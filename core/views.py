@@ -120,3 +120,10 @@ def index_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard:index')
     return redirect('core:login')
+
+
+def csrf_failure(request, reason=""):
+    """Vue personnalisée pour les erreurs CSRF"""
+    return render(request, 'core/csrf_failure.html', {
+        'reason': reason
+    }, status=403)
