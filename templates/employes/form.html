@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}
+{% if object %}Modifier employé{% else %}Nouvel employé{% endif %} - Gestionnaire RH Guinée
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .nav-tabs .nav-link {
+        color: #495057;
+    }
+    .nav-tabs .nav-link.active {
+        color: #667eea;
+        font-weight: 600;
+    }
+    .tab-content {
+        padding: 20px;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 5px 5px;
+    }
+    .required-field::after {
+        content: " *";
+        color: red;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-person-{% if object %}gear{% else %}plus{% endif %}"></i>
+        {% if object %}
+            Modifier l'employé : {{ object.nom }} {{ object.prenoms }}
+        {% else %}
+            Nouvel employé
+        {% endif %}
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'employes:list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour à la liste
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-earmark-person"></i> 
+                    Informations de l'employé
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Information :</strong> Les champs marqués d'un astérisque (<span class="text-danger">*</span>) sont obligatoires.
+                    Le matricule sera généré automatiquement si vous le laissez vide.
+                </div>
+
+                {% crispy form %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Validation côté client
+    $('form').on('submit', function(e) {
+        let isValid = true;
+        
+        // Vérifier les champs obligatoires
+        $('input[required], select[required]').each(function() {
+            if (!$(this).val()) {
+                isValid = false;
+                $(this).addClass('is-invalid');
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Veuillez remplir tous les champs obligatoires');
+            // Aller au premier onglet avec erreur
+            $('.is-invalid').first().closest('.tab-pane').each(function() {
+                let tabId = $(this).attr('id');
+                $('a[href="#' + tabId + '"]').tab('show');
+            });
+        }
+    });
+    
+    // Retirer la classe d'erreur quand l'utilisateur corrige
+    $('input, select').on('change', function() {
+        if ($(this).val()) {
+            $(this).removeClass('is-invalid');
+        }
+    });
+    
+    // Gestion du mode de paiement
+    $('#id_mode_paiement').on('change', function() {
+        let mode = $(this).val();
+        
+        // Afficher/masquer les champs selon le mode
+        if (mode === 'Virement') {
+            $('.field-nom_banque, .field-agence_banque, .field-numero_compte, .field-rib').show();
+            $('.field-operateur_mobile_money, .field-numero_mobile_money').hide();
+        } else if (mode === 'Mobile Money') {
+            $('.field-nom_banque, .field-agence_banque, .field-numero_compte, .field-rib').hide();
+            $('.field-operateur_mobile_money, .field-numero_mobile_money').show();
+        } else {
+            $('.field-nom_banque, .field-agence_banque, .field-numero_compte, .field-rib').hide();
+            $('.field-operateur_mobile_money, .field-numero_mobile_money').hide();
+        }
+    }).trigger('change');
+    
+    // Calcul automatique de l'âge
+    $('#id_date_naissance').on('change', function() {
+        let dateNaissance = new Date($(this).val());
+        let today = new Date();
+        let age = today.getFullYear() - dateNaissance.getFullYear();
+        let m = today.getMonth() - dateNaissance.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < dateNaissance.getDate())) {
+            age--;
+        }
+        
+        if (age > 0 && age < 120) {
+            $(this).after('<small class="form-text text-muted ms-2">Âge: ' + age + ' ans</small>');
+        }
+    });
+    
+    // Validation du numéro CNSS (format guinéen)
+    $('#id_num_cnss_individuel').on('blur', function() {
+        let cnss = $(this).val();
+        if (cnss && cnss.length < 10) {
+            $(this).addClass('is-invalid');
+            $(this).after('<div class="invalid-feedback">Le numéro CNSS doit contenir au moins 10 caractères</div>');
+        } else {
+            $(this).removeClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+        }
+    });
+    
+    // Preview de la photo
+    $('#id_photo').on('change', function(e) {
+        let file = e.target.files[0];
+        if (file) {
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                let preview = '<div class="mt-2"><img src="' + e.target.result + '" class="img-thumbnail" style="max-width: 200px;"></div>';
+                $('#id_photo').after(preview);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // Confirmation avant annulation
+    $('button[name="cancel"]').on('click', function(e) {
+        if (!confirm('Êtes-vous sûr de vouloir annuler ? Les modifications non enregistrées seront perdues.')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

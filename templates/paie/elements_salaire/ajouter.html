@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ajouter un Élément de Salaire - Gestionnaire RH Guinée{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-plus-circle"></i> Ajouter un Élément de Salaire
+        <br><small class="text-muted">{{ employe.nom_complet }} ({{ employe.matricule }})</small>
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'paie:elements_salaire_employe' employe.id %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Rubrique -->
+            <div class="mb-3">
+                <label for="rubrique" class="form-label">Rubrique <span class="text-danger">*</span></label>
+                <select class="form-select" id="rubrique" name="rubrique" required onchange="updateRubriqueType()">
+                    <option value="">-- Sélectionner une rubrique --</option>
+                    <optgroup label="GAINS">
+                        {% for rub in rubriques %}
+                            {% if rub.type_rubrique == 'gain' %}
+                            <option value="{{ rub.id }}" data-type="gain">{{ rub.libelle_rubrique }} ({{ rub.code_rubrique }})</option>
+                            {% endif %}
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="RETENUES">
+                        {% for rub in rubriques %}
+                            {% if rub.type_rubrique == 'retenue' %}
+                            <option value="{{ rub.id }}" data-type="retenue">{{ rub.libelle_rubrique }} ({{ rub.code_rubrique }})</option>
+                            {% endif %}
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="COTISATIONS">
+                        {% for rub in rubriques %}
+                            {% if rub.type_rubrique == 'cotisation' %}
+                            <option value="{{ rub.id }}" data-type="cotisation">{{ rub.libelle_rubrique }} ({{ rub.code_rubrique }})</option>
+                            {% endif %}
+                        {% endfor %}
+                    </optgroup>
+                </select>
+                <small class="text-muted">Choisissez la rubrique à ajouter (prime, indemnité, avance, etc.)</small>
+            </div>
+
+            <!-- Montant ou Taux -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="montant" class="form-label">Montant Fixe (GNF)</label>
+                    <input type="number" class="form-control" id="montant" name="montant" step="1000" placeholder="Ex: 300000">
+                    <small class="text-muted">Montant fixe mensuel</small>
+                </div>
+                <div class="col-md-6">
+                    <label for="taux" class="form-label">Taux (%)</label>
+                    <input type="number" class="form-control" id="taux" name="taux" step="0.01" placeholder="Ex: 10.00">
+                    <small class="text-muted">Pourcentage d'une base</small>
+                </div>
+            </div>
+
+            <!-- Base de calcul (si taux) -->
+            <div class="mb-3" id="base-calcul-group" style="display: none;">
+                <label for="base_calcul" class="form-label">Base de Calcul</label>
+                <select class="form-select" id="base_calcul" name="base_calcul">
+                    <option value="">-- Sélectionner --</option>
+                    <option value="SALAIRE_BASE">Salaire de base</option>
+                    <option value="BRUT">Salaire brut</option>
+                    <option value="CNSS_BASE">Base CNSS</option>
+                </select>
+                <small class="text-muted">Sur quelle base calculer le pourcentage</small>
+            </div>
+
+            <!-- Dates -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="date_debut" class="form-label">Date de Début <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="date_debut" name="date_debut" required value="{{ today|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="date_fin" class="form-label">Date de Fin</label>
+                    <input type="date" class="form-control" id="date_fin" name="date_fin">
+                    <small class="text-muted">Laisser vide pour un élément permanent</small>
+                </div>
+            </div>
+
+            <!-- Options -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="actif" name="actif" checked>
+                        <label class="form-check-label" for="actif">
+                            <strong>Actif</strong> - Pris en compte dans les calculs
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="recurrent" name="recurrent" checked>
+                        <label class="form-check-label" for="recurrent">
+                            <strong>Récurrent</strong> - Appliqué chaque mois
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aide -->
+            <div class="alert alert-info">
+                <h6><i class="bi bi-info-circle"></i> Aide</h6>
+                <ul class="mb-0">
+                    <li><strong>Montant fixe</strong> : Utilisez ce champ pour les primes, indemnités ou retenues à montant fixe (ex: Prime de transport 300,000 GNF)</li>
+                    <li><strong>Taux</strong> : Utilisez ce champ pour les éléments calculés en pourcentage (ex: Prime d'ancienneté 5% du salaire de base)</li>
+                    <li><strong>Récurrent</strong> : Cochez si l'élément doit être appliqué chaque mois (primes régulières)</li>
+                    <li><strong>Non récurrent</strong> : Décochez pour les éléments ponctuels (avances, bonus exceptionnels)</li>
+                    <li><strong>Date de fin</strong> : Définissez une date de fin pour les éléments temporaires (ex: remboursement de prêt sur 12 mois)</li>
+                </ul>
+            </div>
+
+            <!-- Boutons -->
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'paie:elements_salaire_employe' employe.id %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Annuler
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Ajouter l'Élément
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Afficher le champ base de calcul si un taux est saisi
+document.getElementById('taux').addEventListener('input', function() {
+    const baseGroup = document.getElementById('base-calcul-group');
+    if (this.value) {
+        baseGroup.style.display = 'block';
+    } else {
+        baseGroup.style.display = 'none';
+    }
+});
+
+// Mettre à jour le type de rubrique
+function updateRubriqueType() {
+    const select = document.getElementById('rubrique');
+    const option = select.options[select.selectedIndex];
+    const type = option.getAttribute('data-type');
+    
+    // Vous pouvez ajouter des comportements spécifiques selon le type
+    console.log('Type de rubrique sélectionné:', type);
+}
+</script>
+{% endblock %}

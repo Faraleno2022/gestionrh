@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulletin de Paie - {{ bulletin.numero_bulletin }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #000;
+        }
+        
+        .header {
+            border-bottom: 3px solid #d62828;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .company-info {
+            float: left;
+            width: 50%;
+        }
+        
+        .bulletin-info {
+            float: right;
+            width: 45%;
+            text-align: right;
+        }
+        
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        
+        .section-title {
+            background-color: #f0f0f0;
+            padding: 8px;
+            font-weight: bold;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #d62828;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        
+        table.info-table td {
+            padding: 5px;
+            border: none;
+        }
+        
+        table.info-table td:first-child {
+            font-weight: bold;
+            width: 40%;
+        }
+        
+        table.detail-table {
+            border: 1px solid #ddd;
+        }
+        
+        table.detail-table th {
+            background-color: #f8f9fa;
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+            font-weight: bold;
+        }
+        
+        table.detail-table td {
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .total-row {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .net-row {
+            background-color: #d4edda;
+            font-weight: bold;
+            font-size: 12pt;
+        }
+        
+        .summary-box {
+            border: 2px solid #d62828;
+            padding: 15px;
+            margin-top: 20px;
+            background-color: #fff8f8;
+        }
+        
+        .summary-box table td {
+            padding: 8px;
+            border: none;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+            font-size: 9pt;
+            color: #666;
+        }
+        
+        @media print {
+            .no-print {
+                display: none;
+            }
+            
+            body {
+                margin: 0;
+            }
+        }
+        
+        .print-button {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background-color: #d62828;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14pt;
+        }
+        
+        .print-button:hover {
+            background-color: #b01f1f;
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button no-print" onclick="window.print()">
+        🖨️ Imprimer
+    </button>
+
+    <!-- En-tête -->
+    <div class="header clearfix">
+        <div class="company-info">
+            <h2 style="margin: 0; color: #d62828;">{% if params %}{{ params.nom_societe }}{% else %}ENTREPRISE{% endif %}</h2>
+            {% if params %}
+            <p style="margin: 5px 0;">{{ params.adresse_societe|linebreaks }}</p>
+            <p style="margin: 5px 0;">Tél: {{ params.telephone_societe }}</p>
+            <p style="margin: 5px 0;">NIF: {{ params.nif_societe }}</p>
+            <p style="margin: 5px 0;">N° CNSS: {{ params.num_cnss_employeur }}</p>
+            {% endif %}
+        </div>
+        <div class="bulletin-info">
+            <h1 style="margin: 0; color: #d62828;">BULLETIN DE PAIE</h1>
+            <p style="margin: 10px 0;"><strong>N°:</strong> {{ bulletin.numero_bulletin }}</p>
+            <p style="margin: 5px 0;"><strong>Période:</strong> {{ bulletin.periode }}</p>
+            <p style="margin: 5px 0;"><strong>Date:</strong> {{ bulletin.date_calcul|date:"d/m/Y" }}</p>
+        </div>
+    </div>
+
+    <!-- Informations Employé -->
+    <div class="section-title">INFORMATIONS EMPLOYÉ</div>
+    <table class="info-table">
+        <tr>
+            <td>Matricule:</td>
+            <td>{{ bulletin.employe.matricule }}</td>
+            <td>N° CNSS:</td>
+            <td>{{ bulletin.employe.numero_cnss|default:"N/A" }}</td>
+        </tr>
+        <tr>
+            <td>Nom et Prénoms:</td>
+            <td colspan="3">{{ bulletin.employe.nom }} {{ bulletin.employe.prenoms }}</td>
+        </tr>
+        <tr>
+            <td>Fonction:</td>
+            <td>{{ bulletin.employe.fonction|default:"N/A" }}</td>
+            <td>Département:</td>
+            <td>{{ bulletin.employe.departement|default:"N/A" }}</td>
+        </tr>
+        <tr>
+            <td>Date d'embauche:</td>
+            <td>{{ bulletin.employe.date_embauche|date:"d/m/Y"|default:"N/A" }}</td>
+            <td>Situation familiale:</td>
+            <td>{{ bulletin.employe.situation_matrimoniale|default:"N/A" }}</td>
+        </tr>
+    </table>
+
+    <!-- Éléments de Gains -->
+    <div class="section-title">GAINS ET RÉMUNÉRATIONS</div>
+    <table class="detail-table">
+        <thead>
+            <tr>
+                <th style="width: 50%;">Libellé</th>
+                <th class="text-right" style="width: 20%;">Base</th>
+                <th class="text-center" style="width: 10%;">Taux</th>
+                <th class="text-right" style="width: 20%;">Montant</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in gains %}
+            <tr>
+                <td>{{ ligne.rubrique.libelle_rubrique }}</td>
+                <td class="text-right">{{ ligne.base|floatformat:0 }}</td>
+                <td class="text-center">{% if ligne.taux %}{{ ligne.taux }}%{% else %}-{% endif %}</td>
+                <td class="text-right">{{ ligne.montant|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td colspan="3">TOTAL BRUT</td>
+                <td class="text-right">{{ bulletin.salaire_brut|floatformat:0 }} GNF</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Retenues et Cotisations -->
+    <div class="section-title">RETENUES ET COTISATIONS</div>
+    <table class="detail-table">
+        <thead>
+            <tr>
+                <th style="width: 50%;">Libellé</th>
+                <th class="text-right" style="width: 20%;">Base</th>
+                <th class="text-center" style="width: 10%;">Taux</th>
+                <th class="text-right" style="width: 20%;">Montant</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in retenues %}
+            <tr>
+                <td>{{ ligne.rubrique.libelle_rubrique }}</td>
+                <td class="text-right">{{ ligne.base|floatformat:0 }}</td>
+                <td class="text-center">{% if ligne.taux %}{{ ligne.taux }}%{% else %}-{% endif %}</td>
+                <td class="text-right">{{ ligne.montant|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Récapitulatif -->
+    <div class="summary-box">
+        <table style="width: 100%;">
+            <tr>
+                <td style="width: 60%; font-size: 12pt;"><strong>SALAIRE BRUT</strong></td>
+                <td class="text-right" style="font-size: 12pt;"><strong>{{ bulletin.salaire_brut|floatformat:0 }} GNF</strong></td>
+            </tr>
+            <tr>
+                <td>Cotisation CNSS Employé (5%)</td>
+                <td class="text-right" style="color: #d62828;">- {{ bulletin.cnss_employe|floatformat:0 }} GNF</td>
+            </tr>
+            <tr>
+                <td>Impôt sur le Revenu (IRG)</td>
+                <td class="text-right" style="color: #d62828;">- {{ bulletin.irg|floatformat:0 }} GNF</td>
+            </tr>
+            <tr style="border-top: 2px solid #d62828;">
+                <td style="font-size: 14pt; padding-top: 10px;"><strong>NET À PAYER</strong></td>
+                <td class="text-right" style="font-size: 14pt; color: #28a745; padding-top: 10px;">
+                    <strong>{{ bulletin.net_a_payer|floatformat:0 }} GNF</strong>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Cotisations Patronales -->
+    <div class="section-title">COTISATIONS PATRONALES</div>
+    <table class="info-table">
+        <tr>
+            <td>Cotisation CNSS Employeur (18%):</td>
+            <td class="text-right"><strong>{{ bulletin.cnss_employeur|floatformat:0 }} GNF</strong></td>
+        </tr>
+        <tr>
+            <td>Total Cotisations CNSS (Employé + Employeur):</td>
+            <td class="text-right"><strong>{% widthratio bulletin.cnss_employe 1 1|add:bulletin.cnss_employeur|floatformat:0 %} GNF</strong></td>
+        </tr>
+    </table>
+
+    <!-- Pied de page -->
+    <div class="footer">
+        <p><strong>Note:</strong> Ce bulletin de paie est conforme à la législation guinéenne en vigueur.</p>
+        <p>Les cotisations sociales sont calculées selon les taux CNSS: 5% (employé) et 18% (employeur).</p>
+        <p>L'IRG est calculé selon le barème progressif avec application des déductions familiales et abattements professionnels.</p>
+        <p style="margin-top: 15px; text-align: center;">
+            <em>Document généré le {{ bulletin.date_calcul|date:"d/m/Y à H:i" }}</em>
+        </p>
+    </div>
+
+    <script>
+        // Auto-print on load (optionnel)
+        // window.onload = function() { window.print(); }
+    </script>
+</body>
+</html>

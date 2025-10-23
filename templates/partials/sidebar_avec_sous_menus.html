@@ -1,0 +1,326 @@
+<!-- SIDEBAR AVEC SOUS-MENUS DÉROULANTS -->
+<!-- Version améliorée avec tous les liens organisés en sous-menus -->
+
+<style>
+    .submenu {
+        padding-left: 2rem;
+        display: none;
+    }
+    .submenu.show {
+        display: block;
+    }
+    .menu-toggle {
+        cursor: pointer;
+        user-select: none;
+    }
+    .menu-toggle i.bi-chevron-down {
+        transition: transform 0.3s;
+    }
+    .menu-toggle.active i.bi-chevron-down {
+        transform: rotate(180deg);
+    }
+    .nav-link-submenu {
+        font-size: 0.9rem;
+        padding: 0.4rem 1rem;
+    }
+</style>
+
+<div class="position-sticky pt-3">
+    <ul class="nav flex-column">
+        <!-- Tableau de bord -->
+        <li class="nav-item">
+            <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'dashboard:index' %}">
+                <i class="bi bi-speedometer2"></i> Tableau de bord
+            </a>
+        </li>
+        
+        <!-- GESTION DES EMPLOYÉS -->
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>GESTION</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('employes-menu')">
+                <i class="bi bi-people"></i> Employés
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="employes-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'employes:list' %}">
+                    <i class="bi bi-list-ul"></i> Liste des employés
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'employes:create' %}">
+                    <i class="bi bi-person-plus"></i> Nouvel employé
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'employes:export_excel' %}">
+                    <i class="bi bi-file-earmark-excel"></i> Export Excel
+                </a></li>
+            </ul>
+        </li>
+        
+        <!-- TEMPS DE TRAVAIL -->
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>TEMPS DE TRAVAIL</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'temps_travail:home' %}">
+                <i class="bi bi-house-door"></i> Tableau de bord
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('pointages-menu')">
+                <i class="bi bi-clock"></i> Pointages
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="pointages-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'temps_travail:pointages' %}">
+                    <i class="bi bi-list-ul"></i> Liste des pointages
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'temps_travail:creer_pointage' %}">
+                    <i class="bi bi-plus-circle"></i> Nouveau pointage
+                </a></li>
+            </ul>
+        </li>
+        
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('conges-menu')">
+                <i class="bi bi-calendar-check"></i> Congés
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="conges-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'temps_travail:conges' %}">
+                    <i class="bi bi-list-ul"></i> Liste des demandes
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'temps_travail:creer_conge' %}">
+                    <i class="bi bi-plus-circle"></i> Nouvelle demande
+                </a></li>
+            </ul>
+        </li>
+        
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('absences-menu')">
+                <i class="bi bi-person-x"></i> Absences
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="absences-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'temps_travail:absences' %}">
+                    <i class="bi bi-list-ul"></i> Liste des absences
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'temps_travail:creer_absence' %}">
+                    <i class="bi bi-plus-circle"></i> Enregistrer une absence
+                </a></li>
+            </ul>
+        </li>
+        
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('feries-menu')">
+                <i class="bi bi-calendar-event"></i> Jours Fériés
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="feries-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'temps_travail:liste_jours_feries' %}">
+                    <i class="bi bi-list-ul"></i> Calendrier
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'temps_travail:creer_jour_ferie' %}">
+                    <i class="bi bi-plus-circle"></i> Ajouter un jour férié
+                </a></li>
+            </ul>
+        </li>
+        
+        <!-- PAIE -->
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>PAIE</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'paie:home' %}">
+                <i class="bi bi-house-door"></i> Tableau de bord
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('periodes-menu')">
+                <i class="bi bi-calendar3"></i> Périodes de paie
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="periodes-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'paie:liste_periodes' %}">
+                    <i class="bi bi-list-ul"></i> Liste des périodes
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'paie:creer_periode' %}">
+                    <i class="bi bi-plus-circle"></i> Nouvelle période
+                </a></li>
+            </ul>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'paie:liste_bulletins' %}">
+                <i class="bi bi-file-earmark-text"></i> Bulletins de paie
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('elements-menu')">
+                <i class="bi bi-cash-coin"></i> Éléments de Salaire
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="elements-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'paie:liste_elements_salaire' %}">
+                    <i class="bi bi-list-ul"></i> Gérer les éléments
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'paie:liste_rubriques' %}">
+                    <i class="bi bi-list-check"></i> Rubriques de paie
+                </a></li>
+            </ul>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'paie:livre_paie' %}">
+                <i class="bi bi-book"></i> Livre de paie
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'paie:declarations_sociales' %}">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Déclarations sociales
+            </a>
+        </li>
+        
+        <!-- MODULES -->
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>MODULES</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('recrutement-menu')">
+                <i class="bi bi-briefcase"></i> Recrutement
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="recrutement-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'recrutement:home' %}">
+                    <i class="bi bi-house-door"></i> Tableau de bord
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'recrutement:offres' %}">
+                    <i class="bi bi-megaphone"></i> Offres d'emploi
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'recrutement:candidatures' %}">
+                    <i class="bi bi-file-person"></i> Candidatures
+                </a></li>
+            </ul>
+        </li>
+        
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('formation-menu')">
+                <i class="bi bi-mortarboard"></i> Formation
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="formation-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'formation:home' %}">
+                    <i class="bi bi-house-door"></i> Tableau de bord
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'formation:catalogue' %}">
+                    <i class="bi bi-list-ul"></i> Catalogue des formations
+                </a></li>
+            </ul>
+        </li>
+        
+        <!-- RAPPORTS -->
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>RAPPORTS</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'dashboard:rapports' %}">
+                <i class="bi bi-graph-up"></i> Statistiques générales
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'dashboard:statistiques_paie' %}">
+                <i class="bi bi-cash-coin"></i> Statistiques paie
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'temps_travail:rapport_presence' %}">
+                <i class="bi bi-clipboard-data"></i> Rapport présence
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'temps_travail:rapport_heures_supplementaires' %}">
+                <i class="bi bi-clock-history"></i> Heures supplémentaires
+            </a>
+        </li>
+        
+        <!-- ADMINISTRATION -->
+        {% if user.profil.niveau_acces >= 4 %}
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>ADMINISTRATION</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:users' %}">
+                <i class="bi bi-person-badge"></i> Utilisateurs
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:parametres' %}">
+                <i class="bi bi-gear"></i> Paramètres
+            </a>
+        </li>
+        {% endif %}
+        
+        <!-- MON PROFIL (en bas) -->
+        <li class="nav-item mt-4 border-top pt-3">
+            <a class="nav-link" href="{% url 'core:profile' %}">
+                <i class="bi bi-person-circle"></i> Mon Profil
+            </a>
+        </li>
+    </ul>
+</div>
+
+<script>
+function toggleSubmenu(menuId) {
+    const submenu = document.getElementById(menuId);
+    const toggle = submenu.previousElementSibling;
+    
+    // Fermer tous les autres sous-menus
+    document.querySelectorAll('.submenu').forEach(menu => {
+        if (menu.id !== menuId) {
+            menu.classList.remove('show');
+            menu.previousElementSibling.classList.remove('active');
+        }
+    });
+    
+    // Toggle le menu actuel
+    submenu.classList.toggle('show');
+    toggle.classList.toggle('active');
+}
+
+// Ouvrir automatiquement le sous-menu si on est sur une de ses pages
+document.addEventListener('DOMContentLoaded', function() {
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('.submenu a').forEach(link => {
+        if (link.getAttribute('href') === currentPath) {
+            const submenu = link.closest('.submenu');
+            submenu.classList.add('show');
+            submenu.previousElementSibling.classList.add('active');
+        }
+    });
+});
+</script>

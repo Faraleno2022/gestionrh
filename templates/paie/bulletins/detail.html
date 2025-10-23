@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulletin {{ bulletin.numero_bulletin }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2><i class="fas fa-file-invoice me-2"></i>Bulletin {{ bulletin.numero_bulletin }}</h2>
+                <div>
+                    <a href="{% url 'paie:imprimer_bulletin' bulletin.pk %}" 
+                       class="btn btn-secondary" target="_blank">
+                        <i class="fas fa-print me-2"></i>Imprimer
+                    </a>
+                    <a href="{% url 'paie:liste_bulletins' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Retour
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informations employé -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Informations Employé</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless mb-0">
+                        <tr>
+                            <th width="40%">Matricule :</th>
+                            <td>{{ bulletin.employe.matricule }}</td>
+                        </tr>
+                        <tr>
+                            <th>Nom complet :</th>
+                            <td>{{ bulletin.employe.nom }} {{ bulletin.employe.prenoms }}</td>
+                        </tr>
+                        <tr>
+                            <th>Fonction :</th>
+                            <td>{{ bulletin.employe.fonction|default:"N/A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Département :</th>
+                            <td>{{ bulletin.employe.departement|default:"N/A" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Informations Période</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless mb-0">
+                        <tr>
+                            <th width="40%">Période :</th>
+                            <td>{{ bulletin.periode }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date de calcul :</th>
+                            <td>{{ bulletin.date_calcul|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Statut :</th>
+                            <td>
+                                {% if bulletin.statut_bulletin == 'brouillon' %}
+                                    <span class="badge bg-secondary">Brouillon</span>
+                                {% elif bulletin.statut_bulletin == 'calcule' %}
+                                    <span class="badge bg-primary">Calculé</span>
+                                {% elif bulletin.statut_bulletin == 'valide' %}
+                                    <span class="badge bg-success">Validé</span>
+                                {% elif bulletin.statut_bulletin == 'paye' %}
+                                    <span class="badge bg-dark">Payé</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Détail du bulletin -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Gains</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Libellé</th>
+                                <th class="text-end">Base</th>
+                                <th class="text-center">Taux</th>
+                                <th class="text-end">Montant</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ligne in gains %}
+                            <tr>
+                                <td>{{ ligne.rubrique.libelle_rubrique }}</td>
+                                <td class="text-end">{{ ligne.base|floatformat:0 }}</td>
+                                <td class="text-center">
+                                    {% if ligne.taux %}{{ ligne.taux }}%{% else %}-{% endif %}
+                                </td>
+                                <td class="text-end"><strong>{{ ligne.montant|floatformat:0 }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="table-success">
+                                <th colspan="3">Total Brut</th>
+                                <th class="text-end">{{ bulletin.salaire_brut|floatformat:0 }} GNF</th>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-minus-circle me-2"></i>Retenues</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Libellé</th>
+                                <th class="text-end">Base</th>
+                                <th class="text-center">Taux</th>
+                                <th class="text-end">Montant</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ligne in retenues %}
+                            <tr>
+                                <td>{{ ligne.rubrique.libelle_rubrique }}</td>
+                                <td class="text-end">{{ ligne.base|floatformat:0 }}</td>
+                                <td class="text-center">
+                                    {% if ligne.taux %}{{ ligne.taux }}%{% else %}-{% endif %}
+                                </td>
+                                <td class="text-end"><strong>{{ ligne.montant|floatformat:0 }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Récapitulatif -->
+    <div class="row">
+        <div class="col-md-6 mx-auto">
+            <div class="card shadow-sm border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0 text-center">Récapitulatif</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless mb-0">
+                        <tr>
+                            <th>Salaire Brut :</th>
+                            <td class="text-end"><h5>{{ bulletin.salaire_brut|floatformat:0 }} GNF</h5></td>
+                        </tr>
+                        <tr>
+                            <td>CNSS Employé (5%) :</td>
+                            <td class="text-end text-danger">- {{ bulletin.cnss_employe|floatformat:0 }} GNF</td>
+                        </tr>
+                        <tr>
+                            <td>IRG :</td>
+                            <td class="text-end text-danger">- {{ bulletin.irg|floatformat:0 }} GNF</td>
+                        </tr>
+                        <tr class="border-top">
+                            <th><h4>Net à Payer :</h4></th>
+                            <td class="text-end"><h4 class="text-success">{{ bulletin.net_a_payer|floatformat:0 }} GNF</h4></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informations complémentaires -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Cotisations Patronales</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p class="mb-1 text-muted">CNSS Employeur (18%)</p>
+                            <h5>{{ bulletin.cnss_employeur|floatformat:0 }} GNF</h5>
+                        </div>
+                        <div class="col-md-4">
+                            <p class="mb-1 text-muted">Total CNSS</p>
+                            <h5>{% widthratio bulletin.cnss_employe 1 1|add:bulletin.cnss_employeur|floatformat:0 %} GNF</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

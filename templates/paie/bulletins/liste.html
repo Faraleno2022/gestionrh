@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulletins de Paie{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-file-invoice me-2"></i>Bulletins de Paie</h2>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="periode" class="form-label">Période</label>
+                            <select class="form-select" id="periode" name="periode">
+                                <option value="">Toutes les périodes</option>
+                                {% for p in periodes %}
+                                <option value="{{ p.pk }}" {% if request.GET.periode == p.pk|stringformat:"s" %}selected{% endif %}>
+                                    {{ p }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="employe" class="form-label">Employé</label>
+                            <select class="form-select" id="employe" name="employe">
+                                <option value="">Tous les employés</option>
+                                {% for emp in employes %}
+                                <option value="{{ emp.pk }}" {% if request.GET.employe == emp.pk|stringformat:"s" %}selected{% endif %}>
+                                    {{ emp.matricule }} - {{ emp.nom }} {{ emp.prenoms }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="statut" class="form-label">Statut</label>
+                            <select class="form-select" id="statut" name="statut">
+                                <option value="">Tous</option>
+                                <option value="brouillon" {% if request.GET.statut == 'brouillon' %}selected{% endif %}>Brouillon</option>
+                                <option value="calcule" {% if request.GET.statut == 'calcule' %}selected{% endif %}>Calculé</option>
+                                <option value="valide" {% if request.GET.statut == 'valide' %}selected{% endif %}>Validé</option>
+                                <option value="paye" {% if request.GET.statut == 'paye' %}selected{% endif %}>Payé</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-filter me-2"></i>Filtrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des bulletins -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>N° Bulletin</th>
+                                    <th>Période</th>
+                                    <th>Matricule</th>
+                                    <th>Employé</th>
+                                    <th>Brut</th>
+                                    <th>Net</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bulletin in bulletins %}
+                                <tr>
+                                    <td><code>{{ bulletin.numero_bulletin }}</code></td>
+                                    <td>{{ bulletin.periode }}</td>
+                                    <td>{{ bulletin.employe.matricule }}</td>
+                                    <td>{{ bulletin.employe.nom }} {{ bulletin.employe.prenoms }}</td>
+                                    <td>{{ bulletin.salaire_brut|floatformat:0 }} GNF</td>
+                                    <td class="text-success"><strong>{{ bulletin.net_a_payer|floatformat:0 }} GNF</strong></td>
+                                    <td>
+                                        {% if bulletin.statut_bulletin == 'brouillon' %}
+                                            <span class="badge bg-secondary">Brouillon</span>
+                                        {% elif bulletin.statut_bulletin == 'calcule' %}
+                                            <span class="badge bg-primary">Calculé</span>
+                                        {% elif bulletin.statut_bulletin == 'valide' %}
+                                            <span class="badge bg-success">Validé</span>
+                                        {% elif bulletin.statut_bulletin == 'paye' %}
+                                            <span class="badge bg-dark">Payé</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'paie:detail_bulletin' bulletin.pk %}" 
+                                           class="btn btn-sm btn-outline-primary" title="Détails">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'paie:imprimer_bulletin' bulletin.pk %}" 
+                                           class="btn btn-sm btn-outline-secondary" title="Imprimer" target="_blank">
+                                            <i class="fas fa-print"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                        Aucun bulletin trouvé
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

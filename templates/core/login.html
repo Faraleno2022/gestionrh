@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Gestionnaire RH Guinée</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #ce1126 0%, #009460 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .login-container {
+            max-width: 450px;
+            margin: 0 auto;
+        }
+        .login-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #ce1126 0%, #009460 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .login-header i {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+        .login-body {
+            padding: 40px;
+        }
+        .form-control:focus {
+            border-color: #ce1126;
+            box-shadow: 0 0 0 0.2rem rgba(206, 17, 38, 0.25);
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #ce1126 0%, #009460 100%);
+            border: none;
+            padding: 12px;
+            font-weight: 600;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(206, 17, 38, 0.4);
+        }
+        .guinea-flag {
+            display: inline-block;
+            width: 30px;
+            height: 20px;
+            background: linear-gradient(to right, #ce1126 33%, #fcd116 33%, #fcd116 66%, #009460 66%);
+            border-radius: 3px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-container">
+            {% include 'partials/messages.html' %}
+            
+            <div class="login-card">
+                <div class="login-header">
+                    <i class="fas fa-users-cog"></i>
+                    <h3>Gestionnaire RH</h3>
+                    <p class="mb-0">République de Guinée <span class="guinea-flag"></span></p>
+                </div>
+                
+                <div class="login-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="username" class="form-label">
+                                <i class="fas fa-user"></i> Nom d'utilisateur
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" required autofocus>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">
+                                <i class="fas fa-lock"></i> Mot de passe
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="remember">
+                            <label class="form-check-label" for="remember">
+                                Se souvenir de moi
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-login w-100">
+                            <i class="fas fa-sign-in-alt"></i> Se connecter
+                        </button>
+                        
+                        <div class="text-center mt-3">
+                            <a href="#" class="text-muted small">
+                                <i class="fas fa-question-circle"></i> Mot de passe oublié ?
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4 text-white">
+                <small>
+                    <i class="fas fa-shield-alt"></i> Système sécurisé - Conforme au Code du Travail Guinéen
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
