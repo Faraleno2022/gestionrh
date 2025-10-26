@@ -260,17 +260,21 @@ CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 X_FRAME_OPTIONS = 'DENY'
 
 # Content Security Policy (django-csp 4.0+ format)
+# Configuration assouplie pour la production
 CONTENT_SECURITY_POLICY = {
     'DIRECTIVES': {
         'default-src': ("'self'",),
-        'script-src': ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://code.jquery.com"),
-        'style-src': ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com"),
+        'script-src': ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://code.jquery.com", "https://stackpath.bootstrapcdn.com"),
+        'style-src': ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com", "https://stackpath.bootstrapcdn.com"),
         'font-src': ("'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"),
-        'img-src': ("'self'", "data:", "https:"),
+        'img-src': ("'self'", "data:", "https:", "blob:"),
         'connect-src': ("'self'",),
         'frame-ancestors': ("'none'",),
         'base-uri': ("'self'",),
         'form-action': ("'self'",),
+        'media-src': ("'self'", "data:", "https:"),
+        'object-src': ("'none'",),
+        'worker-src': ("'self'", "blob:"),
     }
 }
 
