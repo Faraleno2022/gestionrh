@@ -66,6 +66,8 @@ MIDDLEWARE = [
     'core.middleware.SQLInjectionProtectionMiddleware',
     'core.middleware.XSSProtectionMiddleware',
     'core.middleware.RequestLoggingMiddleware',
+    # Multi-company middleware
+    'core.middleware.EntrepriseQuotaMiddleware',
 ]
 
 ROOT_URLCONF = 'gestionnaire_rh.urls'
