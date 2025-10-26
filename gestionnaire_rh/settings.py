@@ -261,10 +261,12 @@ X_FRAME_OPTIONS = 'DENY'
 
 # Content Security Policy (django-csp 4.0+ format)
 # Configuration assouplie pour la production
+# Note: 'unsafe-eval' est nécessaire pour certaines bibliothèques JS (ex: Chart.js, certains plugins Bootstrap)
+# Utilisez avec précaution et évitez eval() dans votre propre code
 CONTENT_SECURITY_POLICY = {
     'DIRECTIVES': {
         'default-src': ("'self'",),
-        'script-src': ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://code.jquery.com", "https://stackpath.bootstrapcdn.com"),
+        'script-src': ("'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://code.jquery.com", "https://stackpath.bootstrapcdn.com"),
         'style-src': ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com", "https://stackpath.bootstrapcdn.com"),
         'font-src': ("'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"),
         'img-src': ("'self'", "data:", "https:", "blob:"),
