@@ -258,3 +258,53 @@ def sanitize_input(view_func):
         return view_func(request, *args, **kwargs)
     
     return wrapped_view
+
+
+def reauth_required(view_func):
+    """
+    Décorateur pour exiger une réauthentification avant d'accéder à une vue
+    Usage: @reauth_required
+    """
+    @wraps(view_func)
+    @login_required
+    def wrapped_view(request, *args, **kwargs):
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Vérifier si l'utilisateur nécessite une réauthentification
+        if hasattr(request.user, 'require_reauth') and request.user.require_reauth:
+            # Vérifier si la dernière réauthentification est récente (moins de 5 minutes)
+            if request.user.last_reauth:
+                time_since_reauth = timezone.now() - request.user.last_reauth
+                if time_since_reauth < timedelta(minutes=5):
+                    return view_func(request, *args, **kwargs)
+            
+            # Stocker l'URL de destination
+            request.session['reauth_next'] = request.get_full_path()
+            messages.warning(request, "Veuillez vous réauthentifier pour accéder à cette section.")
+            return redirect('core:reauth')
+        
+        return view_func(request, *args, **kwargs)
+    
+    return wrapped_view
+
+
+def entreprise_active_required(view_func):
+    """
+    Décorateur pour vérifier que l'entreprise de l'utilisateur est active
+    Usage: @entreprise_active_required
+    """
+    @wraps(view_func)
+    @login_required
+    def wrapped_view(request, *args, **kwargs):
+        if not hasattr(request.user, 'entreprise') or not request.user.entreprise:
+            messages.error(request, "Vous n'êtes associé à aucune entreprise.")
+            return redirect('core:login')
+        
+        if not request.user.entreprise.actif:
+            messages.error(request, "Votre entreprise est désactivée. Contactez le support.")
+            return redirect('core:login')
+        
+        return view_func(request, *args, **kwargs)
+    
+    return wrapped_view

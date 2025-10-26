@@ -1,9 +1,34 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import (
-    Utilisateur, ProfilUtilisateur, DroitAcces, LogActivite,
+    Entreprise, Utilisateur, ProfilUtilisateur, DroitAcces, LogActivite,
     Societe, Etablissement, Service, Poste
 )
+
+
+@admin.register(Entreprise)
+class EntrepriseAdmin(admin.ModelAdmin):
+    list_display = ['nom_entreprise', 'slug', 'email', 'ville', 'plan_abonnement', 'actif', 'date_creation']
+    list_filter = ['actif', 'plan_abonnement', 'ville']
+    search_fields = ['nom_entreprise', 'slug', 'email', 'nif']
+    readonly_fields = ['date_creation']
+    fieldsets = (
+        ('Informations générales', {
+            'fields': ('nom_entreprise', 'slug', 'logo')
+        }),
+        ('Immatriculation', {
+            'fields': ('nif', 'num_cnss')
+        }),
+        ('Coordonnées', {
+            'fields': ('adresse', 'ville', 'pays', 'telephone', 'email')
+        }),
+        ('Abonnement', {
+            'fields': ('plan_abonnement', 'max_utilisateurs', 'date_expiration')
+        }),
+        ('Statut', {
+            'fields': ('actif', 'date_creation')
+        }),
+    )
 
 
 @admin.register(ProfilUtilisateur)
@@ -15,12 +40,18 @@ class ProfilUtilisateurAdmin(admin.ModelAdmin):
 
 @admin.register(Utilisateur)
 class UtilisateurAdmin(UserAdmin):
-    list_display = ['username', 'email', 'first_name', 'last_name', 'profil', 'actif', 'date_derniere_connexion']
-    list_filter = ['actif', 'profil', 'is_staff', 'is_superuser']
+    list_display = ['username', 'email', 'first_name', 'last_name', 'entreprise', 'profil', 'est_admin_entreprise', 'actif', 'date_derniere_connexion']
+    list_filter = ['actif', 'profil', 'entreprise', 'est_admin_entreprise', 'require_reauth', 'is_staff', 'is_superuser']
     search_fields = ['username', 'email', 'first_name', 'last_name']
     fieldsets = UserAdmin.fieldsets + (
+        ('Entreprise', {
+            'fields': ('entreprise', 'est_admin_entreprise')
+        }),
         ('Informations supplémentaires', {
             'fields': ('telephone', 'profil', 'actif', 'photo', 'date_derniere_connexion', 'tentatives_connexion')
+        }),
+        ('Sécurité', {
+            'fields': ('require_reauth', 'last_reauth')
         }),
     )
 

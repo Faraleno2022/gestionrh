@@ -1,6 +1,41 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+import uuid
+
+
+class Entreprise(models.Model):
+    """Modèle pour gérer plusieurs entreprises"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    nom_entreprise = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True, max_length=100)
+    nif = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name='NIF')
+    num_cnss = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name='N° CNSS')
+    adresse = models.TextField(blank=True, null=True)
+    ville = models.CharField(max_length=100, blank=True, null=True)
+    pays = models.CharField(max_length=50, default='Guinée')
+    telephone = models.CharField(max_length=20, blank=True, null=True)
+    email = models.EmailField()
+    logo = models.ImageField(upload_to='entreprises/logos/', blank=True, null=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_expiration = models.DateField(blank=True, null=True, help_text='Date d\'expiration de l\'abonnement')
+    actif = models.BooleanField(default=True)
+    plan_abonnement = models.CharField(max_length=50, default='gratuit', choices=[
+        ('gratuit', 'Gratuit'),
+        ('basique', 'Basique'),
+        ('premium', 'Premium'),
+        ('entreprise', 'Entreprise'),
+    ])
+    max_utilisateurs = models.IntegerField(default=5, help_text='Nombre maximum d\'utilisateurs')
+    
+    class Meta:
+        db_table = 'entreprises'
+        verbose_name = 'Entreprise'
+        verbose_name_plural = 'Entreprises'
+        ordering = ['nom_entreprise']
+    
+    def __str__(self):
+        return self.nom_entreprise
 
 
 class ProfilUtilisateur(models.Model):
@@ -29,14 +64,18 @@ class ProfilUtilisateur(models.Model):
 
 
 class Utilisateur(AbstractUser):
-    """Modèle utilisateur personnalisé"""
+    """Modèle utilisateur personnalisé avec support multi-entreprise"""
     email = models.EmailField(unique=True)
     telephone = models.CharField(max_length=20, blank=True, null=True)
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='utilisateurs', null=True)
     profil = models.ForeignKey(ProfilUtilisateur, on_delete=models.SET_NULL, null=True, related_name='utilisateurs')
+    est_admin_entreprise = models.BooleanField(default=False, help_text='Administrateur de l\'entreprise')
     actif = models.BooleanField(default=True)
     date_derniere_connexion = models.DateTimeField(null=True, blank=True)
     tentatives_connexion = models.IntegerField(default=0)
     photo = models.ImageField(upload_to='utilisateurs/', blank=True, null=True)
+    require_reauth = models.BooleanField(default=False, help_text='Nécessite une réauthentification pour accéder aux menus')
+    last_reauth = models.DateTimeField(null=True, blank=True, help_text='Dernière réauthentification')
     
     # Fix for groups and user_permissions clash
     groups = models.ManyToManyField(

@@ -188,3 +188,51 @@ class RequestLoggingMiddleware:
             )
         
         return response
+
+
+class EntrepriseQuotaMiddleware:
+    """
+    Middleware pour vérifier les quotas d'abonnement de l'entreprise
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+    
+    def __call__(self, request):
+        # Vérifier uniquement pour les utilisateurs authentifiés
+        if request.user.is_authenticated and hasattr(request.user, 'entreprise'):
+            entreprise = request.user.entreprise
+            
+            if entreprise:
+                # Vérifier si l'entreprise est active
+                if not entreprise.actif:
+                    from django.shortcuts import redirect
+                    from django.contrib import messages
+                    messages.error(request, "Votre entreprise est désactivée. Contactez le support.")
+                    return redirect('core:login')
+                
+                # Vérifier la date d'expiration
+                if entreprise.date_expiration:
+                    from django.utils import timezone
+                    if timezone.now().date() > entreprise.date_expiration:
+                        from django.shortcuts import redirect
+                        from django.contrib import messages
+                        messages.warning(request, "Votre abonnement a expiré. Veuillez le renouveler.")
+                        # Permettre l'accès uniquement aux pages de renouvellement
+                        if not request.path.startswith('/renouvellement/'):
+                            return redirect('core:renouvellement')
+                
+                # Vérifier le quota d'utilisateurs (seulement pour les admins qui créent des users)
+                if request.path == '/manage-users/' and request.method == 'POST':
+                    current_users = entreprise.utilisateurs.filter(actif=True).count()
+                    if current_users >= entreprise.max_utilisateurs:
+                        from django.contrib import messages
+                        messages.error(
+                            request,
+                            f"Quota d'utilisateurs atteint ({entreprise.max_utilisateurs}). "
+                            f"Veuillez upgrader votre plan."
+                        )
+                        from django.shortcuts import redirect
+                        return redirect('core:manage_users')
+        
+        response = self.get_response(request)
+        return response

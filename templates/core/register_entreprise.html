@@ -1,0 +1,164 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription Entreprise - Gestionnaire RH Guinée</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+    <div class="container">
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="bi bi-building"></i> Inscription Entreprise</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <form method="post" enctype="multipart/form-data" novalidate>
+                            {% csrf_token %}
+                            
+                            <h5 class="mb-3"><i class="bi bi-building-fill"></i> Informations de l'entreprise</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.nom_entreprise.id_for_label }}" class="form-label">{{ form.nom_entreprise.label }} *</label>
+                                    {{ form.nom_entreprise }}
+                                    {% if form.nom_entreprise.errors %}
+                                        <div class="text-danger">{{ form.nom_entreprise.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }} *</label>
+                                    {{ form.email }}
+                                    {% if form.email.errors %}
+                                        <div class="text-danger">{{ form.email.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.telephone.id_for_label }}" class="form-label">{{ form.telephone.label }}</label>
+                                    {{ form.telephone }}
+                                    {% if form.telephone.errors %}
+                                        <div class="text-danger">{{ form.telephone.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.ville.id_for_label }}" class="form-label">{{ form.ville.label }}</label>
+                                    {{ form.ville }}
+                                    {% if form.ville.errors %}
+                                        <div class="text-danger">{{ form.ville.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.pays.id_for_label }}" class="form-label">{{ form.pays.label }}</label>
+                                    {{ form.pays }}
+                                    {% if form.pays.errors %}
+                                        <div class="text-danger">{{ form.pays.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.plan_abonnement.id_for_label }}" class="form-label">{{ form.plan_abonnement.label }}</label>
+                                    {{ form.plan_abonnement }}
+                                    {% if form.plan_abonnement.errors %}
+                                        <div class="text-danger">{{ form.plan_abonnement.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.logo.id_for_label }}" class="form-label">{{ form.logo.label }} (optionnel)</label>
+                                {{ form.logo }}
+                                {% if form.logo.errors %}
+                                    <div class="text-danger">{{ form.logo.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Le logo sera affiché en en-tête et sur tous les documents.</small>
+                            </div>
+                            
+                            <hr class="my-4">
+                            
+                            <h5 class="mb-3"><i class="bi bi-person-fill"></i> Compte Administrateur</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.admin_first_name.id_for_label }}" class="form-label">{{ form.admin_first_name.label }} *</label>
+                                    {{ form.admin_first_name }}
+                                    {% if form.admin_first_name.errors %}
+                                        <div class="text-danger">{{ form.admin_first_name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.admin_last_name.id_for_label }}" class="form-label">{{ form.admin_last_name.label }} *</label>
+                                    {{ form.admin_last_name }}
+                                    {% if form.admin_last_name.errors %}
+                                        <div class="text-danger">{{ form.admin_last_name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.admin_username.id_for_label }}" class="form-label">{{ form.admin_username.label }} *</label>
+                                    {{ form.admin_username }}
+                                    {% if form.admin_username.errors %}
+                                        <div class="text-danger">{{ form.admin_username.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.admin_email.id_for_label }}" class="form-label">{{ form.admin_email.label }} *</label>
+                                    {{ form.admin_email }}
+                                    {% if form.admin_email.errors %}
+                                        <div class="text-danger">{{ form.admin_email.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.admin_password.id_for_label }}" class="form-label">{{ form.admin_password.label }} *</label>
+                                    {{ form.admin_password }}
+                                    {% if form.admin_password.errors %}
+                                        <div class="text-danger">{{ form.admin_password.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.admin_password_confirm.id_for_label }}" class="form-label">{{ form.admin_password_confirm.label }} *</label>
+                                    {{ form.admin_password_confirm }}
+                                    {% if form.admin_password_confirm.errors %}
+                                        <div class="text-danger">{{ form.admin_password_confirm.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-check-circle"></i> Créer mon entreprise
+                                </button>
+                                <a href="{% url 'core:login' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left"></i> Retour à la connexion
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

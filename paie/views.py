@@ -16,9 +16,12 @@ from .models import (
 )
 from employes.models import Employe
 from .services import MoteurCalculPaie
+from core.decorators import reauth_required, entreprise_active_required
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def paie_home(request):
     """Vue d'accueil du module paie"""
     # Statistiques générales
@@ -42,6 +45,8 @@ def paie_home(request):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def liste_periodes(request):
     """Liste des périodes de paie"""
     periodes = PeriodePaie.objects.all().annotate(
@@ -54,6 +59,8 @@ def liste_periodes(request):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def creer_periode(request):
     """Créer une nouvelle période de paie"""
     if request.method == 'POST':
@@ -91,6 +98,8 @@ def creer_periode(request):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def detail_periode(request, pk):
     """Détail d'une période de paie"""
     periode = get_object_or_404(PeriodePaie, pk=pk)
@@ -113,6 +122,8 @@ def detail_periode(request, pk):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def calculer_periode(request, pk):
     """Calculer tous les bulletins d'une période"""
     periode = get_object_or_404(PeriodePaie, pk=pk)
@@ -171,6 +182,8 @@ def calculer_periode(request, pk):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def valider_periode(request, pk):
     """Valider une période de paie"""
     periode = get_object_or_404(PeriodePaie, pk=pk)
@@ -198,6 +211,8 @@ def valider_periode(request, pk):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def cloturer_periode(request, pk):
     """Clôturer une période de paie"""
     periode = get_object_or_404(PeriodePaie, pk=pk)
@@ -221,6 +236,8 @@ def cloturer_periode(request, pk):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def liste_bulletins(request):
     """Liste de tous les bulletins de paie"""
     bulletins = BulletinPaie.objects.all().select_related('employe', 'periode')
@@ -248,6 +265,8 @@ def liste_bulletins(request):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def detail_bulletin(request, pk):
     """Détail d'un bulletin de paie"""
     bulletin = get_object_or_404(BulletinPaie, pk=pk)
@@ -265,6 +284,8 @@ def detail_bulletin(request, pk):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def imprimer_bulletin(request, pk):
     """Imprimer un bulletin de paie"""
     bulletin = get_object_or_404(BulletinPaie, pk=pk)
