@@ -242,23 +242,32 @@ CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 # Clickjacking Protection
 X_FRAME_OPTIONS = 'DENY'
 
-# Content Security Policy
-CSP_DEFAULT_SRC = ("'self'",)
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://code.jquery.com")
-CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com")
-CSP_FONT_SRC = ("'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net")
-CSP_IMG_SRC = ("'self'", "data:", "https:")
-CSP_CONNECT_SRC = ("'self'",)
-CSP_FRAME_ANCESTORS = ("'none'",)
-CSP_BASE_URI = ("'self'",)
-CSP_FORM_ACTION = ("'self'",)
+# Content Security Policy (django-csp 4.0+ format)
+CONTENT_SECURITY_POLICY = {
+    'DIRECTIVES': {
+        'default-src': ("'self'",),
+        'script-src': ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://code.jquery.com"),
+        'style-src': ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com"),
+        'font-src': ("'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"),
+        'img-src': ("'self'", "data:", "https:"),
+        'connect-src': ("'self'",),
+        'frame-ancestors': ("'none'",),
+        'base-uri': ("'self'",),
+        'form-action': ("'self'",),
+    }
+}
+
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 # Django Axes - Protection contre les attaques par force brute
 AXES_ENABLED = True
 AXES_FAILURE_LIMIT = 5  # Nombre de tentatives avant blocage
 AXES_COOLOFF_TIME = 1  # Temps de blocage en heures
 AXES_LOCK_OUT_AT_FAILURE = True
-AXES_USE_USER_AGENT = True
 AXES_LOCKOUT_TEMPLATE = 'core/account_locked.html'
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = ['username', 'ip_address']
