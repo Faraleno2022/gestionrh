@@ -96,7 +96,27 @@ GRANT ALL PRIVILEGES ON DATABASE gestionnaire_rh_guinee TO rh_user;
 \q
 ```
 
-### Option 3: MySQL/MariaDB
+### Option 3: MySQL/MariaDB (✅ Compatible Python 3.13)
+
+**Avantages**:
+- ✅ **Compatible avec Python 3.13** (contrairement à PostgreSQL)
+- ✅ Largement supporté sur les hébergeurs
+- ✅ Excellent pour PythonAnywhere
+- ✅ Performance optimale
+
+**Installation du Driver**:
+```bash
+# Linux (Ubuntu/Debian)
+sudo apt-get install python3-dev default-libmysqlclient-dev build-essential
+pip install mysqlclient
+
+# macOS
+brew install mysql
+pip install mysqlclient
+
+# Windows ou PythonAnywhere
+pip install mysqlclient
+```
 
 **Configuration dans `.env`**:
 ```env
@@ -108,27 +128,30 @@ DB_HOST=localhost
 DB_PORT=3306
 ```
 
-**Modifier `settings.py`** (ajouter le support MySQL):
-```python
-elif DB_ENGINE == 'mysql':
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': config('DB_NAME'),
-            'USER': config('DB_USER'),
-            'PASSWORD': config('DB_PASSWORD'),
-            'HOST': config('DB_HOST'),
-            'PORT': config('DB_PORT'),
-            'OPTIONS': {
-                'charset': 'utf8mb4',
-            }
-        }
-    }
+**Configuration PythonAnywhere**:
+```env
+DB_ENGINE=mysql
+DB_NAME=VOTRE_USERNAME$guineerh_db
+DB_USER=VOTRE_USERNAME
+DB_PASSWORD=votre_mot_de_passe_mysql
+DB_HOST=VOTRE_USERNAME.mysql.pythonanywhere-services.com
+DB_PORT=3306
 ```
 
-**Installer le driver**:
+**Le support MySQL est déjà intégré dans `settings.py`** ✅
+
+**Créer la Base de Données**:
 ```bash
-pip install mysqlclient
+# MySQL local
+mysql -u root -p
+CREATE DATABASE gestionnaire_rh_guinee CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'rh_user'@'localhost' IDENTIFIED BY 'mot_de_passe_securise';
+GRANT ALL PRIVILEGES ON gestionnaire_rh_guinee.* TO 'rh_user'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+
+# PythonAnywhere
+# Créer la base via l'interface web dans l'onglet "Databases"
 ```
 
 ## 🚀 Initialisation de la Base de Données

@@ -1,5 +1,7 @@
 Django==4.2.7
-psycopg2-binary==2.9.9
+# Database drivers - Choose one based on your DB_ENGINE in .env
+psycopg2-binary==2.9.9  # For PostgreSQL (not compatible with Python 3.13)
+mysqlclient>=2.2.0      # For MySQL (✅ Compatible with Python 3.13)
 Pillow==10.1.0
 django-crispy-forms==2.1
 crispy-bootstrap5==1.0.0
