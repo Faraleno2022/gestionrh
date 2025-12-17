@@ -3,7 +3,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from decimal import Decimal
 from employes.models import Employe
-from core.models import Utilisateur
+from core.models import Utilisateur, Entreprise
 
 
 class PeriodePaie(models.Model):
@@ -16,6 +16,7 @@ class PeriodePaie(models.Model):
         ('payee', 'Payée'),
     )
     
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='periodes_paie', null=True, blank=True)
     annee = models.IntegerField()
     mois = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
     libelle = models.CharField(max_length=50, blank=True, null=True)
@@ -33,7 +34,7 @@ class PeriodePaie(models.Model):
         db_table = 'periodes_paie'
         verbose_name = 'Période de paie'
         verbose_name_plural = 'Périodes de paie'
-        unique_together = ['annee', 'mois']
+        unique_together = ['entreprise', 'annee', 'mois']
         ordering = ['-annee', '-mois']
     
     def __str__(self):
@@ -408,3 +409,188 @@ class HistoriquePaie(models.Model):
     
     def __str__(self):
         return f"{self.type_action} - {self.date_action.strftime('%d/%m/%Y %H:%M')}"
+
+
+# ============= CONFORMITÉ LÉGISLATIVE GUINÉENNE =============
+
+class GrilleIndiciaire(models.Model):
+    """Grille indiciaire pour fonction publique ou convention collective"""
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='grilles_indiciaires', null=True, blank=True)
+    code_grille = models.CharField(max_length=20)
+    libelle = models.CharField(max_length=100)
+    categorie = models.CharField(max_length=20, help_text="Catégorie professionnelle (A, B, C, D...)")
+    echelon = models.IntegerField(help_text="Échelon dans la catégorie")
+    indice = models.IntegerField(help_text="Indice de rémunération")
+    valeur_point = models.DecimalField(max_digits=10, decimal_places=2, default=1, help_text="Valeur du point indiciaire")
+    salaire_base = models.DecimalField(max_digits=15, decimal_places=2, help_text="Salaire de base correspondant")
+    convention_collective = models.CharField(max_length=100, blank=True, null=True)
+    date_effet = models.DateField()
+    actif = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'grilles_indiciaires'
+        verbose_name = 'Grille indiciaire'
+        verbose_name_plural = 'Grilles indiciaires'
+        unique_together = ['entreprise', 'categorie', 'echelon', 'date_effet']
+        ordering = ['categorie', 'echelon']
+    
+    def __str__(self):
+        return f"{self.categorie}-{self.echelon} : {self.salaire_base:,.0f} GNF"
+
+
+class AvanceSalaire(models.Model):
+    """Gestion des avances sur salaire"""
+    STATUTS = (
+        ('en_cours', 'En cours'),
+        ('soldee', 'Soldée'),
+        ('annulee', 'Annulée'),
+    )
+    
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='avances_salaire')
+    date_demande = models.DateField()
+    date_accord = models.DateField(null=True, blank=True)
+    montant_total = models.DecimalField(max_digits=15, decimal_places=2)
+    nb_mensualites = models.IntegerField(default=1, validators=[MinValueValidator(1)])
+    montant_mensuel = models.DecimalField(max_digits=15, decimal_places=2)
+    montant_rembourse = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    solde_restant = models.DecimalField(max_digits=15, decimal_places=2)
+    motif = models.TextField(blank=True, null=True)
+    statut = models.CharField(max_length=20, choices=STATUTS, default='en_cours')
+    periode_debut = models.ForeignKey(PeriodePaie, on_delete=models.SET_NULL, null=True, related_name='avances_debut')
+    approuve_par = models.ForeignKey(Utilisateur, on_delete=models.SET_NULL, null=True, related_name='avances_approuvees')
+    
+    class Meta:
+        db_table = 'avances_salaire'
+        verbose_name = 'Avance sur salaire'
+        verbose_name_plural = 'Avances sur salaire'
+        ordering = ['-date_demande']
+    
+    def __str__(self):
+        return f"{self.employe.matricule} - {self.montant_total:,.0f} GNF ({self.statut})"
+    
+    def save(self, *args, **kwargs):
+        if not self.montant_mensuel:
+            self.montant_mensuel = self.montant_total / self.nb_mensualites
+        self.solde_restant = self.montant_total - self.montant_rembourse
+        super().save(*args, **kwargs)
+
+
+class SaisieArret(models.Model):
+    """Saisie-arrêt sur salaire"""
+    TYPES_SAISIE = (
+        ('pension_alimentaire', 'Pension alimentaire'),
+        ('credit_bancaire', 'Crédit bancaire'),
+        ('judiciaire', 'Saisie judiciaire'),
+        ('fiscale', 'Saisie fiscale'),
+        ('autre', 'Autre'),
+    )
+    STATUTS = (
+        ('active', 'Active'),
+        ('suspendue', 'Suspendue'),
+        ('terminee', 'Terminée'),
+    )
+    
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='saisies_arret')
+    type_saisie = models.CharField(max_length=30, choices=TYPES_SAISIE)
+    reference_decision = models.CharField(max_length=100, help_text="Référence du jugement ou décision")
+    date_notification = models.DateField()
+    date_debut = models.DateField()
+    date_fin = models.DateField(null=True, blank=True)
+    montant_total = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    montant_mensuel = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    taux_saisie = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Pourcentage du salaire")
+    quote_saisissable = models.DecimalField(max_digits=5, decimal_places=2, default=33.33, help_text="Quote-part saisissable selon barème légal")
+    beneficiaire = models.CharField(max_length=200)
+    rib_beneficiaire = models.CharField(max_length=50, blank=True, null=True)
+    montant_preleve = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    statut = models.CharField(max_length=20, choices=STATUTS, default='active')
+    observations = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        db_table = 'saisies_arret'
+        verbose_name = 'Saisie-arrêt'
+        verbose_name_plural = 'Saisies-arrêt'
+        ordering = ['-date_debut']
+    
+    def __str__(self):
+        return f"{self.employe.matricule} - {self.get_type_saisie_display()} ({self.statut})"
+
+
+class DeclarationSociale(models.Model):
+    """Déclarations sociales obligatoires"""
+    TYPES_DECLARATION = (
+        ('cnss_mensuelle', 'Déclaration CNSS mensuelle'),
+        ('irpp_mensuelle', 'Déclaration IRPP mensuelle'),
+        ('dipe', 'DIPE - Déclaration Individuelle Préalable à l\'Embauche'),
+        ('etat_annuel', 'État récapitulatif annuel'),
+        ('das', 'Déclaration Annuelle des Salaires'),
+    )
+    STATUTS = (
+        ('brouillon', 'Brouillon'),
+        ('generee', 'Générée'),
+        ('validee', 'Validée'),
+        ('transmise', 'Transmise'),
+        ('acceptee', 'Acceptée'),
+        ('rejetee', 'Rejetée'),
+    )
+    
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='declarations_sociales')
+    type_declaration = models.CharField(max_length=30, choices=TYPES_DECLARATION)
+    periode = models.ForeignKey(PeriodePaie, on_delete=models.CASCADE, null=True, blank=True, related_name='declarations')
+    annee = models.IntegerField()
+    mois = models.IntegerField(null=True, blank=True)
+    reference = models.CharField(max_length=50, unique=True)
+    
+    # Montants
+    effectif_declare = models.IntegerField(default=0)
+    masse_salariale = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    base_cotisation = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    montant_cotisation_employe = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    montant_cotisation_employeur = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    montant_total = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    
+    # Statut et dates
+    statut = models.CharField(max_length=20, choices=STATUTS, default='brouillon')
+    date_generation = models.DateTimeField(null=True, blank=True)
+    date_validation = models.DateTimeField(null=True, blank=True)
+    date_transmission = models.DateTimeField(null=True, blank=True)
+    date_limite = models.DateField(null=True, blank=True)
+    
+    # Fichiers
+    fichier_declaration = models.FileField(upload_to='declarations/', null=True, blank=True)
+    accuse_reception = models.FileField(upload_to='declarations/ar/', null=True, blank=True)
+    
+    # Utilisateurs
+    genere_par = models.ForeignKey(Utilisateur, on_delete=models.SET_NULL, null=True, related_name='declarations_generees')
+    valide_par = models.ForeignKey(Utilisateur, on_delete=models.SET_NULL, null=True, related_name='declarations_validees')
+    
+    observations = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        db_table = 'declarations_sociales'
+        verbose_name = 'Déclaration sociale'
+        verbose_name_plural = 'Déclarations sociales'
+        ordering = ['-annee', '-mois']
+    
+    def __str__(self):
+        return f"{self.get_type_declaration_display()} - {self.reference}"
+
+
+class LigneDeclaration(models.Model):
+    """Lignes détaillées d'une déclaration sociale"""
+    declaration = models.ForeignKey(DeclarationSociale, on_delete=models.CASCADE, related_name='lignes')
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE)
+    bulletin = models.ForeignKey(BulletinPaie, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    salaire_brut = models.DecimalField(max_digits=15, decimal_places=2)
+    base_cotisation = models.DecimalField(max_digits=15, decimal_places=2)
+    cotisation_employe = models.DecimalField(max_digits=15, decimal_places=2)
+    cotisation_employeur = models.DecimalField(max_digits=15, decimal_places=2)
+    
+    class Meta:
+        db_table = 'lignes_declarations'
+        verbose_name = 'Ligne de déclaration'
+        verbose_name_plural = 'Lignes de déclaration'
+    
+    def __str__(self):
+        return f"{self.declaration.reference} - {self.employe.matricule}"

@@ -1,6 +1,7 @@
 from django.db import models
 from decimal import Decimal
 from employes.models import Employe
+from core.models import Entreprise
 
 
 class CatalogueFormation(models.Model):
@@ -22,6 +23,7 @@ class CatalogueFormation(models.Model):
         ('reglementaire', 'Réglementaire'),
     )
     
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='catalogue_formations', null=True, blank=True)
     code_formation = models.CharField(max_length=20, unique=True)
     intitule = models.CharField(max_length=200)
     type_formation = models.CharField(max_length=20, choices=TYPES)
@@ -56,6 +58,7 @@ class SessionFormation(models.Model):
     )
     
     formation = models.ForeignKey(CatalogueFormation, on_delete=models.CASCADE, related_name='sessions')
+    plan_formation = models.ForeignKey('PlanFormation', on_delete=models.SET_NULL, null=True, blank=True, related_name='sessions')
     reference_session = models.CharField(max_length=50, unique=True)
     date_debut = models.DateField()
     date_fin = models.DateField()
@@ -152,7 +155,8 @@ class PlanFormation(models.Model):
         ('cloture', 'Clôturé'),
     )
     
-    annee = models.IntegerField(unique=True)
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='plans_formation', null=True, blank=True)
+    annee = models.IntegerField()
     budget_total = models.DecimalField(max_digits=15, decimal_places=2)
     budget_consomme = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     statut = models.CharField(max_length=20, choices=STATUTS, default='brouillon')
@@ -164,6 +168,7 @@ class PlanFormation(models.Model):
         db_table = 'plans_formation'
         verbose_name = 'Plan de Formation'
         verbose_name_plural = 'Plans de Formation'
+        unique_together = ['entreprise', 'annee']
         ordering = ['-annee']
     
     def __str__(self):

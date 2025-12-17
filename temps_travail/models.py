@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 from employes.models import Employe
+from core.models import Entreprise
 
 
 class JourFerie(models.Model):
@@ -11,6 +12,7 @@ class JourFerie(models.Model):
         ('local', 'Local'),
     )
     
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='jours_feries', null=True, blank=True)
     libelle = models.CharField(max_length=100)
     date_jour_ferie = models.DateField()
     annee = models.IntegerField()
@@ -30,13 +32,25 @@ class JourFerie(models.Model):
 
 
 class Conge(models.Model):
-    """Congés des employés"""
+    """Congés des employés - Conformes au Code du Travail guinéen"""
     TYPES = (
-        ('annuel', 'Congé annuel'),
+        # Congés légaux
+        ('annuel', 'Congé annuel (2,5j/mois)'),
+        ('anciennete', 'Congé d\'ancienneté'),
         ('maladie', 'Congé maladie'),
-        ('maternite', 'Congé maternité'),
-        ('paternite', 'Congé paternité'),
+        ('maternite', 'Congé maternité (14 semaines)'),
+        ('paternite', 'Congé paternité (3 jours)'),
+        # Congés exceptionnels (événements familiaux)
+        ('mariage', 'Congé mariage (4 jours)'),
+        ('naissance', 'Congé naissance (3 jours)'),
+        ('deces_conjoint', 'Décès conjoint/enfant (5 jours)'),
+        ('deces_parent', 'Décès parent/beau-parent (3 jours)'),
+        ('deces_autre', 'Décès autre famille (1 jour)'),
+        # Autres congés
+        ('formation', 'Congé formation'),
+        ('examen', 'Congé pour examen'),
         ('sans_solde', 'Congé sans solde'),
+        ('recuperation', 'Récupération'),
     )
     
     STATUTS = (
@@ -207,6 +221,7 @@ class HoraireTravail(models.Model):
         ('flexible', 'Flexible'),
     )
     
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='horaires_travail', null=True, blank=True)
     code_horaire = models.CharField(max_length=20, unique=True)
     libelle_horaire = models.CharField(max_length=100)
     heure_debut = models.TimeField()
@@ -243,3 +258,95 @@ class AffectationHoraire(models.Model):
     
     def __str__(self):
         return f"{self.employe.nom} {self.employe.prenoms} - {self.horaire.libelle_horaire}"
+
+
+# ============= RÉGLEMENTATION TEMPS DE TRAVAIL (Code du Travail guinéen) =============
+
+class ReglementationTemps(models.Model):
+    """Paramètres de réglementation du temps de travail"""
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='reglementations_temps', null=True, blank=True)
+    annee = models.IntegerField()
+    
+    # Durée légale du travail
+    duree_hebdo_legale = models.DecimalField(max_digits=4, decimal_places=2, default=40.00, help_text="Durée hebdomadaire légale (40h en Guinée)")
+    duree_journaliere_max = models.DecimalField(max_digits=4, decimal_places=2, default=10.00, help_text="Durée journalière maximale")
+    
+    # Heures supplémentaires
+    taux_hs_jour_25 = models.DecimalField(max_digits=5, decimal_places=2, default=125.00, help_text="Taux HS jour (1-8h): 125%")
+    taux_hs_jour_50 = models.DecimalField(max_digits=5, decimal_places=2, default=150.00, help_text="Taux HS jour (>8h): 150%")
+    taux_hs_nuit = models.DecimalField(max_digits=5, decimal_places=2, default=150.00, help_text="Taux HS nuit: 150%")
+    taux_hs_dimanche = models.DecimalField(max_digits=5, decimal_places=2, default=175.00, help_text="Taux HS dimanche/férié: 175%")
+    taux_hs_nuit_dimanche = models.DecimalField(max_digits=5, decimal_places=2, default=200.00, help_text="Taux HS nuit dimanche: 200%")
+    
+    # Travail de nuit
+    heure_debut_nuit = models.TimeField(default='21:00', help_text="Début période de nuit")
+    heure_fin_nuit = models.TimeField(default='05:00', help_text="Fin période de nuit")
+    majoration_nuit = models.DecimalField(max_digits=5, decimal_places=2, default=25.00, help_text="Majoration travail de nuit: 25%")
+    
+    # Repos
+    repos_hebdo_jour = models.CharField(max_length=20, default='dimanche', help_text="Jour de repos hebdomadaire")
+    duree_repos_hebdo_min = models.IntegerField(default=24, help_text="Durée minimale repos hebdo (heures)")
+    
+    # Congés
+    jours_conges_annuels = models.DecimalField(max_digits=4, decimal_places=2, default=26.00, help_text="Jours de congés annuels (2,5j/mois)")
+    jours_conges_anciennete_5ans = models.IntegerField(default=1, help_text="Jours supplémentaires après 5 ans")
+    jours_conges_anciennete_10ans = models.IntegerField(default=2, help_text="Jours supplémentaires après 10 ans")
+    jours_conges_anciennete_15ans = models.IntegerField(default=3, help_text="Jours supplémentaires après 15 ans")
+    jours_conges_anciennete_20ans = models.IntegerField(default=4, help_text="Jours supplémentaires après 20 ans")
+    
+    actif = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'reglementation_temps'
+        verbose_name = 'Réglementation temps de travail'
+        verbose_name_plural = 'Réglementations temps de travail'
+        unique_together = ['entreprise', 'annee']
+    
+    def __str__(self):
+        return f"Réglementation {self.annee}"
+
+
+class DroitConge(models.Model):
+    """Droits aux congés par employé et par année"""
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='droits_conges')
+    annee = models.IntegerField()
+    periode_reference_debut = models.DateField()
+    periode_reference_fin = models.DateField()
+    
+    # Jours acquis
+    jours_acquis_base = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Jours acquis (base 2,5j/mois)")
+    jours_acquis_anciennete = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Jours supplémentaires ancienneté")
+    jours_reportes = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Jours reportés année précédente")
+    jours_exceptionnels = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Jours exceptionnels accordés")
+    
+    # Jours utilisés
+    jours_pris = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    jours_planifies = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    
+    # Solde
+    solde_disponible = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    
+    # Indemnité compensatrice (en cas de départ)
+    indemnite_conge = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    
+    date_mise_a_jour = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'droits_conges'
+        verbose_name = 'Droit aux congés'
+        verbose_name_plural = 'Droits aux congés'
+        unique_together = ['employe', 'annee']
+    
+    def __str__(self):
+        return f"{self.employe.nom_complet} - {self.annee}: {self.solde_disponible} jours"
+    
+    def calculer_solde(self):
+        """Calculer le solde disponible"""
+        total_acquis = (
+            self.jours_acquis_base + 
+            self.jours_acquis_anciennete + 
+            self.jours_reportes + 
+            self.jours_exceptionnels
+        )
+        self.solde_disponible = total_acquis - self.jours_pris - self.jours_planifies
+        return self.solde_disponible

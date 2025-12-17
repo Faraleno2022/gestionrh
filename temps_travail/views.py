@@ -24,7 +24,7 @@ def temps_travail_home(request):
     
     # Statistiques du jour
     stats = {
-        'total_employes': Employe.objects.filter(statut_employe='Actif').count(),
+        'total_employes': Employe.objects.filter(statut_employe='actif').count(),
         'presents_aujourdhui': Pointage.objects.filter(
             date_pointage=today,
             statut_pointage='present'
@@ -93,7 +93,7 @@ def liste_pointages(request):
         heures_sup_total=Sum('heures_supplementaires')
     )
     
-    employes = Employe.objects.filter(statut_employe='Actif')
+    employes = Employe.objects.filter(statut_employe='actif')
     
     return render(request, 'temps_travail/pointages/liste.html', {
         'pointages': pointages,
@@ -158,7 +158,7 @@ def creer_pointage(request):
         except Exception as e:
             messages.error(request, f'Erreur lors de la création : {str(e)}')
     
-    employes = Employe.objects.filter(statut_employe='Actif')
+    employes = Employe.objects.filter(statut_employe='actif')
     return render(request, 'temps_travail/pointages/creer.html', {
         'employes': employes,
         'date_defaut': date.today().isoformat()
@@ -267,7 +267,7 @@ def liste_conges(request):
     if annee:
         conges = conges.filter(date_debut__year=annee)
     
-    employes = Employe.objects.filter(statut_employe='Actif')
+    employes = Employe.objects.filter(statut_employe='actif')
     annees = range(date.today().year - 2, date.today().year + 2)
     
     return render(request, 'temps_travail/conges/liste.html', {
@@ -328,7 +328,7 @@ def creer_conge(request):
         except Exception as e:
             messages.error(request, f'Erreur lors de la création : {str(e)}')
     
-    employes = Employe.objects.filter(statut_employe='Actif')
+    employes = Employe.objects.filter(statut_employe='actif')
     return render(request, 'temps_travail/conges/creer.html', {
         'employes': employes
     })
@@ -399,7 +399,7 @@ def liste_absences(request):
             date_absence__year=annee
         )
     
-    employes = Employe.objects.filter(statut_employe='Actif')
+    employes = Employe.objects.filter(statut_employe='actif')
     
     return render(request, 'temps_travail/absences/liste.html', {
         'absences': absences,
@@ -449,7 +449,7 @@ def creer_absence(request):
         except Exception as e:
             messages.error(request, f'Erreur lors de l\'enregistrement : {str(e)}')
     
-    employes = Employe.objects.filter(statut_employe='Actif')
+    employes = Employe.objects.filter(statut_employe='actif')
     return render(request, 'temps_travail/absences/creer.html', {
         'employes': employes
     })
@@ -526,7 +526,7 @@ def rapport_presence(request):
     
     # Statistiques par employé
     stats_employes = []
-    employes = Employe.objects.filter(statut_employe='Actif')
+    employes = Employe.objects.filter(statut_employe='actif')
     
     if employe_id:
         employes = employes.filter(pk=employe_id)
@@ -572,7 +572,7 @@ def rapport_presence(request):
         'annee': annee,
         'mois_liste': mois_liste,
         'annees': annees,
-        'employes': Employe.objects.filter(statut_employe='Actif')
+        'employes': Employe.objects.filter(statut_employe='actif')
     })
 
 

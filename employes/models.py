@@ -1,7 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
-from core.models import Etablissement, Service, Poste
+from core.models import Etablissement, Service, Poste, Entreprise
 from django.utils import timezone
 
 
@@ -51,6 +51,9 @@ class Employe(models.Model):
         ('especes', 'Espèces'),
         ('mobile_money', 'Mobile Money'),
     )
+    
+    # Entreprise (multi-tenant)
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='employes_entreprise', null=True, blank=True)
     
     # Identification
     matricule = models.CharField(max_length=20, unique=True)
@@ -200,6 +203,7 @@ class FormationEmploye(models.Model):
     )
     
     employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='formations')
+    inscription_formation = models.OneToOneField('formation.InscriptionFormation', on_delete=models.SET_NULL, null=True, blank=True, related_name='formation_employe', help_text="Lien vers l'inscription dans le module formation")
     type_formation = models.CharField(max_length=50, choices=TYPES_FORMATION)
     intitule_formation = models.CharField(max_length=200)
     organisme_formation = models.CharField(max_length=200, blank=True, null=True)
@@ -382,3 +386,301 @@ class DocumentEmploye(models.Model):
         if self.fichier and not self.taille_fichier:
             self.taille_fichier = self.fichier.size
         super().save(*args, **kwargs)
+
+
+# ============= CONTRATS & RELATIONS DE TRAVAIL =============
+
+class AvenantContrat(models.Model):
+    """Avenants aux contrats de travail"""
+    MOTIFS = (
+        ('promotion', 'Promotion'),
+        ('mutation', 'Mutation'),
+        ('augmentation', 'Augmentation de salaire'),
+        ('changement_poste', 'Changement de poste'),
+        ('changement_horaire', 'Changement d\'horaire'),
+        ('renouvellement', 'Renouvellement CDD'),
+        ('autre', 'Autre'),
+    )
+    
+    contrat = models.ForeignKey(ContratEmploye, on_delete=models.CASCADE, related_name='avenants')
+    numero_avenant = models.CharField(max_length=50, unique=True)
+    date_avenant = models.DateField()
+    date_effet = models.DateField()
+    motif = models.CharField(max_length=30, choices=MOTIFS)
+    description = models.TextField()
+    
+    # Anciennes valeurs
+    ancien_poste = models.ForeignKey('core.Poste', on_delete=models.SET_NULL, null=True, blank=True, related_name='avenants_ancien')
+    ancien_service = models.ForeignKey('core.Service', on_delete=models.SET_NULL, null=True, blank=True, related_name='avenants_ancien')
+    ancien_salaire = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    
+    # Nouvelles valeurs
+    nouveau_poste = models.ForeignKey('core.Poste', on_delete=models.SET_NULL, null=True, blank=True, related_name='avenants_nouveau')
+    nouveau_service = models.ForeignKey('core.Service', on_delete=models.SET_NULL, null=True, blank=True, related_name='avenants_nouveau')
+    nouveau_salaire = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    
+    fichier_avenant = models.FileField(upload_to='avenants/', blank=True, null=True)
+    date_signature = models.DateField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'avenants_contrats'
+        verbose_name = 'Avenant au contrat'
+        verbose_name_plural = 'Avenants aux contrats'
+        ordering = ['-date_avenant']
+    
+    def __str__(self):
+        return f"{self.numero_avenant} - {self.contrat.employe.nom_complet}"
+
+
+class RuptureContrat(models.Model):
+    """Rupture de contrat de travail"""
+    TYPES_RUPTURE = (
+        ('demission', 'Démission'),
+        ('licenciement_faute', 'Licenciement pour faute'),
+        ('licenciement_economique', 'Licenciement économique'),
+        ('licenciement_inaptitude', 'Licenciement pour inaptitude'),
+        ('rupture_conventionnelle', 'Rupture conventionnelle'),
+        ('fin_cdd', 'Fin de CDD'),
+        ('fin_essai', 'Fin de période d\'essai'),
+        ('retraite', 'Départ à la retraite'),
+        ('deces', 'Décès'),
+        ('autre', 'Autre'),
+    )
+    
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='ruptures')
+    contrat = models.ForeignKey(ContratEmploye, on_delete=models.CASCADE, related_name='rupture')
+    type_rupture = models.CharField(max_length=30, choices=TYPES_RUPTURE)
+    motif_detaille = models.TextField()
+    
+    # Dates
+    date_notification = models.DateField()
+    date_effet = models.DateField(help_text="Date effective de fin de contrat")
+    duree_preavis_jours = models.IntegerField(default=0)
+    date_fin_preavis = models.DateField(null=True, blank=True)
+    preavis_effectue = models.BooleanField(default=True)
+    
+    # Indemnités
+    indemnite_licenciement = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    indemnite_preavis = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    indemnite_conges_payes = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    autres_indemnites = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_indemnites = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    
+    # Documents
+    lettre_notification = models.FileField(upload_to='ruptures/', blank=True, null=True)
+    certificat_travail = models.FileField(upload_to='ruptures/certificats/', blank=True, null=True)
+    solde_tout_compte = models.FileField(upload_to='ruptures/stc/', blank=True, null=True)
+    attestation_pole_emploi = models.FileField(upload_to='ruptures/', blank=True, null=True)
+    
+    date_generation_certificat = models.DateField(null=True, blank=True)
+    observations = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        db_table = 'ruptures_contrats'
+        verbose_name = 'Rupture de contrat'
+        verbose_name_plural = 'Ruptures de contrats'
+        ordering = ['-date_effet']
+    
+    def __str__(self):
+        return f"{self.employe.nom_complet} - {self.get_type_rupture_display()}"
+    
+    def save(self, *args, **kwargs):
+        self.total_indemnites = (
+            self.indemnite_licenciement + 
+            self.indemnite_preavis + 
+            self.indemnite_conges_payes + 
+            self.autres_indemnites
+        )
+        super().save(*args, **kwargs)
+
+
+# ============= DISCIPLINE & SANCTIONS =============
+
+class SanctionDisciplinaire(models.Model):
+    """Sanctions disciplinaires"""
+    TYPES_SANCTION = (
+        ('avertissement_verbal', 'Avertissement verbal'),
+        ('avertissement_ecrit', 'Avertissement écrit'),
+        ('blame', 'Blâme'),
+        ('mise_a_pied', 'Mise à pied disciplinaire'),
+        ('retrogradation', 'Rétrogradation'),
+        ('mutation_disciplinaire', 'Mutation disciplinaire'),
+        ('licenciement', 'Licenciement'),
+    )
+    STATUTS = (
+        ('en_cours', 'En cours'),
+        ('notifiee', 'Notifiée'),
+        ('contestee', 'Contestée'),
+        ('annulee', 'Annulée'),
+        ('executee', 'Exécutée'),
+    )
+    
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='sanctions')
+    type_sanction = models.CharField(max_length=30, choices=TYPES_SANCTION)
+    motif = models.TextField(help_text="Description détaillée des faits reprochés")
+    
+    # Procédure
+    date_faits = models.DateField()
+    date_convocation = models.DateField(null=True, blank=True)
+    date_entretien = models.DateField(null=True, blank=True)
+    proces_verbal_entretien = models.FileField(upload_to='sanctions/pv/', blank=True, null=True)
+    date_notification = models.DateField(null=True, blank=True)
+    lettre_notification = models.FileField(upload_to='sanctions/', blank=True, null=True)
+    
+    # Application
+    date_debut_application = models.DateField(null=True, blank=True)
+    date_fin_application = models.DateField(null=True, blank=True)
+    duree_jours = models.IntegerField(null=True, blank=True, help_text="Durée en jours pour mise à pied")
+    
+    # Recours
+    recours_depose = models.BooleanField(default=False)
+    date_recours = models.DateField(null=True, blank=True)
+    decision_recours = models.TextField(blank=True, null=True)
+    
+    statut = models.CharField(max_length=20, choices=STATUTS, default='en_cours')
+    observations = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        db_table = 'sanctions_disciplinaires'
+        verbose_name = 'Sanction disciplinaire'
+        verbose_name_plural = 'Sanctions disciplinaires'
+        ordering = ['-date_notification']
+    
+    def __str__(self):
+        return f"{self.employe.nom_complet} - {self.get_type_sanction_display()}"
+
+
+# ============= SANTÉ & SÉCURITÉ =============
+
+class VisiteMedicale(models.Model):
+    """Visites médicales"""
+    TYPES_VISITE = (
+        ('embauche', 'Visite d\'embauche'),
+        ('periodique', 'Visite périodique'),
+        ('reprise', 'Visite de reprise'),
+        ('pre_reprise', 'Visite de pré-reprise'),
+        ('demande', 'Visite à la demande'),
+    )
+    APTITUDES = (
+        ('apte', 'Apte'),
+        ('apte_reserves', 'Apte avec réserves'),
+        ('inapte_temporaire', 'Inapte temporaire'),
+        ('inapte_definitif', 'Inapte définitif'),
+        ('en_attente', 'En attente de résultat'),
+    )
+    
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='visites_medicales')
+    type_visite = models.CharField(max_length=20, choices=TYPES_VISITE)
+    date_visite = models.DateField()
+    medecin = models.CharField(max_length=100, blank=True, null=True)
+    centre_medical = models.CharField(max_length=200, blank=True, null=True)
+    
+    aptitude = models.CharField(max_length=20, choices=APTITUDES, default='en_attente')
+    reserves = models.TextField(blank=True, null=True, help_text="Détail des réserves si applicable")
+    recommandations = models.TextField(blank=True, null=True)
+    
+    date_prochaine_visite = models.DateField(null=True, blank=True)
+    fichier_certificat = models.FileField(upload_to='visites_medicales/', blank=True, null=True)
+    
+    class Meta:
+        db_table = 'visites_medicales'
+        verbose_name = 'Visite médicale'
+        verbose_name_plural = 'Visites médicales'
+        ordering = ['-date_visite']
+    
+    def __str__(self):
+        return f"{self.employe.nom_complet} - {self.get_type_visite_display()} ({self.date_visite})"
+
+
+class AccidentTravail(models.Model):
+    """Accidents du travail"""
+    GRAVITES = (
+        ('benin', 'Bénin'),
+        ('leger', 'Léger'),
+        ('grave', 'Grave'),
+        ('tres_grave', 'Très grave'),
+        ('mortel', 'Mortel'),
+    )
+    STATUTS = (
+        ('declare', 'Déclaré'),
+        ('en_instruction', 'En instruction CNSS'),
+        ('reconnu', 'Reconnu'),
+        ('refuse', 'Refusé'),
+        ('cloture', 'Clôturé'),
+    )
+    
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='accidents_travail')
+    date_accident = models.DateField()
+    heure_accident = models.TimeField(null=True, blank=True)
+    lieu_accident = models.CharField(max_length=200)
+    circonstances = models.TextField(help_text="Description détaillée des circonstances")
+    
+    # Lésions
+    nature_lesions = models.TextField()
+    siege_lesions = models.CharField(max_length=200, help_text="Partie du corps touchée")
+    gravite = models.CharField(max_length=20, choices=GRAVITES)
+    
+    # Témoins
+    temoins = models.TextField(blank=True, null=True, help_text="Noms et coordonnées des témoins")
+    
+    # Déclaration CNSS
+    date_declaration_cnss = models.DateField(null=True, blank=True)
+    numero_declaration_cnss = models.CharField(max_length=50, blank=True, null=True)
+    declaration_cnss = models.FileField(upload_to='accidents/cnss/', blank=True, null=True)
+    
+    # Arrêt de travail
+    arret_travail = models.ForeignKey('temps_travail.ArretTravail', on_delete=models.SET_NULL, null=True, blank=True, related_name='accident_origine')
+    jours_arret = models.IntegerField(default=0)
+    
+    # Incapacité
+    taux_ipp = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Taux d'Incapacité Permanente Partielle")
+    
+    statut = models.CharField(max_length=20, choices=STATUTS, default='declare')
+    observations = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        db_table = 'accidents_travail'
+        verbose_name = 'Accident du travail'
+        verbose_name_plural = 'Accidents du travail'
+        ordering = ['-date_accident']
+    
+    def __str__(self):
+        return f"{self.employe.nom_complet} - {self.date_accident} ({self.get_gravite_display()})"
+
+
+class EquipementProtection(models.Model):
+    """Équipements de protection individuelle (EPI)"""
+    TYPES_EPI = (
+        ('casque', 'Casque de sécurité'),
+        ('lunettes', 'Lunettes de protection'),
+        ('gants', 'Gants'),
+        ('chaussures', 'Chaussures de sécurité'),
+        ('gilet', 'Gilet de sécurité'),
+        ('masque', 'Masque de protection'),
+        ('bouchons_oreilles', 'Bouchons d\'oreilles'),
+        ('harnais', 'Harnais de sécurité'),
+        ('combinaison', 'Combinaison de travail'),
+        ('autre', 'Autre'),
+    )
+    
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='equipements_protection')
+    type_epi = models.CharField(max_length=30, choices=TYPES_EPI)
+    designation = models.CharField(max_length=100)
+    marque = models.CharField(max_length=50, blank=True, null=True)
+    taille = models.CharField(max_length=20, blank=True, null=True)
+    
+    date_remise = models.DateField()
+    date_peremption = models.DateField(null=True, blank=True)
+    signature_employe = models.BooleanField(default=False)
+    fiche_remise = models.FileField(upload_to='epi/', blank=True, null=True)
+    
+    observations = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        db_table = 'equipements_protection'
+        verbose_name = 'Équipement de protection'
+        verbose_name_plural = 'Équipements de protection'
+        ordering = ['-date_remise']
+    
+    def __str__(self):
+        return f"{self.employe.nom_complet} - {self.get_type_epi_display()}"

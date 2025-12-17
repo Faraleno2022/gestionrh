@@ -55,12 +55,12 @@ class Command(BaseCommand):
         
         # Récupérer les employés
         if matricule:
-            employes = Employe.objects.filter(matricule=matricule, statut_employe='Actif')
+            employes = Employe.objects.filter(matricule=matricule, statut_employe='actif')
             if not employes.exists():
                 self.stdout.write(self.style.ERROR(f'Employé {matricule} non trouvé ou inactif'))
                 return
         else:
-            employes = Employe.objects.filter(statut_employe='Actif')
+            employes = Employe.objects.filter(statut_employe='actif')
         
         total_employes = employes.count()
         self.stdout.write(f'📊 {total_employes} employé(s) à traiter\n')

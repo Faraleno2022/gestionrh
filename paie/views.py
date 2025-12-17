@@ -29,7 +29,7 @@ def paie_home(request):
     
     stats = {
         'periode_actuelle': periode_actuelle,
-        'total_employes': Employe.objects.filter(statut_employe='Actif').count(),
+        'total_employes': Employe.objects.filter(statut_employe='actif').count(),
         'bulletins_mois': 0,
         'montant_total_brut': 0,
         'montant_total_net': 0,
@@ -139,7 +139,7 @@ def calculer_periode(request, pk):
                 BulletinPaie.objects.filter(periode=periode).delete()
                 
                 # Récupérer tous les employés actifs
-                employes = Employe.objects.filter(statut_employe='Actif')
+                employes = Employe.objects.filter(statut_employe='actif')
                 
                 bulletins_crees = 0
                 erreurs = []
@@ -174,7 +174,7 @@ def calculer_periode(request, pk):
         return redirect('paie:detail_periode', pk=pk)
     
     # GET: Afficher la page de confirmation
-    employes_count = Employe.objects.filter(statut_employe='Actif').count()
+    employes_count = Employe.objects.filter(statut_employe='actif').count()
     return render(request, 'paie/periodes/calculer.html', {
         'periode': periode,
         'employes_count': employes_count
@@ -255,7 +255,7 @@ def liste_bulletins(request):
         bulletins = bulletins.filter(statut_bulletin=statut)
     
     periodes = PeriodePaie.objects.all()
-    employes = Employe.objects.filter(statut_employe='Actif')
+    employes = Employe.objects.filter(statut_employe='actif')
     
     return render(request, 'paie/bulletins/liste.html', {
         'bulletins': bulletins,
@@ -435,7 +435,7 @@ def liste_elements_salaire(request):
         elements = elements.filter(actif=(actif == 'true'))
     
     # Liste des employés pour le filtre
-    employes = Employe.objects.filter(statut_employe='Actif').order_by('nom', 'prenoms')
+    employes = Employe.objects.filter(statut_employe='actif').order_by('nom', 'prenoms')
     
     return render(request, 'paie/elements_salaire/liste.html', {
         'elements': elements,

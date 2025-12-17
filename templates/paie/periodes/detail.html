@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block title %}Période {{ periode }}{% endblock %}
 
@@ -46,7 +47,7 @@
             <div class="card shadow-sm">
                 <div class="card-body text-center">
                     <h6 class="text-muted">Masse Salariale Brute</h6>
-                    <h3>{{ stats.total_brut|floatformat:0|default:"0" }} GNF</h3>
+                    <h3>{{ stats.total_brut|floatformat:0|intcomma }} GNF</h3>
                 </div>
             </div>
         </div>
@@ -54,7 +55,7 @@
             <div class="card shadow-sm">
                 <div class="card-body text-center">
                     <h6 class="text-muted">Net à Payer</h6>
-                    <h3 class="text-success">{{ stats.total_net|floatformat:0|default:"0" }} GNF</h3>
+                    <h3 class="text-success">{{ stats.total_net|floatformat:0|intcomma }} GNF</h3>
                 </div>
             </div>
         </div>
@@ -96,7 +97,7 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     <h6 class="text-muted">CNSS Employé</h6>
-                    <h4>{{ stats.total_cnss_employe|floatformat:0|default:"0" }} GNF</h4>
+                    <h4>{{ stats.total_cnss_employe|floatformat:0|intcomma }} GNF</h4>
                 </div>
             </div>
         </div>
@@ -104,7 +105,7 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     <h6 class="text-muted">CNSS Employeur</h6>
-                    <h4>{{ stats.total_cnss_employeur|floatformat:0|default:"0" }} GNF</h4>
+                    <h4>{{ stats.total_cnss_employeur|floatformat:0|intcomma }} GNF</h4>
                 </div>
             </div>
         </div>
@@ -112,7 +113,7 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     <h6 class="text-muted">IRG Total</h6>
-                    <h4>{{ stats.total_irg|floatformat:0|default:"0" }} GNF</h4>
+                    <h4>{{ stats.total_irg|floatformat:0|intcomma }} GNF</h4>
                 </div>
             </div>
         </div>
@@ -145,10 +146,10 @@
                                 <tr>
                                     <td>{{ bulletin.employe.matricule }}</td>
                                     <td>{{ bulletin.employe.nom }} {{ bulletin.employe.prenoms }}</td>
-                                    <td>{{ bulletin.salaire_brut|floatformat:0 }} GNF</td>
-                                    <td>{{ bulletin.cnss_employe|floatformat:0 }} GNF</td>
-                                    <td>{{ bulletin.irg|floatformat:0 }} GNF</td>
-                                    <td class="text-success"><strong>{{ bulletin.net_a_payer|floatformat:0 }} GNF</strong></td>
+                                    <td>{{ bulletin.salaire_brut|floatformat:0|intcomma }} GNF</td>
+                                    <td>{{ bulletin.cnss_employe|floatformat:0|intcomma }} GNF</td>
+                                    <td>{{ bulletin.irg|floatformat:0|intcomma }} GNF</td>
+                                    <td class="text-success"><strong>{{ bulletin.net_a_payer|floatformat:0|intcomma }} GNF</strong></td>
                                     <td>
                                         {% if bulletin.statut_bulletin == 'brouillon' %}
                                             <span class="badge bg-secondary">Brouillon</span>
@@ -187,3 +188,4 @@
     </div>
 </div>
 {% endblock %}
+

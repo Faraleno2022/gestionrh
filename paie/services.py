@@ -3,8 +3,9 @@ Services de calcul de paie
 Moteur de calcul automatique conforme à la législation guinéenne
 """
 from decimal import Decimal, ROUND_HALF_UP
-from datetime import date
+from datetime import date, timedelta
 from django.db import transaction
+from django.db import models
 from django.utils import timezone
 
 from .models import (
@@ -12,6 +13,8 @@ from .models import (
     RubriquePaie, Constante, TrancheIRG, PeriodePaie, HistoriquePaie
 )
 from employes.models import Employe
+from temps_travail.models import Pointage, Absence, Conge
+import calendar
 
 
 class MoteurCalculPaie:
@@ -31,6 +34,14 @@ class MoteurCalculPaie:
             'net': Decimal('0'),
             'total_gains': Decimal('0'),
             'total_retenues': Decimal('0'),
+            # Temps de travail
+            'jours_travailles': Decimal('0'),
+            'jours_ouvrables': Decimal('0'),
+            'heures_travaillees': Decimal('0'),
+            'heures_supplementaires': Decimal('0'),
+            'jours_absence': Decimal('0'),
+            'jours_conge': Decimal('0'),
+            'retenue_absence': Decimal('0'),
         }
         self.constantes = self._charger_constantes()
         self.tranches_irg = self._charger_tranches_irg()
@@ -77,28 +88,150 @@ class MoteurCalculPaie:
     def calculer_bulletin(self):
         """Calculer le bulletin de paie complet"""
         
+        # 0. Calculer le temps de travail (pointages, absences, congés)
+        self._calculer_temps_travail()
+        
         # 1. Calculer les gains
         self._calculer_gains()
         
-        # 2. Calculer le brut
-        self.montants['brut'] = self.montants['total_gains']
+        # 2. Appliquer les retenues pour absences non payées
+        self._appliquer_retenues_absences()
         
-        # 3. Calculer les cotisations sociales
+        # 3. Calculer le brut
+        self.montants['brut'] = self.montants['total_gains'] - self.montants['retenue_absence']
+        
+        # 4. Calculer les cotisations sociales
         self._calculer_cotisations_sociales()
         
-        # 4. Calculer l'IRG/IRSA
+        # 5. Calculer l'IRG/IRSA
         self._calculer_irg()
         
-        # 5. Calculer les autres retenues
+        # 6. Calculer les autres retenues
         self._calculer_autres_retenues()
         
-        # 6. Calculer le net
+        # 7. Calculer le net
         self.montants['net'] = (
             self.montants['brut'] - 
             self.montants['total_retenues']
         )
         
         return self.montants
+    
+    def _calculer_temps_travail(self):
+        """Calculer les données de temps de travail pour la période"""
+        # Dates de la période
+        premier_jour = date(self.periode.annee, self.periode.mois, 1)
+        dernier_jour = date(
+            self.periode.annee, 
+            self.periode.mois, 
+            calendar.monthrange(self.periode.annee, self.periode.mois)[1]
+        )
+        
+        # Calculer les jours ouvrables du mois (lundi-vendredi)
+        jours_ouvrables = 0
+        current = premier_jour
+        while current <= dernier_jour:
+            if current.weekday() < 5:  # Lundi=0, Vendredi=4
+                jours_ouvrables += 1
+            current += timedelta(days=1)
+        
+        self.montants['jours_ouvrables'] = Decimal(str(jours_ouvrables))
+        
+        # Récupérer les pointages du mois
+        pointages = Pointage.objects.filter(
+            employe=self.employe,
+            date_pointage__gte=premier_jour,
+            date_pointage__lte=dernier_jour
+        )
+        
+        # Compter les jours travaillés
+        jours_presents = pointages.filter(statut_pointage='present').count()
+        jours_retard = pointages.filter(statut_pointage='retard').count()
+        self.montants['jours_travailles'] = Decimal(str(jours_presents + jours_retard))
+        
+        # Heures travaillées et supplémentaires
+        from django.db.models import Sum
+        heures = pointages.aggregate(
+            heures_travaillees=Sum('heures_travaillees'),
+            heures_sup=Sum('heures_supplementaires')
+        )
+        self.montants['heures_travaillees'] = heures['heures_travaillees'] or Decimal('0')
+        self.montants['heures_supplementaires'] = heures['heures_sup'] or Decimal('0')
+        
+        # Récupérer les absences du mois
+        absences = Absence.objects.filter(
+            employe=self.employe,
+            date_absence__gte=premier_jour,
+            date_absence__lte=dernier_jour
+        )
+        
+        jours_absence_non_paye = Decimal('0')
+        jours_absence_total = Decimal('0')
+        
+        for absence in absences:
+            jours_absence_total += absence.duree_jours
+            if absence.impact_paie == 'non_paye':
+                jours_absence_non_paye += absence.duree_jours
+            elif absence.impact_paie == 'partiellement_paye':
+                # Calculer la partie non payée
+                taux_non_paye = (Decimal('100') - absence.taux_maintien_salaire) / Decimal('100')
+                jours_absence_non_paye += absence.duree_jours * taux_non_paye
+        
+        self.montants['jours_absence'] = jours_absence_total
+        self.montants['jours_absence_non_paye'] = jours_absence_non_paye
+        
+        # Récupérer les congés approuvés du mois
+        conges = Conge.objects.filter(
+            employe=self.employe,
+            statut_demande='approuve',
+            date_debut__lte=dernier_jour,
+            date_fin__gte=premier_jour
+        )
+        
+        jours_conge = Decimal('0')
+        for conge in conges:
+            # Calculer les jours de congé dans la période
+            debut_conge = max(conge.date_debut, premier_jour)
+            fin_conge = min(conge.date_fin, dernier_jour)
+            jours_dans_periode = (fin_conge - debut_conge).days + 1
+            jours_conge += Decimal(str(jours_dans_periode))
+        
+        self.montants['jours_conge'] = jours_conge
+    
+    def _appliquer_retenues_absences(self):
+        """Appliquer les retenues pour absences non payées"""
+        jours_absence_non_paye = self.montants.get('jours_absence_non_paye', Decimal('0'))
+        
+        if jours_absence_non_paye <= 0:
+            return
+        
+        # Calculer le salaire journalier
+        jours_ouvrables = self.montants['jours_ouvrables']
+        if jours_ouvrables <= 0:
+            jours_ouvrables = Decimal('22')  # Valeur par défaut
+        
+        salaire_journalier = self.montants['total_gains'] / jours_ouvrables
+        
+        # Calculer la retenue
+        retenue = self._arrondir(salaire_journalier * jours_absence_non_paye)
+        self.montants['retenue_absence'] = retenue
+        
+        # Ajouter la ligne de retenue
+        rubrique_absence = RubriquePaie.objects.filter(
+            code_rubrique__icontains='ABSENCE',
+            type_rubrique='retenue',
+            actif=True
+        ).first()
+        
+        if rubrique_absence:
+            self.lignes.append({
+                'rubrique': rubrique_absence,
+                'base': self.montants['total_gains'],
+                'taux': Decimal('0'),
+                'nombre': jours_absence_non_paye,
+                'montant': retenue,
+                'ordre': rubrique_absence.ordre_affichage
+            })
     
     def _calculer_gains(self):
         """Calculer tous les éléments de gain"""
@@ -132,6 +265,9 @@ class MoteurCalculPaie:
                     self.montants['cnss_base'] += montant
                 if element.rubrique.soumis_irg:
                     self.montants['imposable'] += montant
+        
+        # Ajouter les heures supplémentaires si présentes
+        self._calculer_heures_supplementaires()
     
     def _calculer_element(self, element):
         """Calculer le montant d'un élément"""
@@ -158,11 +294,63 @@ class MoteurCalculPaie:
             return self.montants['cnss_base']
         return Decimal('0')
     
+    def _calculer_heures_supplementaires(self):
+        """Calculer la rémunération des heures supplémentaires"""
+        heures_sup = self.montants.get('heures_supplementaires', Decimal('0'))
+        
+        if heures_sup <= 0:
+            return
+        
+        # Obtenir le salaire horaire de base
+        salaire_base = self._obtenir_base_calcul('SALAIRE_BASE')
+        heures_mensuelles = self.constantes.get('HEURES_MENSUELLES', Decimal('173.33'))
+        
+        if heures_mensuelles <= 0:
+            heures_mensuelles = Decimal('173.33')  # 40h x 52 semaines / 12 mois
+        
+        salaire_horaire = salaire_base / heures_mensuelles
+        
+        # Taux des heures supplémentaires selon la réglementation guinéenne
+        # 1-8h : 125%, >8h : 150%, nuit : 150%, dimanche : 175%
+        taux_hs = self.constantes.get('TAUX_HS_JOUR_25', Decimal('125'))
+        
+        # Calculer le montant des heures supplémentaires
+        montant_hs = self._arrondir(salaire_horaire * heures_sup * taux_hs / Decimal('100'))
+        
+        if montant_hs > 0:
+            self.montants['total_gains'] += montant_hs
+            self.montants['montant_heures_sup'] = montant_hs
+            
+            # Ajouter à la base CNSS et imposable
+            self.montants['cnss_base'] += montant_hs
+            self.montants['imposable'] += montant_hs
+            
+            # Ajouter la ligne
+            rubrique_hs = RubriquePaie.objects.filter(
+                code_rubrique__icontains='HS',
+                type_rubrique='gain',
+                actif=True
+            ).first()
+            
+            if rubrique_hs:
+                self.lignes.append({
+                    'rubrique': rubrique_hs,
+                    'base': salaire_horaire,
+                    'taux': taux_hs,
+                    'nombre': heures_sup,
+                    'montant': montant_hs,
+                    'ordre': rubrique_hs.ordre_affichage
+                })
+    
     def _calculer_cotisations_sociales(self):
         """Calculer les cotisations sociales (CNSS, etc.)"""
-        # CNSS salarié
-        taux_cnss = self.constantes.get('TAUX_CNSS_SALARIE', Decimal('5.50'))
-        cnss_employe = self._arrondir(self.montants['cnss_base'] * taux_cnss / Decimal('100'))
+        # Appliquer le plafond CNSS
+        plafond_cnss = self.constantes.get('PLAFOND_CNSS', Decimal('3000000'))
+        base_cnss_plafonnee = min(self.montants['cnss_base'], plafond_cnss)
+        
+        # CNSS salarié (utiliser TAUX_CNSS_EMPLOYE au lieu de TAUX_CNSS_SALARIE)
+        taux_cnss = self.constantes.get('TAUX_CNSS_EMPLOYE', Decimal('5.00'))
+        cnss_employe = self._arrondir(base_cnss_plafonnee * taux_cnss / Decimal('100'))
         
         self.montants['cnss_employe'] = cnss_employe
         self.montants['total_retenues'] += cnss_employe
@@ -184,10 +372,10 @@ class MoteurCalculPaie:
                 'ordre': rubrique_cnss.ordre_affichage
             })
         
-        # CNSS employeur
+        # CNSS employeur (appliquer aussi le plafond)
         taux_cnss_pat = self.constantes.get('TAUX_CNSS_EMPLOYEUR', Decimal('18.00'))
         self.montants['cnss_employeur'] = self._arrondir(
-            self.montants['cnss_base'] * taux_cnss_pat / Decimal('100')
+            base_cnss_plafonnee * taux_cnss_pat / Decimal('100')
         )
         
         # Autres cotisations (mutuelle, retraite complémentaire, etc.)
@@ -262,25 +450,20 @@ class MoteurCalculPaie:
             })
     
     def _calculer_deductions_familiales(self):
-        """Calculer les déductions familiales"""
+        """Calculer les déductions familiales selon la législation guinéenne"""
         deductions = Decimal('0')
         
-        # Conjoint
-        if self.employe.situation_matrimoniale in ['Marié(e)', 'Marié']:
-            deduction_conjoint = self.constantes.get('DEDUC_CONJOINT_EXPERT', Decimal('100000'))
-            if not deduction_conjoint:
-                deduction_conjoint = self.constantes.get('DEDUC_CONJOINT', Decimal('50000'))
+        # Conjoint (déduction pour personne mariée)
+        if self.employe.situation_matrimoniale in ['marie', 'Marié(e)', 'Marié', 'Marié']:
+            deduction_conjoint = self.constantes.get('DEDUC_CONJOINT', Decimal('100000'))
             deductions += deduction_conjoint
         
-        # Enfants à charge
+        # Enfants à charge (max 4 enfants en Guinée)
         if self.employe.nombre_enfants:
-            max_enfants = int(self.constantes.get('MAX_ENFANTS_DEDUC', Decimal('3')))
+            max_enfants = int(self.constantes.get('MAX_ENFANTS_DEDUC', Decimal('4')))
             nb_enfants = min(self.employe.nombre_enfants, max_enfants)
             
-            deduction_enfant = self.constantes.get('DEDUC_ENFANT_LOCAL', Decimal('100000'))
-            if not deduction_enfant:
-                deduction_enfant = self.constantes.get('DEDUC_ENFANT', Decimal('75000'))
-            
+            deduction_enfant = self.constantes.get('DEDUC_ENFANT', Decimal('50000'))
             deductions += deduction_enfant * nb_enfants
         
         return deductions

@@ -40,12 +40,15 @@
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <nav id="sidebar" class="col-md-3 col-lg-2 bg-light sidebar">
                 {% include 'partials/sidebar.html' %}
             </nav>
             
+            <!-- Overlay pour fermer la sidebar sur mobile -->
+            <div id="sidebar-overlay" class="sidebar-overlay"></div>
+            
             <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
                 {% include 'partials/messages.html' %}
                 {% block content %}{% endblock %}
             </main>
@@ -77,6 +80,73 @@
         }
     </script>
     
+    <!-- Script pour la sidebar responsive -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            
+            // Fonction pour ouvrir la sidebar
+            function openSidebar() {
+                sidebar.classList.add('show');
+                sidebarOverlay.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+            
+            // Fonction pour fermer la sidebar
+            function closeSidebar() {
+                sidebar.classList.remove('show');
+                sidebarOverlay.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+            
+            // Toggle sidebar au clic sur le bouton
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (sidebar.classList.contains('show')) {
+                        closeSidebar();
+                    } else {
+                        openSidebar();
+                    }
+                });
+            }
+            
+            // Fermer la sidebar au clic sur l'overlay
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', function() {
+                    closeSidebar();
+                });
+            }
+            
+            // Fermer la sidebar au clic sur un lien (mobile)
+            const sidebarLinks = sidebar.querySelectorAll('.nav-link');
+            sidebarLinks.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth < 768) {
+                        closeSidebar();
+                    }
+                });
+            });
+            
+            // Fermer la sidebar avec la touche Escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && sidebar.classList.contains('show')) {
+                    closeSidebar();
+                }
+            });
+            
+            // Gérer le redimensionnement de la fenêtre
+            window.addEventListener('resize', function() {
+                if (window.innerWidth >= 768) {
+                    closeSidebar();
+                }
+            });
+        });
+    </script>
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>
+

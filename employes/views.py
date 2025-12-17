@@ -65,7 +65,7 @@ class EmployeListView(LoginRequiredMixin, ListView):
         
         # Statistiques rapides
         context['total_employes'] = self.get_queryset().count()
-        context['employes_actifs'] = self.get_queryset().filter(statut_employe='Actif').count()
+        context['employes_actifs'] = self.get_queryset().filter(statut_employe='actif').count()
         
         # Services pour le filtre
         from core.models import Service
@@ -222,6 +222,47 @@ class EmployeDeleteView(LoginRequiredMixin, DeleteView):
     template_name = 'employes/delete.html'
     success_url = reverse_lazy('employes:list')
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        employe = self.get_object()
+        
+        # Compter les données liées qui seront supprimées
+        donnees_liees = {
+            'contrats': employe.contrats.count(),
+            'documents': employe.documents.count(),
+            'formations': employe.formations.count(),
+            'evaluations': employe.evaluations.count(),
+            'carrieres': employe.carrieres.count(),
+            'sanctions': employe.sanctions.count(),
+            'visites_medicales': employe.visites_medicales.count(),
+            'accidents_travail': employe.accidents_travail.count(),
+            'equipements_protection': employe.equipements_protection.count(),
+        }
+        
+        # Données des autres modules
+        try:
+            donnees_liees['bulletins_paie'] = employe.bulletins.count()
+            donnees_liees['elements_salaire'] = employe.elements_salaire.count()
+            donnees_liees['cumuls_paie'] = employe.cumuls_paie.count()
+            donnees_liees['avances_salaire'] = employe.avances_salaire.count()
+            donnees_liees['saisies_arret'] = employe.saisies_arret.count()
+        except:
+            pass
+        
+        try:
+            donnees_liees['conges'] = employe.conges.count()
+            donnees_liees['pointages'] = employe.pointages.count()
+            donnees_liees['absences'] = employe.absences.count()
+            donnees_liees['arrets_travail'] = employe.arrets_travail.count()
+            donnees_liees['soldes_conges'] = employe.soldes_conges.count()
+        except:
+            pass
+        
+        context['donnees_liees'] = donnees_liees
+        context['total_donnees'] = sum(donnees_liees.values())
+        
+        return context
+    
     def delete(self, request, *args, **kwargs):
         employe = self.get_object()
         
@@ -236,7 +277,7 @@ class EmployeDeleteView(LoginRequiredMixin, DeleteView):
         
         messages.warning(
             request,
-            f'Employé {employe.nom} {employe.prenoms} supprimé'
+            f'Employé {employe.nom} {employe.prenoms} et toutes ses données associées ont été supprimés'
         )
         
         return super().delete(request, *args, **kwargs)
@@ -247,7 +288,7 @@ def employe_export_excel(request):
     """Export de la liste des employés en Excel"""
     employes = Employe.objects.select_related(
         'etablissement', 'service', 'poste'
-    ).filter(statut_employe='Actif')
+    ).filter(statut_employe='actif')
     
     # Créer le workbook
     wb = Workbook()

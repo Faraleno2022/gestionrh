@@ -355,7 +355,7 @@ def admin_dashboard(request):
         'active_users': entreprise.utilisateurs.filter(actif=True).count(),
         'quota_users': entreprise.max_utilisateurs,
         'total_employes': Employe.objects.count(),
-        'employes_actifs': Employe.objects.filter(statut_employe='Actif').count(),
+        'employes_actifs': Employe.objects.filter(statut_employe='actif').count(),
         'bulletins_mois': 0,
         'conges_en_attente': Conge.objects.filter(statut_demande='En attente').count(),
     }
