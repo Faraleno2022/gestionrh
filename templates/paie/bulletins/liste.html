@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block title %}Bulletins de Paie{% endblock %}
 
@@ -87,8 +88,8 @@
                                     <td>{{ bulletin.periode }}</td>
                                     <td>{{ bulletin.employe.matricule }}</td>
                                     <td>{{ bulletin.employe.nom }} {{ bulletin.employe.prenoms }}</td>
-                                    <td>{{ bulletin.salaire_brut|floatformat:0 }} GNF</td>
-                                    <td class="text-success"><strong>{{ bulletin.net_a_payer|floatformat:0 }} GNF</strong></td>
+                                    <td>{{ bulletin.salaire_brut|floatformat:0|intcomma }} GNF</td>
+                                    <td class="text-success"><strong>{{ bulletin.net_a_payer|floatformat:0|intcomma }} GNF</strong></td>
                                     <td>
                                         {% if bulletin.statut_bulletin == 'brouillon' %}
                                             <span class="badge bg-secondary">Brouillon</span>
@@ -128,3 +129,4 @@
     </div>
 </div>
 {% endblock %}
+

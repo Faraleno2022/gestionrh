@@ -1,3 +1,4 @@
+{% load humanize %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -215,14 +216,14 @@
             {% for ligne in gains %}
             <tr>
                 <td>{{ ligne.rubrique.libelle_rubrique }}</td>
-                <td class="text-right">{{ ligne.base|floatformat:0 }}</td>
+                <td class="text-right">{{ ligne.base|floatformat:0|intcomma }}</td>
                 <td class="text-center">{% if ligne.taux %}{{ ligne.taux }}%{% else %}-{% endif %}</td>
-                <td class="text-right">{{ ligne.montant|floatformat:0 }}</td>
+                <td class="text-right">{{ ligne.montant|floatformat:0|intcomma }}</td>
             </tr>
             {% endfor %}
             <tr class="total-row">
                 <td colspan="3">TOTAL BRUT</td>
-                <td class="text-right">{{ bulletin.salaire_brut|floatformat:0 }} GNF</td>
+                <td class="text-right">{{ bulletin.salaire_brut|floatformat:0|intcomma }} GNF</td>
             </tr>
         </tbody>
     </table>
@@ -242,9 +243,9 @@
             {% for ligne in retenues %}
             <tr>
                 <td>{{ ligne.rubrique.libelle_rubrique }}</td>
-                <td class="text-right">{{ ligne.base|floatformat:0 }}</td>
+                <td class="text-right">{{ ligne.base|floatformat:0|intcomma }}</td>
                 <td class="text-center">{% if ligne.taux %}{{ ligne.taux }}%{% else %}-{% endif %}</td>
-                <td class="text-right">{{ ligne.montant|floatformat:0 }}</td>
+                <td class="text-right">{{ ligne.montant|floatformat:0|intcomma }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -255,20 +256,20 @@
         <table style="width: 100%;">
             <tr>
                 <td style="width: 60%; font-size: 12pt;"><strong>SALAIRE BRUT</strong></td>
-                <td class="text-right" style="font-size: 12pt;"><strong>{{ bulletin.salaire_brut|floatformat:0 }} GNF</strong></td>
+                <td class="text-right" style="font-size: 12pt;"><strong>{{ bulletin.salaire_brut|floatformat:0|intcomma }} GNF</strong></td>
             </tr>
             <tr>
                 <td>Cotisation CNSS Employé (5%)</td>
-                <td class="text-right" style="color: #d62828;">- {{ bulletin.cnss_employe|floatformat:0 }} GNF</td>
+                <td class="text-right" style="color: #d62828;">- {{ bulletin.cnss_employe|floatformat:0|intcomma }} GNF</td>
             </tr>
             <tr>
                 <td>Impôt sur le Revenu (IRG)</td>
-                <td class="text-right" style="color: #d62828;">- {{ bulletin.irg|floatformat:0 }} GNF</td>
+                <td class="text-right" style="color: #d62828;">- {{ bulletin.irg|floatformat:0|intcomma }} GNF</td>
             </tr>
             <tr style="border-top: 2px solid #d62828;">
                 <td style="font-size: 14pt; padding-top: 10px;"><strong>NET À PAYER</strong></td>
                 <td class="text-right" style="font-size: 14pt; color: #28a745; padding-top: 10px;">
-                    <strong>{{ bulletin.net_a_payer|floatformat:0 }} GNF</strong>
+                    <strong>{{ bulletin.net_a_payer|floatformat:0|intcomma }} GNF</strong>
                 </td>
             </tr>
         </table>
@@ -279,11 +280,11 @@
     <table class="info-table">
         <tr>
             <td>Cotisation CNSS Employeur (18%):</td>
-            <td class="text-right"><strong>{{ bulletin.cnss_employeur|floatformat:0 }} GNF</strong></td>
+            <td class="text-right"><strong>{{ bulletin.cnss_employeur|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
         <tr>
             <td>Total Cotisations CNSS (Employé + Employeur):</td>
-            <td class="text-right"><strong>{% widthratio bulletin.cnss_employe 1 1|add:bulletin.cnss_employeur|floatformat:0 %} GNF</strong></td>
+            <td class="text-right"><strong>{{ bulletin.cnss_employe|add:bulletin.cnss_employeur|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
     </table>
 
@@ -303,3 +304,4 @@
     </script>
 </body>
 </html>
+

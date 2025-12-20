@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block title %}Tableau de bord - Gestionnaire RH Guinée{% endblock %}
 
@@ -48,7 +49,7 @@
                             Masse Salariale
                         </div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            {{ masse_salariale|floatformat:0 }} GNF
+                            {{ masse_salariale|floatformat:0|intcomma }} GNF
                         </div>
                         <small class="text-muted">Mois en cours</small>
                     </div>
@@ -234,3 +235,4 @@ new Chart(ctx, {
 });
 </script>
 {% endblock %}
+

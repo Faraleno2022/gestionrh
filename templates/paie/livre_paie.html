@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block title %}Livre de Paie{% endblock %}
 
@@ -66,7 +67,7 @@
             <div class="card shadow-sm border-primary">
                 <div class="card-body text-center">
                     <h6 class="text-muted">Masse Salariale Brute</h6>
-                    <h4 class="text-primary">{{ totaux.total_brut|floatformat:0|default:"0" }} GNF</h4>
+                    <h4 class="text-primary">{{ totaux.total_brut|floatformat:0|intcomma }} GNF</h4>
                 </div>
             </div>
         </div>
@@ -74,7 +75,7 @@
             <div class="card shadow-sm">
                 <div class="card-body text-center">
                     <h6 class="text-muted">CNSS Employé</h6>
-                    <h5>{{ totaux.total_cnss_employe|floatformat:0|default:"0" }} GNF</h5>
+                    <h5>{{ totaux.total_cnss_employe|floatformat:0|intcomma }} GNF</h5>
                 </div>
             </div>
         </div>
@@ -82,7 +83,7 @@
             <div class="card shadow-sm">
                 <div class="card-body text-center">
                     <h6 class="text-muted">CNSS Employeur</h6>
-                    <h5>{{ totaux.total_cnss_employeur|floatformat:0|default:"0" }} GNF</h5>
+                    <h5>{{ totaux.total_cnss_employeur|floatformat:0|intcomma }} GNF</h5>
                 </div>
             </div>
         </div>
@@ -90,7 +91,7 @@
             <div class="card shadow-sm">
                 <div class="card-body text-center">
                     <h6 class="text-muted">IRG Total</h6>
-                    <h5>{{ totaux.total_irg|floatformat:0|default:"0" }} GNF</h5>
+                    <h5>{{ totaux.total_irg|floatformat:0|intcomma }} GNF</h5>
                 </div>
             </div>
         </div>
@@ -98,7 +99,7 @@
             <div class="card shadow-sm border-success">
                 <div class="card-body text-center">
                     <h6 class="text-muted">Net à Payer Total</h6>
-                    <h4 class="text-success">{{ totaux.total_net|floatformat:0|default:"0" }} GNF</h4>
+                    <h4 class="text-success">{{ totaux.total_net|floatformat:0|intcomma }} GNF</h4>
                 </div>
             </div>
         </div>
@@ -142,12 +143,12 @@
                                     <td>{{ bulletin.employe.matricule }}</td>
                                     <td>{{ bulletin.employe.nom }} {{ bulletin.employe.prenoms }}</td>
                                     <td>{{ bulletin.employe.fonction|default:"-" }}</td>
-                                    <td class="text-end">{{ bulletin.salaire_brut|floatformat:0 }}</td>
-                                    <td class="text-end">{{ bulletin.salaire_brut|floatformat:0 }}</td>
-                                    <td class="text-end">{{ bulletin.cnss_employe|floatformat:0 }}</td>
-                                    <td class="text-end">{{ bulletin.irg|floatformat:0 }}</td>
+                                    <td class="text-end">{{ bulletin.salaire_brut|floatformat:0|intcomma }}</td>
+                                    <td class="text-end">{{ bulletin.salaire_brut|floatformat:0|intcomma }}</td>
+                                    <td class="text-end">{{ bulletin.cnss_employe|floatformat:0|intcomma }}</td>
+                                    <td class="text-end">{{ bulletin.irg|floatformat:0|intcomma }}</td>
                                     <td class="text-end">{% widthratio bulletin.cnss_employe 1 1|add:bulletin.irg|floatformat:0 %}</td>
-                                    <td class="text-end text-success"><strong>{{ bulletin.net_a_payer|floatformat:0 }}</strong></td>
+                                    <td class="text-end text-success"><strong>{{ bulletin.net_a_payer|floatformat:0|intcomma }}</strong></td>
                                 </tr>
                                 {% empty %}
                                 <tr>
@@ -161,12 +162,12 @@
                             <tfoot class="table-secondary">
                                 <tr>
                                     <th colspan="4" class="text-end">TOTAUX:</th>
-                                    <th class="text-end">{{ totaux.total_brut|floatformat:0 }}</th>
-                                    <th class="text-end">{{ totaux.total_brut|floatformat:0 }}</th>
-                                    <th class="text-end">{{ totaux.total_cnss_employe|floatformat:0 }}</th>
-                                    <th class="text-end">{{ totaux.total_irg|floatformat:0 }}</th>
+                                    <th class="text-end">{{ totaux.total_brut|floatformat:0|intcomma }}</th>
+                                    <th class="text-end">{{ totaux.total_brut|floatformat:0|intcomma }}</th>
+                                    <th class="text-end">{{ totaux.total_cnss_employe|floatformat:0|intcomma }}</th>
+                                    <th class="text-end">{{ totaux.total_irg|floatformat:0|intcomma }}</th>
                                     <th class="text-end">{% widthratio totaux.total_cnss_employe 1 1|add:totaux.total_irg|floatformat:0 %}</th>
-                                    <th class="text-end text-success"><strong>{{ totaux.total_net|floatformat:0 }}</strong></th>
+                                    <th class="text-end text-success"><strong>{{ totaux.total_net|floatformat:0|intcomma }}</strong></th>
                                 </tr>
                             </tfoot>
                             {% endif %}
@@ -215,3 +216,4 @@
     }
 </style>
 {% endblock %}
+

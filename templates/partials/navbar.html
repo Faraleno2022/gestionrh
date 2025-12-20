@@ -1,12 +1,18 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
     <div class="container-fluid">
+        <!-- Bouton toggle sidebar pour mobile/tablette -->
+        <button class="btn btn-link text-white d-md-none me-2 sidebar-toggle" type="button" id="sidebarToggle">
+            <i class="fas fa-bars fa-lg"></i>
+        </button>
+        
         <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard:index' %}">
             {% if entreprise_logo %}
                 <img src="{{ entreprise_logo.url }}" alt="{{ entreprise_nom }}" style="height: 40px; margin-right: 10px;" class="d-inline-block">
             {% else %}
                 <i class="fas fa-users-cog me-2"></i>
             {% endif %}
-            <span>{{ entreprise_nom|default:"RH Guinée" }}</span>
+            <span class="d-none d-sm-inline">{{ entreprise_nom|default:"RH Guinée" }}</span>
+            <span class="d-sm-none">RH</span>
         </a>
         
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -41,3 +47,4 @@
         </div>
     </div>
 </nav>
+

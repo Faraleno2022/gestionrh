@@ -165,6 +165,7 @@ class LogActivite(models.Model):
 
 class Societe(models.Model):
     """Informations sur la société"""
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='societes', null=True, blank=True)
     raison_sociale = models.CharField(max_length=200)
     forme_juridique = models.CharField(max_length=50, blank=True, null=True)
     nif = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name='NIF')
@@ -277,3 +278,450 @@ class Poste(models.Model):
     
     def __str__(self):
         return f"{self.code_poste} - {self.intitule_poste}"
+
+
+# ============= MODULES STRATÉGIQUES GUINÉE =============
+
+class Devise(models.Model):
+    """Gestion des devises pour multi-currency"""
+    code = models.CharField(max_length=3, unique=True, help_text="Code ISO (GNF, USD, EUR)")
+    nom = models.CharField(max_length=50)
+    symbole = models.CharField(max_length=5)
+    est_devise_base = models.BooleanField(default=False, help_text="GNF est la devise de base")
+    actif = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'devises'
+        verbose_name = 'Devise'
+        verbose_name_plural = 'Devises'
+    
+    def __str__(self):
+        return f"{self.code} - {self.nom}"
+
+
+class TauxChange(models.Model):
+    """Taux de change journaliers"""
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='taux_changes', null=True, blank=True)
+    devise_source = models.ForeignKey(Devise, on_delete=models.CASCADE, related_name='taux_source')
+    devise_cible = models.ForeignKey(Devise, on_delete=models.CASCADE, related_name='taux_cible')
+    taux = models.DecimalField(max_digits=15, decimal_places=6, help_text="1 devise_source = X devise_cible")
+    date_taux = models.DateField()
+    source = models.CharField(max_length=100, blank=True, null=True, help_text="Source du taux (BCRG, marché, etc.)")
+    
+    class Meta:
+        db_table = 'taux_changes'
+        verbose_name = 'Taux de change'
+        verbose_name_plural = 'Taux de change'
+        unique_together = ['devise_source', 'devise_cible', 'date_taux']
+        ordering = ['-date_taux']
+    
+    def __str__(self):
+        return f"1 {self.devise_source.code} = {self.taux} {self.devise_cible.code} ({self.date_taux})"
+
+
+class ParametrePaieDevise(models.Model):
+    """Paramètres de paie par devise pour expatriés"""
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='params_paie_devise')
+    devise = models.ForeignKey(Devise, on_delete=models.CASCADE)
+    annee = models.IntegerField()
+    
+    # Plafonds et seuils en devise
+    plafond_cnss = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Plafond CNSS dans cette devise")
+    seuil_irpp = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Seuil d'imposition IRPP")
+    
+    actif = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'parametres_paie_devise'
+        verbose_name = 'Paramètre paie devise'
+        verbose_name_plural = 'Paramètres paie devises'
+        unique_together = ['entreprise', 'devise', 'annee']
+    
+    def __str__(self):
+        return f"Paramètres {self.devise.code} - {self.annee}"
+
+
+# ============= GESTION DES EXPATRIÉS =============
+
+class Expatrie(models.Model):
+    """Informations spécifiques aux expatriés"""
+    TYPES_CONTRAT_EXPAT = (
+        ('detachement', 'Détachement'),
+        ('expatriation', 'Expatriation'),
+        ('local_plus', 'Local Plus'),
+        ('vip', 'VIP/Impatrié'),
+    )
+    
+    employe = models.OneToOneField('employes.Employe', on_delete=models.CASCADE, related_name='info_expatrie')
+    type_contrat_expat = models.CharField(max_length=30, choices=TYPES_CONTRAT_EXPAT)
+    pays_origine = models.CharField(max_length=100)
+    devise_salaire = models.ForeignKey(Devise, on_delete=models.SET_NULL, null=True, related_name='expatries')
+    
+    # Salaire split (partie locale + partie pays d'origine)
+    salaire_local_pct = models.DecimalField(max_digits=5, decimal_places=2, default=100, help_text="% payé en GNF")
+    salaire_origine_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="% payé en devise origine")
+    
+    # Avantages expatriation
+    prime_expatriation = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    indemnite_logement = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    indemnite_scolarite = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    billet_avion_annuel = models.IntegerField(default=0, help_text="Nombre de billets A/R par an")
+    
+    # Couverture sociale
+    maintien_secu_origine = models.BooleanField(default=False, help_text="Maintien sécurité sociale pays d'origine")
+    assurance_rapatriement = models.BooleanField(default=True)
+    
+    date_debut_mission = models.DateField()
+    date_fin_mission_prevue = models.DateField(null=True, blank=True)
+    
+    observations = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        db_table = 'expatries'
+        verbose_name = 'Expatrié'
+        verbose_name_plural = 'Expatriés'
+    
+    def __str__(self):
+        return f"{self.employe.nom_complet} - {self.get_type_contrat_expat_display()}"
+
+
+class PermisVisa(models.Model):
+    """Permis de travail et visas pour expatriés"""
+    TYPES_DOCUMENT = (
+        ('visa_travail', 'Visa de travail'),
+        ('visa_affaires', 'Visa d\'affaires'),
+        ('permis_travail', 'Permis de travail'),
+        ('carte_sejour', 'Carte de séjour'),
+        ('autorisation_emploi', 'Autorisation d\'emploi'),
+    )
+    STATUTS = (
+        ('en_cours', 'En cours de validité'),
+        ('expire', 'Expiré'),
+        ('en_renouvellement', 'En renouvellement'),
+        ('refuse', 'Refusé'),
+    )
+    
+    expatrie = models.ForeignKey(Expatrie, on_delete=models.CASCADE, related_name='permis_visas')
+    type_document = models.CharField(max_length=30, choices=TYPES_DOCUMENT)
+    numero_document = models.CharField(max_length=50)
+    
+    date_emission = models.DateField()
+    date_expiration = models.DateField()
+    autorite_emission = models.CharField(max_length=100, help_text="Ex: Direction Nationale de l'Emploi")
+    
+    statut = models.CharField(max_length=20, choices=STATUTS, default='en_cours')
+    
+    # Alertes
+    alerte_renouvellement_jours = models.IntegerField(default=60, help_text="Jours avant expiration pour alerte")
+    
+    fichier_document = models.FileField(upload_to='expatries/permis/', null=True, blank=True)
+    observations = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        db_table = 'permis_visas'
+        verbose_name = 'Permis/Visa'
+        verbose_name_plural = 'Permis/Visas'
+        ordering = ['-date_expiration']
+    
+    def __str__(self):
+        return f"{self.expatrie.employe.nom} - {self.get_type_document_display()} ({self.date_expiration})"
+    
+    @property
+    def est_expire(self):
+        from django.utils import timezone
+        return self.date_expiration < timezone.now().date()
+    
+    @property
+    def jours_avant_expiration(self):
+        from django.utils import timezone
+        delta = self.date_expiration - timezone.now().date()
+        return delta.days
+
+
+# ============= INTERFACE CNSS - TÉLÉDÉCLARATION =============
+
+class ConfigurationCNSS(models.Model):
+    """Configuration pour l'interface CNSS"""
+    entreprise = models.OneToOneField(Entreprise, on_delete=models.CASCADE, related_name='config_cnss')
+    
+    # Identifiants CNSS
+    numero_employeur = models.CharField(max_length=50, help_text="Numéro employeur CNSS")
+    code_agence = models.CharField(max_length=20, blank=True, null=True)
+    
+    # API CNSS (si disponible)
+    api_url = models.URLField(blank=True, null=True, help_text="URL API télédéclaration CNSS")
+    api_username = models.CharField(max_length=100, blank=True, null=True)
+    api_password = models.CharField(max_length=100, blank=True, null=True)  # À chiffrer en production
+    api_token = models.TextField(blank=True, null=True)
+    
+    # Paramètres
+    mode_declaration = models.CharField(max_length=20, choices=[
+        ('manuel', 'Manuel (fichier)'),
+        ('api', 'API automatique'),
+    ], default='manuel')
+    
+    format_fichier = models.CharField(max_length=20, choices=[
+        ('csv', 'CSV'),
+        ('xml', 'XML'),
+        ('json', 'JSON'),
+    ], default='csv')
+    
+    actif = models.BooleanField(default=True)
+    date_derniere_synchro = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'config_cnss'
+        verbose_name = 'Configuration CNSS'
+    
+    def __str__(self):
+        return f"Config CNSS - {self.entreprise.nom_entreprise}"
+
+
+class TransmissionCNSS(models.Model):
+    """Historique des transmissions CNSS"""
+    STATUTS = (
+        ('brouillon', 'Brouillon'),
+        ('genere', 'Fichier généré'),
+        ('transmis', 'Transmis'),
+        ('accepte', 'Accepté'),
+        ('rejete', 'Rejeté'),
+        ('erreur', 'Erreur'),
+    )
+    
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='transmissions_cnss')
+    periode_mois = models.IntegerField()
+    periode_annee = models.IntegerField()
+    reference = models.CharField(max_length=50, unique=True)
+    
+    # Données
+    nombre_salaries = models.IntegerField(default=0)
+    masse_salariale_brute = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    base_cnss_totale = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    cotisation_employe = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    cotisation_employeur = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_cotisations = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    
+    # Fichier
+    fichier_declaration = models.FileField(upload_to='cnss/declarations/', null=True, blank=True)
+    
+    # Statut
+    statut = models.CharField(max_length=20, choices=STATUTS, default='brouillon')
+    date_generation = models.DateTimeField(null=True, blank=True)
+    date_transmission = models.DateTimeField(null=True, blank=True)
+    date_reponse = models.DateTimeField(null=True, blank=True)
+    
+    # Réponse CNSS
+    numero_accuse = models.CharField(max_length=50, blank=True, null=True)
+    message_retour = models.TextField(blank=True, null=True)
+    fichier_accuse = models.FileField(upload_to='cnss/accuses/', null=True, blank=True)
+    
+    genere_par = models.ForeignKey(Utilisateur, on_delete=models.SET_NULL, null=True)
+    
+    class Meta:
+        db_table = 'transmissions_cnss'
+        verbose_name = 'Transmission CNSS'
+        verbose_name_plural = 'Transmissions CNSS'
+        unique_together = ['entreprise', 'periode_mois', 'periode_annee']
+        ordering = ['-periode_annee', '-periode_mois']
+    
+    def __str__(self):
+        return f"CNSS {self.periode_mois:02d}/{self.periode_annee} - {self.get_statut_display()}"
+
+
+# ============= CONFORMITÉ INSPECTION DU TRAVAIL =============
+
+class RegistreObligatoire(models.Model):
+    """Registres obligatoires selon le Code du Travail guinéen"""
+    TYPES_REGISTRE = (
+        ('personnel', 'Registre du personnel'),
+        ('paie', 'Registre de paie'),
+        ('conges', 'Registre des congés'),
+        ('accidents', 'Registre des accidents du travail'),
+        ('delegues', 'Registre des délégués du personnel'),
+        ('heures_sup', 'Registre des heures supplémentaires'),
+        ('visites_medicales', 'Registre des visites médicales'),
+        ('sanctions', 'Registre des sanctions'),
+    )
+    
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='registres_obligatoires')
+    type_registre = models.CharField(max_length=30, choices=TYPES_REGISTRE)
+    annee = models.IntegerField()
+    
+    # Informations du registre
+    numero_registre = models.CharField(max_length=50, blank=True, null=True)
+    date_ouverture = models.DateField()
+    date_cloture = models.DateField(null=True, blank=True)
+    
+    # Visa Inspection du Travail
+    vise_inspection = models.BooleanField(default=False)
+    date_visa = models.DateField(null=True, blank=True)
+    numero_visa = models.CharField(max_length=50, blank=True, null=True)
+    
+    fichier_registre = models.FileField(upload_to='registres/', null=True, blank=True)
+    observations = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        db_table = 'registres_obligatoires'
+        verbose_name = 'Registre obligatoire'
+        verbose_name_plural = 'Registres obligatoires'
+        unique_together = ['entreprise', 'type_registre', 'annee']
+    
+    def __str__(self):
+        return f"{self.get_type_registre_display()} - {self.annee}"
+
+
+class VisiteInspection(models.Model):
+    """Visites de l'Inspection du Travail"""
+    TYPES_VISITE = (
+        ('routine', 'Visite de routine'),
+        ('controle', 'Contrôle'),
+        ('enquete', 'Enquête'),
+        ('suite_plainte', 'Suite à plainte'),
+        ('verification', 'Vérification'),
+    )
+    RESULTATS = (
+        ('conforme', 'Conforme'),
+        ('observations', 'Observations'),
+        ('mise_demeure', 'Mise en demeure'),
+        ('pv_infraction', 'PV d\'infraction'),
+    )
+    
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='visites_inspection')
+    date_visite = models.DateField()
+    type_visite = models.CharField(max_length=30, choices=TYPES_VISITE)
+    
+    # Inspecteur
+    nom_inspecteur = models.CharField(max_length=100)
+    matricule_inspecteur = models.CharField(max_length=50, blank=True, null=True)
+    direction_regionale = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Objet de la visite
+    objet_visite = models.TextField()
+    points_controles = models.TextField(blank=True, null=True, help_text="Points vérifiés")
+    
+    # Résultat
+    resultat = models.CharField(max_length=30, choices=RESULTATS, blank=True, null=True)
+    observations_inspecteur = models.TextField(blank=True, null=True)
+    recommandations = models.TextField(blank=True, null=True)
+    
+    # Documents
+    pv_visite = models.FileField(upload_to='inspection/pv/', null=True, blank=True)
+    mise_demeure = models.FileField(upload_to='inspection/mises_demeure/', null=True, blank=True)
+    
+    # Suivi
+    date_limite_regularisation = models.DateField(null=True, blank=True)
+    regularisation_effectuee = models.BooleanField(default=False)
+    date_regularisation = models.DateField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'visites_inspection'
+        verbose_name = 'Visite inspection'
+        verbose_name_plural = 'Visites inspection'
+        ordering = ['-date_visite']
+    
+    def __str__(self):
+        return f"Inspection {self.date_visite} - {self.get_type_visite_display()}"
+
+
+class NonConformite(models.Model):
+    """Non-conformités relevées par l'Inspection"""
+    GRAVITES = (
+        ('mineure', 'Mineure'),
+        ('majeure', 'Majeure'),
+        ('critique', 'Critique'),
+    )
+    STATUTS = (
+        ('ouverte', 'Ouverte'),
+        ('en_cours', 'En cours de traitement'),
+        ('resolue', 'Résolue'),
+        ('fermee', 'Fermée'),
+    )
+    
+    visite = models.ForeignKey(VisiteInspection, on_delete=models.CASCADE, related_name='non_conformites')
+    reference = models.CharField(max_length=50)
+    
+    # Description
+    article_code_travail = models.CharField(max_length=50, blank=True, null=True, help_text="Article du Code du Travail")
+    description = models.TextField()
+    gravite = models.CharField(max_length=20, choices=GRAVITES)
+    
+    # Actions correctives
+    action_corrective = models.TextField(blank=True, null=True)
+    responsable_action = models.CharField(max_length=100, blank=True, null=True)
+    date_echeance = models.DateField(null=True, blank=True)
+    
+    # Statut
+    statut = models.CharField(max_length=20, choices=STATUTS, default='ouverte')
+    date_resolution = models.DateField(null=True, blank=True)
+    preuve_resolution = models.FileField(upload_to='inspection/preuves/', null=True, blank=True)
+    
+    class Meta:
+        db_table = 'non_conformites'
+        verbose_name = 'Non-conformité'
+        verbose_name_plural = 'Non-conformités'
+        ordering = ['-visite__date_visite', 'gravite']
+    
+    def __str__(self):
+        return f"{self.reference} - {self.get_gravite_display()}"
+
+
+# ============= BARÈME IRPP GUINÉE =============
+
+class BaremeIRPP(models.Model):
+    """Barème progressif de l'IRPP (Impôt sur le Revenu des Personnes Physiques)"""
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='baremes_irpp', null=True, blank=True)
+    annee = models.IntegerField()
+    
+    # Tranche
+    tranche_numero = models.IntegerField()
+    revenu_min = models.DecimalField(max_digits=15, decimal_places=2)
+    revenu_max = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, help_text="Null = illimité")
+    taux = models.DecimalField(max_digits=5, decimal_places=2, help_text="Taux en %")
+    
+    # Montant forfaitaire (pour calcul rapide)
+    montant_cumule_precedent = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Impôt cumulé des tranches précédentes")
+    
+    actif = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'baremes_irpp'
+        verbose_name = 'Tranche IRPP'
+        verbose_name_plural = 'Barème IRPP'
+        unique_together = ['entreprise', 'annee', 'tranche_numero']
+        ordering = ['annee', 'tranche_numero']
+    
+    def __str__(self):
+        max_str = f"{self.revenu_max:,.0f}" if self.revenu_max else "∞"
+        return f"Tranche {self.tranche_numero}: {self.revenu_min:,.0f} - {max_str} GNF @ {self.taux}%"
+
+
+class DeductionFiscale(models.Model):
+    """Déductions fiscales (charges de famille, etc.)"""
+    TYPES_DEDUCTION = (
+        ('conjoint', 'Conjoint à charge'),
+        ('enfant', 'Enfant à charge'),
+        ('ascendant', 'Ascendant à charge'),
+        ('handicap', 'Personne handicapée'),
+        ('assurance_vie', 'Assurance vie'),
+        ('epargne_retraite', 'Épargne retraite'),
+    )
+    
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='deductions_fiscales', null=True, blank=True)
+    annee = models.IntegerField()
+    type_deduction = models.CharField(max_length=30, choices=TYPES_DEDUCTION)
+    
+    montant_deduction = models.DecimalField(max_digits=15, decimal_places=2, help_text="Montant de la déduction")
+    plafond = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, help_text="Plafond si applicable")
+    nombre_max = models.IntegerField(null=True, blank=True, help_text="Nombre max (ex: 4 enfants)")
+    
+    conditions = models.TextField(blank=True, null=True, help_text="Conditions d'application")
+    actif = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'deductions_fiscales'
+        verbose_name = 'Déduction fiscale'
+        verbose_name_plural = 'Déductions fiscales'
+        unique_together = ['entreprise', 'annee', 'type_deduction']
+    
+    def __str__(self):
+        return f"{self.get_type_deduction_display()} - {self.montant_deduction:,.0f} GNF ({self.annee})"

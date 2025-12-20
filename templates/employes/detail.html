@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block title %}{{ employe.nom }} {{ employe.prenoms }} - Gestionnaire RH Guinée{% endblock %}
 
@@ -130,7 +131,7 @@
                 <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Salaire de base</div>
                 <div class="h5 mb-0">
                     {% if salaire_base %}
-                        {{ salaire_base|floatformat:0 }} GNF
+                        {{ salaire_base|floatformat:0|intcomma }} GNF
                     {% else %}
                         N/A
                     {% endif %}
@@ -404,7 +405,7 @@
                 <div class="row">
                     <div class="col-md-12">
                         <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i> Salaire de base : <strong>{{ salaire_base|floatformat:0 }} GNF</strong>
+                            <i class="bi bi-info-circle"></i> Salaire de base : <strong>{{ salaire_base|floatformat:0|intcomma }} GNF</strong>
                         </div>
                         <p class="text-muted">
                             Pour consulter et gérer tous les éléments de salaire (primes, indemnités, retenues) :
@@ -681,3 +682,4 @@ function confirmDeleteDocument(documentId, titre) {
 }
 </script>
 {% endblock %}
+

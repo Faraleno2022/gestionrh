@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block title %}Déclarations Sociales{% endblock %}
 
@@ -84,19 +85,19 @@
                         <div class="col-md-3">
                             <div class="p-3 bg-light rounded">
                                 <h6 class="text-muted">Masse Salariale</h6>
-                                <h4>{{ declaration_cnss.masse_salariale|floatformat:0 }} GNF</h4>
+                                <h4>{{ declaration_cnss.masse_salariale|floatformat:0|intcomma }} GNF</h4>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="p-3 bg-light rounded">
                                 <h6 class="text-muted">Cotisation Employé (5%)</h6>
-                                <h4>{{ declaration_cnss.cotisation_employe|floatformat:0 }} GNF</h4>
+                                <h4>{{ declaration_cnss.cotisation_employe|floatformat:0|intcomma }} GNF</h4>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="p-3 bg-light rounded">
                                 <h6 class="text-muted">Cotisation Employeur (18%)</h6>
-                                <h4>{{ declaration_cnss.cotisation_employeur|floatformat:0 }} GNF</h4>
+                                <h4>{{ declaration_cnss.cotisation_employeur|floatformat:0|intcomma }} GNF</h4>
                             </div>
                         </div>
                     </div>
@@ -105,7 +106,7 @@
                         <h5 class="mb-0">
                             <i class="fas fa-money-bill-wave me-2"></i>
                             Total à verser à la CNSS: 
-                            <strong>{{ declaration_cnss.total_cotisation|floatformat:0 }} GNF</strong>
+                            <strong>{{ declaration_cnss.total_cotisation|floatformat:0|intcomma }} GNF</strong>
                         </h5>
                     </div>
                 </div>
@@ -131,13 +132,13 @@
                         <div class="col-md-4">
                             <div class="p-3 bg-light rounded">
                                 <h6 class="text-muted">Masse Imposable</h6>
-                                <h4>{{ declaration_irg.masse_imposable|floatformat:0 }} GNF</h4>
+                                <h4>{{ declaration_irg.masse_imposable|floatformat:0|intcomma }} GNF</h4>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="p-3 bg-light rounded">
                                 <h6 class="text-muted">IRG Retenu à la Source</h6>
-                                <h4>{{ declaration_irg.total_irg|floatformat:0 }} GNF</h4>
+                                <h4>{{ declaration_irg.total_irg|floatformat:0|intcomma }} GNF</h4>
                             </div>
                         </div>
                     </div>
@@ -146,7 +147,7 @@
                         <h5 class="mb-0">
                             <i class="fas fa-money-bill-wave me-2"></i>
                             Total à verser au Trésor Public: 
-                            <strong>{{ declaration_irg.total_irg|floatformat:0 }} GNF</strong>
+                            <strong>{{ declaration_irg.total_irg|floatformat:0|intcomma }} GNF</strong>
                         </h5>
                     </div>
                 </div>
@@ -166,7 +167,7 @@
                         <div class="col-md-4">
                             <div class="p-3 bg-light rounded">
                                 <h6 class="text-muted">Masse Salariale</h6>
-                                <h4>{{ declaration_inam.masse_salariale|floatformat:0 }} GNF</h4>
+                                <h4>{{ declaration_inam.masse_salariale|floatformat:0|intcomma }} GNF</h4>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -178,7 +179,7 @@
                         <div class="col-md-4">
                             <div class="p-3 bg-light rounded">
                                 <h6 class="text-muted">Cotisation INAM</h6>
-                                <h4>{{ declaration_inam.montant|floatformat:0 }} GNF</h4>
+                                <h4>{{ declaration_inam.montant|floatformat:0|intcomma }} GNF</h4>
                             </div>
                         </div>
                     </div>
@@ -187,7 +188,7 @@
                         <h5 class="mb-0">
                             <i class="fas fa-money-bill-wave me-2"></i>
                             Total à verser à l'INAM: 
-                            <strong>{{ declaration_inam.montant|floatformat:0 }} GNF</strong>
+                            <strong>{{ declaration_inam.montant|floatformat:0|intcomma }} GNF</strong>
                         </h5>
                     </div>
                 </div>
@@ -264,11 +265,11 @@
                                     <td>{{ employe.matricule }}</td>
                                     <td>{{ employe.nom_complet }}</td>
                                     <td>{{ employe.periode }}</td>
-                                    <td class="text-end">{{ employe.brut|floatformat:0 }}</td>
-                                    <td class="text-end">{{ employe.cnss_employe|floatformat:0 }}</td>
-                                    <td class="text-end">{{ employe.cnss_employeur|floatformat:0 }}</td>
-                                    <td class="text-end">{{ employe.irg|floatformat:0 }}</td>
-                                    <td class="text-end text-success">{{ employe.net|floatformat:0 }}</td>
+                                    <td class="text-end">{{ employe.brut|floatformat:0|intcomma }}</td>
+                                    <td class="text-end">{{ employe.cnss_employe|floatformat:0|intcomma }}</td>
+                                    <td class="text-end">{{ employe.cnss_employeur|floatformat:0|intcomma }}</td>
+                                    <td class="text-end">{{ employe.irg|floatformat:0|intcomma }}</td>
+                                    <td class="text-end text-success">{{ employe.net|floatformat:0|intcomma }}</td>
                                 </tr>
                                 {% empty %}
                                 <tr>
@@ -319,3 +320,4 @@
     }
 </style>
 {% endblock %}
+

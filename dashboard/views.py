@@ -15,7 +15,7 @@ def index(request):
     context = {}
     
     # Statistiques employés
-    employes_actifs = Employe.objects.filter(statut_employe='Actif')
+    employes_actifs = Employe.objects.filter(statut_employe='actif')
     context['total_employes'] = employes_actifs.count()
     context['employes_hommes'] = employes_actifs.filter(sexe='M').count()
     context['employes_femmes'] = employes_actifs.filter(sexe='F').count()
@@ -74,7 +74,7 @@ def index(request):
         type_contrat='CDD',
         date_fin_contrat__lte=date_limite,
         date_fin_contrat__gte=aujourd_hui,
-        statut_employe='Actif'
+        statut_employe='actif'
     ).count()
     
     if contrats_echeance > 0:
@@ -124,7 +124,7 @@ def rapports(request):
     
     # Pyramide des âges
     aujourd_hui = timezone.now().date()
-    employes_actifs = Employe.objects.filter(statut_employe='Actif')
+    employes_actifs = Employe.objects.filter(statut_employe='actif')
     
     pyramide_ages = {
         '< 25 ans': 0,
