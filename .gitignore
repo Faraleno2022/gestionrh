@@ -91,3 +91,5 @@ credentials/
 
 # Node modules (si vous utilisez npm)
 node_modules/
+staticfiles/
+fix_settings.py
