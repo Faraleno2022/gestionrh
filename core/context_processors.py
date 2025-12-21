@@ -4,9 +4,14 @@ from .models import Societe, Entreprise
 
 def company_info(request):
     """Ajoute les informations de la société au contexte"""
+    societe = None
     try:
-        societe = Societe.objects.filter(actif=True).first()
-    except:
+        if request.user.is_authenticated and hasattr(request.user, 'entreprise') and request.user.entreprise:
+            societe = Societe.objects.filter(
+                entreprise=request.user.entreprise,
+                actif=True
+            ).first()
+    except Exception:
         societe = None
     
     # Ajouter le logo de l'entreprise de l'utilisateur connecté

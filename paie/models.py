@@ -3,7 +3,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from decimal import Decimal
 from employes.models import Employe
-from core.models import Utilisateur, Entreprise
+from core.models import Utilisateur, Devise, Entreprise
 
 
 class PeriodePaie(models.Model):
@@ -91,12 +91,17 @@ class BulletinPaie(models.Model):
     mois_paie = models.IntegerField()
     annee_paie = models.IntegerField()
     
-    # Montants
+    # Calculs de paie
     salaire_brut = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     cnss_employe = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    cnss_employeur = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     irg = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     net_a_payer = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    cnss_employeur = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    
+    # Devise du bulletin
+    devise_bulletin = models.ForeignKey(Devise, on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name='bulletins_devise',
+                                      help_text='Devise utilisée pour ce bulletin')
     
     statut_bulletin = models.CharField(max_length=20, choices=STATUTS, default='brouillon')
     date_calcul = models.DateTimeField(blank=True, null=True)

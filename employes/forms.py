@@ -2,7 +2,8 @@ from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Row, Column, Submit, Button, HTML
 from crispy_forms.bootstrap import TabHolder, Tab
-from .models import Employe, ContratEmploye
+from .models import Employe, ContratEmploye, EvaluationEmploye, SanctionDisciplinaire
+from core.models import Devise
 
 
 class EmployeForm(forms.ModelForm):
@@ -41,7 +42,7 @@ class EmployeForm(forms.ModelForm):
             # Bancaire
             'mode_paiement', 'nom_banque', 'agence_banque',
             'numero_compte', 'rib', 'operateur_mobile_money',
-            'numero_mobile_money'
+            'numero_mobile_money', 'devise_paie'
         ]
         
         widgets = {
@@ -59,6 +60,10 @@ class EmployeForm(forms.ModelForm):
         
         # Rendre le matricule optionnel (sera généré automatiquement)
         self.fields['matricule'].required = False
+        
+        # Filtrer les devises actives uniquement
+        self.fields['devise_paie'].queryset = Devise.objects.filter(actif=True)
+        self.fields['devise_paie'].empty_label = "GNF (par défaut)"
         
         # Helper Crispy Forms
         self.helper = FormHelper()
@@ -164,7 +169,11 @@ class EmployeForm(forms.ModelForm):
                 
                 Tab('Bancaire',
                     Fieldset('Mode de paiement',
-                        'mode_paiement',
+                        Row(
+                            Column('mode_paiement', css_class='col-md-6'),
+                            Column('devise_paie', css_class='col-md-6'),
+                        ),
+                        HTML('<small class="form-text text-muted">La devise de paie est utilisée pour les calculs de salaire et les bulletins de paie</small>'),
                     ),
                     Fieldset('Informations bancaires',
                         Row(
@@ -354,3 +363,54 @@ class EmployeSearchForm(forms.Form):
         choices=[('', 'Tous'), ('M', 'Masculin'), ('F', 'Féminin')],
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+
+
+class EvaluationEmployeForm(forms.ModelForm):
+    class Meta:
+        model = EvaluationEmploye
+        fields = [
+            'annee_evaluation', 'periode', 'date_evaluation', 'evaluateur',
+            'objectifs_atteints', 'competences_techniques', 'competences_comportementales',
+            'note_globale', 'appreciation',
+            'points_forts', 'points_amelioration', 'plan_developpement',
+            'recommandations', 'date_prochain_entretien'
+        ]
+        widgets = {
+            'date_evaluation': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_prochain_entretien': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'points_forts': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'points_amelioration': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'plan_developpement': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'recommandations': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        entreprise = kwargs.pop('entreprise', None)
+        super().__init__(*args, **kwargs)
+        if entreprise:
+            self.fields['evaluateur'].queryset = Employe.objects.filter(entreprise=entreprise)
+
+
+class SanctionDisciplinaireForm(forms.ModelForm):
+    class Meta:
+        model = SanctionDisciplinaire
+        fields = [
+            'type_sanction', 'motif',
+            'date_faits', 'date_convocation', 'date_entretien', 'proces_verbal_entretien',
+            'date_notification', 'lettre_notification',
+            'date_debut_application', 'date_fin_application', 'duree_jours',
+            'recours_depose', 'date_recours', 'decision_recours',
+            'statut', 'observations'
+        ]
+        widgets = {
+            'date_faits': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_convocation': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_entretien': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_notification': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_debut_application': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_fin_application': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_recours': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'motif': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'decision_recours': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'observations': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }

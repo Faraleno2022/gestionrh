@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views_irpp import bareme_irpp
 
 app_name = 'paie'
 
@@ -37,4 +38,13 @@ urlpatterns = [
     path('rubriques/', views.liste_rubriques, name='liste_rubriques'),
     path('rubriques/creer/', views.creer_rubrique, name='creer_rubrique'),
     path('rubriques/<int:pk>/', views.detail_rubrique, name='detail_rubrique'),
+    
+    # Barème IRPP
+    path('bareme-irpp/', bareme_irpp.bareme_irpp_liste, name='bareme_irpp_liste'),
+    path('bareme-irpp/ajouter/', bareme_irpp.bareme_irpp_ajouter, name='bareme_irpp_ajouter'),
+    path('bareme-irpp/<int:pk>/modifier/', bareme_irpp.bareme_irpp_modifier, name='bareme_irpp_modifier'),
+    path('bareme-irpp/<int:pk>/supprimer/', bareme_irpp.bareme_irpp_supprimer, name='bareme_irpp_supprimer'),
+    path('bareme-irpp/dupliquer/', bareme_irpp.bareme_irpp_dupliquer, name='bareme_irpp_dupliquer'),
+    path('simulateur-irpp/', bareme_irpp.simulateur_irpp, name='simulateur_irpp'),
+    path('api/calculer-irpp/', bareme_irpp.api_calculer_irpp, name='api_calculer_irpp'),
 ]

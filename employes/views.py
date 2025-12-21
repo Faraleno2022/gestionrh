@@ -9,9 +9,16 @@ from django.http import HttpResponse
 from openpyxl import Workbook
 from datetime import datetime
 
-from .models import Employe, ContratEmploye
-from .forms import EmployeForm, ContratForm
+from .models import Employe, ContratEmploye, EvaluationEmploye, SanctionDisciplinaire
+from .forms import EmployeForm, ContratForm, EvaluationEmployeForm, SanctionDisciplinaireForm
 from core.views import log_activity
+
+
+class EntrepriseEmployeQuerysetMixin(LoginRequiredMixin):
+    def get_queryset(self):
+        return Employe.objects.select_related(
+            'etablissement', 'service', 'poste'
+        ).filter(entreprise=self.request.user.entreprise)
 
 
 class EmployeListView(LoginRequiredMixin, ListView):
@@ -24,7 +31,7 @@ class EmployeListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         queryset = Employe.objects.select_related(
             'etablissement', 'service', 'poste'
-        ).all()
+        ).filter(entreprise=self.request.user.entreprise)
         
         # Recherche
         search = self.request.GET.get('search', '')
@@ -69,12 +76,15 @@ class EmployeListView(LoginRequiredMixin, ListView):
         
         # Services pour le filtre
         from core.models import Service
-        context['services'] = Service.objects.filter(actif=True)
+        context['services'] = Service.objects.filter(
+            actif=True,
+            etablissement__societe__entreprise=self.request.user.entreprise,
+        )
         
         return context
 
 
-class EmployeDetailView(LoginRequiredMixin, DetailView):
+class EmployeDetailView(EntrepriseEmployeQuerysetMixin, DetailView):
     """Fiche détaillée d'un employé"""
     model = Employe
     template_name = 'employes/detail.html'
@@ -127,6 +137,12 @@ class EmployeDetailView(LoginRequiredMixin, DetailView):
         context['documents'] = DocumentEmploye.objects.filter(
             employe=employe
         ).order_by('-date_ajout')
+
+        context['evaluations_count'] = EvaluationEmploye.objects.filter(employe=employe).count()
+        context['sanctions_count'] = SanctionDisciplinaire.objects.filter(employe=employe).count()
+
+        context['last_evaluation'] = EvaluationEmploye.objects.filter(employe=employe).order_by('-date_evaluation').select_related('evaluateur').first()
+        context['last_sanction'] = SanctionDisciplinaire.objects.filter(employe=employe).order_by('-date_notification', '-date_faits').first()
         
         # Statistiques documents par type
         from django.db.models import Count
@@ -146,6 +162,7 @@ class EmployeCreateView(LoginRequiredMixin, CreateView):
     
     def form_valid(self, form):
         employe = form.save(commit=False)
+        employe.entreprise = self.request.user.entreprise
         
         # Générer le matricule si vide
         if not employe.matricule:
@@ -174,6 +191,7 @@ class EmployeCreateView(LoginRequiredMixin, CreateView):
         """Génère un matricule automatique"""
         annee = datetime.now().year
         dernier = Employe.objects.filter(
+            entreprise=self.request.user.entreprise,
             matricule__startswith=f'EMP{annee}'
         ).order_by('-matricule').first()
         
@@ -185,7 +203,7 @@ class EmployeCreateView(LoginRequiredMixin, CreateView):
         return f'EMP{annee}{numero:04d}'
 
 
-class EmployeUpdateView(LoginRequiredMixin, UpdateView):
+class EmployeUpdateView(EntrepriseEmployeQuerysetMixin, UpdateView):
     """Modification d'un employé"""
     model = Employe
     form_class = EmployeForm
@@ -216,7 +234,7 @@ class EmployeUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class EmployeDeleteView(LoginRequiredMixin, DeleteView):
+class EmployeDeleteView(EntrepriseEmployeQuerysetMixin, DeleteView):
     """Suppression d'un employé"""
     model = Employe
     template_name = 'employes/delete.html'
@@ -288,7 +306,10 @@ def employe_export_excel(request):
     """Export de la liste des employés en Excel"""
     employes = Employe.objects.select_related(
         'etablissement', 'service', 'poste'
-    ).filter(statut_employe='actif')
+    ).filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    )
     
     # Créer le workbook
     wb = Workbook()
@@ -344,7 +365,7 @@ def employe_export_excel(request):
 @login_required
 def employe_contrat_create(request, employe_id):
     """Créer un nouveau contrat pour un employé"""
-    employe = get_object_or_404(Employe, pk=employe_id)
+    employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
     
     if request.method == 'POST':
         form = ContratForm(request.POST, request.FILES)
@@ -362,6 +383,7 @@ def employe_contrat_create(request, employe_id):
             
             messages.success(request, 'Contrat créé avec succès')
             return redirect('employes:detail', pk=employe.id)
+
     else:
         form = ContratForm()
     
@@ -372,11 +394,161 @@ def employe_contrat_create(request, employe_id):
 
 
 @login_required
+def evaluation_list(request, employe_id):
+    employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
+    evaluations = EvaluationEmploye.objects.filter(employe=employe).select_related('evaluateur')
+    return render(request, 'employes/evaluations/liste.html', {
+        'employe': employe,
+        'evaluations': evaluations,
+    })
+
+
+@login_required
+def evaluation_create(request, employe_id):
+    employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
+
+    if request.method == 'POST':
+        form = EvaluationEmployeForm(request.POST, entreprise=request.user.entreprise)
+        if form.is_valid():
+            evaluation = form.save(commit=False)
+            evaluation.employe = employe
+            evaluation.save()
+
+            log_activity(
+                request,
+                f"Création évaluation {evaluation.annee_evaluation} - {employe.matricule}",
+                'employes',
+                'evaluations_employes',
+                evaluation.id,
+            )
+
+            messages.success(request, 'Évaluation enregistrée avec succès')
+            return redirect('employes:evaluation_detail', pk=evaluation.pk)
+    else:
+        form = EvaluationEmployeForm(entreprise=request.user.entreprise)
+
+    return render(request, 'employes/evaluations/form.html', {
+        'form': form,
+        'employe': employe,
+    })
+
+
+@login_required
+def evaluation_detail(request, pk):
+    evaluation = get_object_or_404(EvaluationEmploye, pk=pk, employe__entreprise=request.user.entreprise)
+    return render(request, 'employes/evaluations/detail.html', {
+        'evaluation': evaluation,
+        'employe': evaluation.employe,
+    })
+
+
+@login_required
+def evaluation_delete(request, pk):
+    evaluation = get_object_or_404(EvaluationEmploye, pk=pk, employe__entreprise=request.user.entreprise)
+    employe = evaluation.employe
+
+    if request.method == 'POST':
+        evaluation_id = evaluation.id
+        evaluation.delete()
+
+        log_activity(
+            request,
+            f"Suppression évaluation {evaluation_id} - {employe.matricule}",
+            'employes',
+            'evaluations_employes',
+            evaluation_id,
+        )
+
+        messages.success(request, 'Évaluation supprimée avec succès')
+        return redirect('employes:evaluation_list', employe_id=employe.id)
+
+    return render(request, 'employes/evaluations/delete.html', {
+        'evaluation': evaluation,
+        'employe': employe,
+    })
+
+
+@login_required
+def sanction_list(request, employe_id):
+    employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
+    sanctions = SanctionDisciplinaire.objects.filter(employe=employe)
+    return render(request, 'employes/sanctions/liste.html', {
+        'employe': employe,
+        'sanctions': sanctions,
+    })
+
+
+@login_required
+def sanction_create(request, employe_id):
+    employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
+
+    if request.method == 'POST':
+        form = SanctionDisciplinaireForm(request.POST, request.FILES)
+        if form.is_valid():
+            sanction = form.save(commit=False)
+            sanction.employe = employe
+            sanction.save()
+
+            log_activity(
+                request,
+                f"Création sanction {sanction.get_type_sanction_display()} - {employe.matricule}",
+                'employes',
+                'sanctions_disciplinaires',
+                sanction.id,
+            )
+
+            messages.success(request, 'Sanction enregistrée avec succès')
+            return redirect('employes:sanction_detail', pk=sanction.pk)
+    else:
+        form = SanctionDisciplinaireForm()
+
+    return render(request, 'employes/sanctions/form.html', {
+        'form': form,
+        'employe': employe,
+    })
+
+
+@login_required
+def sanction_detail(request, pk):
+    sanction = get_object_or_404(SanctionDisciplinaire, pk=pk, employe__entreprise=request.user.entreprise)
+    return render(request, 'employes/sanctions/detail.html', {
+        'sanction': sanction,
+        'employe': sanction.employe,
+    })
+
+
+@login_required
+def sanction_delete(request, pk):
+    sanction = get_object_or_404(SanctionDisciplinaire, pk=pk, employe__entreprise=request.user.entreprise)
+    employe = sanction.employe
+
+    if request.method == 'POST':
+        sanction_id = sanction.id
+        sanction.delete()
+
+        log_activity(
+            request,
+            f"Suppression sanction {sanction_id} - {employe.matricule}",
+            'employes',
+            'sanctions_disciplinaires',
+            sanction_id,
+        )
+
+        messages.success(request, 'Sanction supprimée avec succès')
+        return redirect('employes:sanction_list', employe_id=employe.id)
+
+    return render(request, 'employes/sanctions/delete.html', {
+        'sanction': sanction,
+        'employe': employe,
+    })
+
+
+@login_required
 def employe_document_upload(request, employe_id):
     """Télécharger un document pour un employé"""
     from .models import DocumentEmploye
     
-    employe = get_object_or_404(Employe, pk=employe_id)
+    employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
     
     if request.method == 'POST':
         type_document = request.POST.get('type_document')
@@ -424,7 +596,7 @@ def employe_document_delete(request, document_id):
     """Supprimer un document d'employé"""
     from .models import DocumentEmploye
     
-    document = get_object_or_404(DocumentEmploye, pk=document_id)
+    document = get_object_or_404(DocumentEmploye, pk=document_id, employe__entreprise=request.user.entreprise)
     employe = document.employe
     
     if request.method == 'POST':

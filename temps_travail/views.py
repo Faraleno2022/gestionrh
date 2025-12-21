@@ -15,31 +15,40 @@ from .models import (
     HoraireTravail, AffectationHoraire, JourFerie
 )
 from employes.models import Employe
+from core.decorators import entreprise_active_required
 
 
 @login_required
+@entreprise_active_required
 def temps_travail_home(request):
     """Vue d'accueil du module temps de travail"""
     today = date.today()
     
     # Statistiques du jour
     stats = {
-        'total_employes': Employe.objects.filter(statut_employe='actif').count(),
+        'total_employes': Employe.objects.filter(
+            entreprise=request.user.entreprise,
+            statut_employe='actif'
+        ).count(),
         'presents_aujourdhui': Pointage.objects.filter(
             date_pointage=today,
-            statut_pointage='present'
+            statut_pointage='present',
+            employe__entreprise=request.user.entreprise,
         ).count(),
         'absents_aujourdhui': Pointage.objects.filter(
             date_pointage=today,
-            statut_pointage='absent'
+            statut_pointage='absent',
+            employe__entreprise=request.user.entreprise,
         ).count(),
         'en_conge': Conge.objects.filter(
             date_debut__lte=today,
             date_fin__gte=today,
-            statut_demande='approuve'
+            statut_demande='approuve',
+            employe__entreprise=request.user.entreprise,
         ).count(),
         'demandes_conge_attente': Conge.objects.filter(
-            statut_demande='en_attente'
+            statut_demande='en_attente',
+            employe__entreprise=request.user.entreprise,
         ).count(),
     }
     
@@ -53,6 +62,7 @@ def temps_travail_home(request):
     
     # Prochains jours fériés
     prochains_feries = JourFerie.objects.filter(
+        entreprise=request.user.entreprise,
         date_jour_ferie__gte=today
     ).order_by('date_jour_ferie')[:5]
     
@@ -65,6 +75,7 @@ def temps_travail_home(request):
 # ============= POINTAGES =============
 
 @login_required
+@entreprise_active_required
 def liste_pointages(request):
     """Liste des pointages"""
     # Filtres
@@ -77,7 +88,10 @@ def liste_pointages(request):
     except:
         date_pointage = date.today()
     
-    pointages = Pointage.objects.filter(date_pointage=date_pointage).select_related('employe')
+    pointages = Pointage.objects.filter(
+        date_pointage=date_pointage,
+        employe__entreprise=request.user.entreprise,
+    ).select_related('employe')
     
     if employe_id:
         pointages = pointages.filter(employe_id=employe_id)
@@ -93,7 +107,10 @@ def liste_pointages(request):
         heures_sup_total=Sum('heures_supplementaires')
     )
     
-    employes = Employe.objects.filter(statut_employe='actif')
+    employes = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    )
     
     return render(request, 'temps_travail/pointages/liste.html', {
         'pointages': pointages,
@@ -104,6 +121,7 @@ def liste_pointages(request):
 
 
 @login_required
+@entreprise_active_required
 def creer_pointage(request):
     """Créer un pointage"""
     if request.method == 'POST':
@@ -114,7 +132,7 @@ def creer_pointage(request):
             heure_sortie = request.POST.get('heure_sortie')
             statut = request.POST.get('statut', 'present')
             
-            employe = get_object_or_404(Employe, pk=employe_id)
+            employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
             
             # Vérifier si le pointage existe déjà
             if Pointage.objects.filter(employe=employe, date_pointage=date_pointage).exists():
@@ -158,7 +176,10 @@ def creer_pointage(request):
         except Exception as e:
             messages.error(request, f'Erreur lors de la création : {str(e)}')
     
-    employes = Employe.objects.filter(statut_employe='actif')
+    employes = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    )
     return render(request, 'temps_travail/pointages/creer.html', {
         'employes': employes,
         'date_defaut': date.today().isoformat()
@@ -166,12 +187,13 @@ def creer_pointage(request):
 
 
 @login_required
+@entreprise_active_required
 def pointer_entree(request):
     """Pointer l'entrée d'un employé"""
     if request.method == 'POST':
         try:
             employe_id = request.POST.get('employe')
-            employe = get_object_or_404(Employe, pk=employe_id)
+            employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
             today = date.today()
             now = timezone.now().time()
             
@@ -210,7 +232,7 @@ def pointer_sortie(request):
     if request.method == 'POST':
         try:
             employe_id = request.POST.get('employe')
-            employe = get_object_or_404(Employe, pk=employe_id)
+            employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
             today = date.today()
             now = timezone.now().time()
             
@@ -251,6 +273,7 @@ def pointer_sortie(request):
 # ============= CONGÉS =============
 
 @login_required
+@entreprise_active_required
 def liste_conges(request):
     """Liste des congés"""
     # Filtres
@@ -258,7 +281,9 @@ def liste_conges(request):
     employe_id = request.GET.get('employe')
     annee = request.GET.get('annee', date.today().year)
     
-    conges = Conge.objects.all().select_related('employe', 'approbateur')
+    conges = Conge.objects.filter(
+        employe__entreprise=request.user.entreprise
+    ).select_related('employe', 'approbateur')
     
     if statut:
         conges = conges.filter(statut_demande=statut)
@@ -267,7 +292,10 @@ def liste_conges(request):
     if annee:
         conges = conges.filter(date_debut__year=annee)
     
-    employes = Employe.objects.filter(statut_employe='actif')
+    employes = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    )
     annees = range(date.today().year - 2, date.today().year + 2)
     
     return render(request, 'temps_travail/conges/liste.html', {
@@ -278,6 +306,7 @@ def liste_conges(request):
 
 
 @login_required
+@entreprise_active_required
 def creer_conge(request):
     """Créer une demande de congé"""
     if request.method == 'POST':
@@ -328,16 +357,20 @@ def creer_conge(request):
         except Exception as e:
             messages.error(request, f'Erreur lors de la création : {str(e)}')
     
-    employes = Employe.objects.filter(statut_employe='actif')
+    employes = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    )
     return render(request, 'temps_travail/conges/creer.html', {
         'employes': employes
     })
 
 
 @login_required
+@entreprise_active_required
 def approuver_conge(request, pk):
     """Approuver une demande de congé"""
-    conge = get_object_or_404(Conge, pk=pk)
+    conge = get_object_or_404(Conge, pk=pk, employe__entreprise=request.user.entreprise)
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -379,6 +412,7 @@ def approuver_conge(request, pk):
 # ============= ABSENCES =============
 
 @login_required
+@entreprise_active_required
 def liste_absences(request):
     """Liste des absences"""
     # Filtres
@@ -387,7 +421,9 @@ def liste_absences(request):
     mois = request.GET.get('mois', date.today().month)
     annee = request.GET.get('annee', date.today().year)
     
-    absences = Absence.objects.all().select_related('employe')
+    absences = Absence.objects.filter(
+        employe__entreprise=request.user.entreprise
+    ).select_related('employe')
     
     if employe_id:
         absences = absences.filter(employe_id=employe_id)
@@ -399,7 +435,10 @@ def liste_absences(request):
             date_absence__year=annee
         )
     
-    employes = Employe.objects.filter(statut_employe='actif')
+    employes = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    )
     
     return render(request, 'temps_travail/absences/liste.html', {
         'absences': absences,
@@ -408,6 +447,7 @@ def liste_absences(request):
 
 
 @login_required
+@entreprise_active_required
 def creer_absence(request):
     """Enregistrer une absence"""
     if request.method == 'POST':
@@ -449,7 +489,10 @@ def creer_absence(request):
         except Exception as e:
             messages.error(request, f'Erreur lors de l\'enregistrement : {str(e)}')
     
-    employes = Employe.objects.filter(statut_employe='actif')
+    employes = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    )
     return render(request, 'temps_travail/absences/creer.html', {
         'employes': employes
     })
@@ -458,11 +501,15 @@ def creer_absence(request):
 # ============= JOURS FÉRIÉS =============
 
 @login_required
+@entreprise_active_required
 def liste_jours_feries(request):
     """Liste des jours fériés"""
     annee = request.GET.get('annee', date.today().year)
     
-    jours_feries = JourFerie.objects.filter(annee=annee)
+    jours_feries = JourFerie.objects.filter(
+        entreprise=request.user.entreprise,
+        annee=annee
+    )
     annees = range(date.today().year - 1, date.today().year + 3)
     
     return render(request, 'temps_travail/jours_feries/liste.html', {
@@ -473,6 +520,7 @@ def liste_jours_feries(request):
 
 
 @login_required
+@entreprise_active_required
 def creer_jour_ferie(request):
     """Créer un jour férié"""
     if request.method == 'POST':
@@ -485,6 +533,7 @@ def creer_jour_ferie(request):
             date_obj = datetime.strptime(date_ferie, '%Y-%m-%d').date()
             
             JourFerie.objects.create(
+                entreprise=request.user.entreprise,
                 libelle=libelle,
                 date_jour_ferie=date_obj,
                 annee=date_obj.year,
@@ -518,7 +567,8 @@ def rapport_presence(request):
     # Pointages du mois
     pointages = Pointage.objects.filter(
         date_pointage__gte=premier_jour,
-        date_pointage__lte=dernier_jour
+        date_pointage__lte=dernier_jour,
+        employe__entreprise=request.user.entreprise,
     ).select_related('employe')
     
     if employe_id:
@@ -526,7 +576,10 @@ def rapport_presence(request):
     
     # Statistiques par employé
     stats_employes = []
-    employes = Employe.objects.filter(statut_employe='actif')
+    employes = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    )
     
     if employe_id:
         employes = employes.filter(pk=employe_id)
@@ -572,7 +625,10 @@ def rapport_presence(request):
         'annee': annee,
         'mois_liste': mois_liste,
         'annees': annees,
-        'employes': Employe.objects.filter(statut_employe='actif')
+        'employes': Employe.objects.filter(
+            entreprise=request.user.entreprise,
+            statut_employe='actif'
+        )
     })
 
 
@@ -589,7 +645,8 @@ def rapport_heures_supplementaires(request):
     pointages = Pointage.objects.filter(
         date_pointage__gte=premier_jour,
         date_pointage__lte=dernier_jour,
-        heures_supplementaires__gt=0
+        heures_supplementaires__gt=0,
+        employe__entreprise=request.user.entreprise,
     ).select_related('employe').order_by('employe', 'date_pointage')
     
     # Totaux par employé
@@ -599,9 +656,15 @@ def rapport_heures_supplementaires(request):
     ).order_by('-total_heures_sup')
     
     # Enrichir avec les infos employé
+    employes_map = {
+        e.pk: e
+        for e in Employe.objects.filter(
+            entreprise=request.user.entreprise,
+            pk__in=[t['employe'] for t in totaux_employes]
+        )
+    }
     for total in totaux_employes:
-        employe = Employe.objects.get(pk=total['employe'])
-        total['employe_obj'] = employe
+        total['employe_obj'] = employes_map.get(total['employe'])
     
     mois_liste = [
         (1, 'Janvier'), (2, 'Février'), (3, 'Mars'), (4, 'Avril'),

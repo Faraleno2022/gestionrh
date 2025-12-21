@@ -9,33 +9,54 @@ import string
 
 from .models import CatalogueFormation, SessionFormation, InscriptionFormation, EvaluationFormation, PlanFormation
 from employes.models import Employe
+from core.decorators import entreprise_active_required
 
 
 @login_required
+@entreprise_active_required
 def formation_home(request):
     """Vue d'accueil du module formation"""
     # Statistiques
     stats = {
-        'total_formations': CatalogueFormation.objects.filter(actif=True).count(),
-        'sessions_planifiees': SessionFormation.objects.filter(statut='planifiee').count(),
-        'sessions_en_cours': SessionFormation.objects.filter(statut='en_cours').count(),
-        'total_participants': InscriptionFormation.objects.filter(statut__in=['inscrit', 'confirme', 'present']).count(),
+        'total_formations': CatalogueFormation.objects.filter(
+            entreprise=request.user.entreprise,
+            actif=True
+        ).count(),
+        'sessions_planifiees': SessionFormation.objects.filter(
+            formation__entreprise=request.user.entreprise,
+            statut='planifiee'
+        ).count(),
+        'sessions_en_cours': SessionFormation.objects.filter(
+            formation__entreprise=request.user.entreprise,
+            statut='en_cours'
+        ).count(),
+        'total_participants': InscriptionFormation.objects.filter(
+            session__formation__entreprise=request.user.entreprise,
+            statut__in=['inscrit', 'confirme', 'present']
+        ).count(),
     }
     
     # Plan de formation en cours
     annee_actuelle = date.today().year
-    plan_actuel = PlanFormation.objects.filter(annee=annee_actuelle).first()
+    plan_actuel = PlanFormation.objects.filter(
+        entreprise=request.user.entreprise,
+        annee=annee_actuelle
+    ).first()
     
     # Prochaines sessions
     prochaines_sessions = SessionFormation.objects.filter(
         date_debut__gte=date.today(),
-        statut='planifiee'
+        statut='planifiee',
+        formation__entreprise=request.user.entreprise,
     ).select_related('formation').order_by('date_debut')[:5]
     
     # Formations populaires
     formations_populaires = CatalogueFormation.objects.annotate(
         nb_sessions=Count('sessions')
-    ).filter(actif=True).order_by('-nb_sessions')[:5]
+    ).filter(
+        entreprise=request.user.entreprise,
+        actif=True
+    ).order_by('-nb_sessions')[:5]
     
     return render(request, 'formation/home.html', {
         'stats': stats,
@@ -48,12 +69,15 @@ def formation_home(request):
 # ============= CATALOGUE =============
 
 @login_required
+@entreprise_active_required
 def liste_catalogue(request):
     """Liste des formations du catalogue"""
     type_formation = request.GET.get('type')
     domaine = request.GET.get('domaine')
     
-    formations = CatalogueFormation.objects.all().annotate(
+    formations = CatalogueFormation.objects.filter(
+        entreprise=request.user.entreprise
+    ).annotate(
         nb_sessions=Count('sessions')
     )
     
@@ -68,6 +92,7 @@ def liste_catalogue(request):
 
 
 @login_required
+@entreprise_active_required
 def creer_formation(request):
     """Créer une formation"""
     if request.method == 'POST':
@@ -76,6 +101,7 @@ def creer_formation(request):
             code = f"FORM-{''.join(random.choices(string.digits, k=3))}"
             
             formation = CatalogueFormation.objects.create(
+                entreprise=request.user.entreprise,
                 code_formation=code,
                 intitule=request.POST.get('intitule'),
                 type_formation=request.POST.get('type_formation'),
@@ -101,9 +127,10 @@ def creer_formation(request):
 
 
 @login_required
+@entreprise_active_required
 def detail_formation(request, pk):
     """Détail d'une formation"""
-    formation = get_object_or_404(CatalogueFormation, pk=pk)
+    formation = get_object_or_404(CatalogueFormation, pk=pk, entreprise=request.user.entreprise)
     sessions = formation.sessions.all().annotate(
         nb_inscrits=Count('inscriptions')
     )
@@ -115,9 +142,10 @@ def detail_formation(request, pk):
 
 
 @login_required
+@entreprise_active_required
 def modifier_formation(request, pk):
     """Modifier une formation"""
-    formation = get_object_or_404(CatalogueFormation, pk=pk)
+    formation = get_object_or_404(CatalogueFormation, pk=pk, entreprise=request.user.entreprise)
     
     if request.method == 'POST':
         try:
@@ -148,11 +176,14 @@ def modifier_formation(request, pk):
 # ============= SESSIONS =============
 
 @login_required
+@entreprise_active_required
 def liste_sessions(request):
     """Liste des sessions"""
     statut = request.GET.get('statut')
     
-    sessions = SessionFormation.objects.all().select_related('formation').annotate(
+    sessions = SessionFormation.objects.filter(
+        formation__entreprise=request.user.entreprise
+    ).select_related('formation').annotate(
         nb_inscrits=Count('inscriptions')
     )
     
@@ -165,6 +196,7 @@ def liste_sessions(request):
 
 
 @login_required
+@entreprise_active_required
 def planifier_session(request):
     """Planifier une session"""
     if request.method == 'POST':
@@ -172,8 +204,14 @@ def planifier_session(request):
             # Générer une référence unique
             reference = f"SESS-{date.today().year}-{''.join(random.choices(string.digits, k=3))}"
             
+            formation = get_object_or_404(
+                CatalogueFormation,
+                pk=request.POST.get('formation'),
+                entreprise=request.user.entreprise,
+            )
+
             session = SessionFormation.objects.create(
-                formation_id=request.POST.get('formation'),
+                formation=formation,
                 reference_session=reference,
                 date_debut=request.POST.get('date_debut'),
                 date_fin=request.POST.get('date_fin'),
@@ -190,7 +228,10 @@ def planifier_session(request):
         except Exception as e:
             messages.error(request, f'Erreur : {str(e)}')
     
-    formations = CatalogueFormation.objects.filter(actif=True)
+    formations = CatalogueFormation.objects.filter(
+        entreprise=request.user.entreprise,
+        actif=True
+    )
     
     return render(request, 'formation/sessions/planifier.html', {
         'formations': formations
@@ -198,9 +239,10 @@ def planifier_session(request):
 
 
 @login_required
+@entreprise_active_required
 def detail_session(request, pk):
     """Détail d'une session"""
-    session = get_object_or_404(SessionFormation, pk=pk)
+    session = get_object_or_404(SessionFormation, pk=pk, formation__entreprise=request.user.entreprise)
     inscriptions = session.inscriptions.all().select_related('employe')
     
     return render(request, 'formation/sessions/detail.html', {
@@ -210,13 +252,15 @@ def detail_session(request, pk):
 
 
 @login_required
+@entreprise_active_required
 def inscrire_employe(request, session_id):
     """Inscrire un employé à une session"""
-    session = get_object_or_404(SessionFormation, pk=session_id)
+    session = get_object_or_404(SessionFormation, pk=session_id, formation__entreprise=request.user.entreprise)
     
     if request.method == 'POST':
         try:
             employe_id = request.POST.get('employe')
+            employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
             
             # Vérifier les places disponibles
             if session.nombre_inscrits >= session.nombre_places:
@@ -226,7 +270,7 @@ def inscrire_employe(request, session_id):
             # Créer l'inscription
             inscription = InscriptionFormation.objects.create(
                 session=session,
-                employe_id=employe_id,
+                employe=employe,
                 statut='inscrit'
             )
             
@@ -240,7 +284,10 @@ def inscrire_employe(request, session_id):
         except Exception as e:
             messages.error(request, f'Erreur : {str(e)}')
     
-    employes = Employe.objects.filter(statut_employe='actif')
+    employes = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    )
     
     return render(request, 'formation/inscriptions/inscrire.html', {
         'session': session,
@@ -251,9 +298,13 @@ def inscrire_employe(request, session_id):
 # ============= INSCRIPTIONS =============
 
 @login_required
+@entreprise_active_required
 def liste_inscriptions(request):
     """Liste des inscriptions"""
-    inscriptions = InscriptionFormation.objects.all().select_related(
+    inscriptions = InscriptionFormation.objects.filter(
+        session__formation__entreprise=request.user.entreprise,
+        employe__entreprise=request.user.entreprise,
+    ).select_related(
         'employe', 'session', 'session__formation'
     )
     
@@ -263,9 +314,15 @@ def liste_inscriptions(request):
 
 
 @login_required
+@entreprise_active_required
 def evaluer_participant(request, pk):
     """Évaluer un participant"""
-    inscription = get_object_or_404(InscriptionFormation, pk=pk)
+    inscription = get_object_or_404(
+        InscriptionFormation,
+        pk=pk,
+        session__formation__entreprise=request.user.entreprise,
+        employe__entreprise=request.user.entreprise,
+    )
     
     if request.method == 'POST':
         try:
@@ -290,9 +347,15 @@ def evaluer_participant(request, pk):
 # ============= ÉVALUATIONS =============
 
 @login_required
+@entreprise_active_required
 def formulaire_evaluation(request, inscription_id):
     """Formulaire d'évaluation de la formation"""
-    inscription = get_object_or_404(InscriptionFormation, pk=inscription_id)
+    inscription = get_object_or_404(
+        InscriptionFormation,
+        pk=inscription_id,
+        session__formation__entreprise=request.user.entreprise,
+        employe__entreprise=request.user.entreprise,
+    )
     
     if request.method == 'POST':
         try:
@@ -323,9 +386,13 @@ def formulaire_evaluation(request, inscription_id):
 
 
 @login_required
+@entreprise_active_required
 def liste_evaluations(request):
     """Liste des évaluations"""
-    evaluations = EvaluationFormation.objects.all().select_related(
+    evaluations = EvaluationFormation.objects.filter(
+        inscription__session__formation__entreprise=request.user.entreprise,
+        inscription__employe__entreprise=request.user.entreprise,
+    ).select_related(
         'inscription', 'inscription__employe', 'inscription__session__formation'
     )
     
@@ -337,9 +404,10 @@ def liste_evaluations(request):
 # ============= PLAN DE FORMATION =============
 
 @login_required
+@entreprise_active_required
 def liste_plans(request):
     """Liste des plans de formation"""
-    plans = PlanFormation.objects.all()
+    plans = PlanFormation.objects.filter(entreprise=request.user.entreprise)
     
     return render(request, 'formation/plan/liste.html', {
         'plans': plans
@@ -347,11 +415,13 @@ def liste_plans(request):
 
 
 @login_required
+@entreprise_active_required
 def creer_plan(request):
     """Créer un plan de formation"""
     if request.method == 'POST':
         try:
             plan = PlanFormation.objects.create(
+                entreprise=request.user.entreprise,
                 annee=request.POST.get('annee'),
                 budget_total=request.POST.get('budget_total'),
                 objectifs=request.POST.get('objectifs'),
@@ -368,13 +438,15 @@ def creer_plan(request):
 
 
 @login_required
+@entreprise_active_required
 def detail_plan(request, annee):
     """Détail d'un plan de formation"""
-    plan = get_object_or_404(PlanFormation, annee=annee)
+    plan = get_object_or_404(PlanFormation, annee=annee, entreprise=request.user.entreprise)
     
     # Sessions de l'année
     sessions = SessionFormation.objects.filter(
-        date_debut__year=annee
+        date_debut__year=annee,
+        formation__entreprise=request.user.entreprise,
     ).select_related('formation')
     
     return render(request, 'formation/plan/detail.html', {

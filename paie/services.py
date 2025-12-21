@@ -14,6 +14,8 @@ from .models import (
 )
 from employes.models import Employe
 from temps_travail.models import Pointage, Absence, Conge
+from core.services.devises import DeviseService
+from core.models import Devise
 import calendar
 
 
@@ -45,6 +47,11 @@ class MoteurCalculPaie:
         }
         self.constantes = self._charger_constantes()
         self.tranches_irg = self._charger_tranches_irg()
+        
+        # Devise de paie de l'employé et service de conversion
+        self.devise_employe = employe.devise_paie if employe.devise_paie else DeviseService.get_devise_base()
+        self.devise_base = DeviseService.get_devise_base()
+        self.date_conversion = date(self.periode.annee, self.periode.mois, 1)
     
     def _charger_constantes(self):
         """Charger les constantes actives"""
@@ -344,9 +351,18 @@ class MoteurCalculPaie:
     
     def _calculer_cotisations_sociales(self):
         """Calculer les cotisations sociales (CNSS, etc.)"""
-        # Appliquer le plafond CNSS
+        # Convertir la base CNSS en GNF si nécessaire (les cotisations sociales sont toujours en GNF)
+        base_cnss_gnf = self.montants['cnss_base']
+        if self.devise_employe != self.devise_base:
+            base_cnss_gnf = DeviseService.convertir_vers_gnf(
+                self.montants['cnss_base'], 
+                self.devise_employe, 
+                self.date_conversion
+            )
+        
+        # Appliquer le plafond CNSS (toujours en GNF)
         plafond_cnss = self.constantes.get('PLAFOND_CNSS', Decimal('3000000'))
-        base_cnss_plafonnee = min(self.montants['cnss_base'], plafond_cnss)
+        base_cnss_plafonnee = min(base_cnss_gnf, plafond_cnss)
         
         # CNSS salarié (utiliser TAUX_CNSS_EMPLOYE au lieu de TAUX_CNSS_SALARIE)
         taux_cnss = self.constantes.get('TAUX_CNSS_EMPLOYE', Decimal('5.00'))
@@ -413,6 +429,14 @@ class MoteurCalculPaie:
         """Calculer l'IRG/IRSA selon le barème progressif"""
         # Base imposable = imposable - CNSS - autres déductions
         base_imposable = self.montants['imposable'] - self.montants['cnss_employe']
+        
+        # Convertir en GNF si nécessaire (l'IRG est toujours calculé en GNF)
+        if self.devise_employe != self.devise_base:
+            base_imposable = DeviseService.convertir_vers_gnf(
+                base_imposable, 
+                self.devise_employe, 
+                self.date_conversion
+            )
         
         # Appliquer déductions familiales
         deductions = self._calculer_deductions_familiales()
@@ -562,6 +586,7 @@ class MoteurCalculPaie:
             irg=self.montants['irg'],
             net_a_payer=self.montants['net'],
             cnss_employeur=self.montants['cnss_employeur'],
+            devise_bulletin=self.devise_employe,
             statut_bulletin='calcule',
             date_calcul=timezone.now()
         )

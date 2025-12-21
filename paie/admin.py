@@ -70,6 +70,12 @@ class PeriodePaieAdmin(admin.ModelAdmin):
     list_filter = ['annee', 'statut_periode']
     ordering = ['-annee', '-mois']
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(entreprise=request.user.entreprise)
+
 
 @admin.register(RubriquePaie)
 class RubriquePaieAdmin(admin.ModelAdmin):
@@ -111,6 +117,19 @@ class BulletinPaieAdmin(admin.ModelAdmin):
         }),
     )
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(periode__entreprise=request.user.entreprise)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser and db_field.name == 'periode':
+            kwargs['queryset'] = PeriodePaie.objects.filter(entreprise=request.user.entreprise)
+        if not request.user.is_superuser and db_field.name == 'employe':
+            kwargs['queryset'] = db_field.remote_field.model.objects.filter(entreprise=request.user.entreprise)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(ElementSalaire)
 class ElementSalaireAdmin(admin.ModelAdmin):
@@ -131,6 +150,17 @@ class ElementSalaireAdmin(admin.ModelAdmin):
         }),
     )
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(employe__entreprise=request.user.entreprise)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser and db_field.name == 'employe':
+            kwargs['queryset'] = db_field.remote_field.model.objects.filter(entreprise=request.user.entreprise)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(LigneBulletin)
 class LigneBulletinAdmin(admin.ModelAdmin):
@@ -138,6 +168,12 @@ class LigneBulletinAdmin(admin.ModelAdmin):
     list_filter = ['bulletin__periode', 'rubrique__type_rubrique']
     search_fields = ['bulletin__numero_bulletin', 'rubrique__libelle_rubrique']
     ordering = ['bulletin', 'ordre']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(bulletin__periode__entreprise=request.user.entreprise)
 
 
 @admin.register(CumulPaie)
@@ -148,6 +184,17 @@ class CumulPaieAdmin(admin.ModelAdmin):
     readonly_fields = ['date_creation', 'date_mise_a_jour']
     ordering = ['-annee', 'employe']
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(employe__entreprise=request.user.entreprise)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser and db_field.name == 'employe':
+            kwargs['queryset'] = db_field.remote_field.model.objects.filter(entreprise=request.user.entreprise)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(HistoriquePaie)
 class HistoriquePaieAdmin(admin.ModelAdmin):
@@ -156,3 +203,9 @@ class HistoriquePaieAdmin(admin.ModelAdmin):
     search_fields = ['employe__nom', 'employe__prenoms', 'description']
     readonly_fields = ['date_action', 'utilisateur', 'adresse_ip']
     ordering = ['-date_action']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(periode__entreprise=request.user.entreprise)

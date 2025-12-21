@@ -25,18 +25,27 @@ from core.decorators import reauth_required, entreprise_active_required
 def paie_home(request):
     """Vue d'accueil du module paie"""
     # Statistiques générales
-    periode_actuelle = PeriodePaie.objects.filter(statut_periode='ouverte').first()
+    periode_actuelle = PeriodePaie.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_periode='ouverte'
+    ).first()
     
     stats = {
         'periode_actuelle': periode_actuelle,
-        'total_employes': Employe.objects.filter(statut_employe='actif').count(),
+        'total_employes': Employe.objects.filter(
+            entreprise=request.user.entreprise,
+            statut_employe='actif'
+        ).count(),
         'bulletins_mois': 0,
         'montant_total_brut': 0,
         'montant_total_net': 0,
     }
     
     if periode_actuelle:
-        bulletins = BulletinPaie.objects.filter(periode=periode_actuelle)
+        bulletins = BulletinPaie.objects.filter(
+            periode=periode_actuelle,
+            employe__entreprise=request.user.entreprise,
+        )
         stats['bulletins_mois'] = bulletins.count()
         stats['montant_total_brut'] = bulletins.aggregate(Sum('salaire_brut'))['salaire_brut__sum'] or 0
         stats['montant_total_net'] = bulletins.aggregate(Sum('net_a_payer'))['net_a_payer__sum'] or 0
@@ -49,7 +58,9 @@ def paie_home(request):
 @reauth_required
 def liste_periodes(request):
     """Liste des périodes de paie"""
-    periodes = PeriodePaie.objects.all().annotate(
+    periodes = PeriodePaie.objects.filter(
+        entreprise=request.user.entreprise
+    ).annotate(
         nb_bulletins=Count('bulletins')
     )
     
@@ -69,7 +80,11 @@ def creer_periode(request):
             mois = int(request.POST.get('mois'))
             
             # Vérifier si la période existe déjà
-            if PeriodePaie.objects.filter(annee=annee, mois=mois).exists():
+            if PeriodePaie.objects.filter(
+                entreprise=request.user.entreprise,
+                annee=annee,
+                mois=mois
+            ).exists():
                 messages.error(request, 'Cette période existe déjà.')
                 return redirect('paie:liste_periodes')
             
@@ -81,6 +96,7 @@ def creer_periode(request):
             
             # Créer la période
             periode = PeriodePaie.objects.create(
+                entreprise=request.user.entreprise,
                 annee=annee,
                 mois=mois,
                 date_debut=date_debut,
@@ -102,8 +118,11 @@ def creer_periode(request):
 @reauth_required
 def detail_periode(request, pk):
     """Détail d'une période de paie"""
-    periode = get_object_or_404(PeriodePaie, pk=pk)
-    bulletins = BulletinPaie.objects.filter(periode=periode).select_related('employe')
+    periode = get_object_or_404(PeriodePaie, pk=pk, entreprise=request.user.entreprise)
+    bulletins = BulletinPaie.objects.filter(
+        periode=periode,
+        employe__entreprise=request.user.entreprise,
+    ).select_related('employe')
     
     # Statistiques de la période
     stats = bulletins.aggregate(
@@ -126,7 +145,7 @@ def detail_periode(request, pk):
 @reauth_required
 def calculer_periode(request, pk):
     """Calculer tous les bulletins d'une période"""
-    periode = get_object_or_404(PeriodePaie, pk=pk)
+    periode = get_object_or_404(PeriodePaie, pk=pk, entreprise=request.user.entreprise)
     
     if periode.statut_periode not in ['ouverte', 'calculee']:
         messages.error(request, 'Cette période ne peut plus être calculée.')
@@ -136,10 +155,16 @@ def calculer_periode(request, pk):
         try:
             with transaction.atomic():
                 # Supprimer les bulletins existants
-                BulletinPaie.objects.filter(periode=periode).delete()
+                BulletinPaie.objects.filter(
+                    periode=periode,
+                    employe__entreprise=request.user.entreprise,
+                ).delete()
                 
                 # Récupérer tous les employés actifs
-                employes = Employe.objects.filter(statut_employe='actif')
+                employes = Employe.objects.filter(
+                    entreprise=request.user.entreprise,
+                    statut_employe='actif'
+                )
                 
                 bulletins_crees = 0
                 erreurs = []
@@ -174,7 +199,10 @@ def calculer_periode(request, pk):
         return redirect('paie:detail_periode', pk=pk)
     
     # GET: Afficher la page de confirmation
-    employes_count = Employe.objects.filter(statut_employe='actif').count()
+    employes_count = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    ).count()
     return render(request, 'paie/periodes/calculer.html', {
         'periode': periode,
         'employes_count': employes_count
@@ -186,7 +214,7 @@ def calculer_periode(request, pk):
 @reauth_required
 def valider_periode(request, pk):
     """Valider une période de paie"""
-    periode = get_object_or_404(PeriodePaie, pk=pk)
+    periode = get_object_or_404(PeriodePaie, pk=pk, entreprise=request.user.entreprise)
     
     if periode.statut_periode != 'calculee':
         messages.error(request, 'La période doit être calculée avant validation.')
@@ -195,7 +223,10 @@ def valider_periode(request, pk):
     if request.method == 'POST':
         with transaction.atomic():
             # Valider tous les bulletins
-            BulletinPaie.objects.filter(periode=periode).update(
+            BulletinPaie.objects.filter(
+                periode=periode,
+                employe__entreprise=request.user.entreprise,
+            ).update(
                 statut_bulletin='valide'
             )
             
@@ -215,7 +246,7 @@ def valider_periode(request, pk):
 @reauth_required
 def cloturer_periode(request, pk):
     """Clôturer une période de paie"""
-    periode = get_object_or_404(PeriodePaie, pk=pk)
+    periode = get_object_or_404(PeriodePaie, pk=pk, entreprise=request.user.entreprise)
     
     if periode.statut_periode != 'validee':
         messages.error(request, 'La période doit être validée avant clôture.')
@@ -240,7 +271,10 @@ def cloturer_periode(request, pk):
 @reauth_required
 def liste_bulletins(request):
     """Liste de tous les bulletins de paie"""
-    bulletins = BulletinPaie.objects.all().select_related('employe', 'periode')
+    bulletins = BulletinPaie.objects.filter(
+        employe__entreprise=request.user.entreprise,
+        periode__entreprise=request.user.entreprise,
+    ).select_related('employe', 'periode')
     
     # Filtres
     periode_id = request.GET.get('periode')
@@ -254,8 +288,11 @@ def liste_bulletins(request):
     if statut:
         bulletins = bulletins.filter(statut_bulletin=statut)
     
-    periodes = PeriodePaie.objects.all()
-    employes = Employe.objects.filter(statut_employe='actif')
+    periodes = PeriodePaie.objects.filter(entreprise=request.user.entreprise)
+    employes = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    )
     
     return render(request, 'paie/bulletins/liste.html', {
         'bulletins': bulletins,
@@ -269,7 +306,12 @@ def liste_bulletins(request):
 @reauth_required
 def detail_bulletin(request, pk):
     """Détail d'un bulletin de paie"""
-    bulletin = get_object_or_404(BulletinPaie, pk=pk)
+    bulletin = get_object_or_404(
+        BulletinPaie,
+        pk=pk,
+        employe__entreprise=request.user.entreprise,
+        periode__entreprise=request.user.entreprise,
+    )
     lignes = LigneBulletin.objects.filter(bulletin=bulletin).select_related('rubrique')
     
     # Séparer les gains et retenues
@@ -288,7 +330,12 @@ def detail_bulletin(request, pk):
 @reauth_required
 def imprimer_bulletin(request, pk):
     """Imprimer un bulletin de paie"""
-    bulletin = get_object_or_404(BulletinPaie, pk=pk)
+    bulletin = get_object_or_404(
+        BulletinPaie,
+        pk=pk,
+        employe__entreprise=request.user.entreprise,
+        periode__entreprise=request.user.entreprise,
+    )
     lignes = LigneBulletin.objects.filter(bulletin=bulletin).select_related('rubrique')
     
     # Récupérer les paramètres de l'entreprise
@@ -315,13 +362,17 @@ def livre_paie(request):
     annee = request.GET.get('annee', timezone.now().year)
     mois = request.GET.get('mois')
     
-    periodes = PeriodePaie.objects.filter(annee=annee)
+    periodes = PeriodePaie.objects.filter(
+        entreprise=request.user.entreprise,
+        annee=annee
+    )
     if mois:
         periodes = periodes.filter(mois=mois)
     
     # Récupérer tous les bulletins des périodes
     bulletins = BulletinPaie.objects.filter(
-        periode__in=periodes
+        periode__in=periodes,
+        employe__entreprise=request.user.entreprise,
     ).select_related('employe', 'periode').order_by('periode__mois', 'employe__matricule')
     
     # Calcul des totaux
@@ -334,7 +385,9 @@ def livre_paie(request):
     )
     
     # Années disponibles
-    annees = PeriodePaie.objects.values_list('annee', flat=True).distinct().order_by('-annee')
+    annees = PeriodePaie.objects.filter(
+        entreprise=request.user.entreprise
+    ).values_list('annee', flat=True).distinct().order_by('-annee')
     
     return render(request, 'paie/livre_paie.html', {
         'bulletins': bulletins,
@@ -352,13 +405,18 @@ def declarations_sociales(request):
     annee = request.GET.get('annee', timezone.now().year)
     mois = request.GET.get('mois')
     
-    periodes = PeriodePaie.objects.filter(annee=annee, statut_periode__in=['validee', 'cloturee'])
+    periodes = PeriodePaie.objects.filter(
+        entreprise=request.user.entreprise,
+        annee=annee,
+        statut_periode__in=['validee', 'cloturee']
+    )
     if mois:
         periodes = periodes.filter(mois=mois)
     
     bulletins = BulletinPaie.objects.filter(
         periode__in=periodes,
-        statut_bulletin__in=['valide', 'paye']
+        statut_bulletin__in=['valide', 'paye'],
+        employe__entreprise=request.user.entreprise,
     ).select_related('employe', 'periode')
     
     # Calculs pour CNSS
@@ -401,7 +459,9 @@ def declarations_sociales(request):
             'net': bulletin.net_a_payer
         })
     
-    annees = PeriodePaie.objects.values_list('annee', flat=True).distinct().order_by('-annee')
+    annees = PeriodePaie.objects.filter(
+        entreprise=request.user.entreprise
+    ).values_list('annee', flat=True).distinct().order_by('-annee')
     
     return render(request, 'paie/declarations_sociales.html', {
         'declaration_cnss': declaration_cnss,
@@ -425,7 +485,7 @@ def liste_elements_salaire(request):
     
     elements = ElementSalaire.objects.select_related(
         'employe', 'rubrique'
-    ).all()
+    ).filter(employe__entreprise=request.user.entreprise)
     
     if employe_id:
         elements = elements.filter(employe_id=employe_id)
@@ -435,7 +495,10 @@ def liste_elements_salaire(request):
         elements = elements.filter(actif=(actif == 'true'))
     
     # Liste des employés pour le filtre
-    employes = Employe.objects.filter(statut_employe='actif').order_by('nom', 'prenoms')
+    employes = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    ).order_by('nom', 'prenoms')
     
     return render(request, 'paie/elements_salaire/liste.html', {
         'elements': elements,
@@ -446,7 +509,7 @@ def liste_elements_salaire(request):
 @login_required
 def elements_salaire_employe(request, employe_id):
     """Éléments de salaire d'un employé spécifique"""
-    employe = get_object_or_404(Employe, pk=employe_id)
+    employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
     
     elements = ElementSalaire.objects.filter(
         employe=employe
@@ -472,7 +535,7 @@ def elements_salaire_employe(request, employe_id):
 @login_required
 def ajouter_element_salaire(request, employe_id):
     """Ajouter un élément de salaire à un employé"""
-    employe = get_object_or_404(Employe, pk=employe_id)
+    employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
     
     if request.method == 'POST':
         rubrique_id = request.POST.get('rubrique')
@@ -520,7 +583,7 @@ def ajouter_element_salaire(request, employe_id):
 @login_required
 def modifier_element_salaire(request, pk):
     """Modifier un élément de salaire"""
-    element = get_object_or_404(ElementSalaire, pk=pk)
+    element = get_object_or_404(ElementSalaire, pk=pk, employe__entreprise=request.user.entreprise)
     
     if request.method == 'POST':
         montant = request.POST.get('montant')
@@ -555,7 +618,7 @@ def modifier_element_salaire(request, pk):
 @login_required
 def supprimer_element_salaire(request, pk):
     """Supprimer un élément de salaire"""
-    element = get_object_or_404(ElementSalaire, pk=pk)
+    element = get_object_or_404(ElementSalaire, pk=pk, employe__entreprise=request.user.entreprise)
     employe_id = element.employe.id
     
     if request.method == 'POST':
@@ -643,12 +706,14 @@ def detail_rubrique(request, pk):
     # Nombre d'employés utilisant cette rubrique
     nb_employes = ElementSalaire.objects.filter(
         rubrique=rubrique,
-        actif=True
+        actif=True,
+        employe__entreprise=request.user.entreprise,
     ).values('employe').distinct().count()
     
     # Éléments utilisant cette rubrique
     elements = ElementSalaire.objects.filter(
-        rubrique=rubrique
+        rubrique=rubrique,
+        employe__entreprise=request.user.entreprise,
     ).select_related('employe').order_by('-actif', 'employe__nom')[:20]
     
     return render(request, 'paie/rubriques/detail.html', {

@@ -354,16 +354,25 @@ def admin_dashboard(request):
         'total_users': entreprise.utilisateurs.count(),
         'active_users': entreprise.utilisateurs.filter(actif=True).count(),
         'quota_users': entreprise.max_utilisateurs,
-        'total_employes': Employe.objects.count(),
-        'employes_actifs': Employe.objects.filter(statut_employe='actif').count(),
+        'total_employes': Employe.objects.filter(entreprise=entreprise).count(),
+        'employes_actifs': Employe.objects.filter(entreprise=entreprise, statut_employe='actif').count(),
         'bulletins_mois': 0,
-        'conges_en_attente': Conge.objects.filter(statut_demande='En attente').count(),
+        'conges_en_attente': Conge.objects.filter(
+            employe__entreprise=entreprise,
+            statut_demande='En attente'
+        ).count(),
     }
     
     # Bulletins du mois en cours
-    periode_actuelle = PeriodePaie.objects.filter(statut_periode='ouverte').first()
+    periode_actuelle = PeriodePaie.objects.filter(
+        entreprise=entreprise,
+        statut_periode='ouverte'
+    ).first()
     if periode_actuelle:
-        stats['bulletins_mois'] = BulletinPaie.objects.filter(periode=periode_actuelle).count()
+        stats['bulletins_mois'] = BulletinPaie.objects.filter(
+            periode=periode_actuelle,
+            employe__entreprise=entreprise,
+        ).count()
     
     # Activités récentes
     recent_logs = LogActivite.objects.filter(

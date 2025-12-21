@@ -100,12 +100,34 @@ class SocieteAdmin(admin.ModelAdmin):
         }),
     )
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(entreprise=request.user.entreprise)
+
+    def save_model(self, request, obj, form, change):
+        if not request.user.is_superuser and not getattr(obj, 'entreprise_id', None):
+            obj.entreprise = request.user.entreprise
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(Etablissement)
 class EtablissementAdmin(admin.ModelAdmin):
     list_display = ['code_etablissement', 'nom_etablissement', 'type_etablissement', 'ville', 'actif']
     list_filter = ['type_etablissement', 'actif', 'ville']
     search_fields = ['code_etablissement', 'nom_etablissement']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(societe__entreprise=request.user.entreprise)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser and db_field.name == 'societe':
+            kwargs['queryset'] = Societe.objects.filter(entreprise=request.user.entreprise)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(Service)
@@ -114,6 +136,19 @@ class ServiceAdmin(admin.ModelAdmin):
     list_filter = ['actif', 'etablissement']
     search_fields = ['code_service', 'nom_service']
     raw_id_fields = ['responsable_service']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(etablissement__societe__entreprise=request.user.entreprise)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser and db_field.name == 'etablissement':
+            kwargs['queryset'] = Etablissement.objects.filter(societe__entreprise=request.user.entreprise)
+        if not request.user.is_superuser and db_field.name == 'responsable_service':
+            kwargs['queryset'] = db_field.remote_field.model.objects.filter(entreprise=request.user.entreprise)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(Poste)
@@ -135,3 +170,14 @@ class PosteAdmin(admin.ModelAdmin):
             'fields': ('actif',)
         }),
     )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(service__etablissement__societe__entreprise=request.user.entreprise)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser and db_field.name == 'service':
+            kwargs['queryset'] = Service.objects.filter(etablissement__societe__entreprise=request.user.entreprise)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)

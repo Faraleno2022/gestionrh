@@ -12,6 +12,12 @@ class JourFerieAdmin(admin.ModelAdmin):
     search_fields = ['libelle']
     ordering = ['-date_jour_ferie']
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(entreprise=request.user.entreprise)
+
 
 @admin.register(Conge)
 class CongeAdmin(admin.ModelAdmin):
@@ -20,6 +26,17 @@ class CongeAdmin(admin.ModelAdmin):
     search_fields = ['employe__nom', 'employe__prenoms']
     readonly_fields = ['date_demande']
     ordering = ['-date_debut']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(employe__entreprise=request.user.entreprise)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser and db_field.name == 'employe':
+            kwargs['queryset'] = db_field.remote_field.model.objects.filter(entreprise=request.user.entreprise)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(SoldeConge)
@@ -30,6 +47,17 @@ class SoldeCongeAdmin(admin.ModelAdmin):
     readonly_fields = ['date_mise_a_jour']
     ordering = ['-annee', 'employe__nom']
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(employe__entreprise=request.user.entreprise)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser and db_field.name == 'employe':
+            kwargs['queryset'] = db_field.remote_field.model.objects.filter(entreprise=request.user.entreprise)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(Pointage)
 class PointageAdmin(admin.ModelAdmin):
@@ -37,6 +65,17 @@ class PointageAdmin(admin.ModelAdmin):
     list_filter = ['statut_pointage', 'valide', 'date_pointage']
     search_fields = ['employe__nom', 'employe__prenoms']
     ordering = ['-date_pointage']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(employe__entreprise=request.user.entreprise)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser and db_field.name == 'employe':
+            kwargs['queryset'] = db_field.remote_field.model.objects.filter(entreprise=request.user.entreprise)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(Absence)
@@ -46,6 +85,17 @@ class AbsenceAdmin(admin.ModelAdmin):
     search_fields = ['employe__nom', 'employe__prenoms']
     ordering = ['-date_absence']
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(employe__entreprise=request.user.entreprise)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser and db_field.name == 'employe':
+            kwargs['queryset'] = db_field.remote_field.model.objects.filter(entreprise=request.user.entreprise)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(ArretTravail)
 class ArretTravailAdmin(admin.ModelAdmin):
@@ -53,6 +103,17 @@ class ArretTravailAdmin(admin.ModelAdmin):
     list_filter = ['type_arret', 'organisme_payeur', 'prolongation']
     search_fields = ['employe__nom', 'employe__prenoms', 'numero_certificat']
     ordering = ['-date_debut']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(employe__entreprise=request.user.entreprise)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser and db_field.name == 'employe':
+            kwargs['queryset'] = db_field.remote_field.model.objects.filter(entreprise=request.user.entreprise)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(HoraireTravail)
@@ -62,6 +123,17 @@ class HoraireTravailAdmin(admin.ModelAdmin):
     search_fields = ['code_horaire', 'libelle_horaire']
     ordering = ['code_horaire']
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(entreprise=request.user.entreprise)
+
+    def save_model(self, request, obj, form, change):
+        if not request.user.is_superuser and not getattr(obj, 'entreprise_id', None):
+            obj.entreprise = request.user.entreprise
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(AffectationHoraire)
 class AffectationHoraireAdmin(admin.ModelAdmin):
@@ -69,3 +141,19 @@ class AffectationHoraireAdmin(admin.ModelAdmin):
     list_filter = ['actif', 'horaire']
     search_fields = ['employe__nom', 'employe__prenoms']
     ordering = ['-date_debut']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(
+            employe__entreprise=request.user.entreprise,
+            horaire__entreprise=request.user.entreprise,
+        )
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser and db_field.name == 'employe':
+            kwargs['queryset'] = db_field.remote_field.model.objects.filter(entreprise=request.user.entreprise)
+        if not request.user.is_superuser and db_field.name == 'horaire':
+            kwargs['queryset'] = HoraireTravail.objects.filter(entreprise=request.user.entreprise)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)

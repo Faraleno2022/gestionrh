@@ -20,4 +20,16 @@ urlpatterns = [
     # Documents
     path('<int:employe_id>/document/upload/', views.employe_document_upload, name='document_upload'),
     path('document/<int:document_id>/delete/', views.employe_document_delete, name='document_delete'),
+
+    # Évaluations (performance)
+    path('<int:employe_id>/evaluations/', views.evaluation_list, name='evaluation_list'),
+    path('<int:employe_id>/evaluations/create/', views.evaluation_create, name='evaluation_create'),
+    path('evaluations/<int:pk>/', views.evaluation_detail, name='evaluation_detail'),
+    path('evaluations/<int:pk>/delete/', views.evaluation_delete, name='evaluation_delete'),
+
+    # Sanctions disciplinaires
+    path('<int:employe_id>/sanctions/', views.sanction_list, name='sanction_list'),
+    path('<int:employe_id>/sanctions/create/', views.sanction_create, name='sanction_create'),
+    path('sanctions/<int:pk>/', views.sanction_detail, name='sanction_detail'),
+    path('sanctions/<int:pk>/delete/', views.sanction_delete, name='sanction_delete'),
 ]

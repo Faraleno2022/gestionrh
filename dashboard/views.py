@@ -15,7 +15,10 @@ def index(request):
     context = {}
     
     # Statistiques employés
-    employes_actifs = Employe.objects.filter(statut_employe='actif')
+    employes_actifs = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    )
     context['total_employes'] = employes_actifs.count()
     context['employes_hommes'] = employes_actifs.filter(sexe='M').count()
     context['employes_femmes'] = employes_actifs.filter(sexe='F').count()
@@ -30,14 +33,16 @@ def index(request):
     conges_en_cours = Conge.objects.filter(
         statut_demande='Approuvé',
         date_debut__lte=aujourd_hui,
-        date_fin__gte=aujourd_hui
+        date_fin__gte=aujourd_hui,
+        employe__entreprise=request.user.entreprise,
     )
     context['conges_en_cours'] = conges_en_cours.count()
     context['employes_en_conge'] = conges_en_cours.select_related('employe')[:5]
     
     # Congés en attente
     context['conges_en_attente'] = Conge.objects.filter(
-        statut_demande='En attente'
+        statut_demande='En attente',
+        employe__entreprise=request.user.entreprise,
     ).count()
     
     # Paie du mois en cours
@@ -46,10 +51,14 @@ def index(request):
     
     try:
         periode_actuelle = PeriodePaie.objects.get(
+            entreprise=request.user.entreprise,
             annee=annee_actuelle,
             mois=mois_actuel
         )
-        bulletins_mois = BulletinPaie.objects.filter(periode=periode_actuelle)
+        bulletins_mois = BulletinPaie.objects.filter(
+            periode=periode_actuelle,
+            employe__entreprise=request.user.entreprise,
+        )
         context['bulletins_calcules'] = bulletins_mois.filter(statut_bulletin='Calculé').count()
         context['bulletins_valides'] = bulletins_mois.filter(statut_bulletin='Validé').count()
         context['masse_salariale'] = bulletins_mois.aggregate(
@@ -62,7 +71,8 @@ def index(request):
     
     # Pointages du jour
     context['pointages_jour'] = Pointage.objects.filter(
-        date_pointage=aujourd_hui
+        date_pointage=aujourd_hui,
+        employe__entreprise=request.user.entreprise,
     ).count()
     
     # Alertes
@@ -71,6 +81,7 @@ def index(request):
     # Contrats arrivant à échéance (30 jours)
     date_limite = aujourd_hui + timedelta(days=30)
     contrats_echeance = Employe.objects.filter(
+        entreprise=request.user.entreprise,
         type_contrat='CDD',
         date_fin_contrat__lte=date_limite,
         date_fin_contrat__gte=aujourd_hui,
@@ -108,6 +119,7 @@ def rapports(request):
     effectif_mensuel = []
     for mois in range(1, 13):
         effectif = Employe.objects.filter(
+            entreprise=request.user.entreprise,
             date_embauche__year__lte=annee,
             date_embauche__month__lte=mois
         ).exclude(
@@ -124,7 +136,10 @@ def rapports(request):
     
     # Pyramide des âges
     aujourd_hui = timezone.now().date()
-    employes_actifs = Employe.objects.filter(statut_employe='actif')
+    employes_actifs = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    )
     
     pyramide_ages = {
         '< 25 ans': 0,
@@ -153,7 +168,10 @@ def rapports(request):
     # Répartition par service
     from core.models import Service
     services_stats = []
-    for service in Service.objects.filter(actif=True):
+    for service in Service.objects.filter(
+        actif=True,
+        etablissement__societe__entreprise=request.user.entreprise,
+    ):
         effectif = employes_actifs.filter(service=service).count()
         if effectif > 0:
             services_stats.append({
@@ -178,10 +196,15 @@ def statistiques_paie(request):
     masse_mensuelle = []
     for mois in range(1, 13):
         try:
-            periode = PeriodePaie.objects.get(annee=annee, mois=mois)
+            periode = PeriodePaie.objects.get(
+                entreprise=request.user.entreprise,
+                annee=annee,
+                mois=mois
+            )
             total = BulletinPaie.objects.filter(
                 periode=periode,
-                statut_bulletin__in=['Validé', 'Payé']
+                statut_bulletin__in=['Validé', 'Payé'],
+                employe__entreprise=request.user.entreprise,
             ).aggregate(total=Sum('net_a_payer'))['total'] or 0
             masse_mensuelle.append(float(total))
         except PeriodePaie.DoesNotExist:

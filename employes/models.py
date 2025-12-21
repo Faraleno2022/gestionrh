@@ -1,7 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
-from core.models import Etablissement, Service, Poste, Entreprise
+from core.models import Etablissement, Service, Poste, Entreprise, Devise
 from django.utils import timezone
 
 
@@ -120,6 +120,11 @@ class Employe(models.Model):
     rib = models.CharField(max_length=50, blank=True, null=True, verbose_name='RIB')
     operateur_mobile_money = models.CharField(max_length=50, blank=True, null=True)
     numero_mobile_money = models.CharField(max_length=20, blank=True, null=True)
+    
+    # Devise de paie (pour expatriés et employés multi-devises)
+    devise_paie = models.ForeignKey(Devise, on_delete=models.SET_NULL, null=True, blank=True, 
+                                   related_name='employes_devise',
+                                   help_text='Devise de paiement du salaire (par défaut GNF)')
     
     # Audit
     date_creation = models.DateTimeField(auto_now_add=True)

@@ -10,29 +10,47 @@ import string
 from .models import OffreEmploi, Candidature, EntretienRecrutement
 from core.models import Poste, Service
 from employes.models import Employe
+from core.decorators import entreprise_active_required
 
 
 @login_required
+@entreprise_active_required
 def recrutement_home(request):
     """Vue d'accueil du module recrutement"""
     # Statistiques
     stats = {
-        'offres_ouvertes': OffreEmploi.objects.filter(statut_offre='ouverte').count(),
-        'candidatures_recues': Candidature.objects.filter(statut_candidature='recue').count(),
+        'offres_ouvertes': OffreEmploi.objects.filter(
+            entreprise=request.user.entreprise,
+            statut_offre='ouverte'
+        ).count(),
+        'candidatures_recues': Candidature.objects.filter(
+            offre__entreprise=request.user.entreprise,
+            statut_candidature='recue'
+        ).count(),
         'entretiens_prevus': EntretienRecrutement.objects.filter(
+            candidature__offre__entreprise=request.user.entreprise,
             date_entretien__gte=timezone.now()
         ).count(),
-        'candidatures_retenues': Candidature.objects.filter(statut_candidature='retenue').count(),
+        'candidatures_retenues': Candidature.objects.filter(
+            offre__entreprise=request.user.entreprise,
+            statut_candidature='retenue'
+        ).count(),
     }
     
     # Offres récentes
-    offres_recentes = OffreEmploi.objects.filter(statut_offre='ouverte')[:5]
+    offres_recentes = OffreEmploi.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_offre='ouverte'
+    )[:5]
     
     # Candidatures récentes
-    candidatures_recentes = Candidature.objects.all()[:5]
+    candidatures_recentes = Candidature.objects.filter(
+        offre__entreprise=request.user.entreprise
+    )[:5]
     
     # Prochains entretiens
     prochains_entretiens = EntretienRecrutement.objects.filter(
+        candidature__offre__entreprise=request.user.entreprise,
         date_entretien__gte=timezone.now()
     ).order_by('date_entretien')[:5]
     
@@ -47,12 +65,15 @@ def recrutement_home(request):
 # ============= OFFRES D'EMPLOI =============
 
 @login_required
+@entreprise_active_required
 def liste_offres(request):
     """Liste des offres d'emploi"""
     statut = request.GET.get('statut')
     service_id = request.GET.get('service')
     
-    offres = OffreEmploi.objects.all().select_related('poste', 'service', 'responsable_recrutement')
+    offres = OffreEmploi.objects.filter(
+        entreprise=request.user.entreprise
+    ).select_related('poste', 'service', 'responsable_recrutement')
     
     if statut:
         offres = offres.filter(statut_offre=statut)
@@ -62,7 +83,9 @@ def liste_offres(request):
     # Ajouter le nombre de candidatures pour chaque offre
     offres = offres.annotate(nb_candidatures=Count('candidatures'))
     
-    services = Service.objects.all()
+    services = Service.objects.filter(
+        etablissement__societe__entreprise=request.user.entreprise
+    )
     
     return render(request, 'recrutement/offres/liste.html', {
         'offres': offres,
@@ -71,6 +94,7 @@ def liste_offres(request):
 
 
 @login_required
+@entreprise_active_required
 def creer_offre(request):
     """Créer une offre d'emploi"""
     if request.method == 'POST':
@@ -79,6 +103,7 @@ def creer_offre(request):
             reference = f"OFF-{date.today().year}-{''.join(random.choices(string.digits, k=4))}"
             
             offre = OffreEmploi.objects.create(
+                entreprise=request.user.entreprise,
                 reference_offre=reference,
                 intitule_poste=request.POST.get('intitule_poste'),
                 poste_id=request.POST.get('poste') if request.POST.get('poste') else None,
@@ -105,8 +130,14 @@ def creer_offre(request):
             messages.error(request, f'Erreur lors de la création : {str(e)}')
     
     postes = Poste.objects.filter(actif=True)
-    services = Service.objects.filter(actif=True)
-    employes = Employe.objects.filter(statut_employe='actif')
+    services = Service.objects.filter(
+        actif=True,
+        etablissement__societe__entreprise=request.user.entreprise,
+    )
+    employes = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    )
     
     return render(request, 'recrutement/offres/creer.html', {
         'postes': postes,
@@ -116,9 +147,10 @@ def creer_offre(request):
 
 
 @login_required
+@entreprise_active_required
 def detail_offre(request, pk):
     """Détail d'une offre d'emploi"""
-    offre = get_object_or_404(OffreEmploi, pk=pk)
+    offre = get_object_or_404(OffreEmploi, pk=pk, entreprise=request.user.entreprise)
     candidatures = offre.candidatures.all()
     
     # Statistiques des candidatures
@@ -139,9 +171,10 @@ def detail_offre(request, pk):
 
 
 @login_required
+@entreprise_active_required
 def modifier_offre(request, pk):
     """Modifier une offre d'emploi"""
-    offre = get_object_or_404(OffreEmploi, pk=pk)
+    offre = get_object_or_404(OffreEmploi, pk=pk, entreprise=request.user.entreprise)
     
     if request.method == 'POST':
         try:
@@ -181,19 +214,25 @@ def modifier_offre(request, pk):
 # ============= CANDIDATURES =============
 
 @login_required
+@entreprise_active_required
 def liste_candidatures(request):
     """Liste des candidatures"""
     statut = request.GET.get('statut')
     offre_id = request.GET.get('offre')
     
-    candidatures = Candidature.objects.all().select_related('offre')
+    candidatures = Candidature.objects.filter(
+        offre__entreprise=request.user.entreprise
+    ).select_related('offre')
     
     if statut:
         candidatures = candidatures.filter(statut_candidature=statut)
     if offre_id:
         candidatures = candidatures.filter(offre_id=offre_id)
     
-    offres = OffreEmploi.objects.filter(statut_offre='ouverte')
+    offres = OffreEmploi.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_offre='ouverte'
+    )
     
     return render(request, 'recrutement/candidatures/liste.html', {
         'candidatures': candidatures,
@@ -202,15 +241,22 @@ def liste_candidatures(request):
 
 
 @login_required
+@entreprise_active_required
 def creer_candidature(request):
     """Créer une candidature"""
     if request.method == 'POST':
         try:
             # Générer un numéro unique
             numero = f"CAND-{date.today().year}-{''.join(random.choices(string.digits, k=5))}"
+
+            offre = get_object_or_404(
+                OffreEmploi,
+                pk=request.POST.get('offre'),
+                entreprise=request.user.entreprise,
+            )
             
             candidature = Candidature.objects.create(
-                offre_id=request.POST.get('offre'),
+                offre=offre,
                 numero_candidature=numero,
                 civilite=request.POST.get('civilite'),
                 nom=request.POST.get('nom'),
@@ -238,7 +284,10 @@ def creer_candidature(request):
         except Exception as e:
             messages.error(request, f'Erreur lors de l\'enregistrement : {str(e)}')
     
-    offres = OffreEmploi.objects.filter(statut_offre='ouverte')
+    offres = OffreEmploi.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_offre='ouverte'
+    )
     
     return render(request, 'recrutement/candidatures/creer.html', {
         'offres': offres
@@ -246,9 +295,10 @@ def creer_candidature(request):
 
 
 @login_required
+@entreprise_active_required
 def detail_candidature(request, pk):
     """Détail d'une candidature"""
-    candidature = get_object_or_404(Candidature, pk=pk)
+    candidature = get_object_or_404(Candidature, pk=pk, offre__entreprise=request.user.entreprise)
     entretiens = candidature.entretiens.all()
     
     return render(request, 'recrutement/candidatures/detail.html', {
@@ -258,9 +308,10 @@ def detail_candidature(request, pk):
 
 
 @login_required
+@entreprise_active_required
 def evaluer_candidature(request, pk):
     """Évaluer une candidature"""
-    candidature = get_object_or_404(Candidature, pk=pk)
+    candidature = get_object_or_404(Candidature, pk=pk, offre__entreprise=request.user.entreprise)
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -292,9 +343,12 @@ def evaluer_candidature(request, pk):
 # ============= ENTRETIENS =============
 
 @login_required
+@entreprise_active_required
 def liste_entretiens(request):
     """Liste des entretiens"""
-    entretiens = EntretienRecrutement.objects.all().select_related('candidature', 'candidature__offre')
+    entretiens = EntretienRecrutement.objects.filter(
+        candidature__offre__entreprise=request.user.entreprise
+    ).select_related('candidature', 'candidature__offre')
     
     return render(request, 'recrutement/entretiens/liste.html', {
         'entretiens': entretiens
@@ -302,9 +356,10 @@ def liste_entretiens(request):
 
 
 @login_required
+@entreprise_active_required
 def creer_entretien(request, candidature_id):
     """Planifier un entretien"""
-    candidature = get_object_or_404(Candidature, pk=candidature_id)
+    candidature = get_object_or_404(Candidature, pk=candidature_id, offre__entreprise=request.user.entreprise)
     
     if request.method == 'POST':
         try:
@@ -334,9 +389,14 @@ def creer_entretien(request, candidature_id):
 
 
 @login_required
+@entreprise_active_required
 def detail_entretien(request, pk):
     """Détail d'un entretien"""
-    entretien = get_object_or_404(EntretienRecrutement, pk=pk)
+    entretien = get_object_or_404(
+        EntretienRecrutement,
+        pk=pk,
+        candidature__offre__entreprise=request.user.entreprise,
+    )
     
     return render(request, 'recrutement/entretiens/detail.html', {
         'entretien': entretien
@@ -344,9 +404,14 @@ def detail_entretien(request, pk):
 
 
 @login_required
+@entreprise_active_required
 def evaluer_entretien(request, pk):
     """Évaluer un entretien"""
-    entretien = get_object_or_404(EntretienRecrutement, pk=pk)
+    entretien = get_object_or_404(
+        EntretienRecrutement,
+        pk=pk,
+        candidature__offre__entreprise=request.user.entreprise,
+    )
     
     if request.method == 'POST':
         try:
