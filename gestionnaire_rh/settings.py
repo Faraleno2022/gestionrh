@@ -36,7 +36,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'axes',
-    'defender',
+    # 'defender',  # Désactivé - nécessite Redis
     'csp',
     
     # Local apps
@@ -61,7 +61,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Security middlewares
     'axes.middleware.AxesMiddleware',
-    'defender.middleware.FailedLoginMiddleware',
+    # 'defender.middleware.FailedLoginMiddleware',  # Désactivé - nécessite Redis
     # 'csp.middleware.CSPMiddleware',  # Désactivé temporairement
     'core.middleware.SecurityHeadersMiddleware',
     'core.middleware.SQLInjectionProtectionMiddleware',
