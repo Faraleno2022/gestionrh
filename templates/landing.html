@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestionnaireRH - Solution complète de gestion des ressources humaines</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --guinea-red: #ce1126;
+            --guinea-yellow: #fcd116;
+            --guinea-green: #009a49;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+        
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(to right, var(--guinea-red), var(--guinea-yellow), var(--guinea-green));
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        
+        .navbar-brand .text-danger { color: var(--guinea-red) !important; }
+        .navbar-brand .text-warning { color: var(--guinea-yellow) !important; }
+        .navbar-brand .text-success { color: var(--guinea-green) !important; }
+        
+        .hero-content {
+            padding-top: 120px;
+            padding-bottom: 80px;
+        }
+        
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(to right, #fff, #e0e0e0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero .lead {
+            font-size: 1.3rem;
+            color: #b0b0b0;
+            margin-bottom: 2rem;
+        }
+        
+        .btn-guinea {
+            background: linear-gradient(to right, var(--guinea-red), var(--guinea-yellow), var(--guinea-green));
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .btn-guinea:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(206, 17, 38, 0.3);
+            color: white;
+        }
+        
+        .btn-outline-light {
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+        }
+        
+        .floating-shapes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+        }
+        
+        .shape-1 {
+            width: 300px;
+            height: 300px;
+            background: var(--guinea-red);
+            top: 10%;
+            right: -100px;
+            animation: float 8s ease-in-out infinite;
+        }
+        
+        .shape-2 {
+            width: 200px;
+            height: 200px;
+            background: var(--guinea-yellow);
+            bottom: 20%;
+            left: -50px;
+            animation: float 6s ease-in-out infinite reverse;
+        }
+        
+        .shape-3 {
+            width: 150px;
+            height: 150px;
+            background: var(--guinea-green);
+            top: 50%;
+            right: 20%;
+            animation: float 10s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(10deg); }
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 100px 0;
+            background: #f8f9fa;
+        }
+        
+        .section-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        
+        .section-title h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 1rem;
+        }
+        
+        .section-title p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            height: 100%;
+            border: none;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            font-size: 2rem;
+        }
+        
+        .feature-icon.red { background: rgba(206, 17, 38, 0.1); color: var(--guinea-red); }
+        .feature-icon.yellow { background: rgba(252, 209, 22, 0.15); color: #b8860b; }
+        .feature-icon.green { background: rgba(0, 154, 73, 0.1); color: var(--guinea-green); }
+        .feature-icon.blue { background: rgba(0, 123, 255, 0.1); color: #007bff; }
+        .feature-icon.purple { background: rgba(111, 66, 193, 0.1); color: #6f42c1; }
+        .feature-icon.orange { background: rgba(253, 126, 20, 0.1); color: #fd7e14; }
+        
+        .feature-card h4 {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1a1a2e;
+        }
+        
+        .feature-card p {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+        
+        /* Modules Section */
+        .modules {
+            padding: 100px 0;
+            background: white;
+        }
+        
+        .module-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            padding: 25px;
+            border-radius: 15px;
+            transition: background 0.3s;
+        }
+        
+        .module-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .module-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            flex-shrink: 0;
+            font-size: 1.3rem;
+        }
+        
+        .module-item h5 {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1a1a2e;
+        }
+        
+        .module-item p {
+            color: #666;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+        
+        /* Stats Section */
+        .stats {
+            padding: 80px 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 30px;
+        }
+        
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--guinea-red), var(--guinea-yellow), var(--guinea-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            font-size: 1.1rem;
+            color: #b0b0b0;
+            margin-top: 10px;
+        }
+        
+        /* CTA Section */
+        .cta {
+            padding: 100px 0;
+            background: linear-gradient(to right, rgba(206, 17, 38, 0.05), rgba(252, 209, 22, 0.05), rgba(0, 154, 73, 0.05));
+        }
+        
+        .cta h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 1.5rem;
+        }
+        
+        .cta p {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        
+        /* Footer */
+        footer {
+            background: #1a1a2e;
+            color: white;
+            padding: 60px 0 30px;
+        }
+        
+        footer h5 {
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        footer a {
+            color: #b0b0b0;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        footer a:hover {
+            color: var(--guinea-yellow);
+        }
+        
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 30px;
+            margin-top: 40px;
+        }
+        
+        .guinea-flag-footer {
+            display: inline-flex;
+            width: 40px;
+            height: 25px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        
+        .guinea-flag-footer div { flex: 1; }
+        .guinea-flag-footer .red { background: var(--guinea-red); }
+        .guinea-flag-footer .yellow { background: var(--guinea-yellow); }
+        .guinea-flag-footer .green { background: var(--guinea-green); }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.5rem; }
+            .hero .lead { font-size: 1.1rem; }
+            .section-title h2 { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top" style="background: rgba(26, 26, 46, 0.95); backdrop-filter: blur(10px);">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <span class="text-danger">Gestion</span><span class="text-warning">naire</span><span class="text-success">RH</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="#features">Fonctionnalités</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#modules">Modules</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+                    <li class="nav-item ms-lg-3">
+                        <a class="btn btn-outline-light btn-sm px-4" href="{% url 'login' %}">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Connexion
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="floating-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+        </div>
+        <div class="container hero-content">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <p class="text-uppercase mb-3" style="color: var(--guinea-yellow); letter-spacing: 3px; font-size: 0.9rem;">
+                        <i class="bi bi-star-fill me-2"></i>Solution RH Complète
+                    </p>
+                    <h1>Gestionnaire des Ressources Humaines</h1>
+                    <p class="lead">
+                        Une solution moderne et complète pour la gestion de vos ressources humaines, 
+                        conforme à la législation guinéenne. Simplifiez la paie, les congés, 
+                        les déclarations sociales et bien plus encore.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="{% url 'login' %}" class="btn btn-guinea">
+                            <i class="bi bi-rocket-takeoff me-2"></i>Commencer
+                        </a>
+                        <a href="#features" class="btn btn-outline-light">
+                            <i class="bi bi-info-circle me-2"></i>En savoir plus
+                        </a>
+                    </div>
+                    <div class="mt-5 d-flex align-items-center gap-4">
+                        <div>
+                            <div class="d-flex align-items-center">
+                                <div class="guinea-flag-footer me-2">
+                                    <div class="red"></div>
+                                    <div class="yellow"></div>
+                                    <div class="green"></div>
+                                </div>
+                                <span style="color: #b0b0b0;">République de Guinée</span>
+                            </div>
+                            <small style="color: #666;">Travail - Justice - Solidarité</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 text-center mt-5 mt-lg-0">
+                    <div class="position-relative">
+                        <div style="background: linear-gradient(135deg, rgba(206,17,38,0.2), rgba(252,209,22,0.2), rgba(0,154,73,0.2)); border-radius: 30px; padding: 40px;">
+                            <i class="bi bi-people-fill" style="font-size: 15rem; color: rgba(255,255,255,0.1);"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-title">
+                <h2>Fonctionnalités Principales</h2>
+                <p>Tout ce dont vous avez besoin pour une gestion RH efficace</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon red">
+                            <i class="bi bi-people"></i>
+                        </div>
+                        <h4>Gestion des Employés</h4>
+                        <p>Centralisez toutes les informations de vos employés : contrats, documents, historique de carrière et informations personnelles.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon yellow">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+                        <h4>Paie & Bulletins</h4>
+                        <p>Calcul automatique des salaires, CNSS, IRPP selon la législation guinéenne. Génération et envoi des bulletins par email ou WhatsApp.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon green">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <h4>Congés & Absences</h4>
+                        <p>Gestion complète des demandes de congés, suivi des soldes, validation hiérarchique et calendrier des absences.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon blue">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <h4>Pointage & Temps</h4>
+                        <p>Suivi des heures de travail, gestion des heures supplémentaires et des retards. Rapports détaillés de présence.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon purple">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </div>
+                        <h4>Déclarations Sociales</h4>
+                        <p>Génération automatique des déclarations CNSS, télédéclaration et suivi des cotisations sociales.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon orange">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                        <h4>Tableaux de Bord</h4>
+                        <p>Visualisez vos indicateurs RH clés : effectifs, masse salariale, turnover et statistiques en temps réel.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modules Section -->
+    <section class="modules" id="modules">
+        <div class="container">
+            <div class="section-title">
+                <h2>Modules Disponibles</h2>
+                <p>Une suite complète d'outils pour votre gestion RH</p>
+            </div>
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="module-item">
+                        <div class="module-icon" style="background: rgba(206,17,38,0.1); color: var(--guinea-red);">
+                            <i class="bi bi-person-badge"></i>
+                        </div>
+                        <div>
+                            <h5>Gestion du Personnel</h5>
+                            <p>Fiches employés complètes, contrats, documents administratifs, historique de carrière et suivi des compétences.</p>
+                        </div>
+                    </div>
+                    <div class="module-item">
+                        <div class="module-icon" style="background: rgba(252,209,22,0.15); color: #b8860b;">
+                            <i class="bi bi-wallet2"></i>
+                        </div>
+                        <div>
+                            <h5>Module Paie</h5>
+                            <p>Calcul de paie automatisé, rubriques personnalisables, barème IRPP progressif, simulateur fiscal et livre de paie.</p>
+                        </div>
+                    </div>
+                    <div class="module-item">
+                        <div class="module-icon" style="background: rgba(0,154,73,0.1); color: var(--guinea-green);">
+                            <i class="bi bi-building"></i>
+                        </div>
+                        <div>
+                            <h5>Interface CNSS</h5>
+                            <p>Télédéclaration CNSS, génération de fichiers (CSV, XML, JSON), suivi des transmissions et historique des déclarations.</p>
+                        </div>
+                    </div>
+                    <div class="module-item">
+                        <div class="module-icon" style="background: rgba(0,123,255,0.1); color: #007bff;">
+                            <i class="bi bi-airplane"></i>
+                        </div>
+                        <div>
+                            <h5>Gestion des Expatriés</h5>
+                            <p>Suivi des visas et permis de travail, alertes d'expiration, gestion des documents et conformité administrative.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="module-item">
+                        <div class="module-icon" style="background: rgba(111,66,193,0.1); color: #6f42c1;">
+                            <i class="bi bi-calendar2-week"></i>
+                        </div>
+                        <div>
+                            <h5>Gestion des Congés</h5>
+                            <p>Demandes en ligne, workflow de validation, calcul automatique des soldes, calendrier partagé et jours fériés.</p>
+                        </div>
+                    </div>
+                    <div class="module-item">
+                        <div class="module-icon" style="background: rgba(253,126,20,0.1); color: #fd7e14;">
+                            <i class="bi bi-clipboard-check"></i>
+                        </div>
+                        <div>
+                            <h5>Conformité Inspection</h5>
+                            <p>Checklist de conformité, registres obligatoires, suivi des visites d'inspection et rapports de conformité.</p>
+                        </div>
+                    </div>
+                    <div class="module-item">
+                        <div class="module-icon" style="background: rgba(220,53,69,0.1); color: #dc3545;">
+                            <i class="bi bi-envelope-paper"></i>
+                        </div>
+                        <div>
+                            <h5>Envoi Bulletins</h5>
+                            <p>Envoi des bulletins de paie par email et WhatsApp, individuel ou en masse, avec message personnalisé.</p>
+                        </div>
+                    </div>
+                    <div class="module-item">
+                        <div class="module-icon" style="background: rgba(32,201,151,0.1); color: #20c997;">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+                        <div>
+                            <h5>Sécurité & Audit</h5>
+                            <p>Gestion des utilisateurs et rôles, journal d'activité, traçabilité complète et protection des données.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="container">
+            <div class="row">
+                <div class="col-6 col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">100%</div>
+                        <div class="stat-label">Conforme Législation</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">24/7</div>
+                        <div class="stat-label">Accessible</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">10+</div>
+                        <div class="stat-label">Modules</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">∞</div>
+                        <div class="stat-label">Employés</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta text-center" id="contact">
+        <div class="container">
+            <h2>Prêt à simplifier votre gestion RH ?</h2>
+            <p>Connectez-vous dès maintenant et découvrez toutes les fonctionnalités</p>
+            <a href="{% url 'login' %}" class="btn btn-guinea btn-lg">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <h5>
+                        <span style="color: var(--guinea-red);">Gestion</span><span style="color: var(--guinea-yellow);">naire</span><span style="color: var(--guinea-green);">RH</span>
+                    </h5>
+                    <p style="color: #b0b0b0;">
+                        Solution complète de gestion des ressources humaines, 
+                        conçue pour les entreprises guinéennes.
+                    </p>
+                    <div class="guinea-flag-footer">
+                        <div class="red"></div>
+                        <div class="yellow"></div>
+                        <div class="green"></div>
+                    </div>
+                    <span style="color: #b0b0b0;">République de Guinée</span>
+                </div>
+                <div class="col-lg-2 col-md-4 mb-4">
+                    <h5>Modules</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#">Personnel</a></li>
+                        <li class="mb-2"><a href="#">Paie</a></li>
+                        <li class="mb-2"><a href="#">Congés</a></li>
+                        <li class="mb-2"><a href="#">Pointage</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-4 mb-4">
+                    <h5>Légal</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#">CNSS</a></li>
+                        <li class="mb-2"><a href="#">IRPP</a></li>
+                        <li class="mb-2"><a href="#">Inspection</a></li>
+                        <li class="mb-2"><a href="#">Conformité</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-4 col-md-4 mb-4">
+                    <h5>Contact</h5>
+                    <ul class="list-unstyled" style="color: #b0b0b0;">
+                        <li class="mb-2"><i class="bi bi-geo-alt me-2"></i>Conakry, Guinée</li>
+                        <li class="mb-2"><i class="bi bi-envelope me-2"></i>contact@gestionnairerh.gn</li>
+                        <li class="mb-2"><i class="bi bi-phone me-2"></i>+224 XXX XXX XXX</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom text-center">
+                <p style="color: #666; margin: 0;">
+                    © 2024 GestionnaireRH. Tous droits réservés. | 
+                    <span style="color: #b0b0b0;">Travail - Justice - Solidarité</span>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+        
+        // Navbar background on scroll
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.style.background = 'rgba(26, 26, 46, 0.98)';
+            } else {
+                navbar.style.background = 'rgba(26, 26, 46, 0.95)';
+            }
+        });
+    </script>
+</body>
+</html>

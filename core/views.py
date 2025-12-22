@@ -117,10 +117,10 @@ def profile_view(request):
 
 
 def index_view(request):
-    """Page d'accueil - redirige vers le dashboard si connecté"""
+    """Page d'accueil - redirige vers le dashboard si connecté, sinon affiche landing page"""
     if request.user.is_authenticated:
         return redirect('dashboard:index')
-    return redirect('core:login')
+    return render(request, 'landing.html')
 
 
 def csrf_failure(request, reason=""):
