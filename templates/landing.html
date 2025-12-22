@@ -163,13 +163,13 @@
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            background: rgba(252, 209, 22, 0.1);
-            border: 1px solid rgba(252, 209, 22, 0.3);
+            background: rgba(206, 17, 38, 0.1);
+            border: 1px solid rgba(206, 17, 38, 0.3);
             padding: 8px 20px;
             border-radius: 50px;
             font-size: 0.85rem;
             font-weight: 600;
-            color: var(--guinea-yellow);
+            color: var(--guinea-red);
             margin-bottom: 25px;
             animation: badgePulse 2s ease-in-out infinite;
         }
@@ -234,19 +234,19 @@
         }
         
         .btn-outline-glass {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--dark-border);
+            background: rgba(0,0,0,0.05);
+            border: 2px solid var(--text-primary);
             padding: 16px 40px;
             border-radius: 50px;
             font-weight: 600;
-            color: white;
+            color: var(--text-primary);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             backdrop-filter: blur(10px);
         }
         
         .btn-outline-glass:hover {
-            background: rgba(255,255,255,0.1);
-            border-color: rgba(255,255,255,0.3);
+            background: var(--text-primary);
+            border-color: var(--text-primary);
             transform: translateY(-4px);
             color: white;
         }
@@ -323,11 +323,13 @@
         
         .floating-card-text {
             font-size: 0.85rem;
+            color: var(--text-primary);
         }
         
         .floating-card-text strong {
             display: block;
             font-size: 1rem;
+            color: var(--text-primary);
         }
         
         /* Section Titles */
@@ -344,7 +346,7 @@
             border-radius: 50px;
             font-size: 0.85rem;
             font-weight: 600;
-            color: var(--guinea-yellow);
+            color: var(--guinea-red);
             margin-bottom: 20px;
             text-transform: uppercase;
             letter-spacing: 2px;
@@ -422,8 +424,8 @@
             color: var(--guinea-red);
         }
         .feature-icon.yellow { 
-            background: linear-gradient(135deg, rgba(252,209,22,0.2), rgba(252,209,22,0.05));
-            color: var(--guinea-yellow);
+            background: linear-gradient(135deg, rgba(252,209,22,0.3), rgba(252,209,22,0.1));
+            color: #b8860b;
         }
         .feature-icon.green { 
             background: linear-gradient(135deg, rgba(0,154,73,0.2), rgba(0,154,73,0.05));
@@ -830,9 +832,9 @@
                                     <div style="background: rgba(252,209,22,0.1); border-radius: 12px; padding: 15px;">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <span style="color: var(--text-secondary);">Masse salariale</span>
-                                            <span style="font-weight: 700; color: var(--guinea-yellow);">+12.5%</span>
+                                            <span style="font-weight: 700; color: #b8860b;">+12.5%</span>
                                         </div>
-                                        <div style="height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 10px; overflow: hidden;">
+                                        <div style="height: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; margin-top: 10px; overflow: hidden;">
                                             <div style="height: 100%; width: 75%; background: linear-gradient(to right, var(--guinea-red), var(--guinea-yellow), var(--guinea-green)); border-radius: 4px;"></div>
                                         </div>
                                     </div>
@@ -861,7 +863,7 @@
                         </div>
                         
                         <div class="floating-card card-3" data-aos="fade-left" data-aos-delay="1000">
-                            <div class="floating-card-icon" style="background: rgba(252,209,22,0.2); color: var(--guinea-yellow);">
+                            <div class="floating-card-icon" style="background: rgba(252,209,22,0.3); color: #b8860b;">
                                 <i class="bi bi-shield-check"></i>
                             </div>
                             <div class="floating-card-text">
