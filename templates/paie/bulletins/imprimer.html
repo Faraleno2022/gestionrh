@@ -18,21 +18,134 @@
             color: #000;
         }
         
-        .header {
-            border-bottom: 3px solid #d62828;
+        /* En-tête officiel */
+        .official-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 3px solid #ce1126;
             padding-bottom: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
-        .company-info {
-            float: left;
-            width: 50%;
+        .logo-left {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
-        .bulletin-info {
-            float: right;
-            width: 45%;
-            text-align: right;
+        .logo-left img {
+            max-width: 80px;
+            max-height: 80px;
+        }
+        
+        .logo-placeholder {
+            width: 70px;
+            height: 70px;
+            border: 2px dashed #ccc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8pt;
+            color: #999;
+            text-align: center;
+        }
+        
+        .header-center {
+            flex: 1;
+            text-align: center;
+            padding: 0 15px;
+        }
+        
+        .republique {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #000;
+            margin: 0;
+            text-transform: uppercase;
+        }
+        
+        .devise-nationale {
+            font-size: 9pt;
+            font-style: italic;
+            color: #ce1126;
+            margin: 3px 0 8px 0;
+        }
+        
+        .company-name {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #ce1126;
+            margin: 8px 0 5px 0;
+        }
+        
+        .bulletin-title {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #000;
+            margin: 10px 0 5px 0;
+            padding: 5px 15px;
+            background: linear-gradient(to right, #ce1126, #fcd116, #009a49);
+            -webkit-background-clip: text;
+            background-clip: text;
+            display: inline-block;
+        }
+        
+        .bulletin-ref {
+            font-size: 10pt;
+            color: #666;
+        }
+        
+        .flag-right {
+            width: 80px;
+            text-align: center;
+        }
+        
+        .guinea-flag {
+            display: flex;
+            width: 60px;
+            height: 40px;
+            border: 1px solid #ddd;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .flag-red {
+            background-color: #ce1126;
+            flex: 1;
+        }
+        
+        .flag-yellow {
+            background-color: #fcd116;
+            flex: 1;
+        }
+        
+        .flag-green {
+            background-color: #009a49;
+            flex: 1;
+        }
+        
+        .header {
+            margin-bottom: 15px;
+        }
+        
+        .bulletin-info-row {
+            display: flex;
+            justify-content: space-between;
+            background-color: #f8f9fa;
+            padding: 8px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .bulletin-info-item {
+            font-size: 10pt;
+        }
+        
+        .bulletin-info-item strong {
+            color: #ce1126;
         }
         
         .clearfix::after {
@@ -47,7 +160,7 @@
             font-weight: bold;
             margin-top: 15px;
             margin-bottom: 10px;
-            border-left: 4px solid #d62828;
+            border-left: 4px solid #ce1126;
         }
         
         table {
@@ -103,7 +216,7 @@
         }
         
         .summary-box {
-            border: 2px solid #d62828;
+            border: 2px solid #ce1126;
             padding: 15px;
             margin-top: 20px;
             background-color: #fff8f8;
@@ -117,9 +230,26 @@
         .footer {
             margin-top: 30px;
             padding-top: 15px;
-            border-top: 1px solid #ddd;
+            border-top: 2px solid #ce1126;
             font-size: 9pt;
-            color: #666;
+            color: #333;
+        }
+        
+        .company-footer {
+            background: linear-gradient(to right, rgba(206,17,38,0.1), rgba(252,209,22,0.1), rgba(0,154,73,0.1));
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+        
+        .company-footer-content {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        
+        .company-footer-item {
+            margin: 3px 10px;
         }
         
         @media print {
@@ -137,7 +267,7 @@
             top: 10px;
             right: 10px;
             padding: 10px 20px;
-            background-color: #d62828;
+            background-color: #ce1126;
             color: white;
             border: none;
             border-radius: 5px;
@@ -146,7 +276,7 @@
         }
         
         .print-button:hover {
-            background-color: #b01f1f;
+            background-color: #a00e1e;
         }
     </style>
 </head>
@@ -155,23 +285,41 @@
         🖨️ Imprimer
     </button>
 
-    <!-- En-tête -->
-    <div class="header clearfix">
-        <div class="company-info">
-            <h2 style="margin: 0; color: #d62828;">{% if params %}{{ params.nom_societe }}{% else %}ENTREPRISE{% endif %}</h2>
-            {% if params %}
-            <p style="margin: 5px 0;">{{ params.adresse_societe|linebreaks }}</p>
-            <p style="margin: 5px 0;">Tél: {{ params.telephone_societe }}</p>
-            <p style="margin: 5px 0;">NIF: {{ params.nif_societe }}</p>
-            <p style="margin: 5px 0;">N° CNSS: {{ params.num_cnss_employeur }}</p>
+    <!-- En-tête Officiel -->
+    <div class="official-header">
+        <!-- Logo entreprise à gauche -->
+        <div class="logo-left">
+            {% if params and params.logo %}
+            <img src="{{ params.logo.url }}" alt="Logo">
+            {% else %}
+            <div class="logo-placeholder">LOGO</div>
             {% endif %}
         </div>
-        <div class="bulletin-info">
-            <h1 style="margin: 0; color: #d62828;">BULLETIN DE PAIE</h1>
-            <p style="margin: 10px 0;"><strong>N°:</strong> {{ bulletin.numero_bulletin }}</p>
-            <p style="margin: 5px 0;"><strong>Période:</strong> {{ bulletin.periode }}</p>
-            <p style="margin: 5px 0;"><strong>Date:</strong> {{ bulletin.date_calcul|date:"d/m/Y" }}</p>
+        
+        <!-- Informations centrales -->
+        <div class="header-center">
+            <p class="republique">République de Guinée</p>
+            <p class="devise-nationale">Travail - Justice - Solidarité</p>
+            <p class="company-name">{% if params %}{{ params.nom_societe }}{% else %}ENTREPRISE{% endif %}</p>
+            <h1 class="bulletin-title">BULLETIN DE PAIE</h1>
         </div>
+        
+        <!-- Drapeau Guinée à droite -->
+        <div class="flag-right">
+            <div class="guinea-flag">
+                <div class="flag-red"></div>
+                <div class="flag-yellow"></div>
+                <div class="flag-green"></div>
+            </div>
+            <div style="font-size: 7pt; color: #666; margin-top: 3px;">GUINÉE</div>
+        </div>
+    </div>
+    
+    <!-- Informations du bulletin -->
+    <div class="bulletin-info-row">
+        <span class="bulletin-info-item"><strong>N°:</strong> {{ bulletin.numero_bulletin }}</span>
+        <span class="bulletin-info-item"><strong>Période:</strong> {{ bulletin.periode }}</span>
+        <span class="bulletin-info-item"><strong>Date:</strong> {{ bulletin.date_calcul|date:"d/m/Y" }}</span>
     </div>
 
     <!-- Informations Employé -->
@@ -288,11 +436,27 @@
         </tr>
     </table>
 
-    <!-- Pied de page -->
+    <!-- Pied de page avec informations entreprise -->
     <div class="footer">
         <p><strong>Note:</strong> Ce bulletin de paie est conforme à la législation guinéenne en vigueur.</p>
         <p>Les cotisations sociales sont calculées selon les taux CNSS: 5% (employé) et 18% (employeur).</p>
         <p>L'IRG est calculé selon le barème progressif avec application des déductions familiales et abattements professionnels.</p>
+        
+        <!-- Informations de l'entreprise en bas -->
+        <div class="company-footer">
+            <div style="text-align: center; margin-bottom: 8px;">
+                <strong style="color: #ce1126;">{% if params %}{{ params.nom_societe }}{% else %}ENTREPRISE{% endif %}</strong>
+            </div>
+            <div class="company-footer-content" style="justify-content: center; text-align: center;">
+                {% if params %}
+                <span class="company-footer-item">📍 {{ params.adresse_societe|default:"Adresse" }}</span>
+                <span class="company-footer-item">📞 {{ params.telephone_societe|default:"Téléphone" }}</span>
+                <span class="company-footer-item">🏛️ NIF: {{ params.nif_societe|default:"N/A" }}</span>
+                <span class="company-footer-item">🔢 CNSS: {{ params.num_cnss_employeur|default:"N/A" }}</span>
+                {% endif %}
+            </div>
+        </div>
+        
         <p style="margin-top: 15px; text-align: center;">
             <em>Document généré le {{ bulletin.date_calcul|date:"d/m/Y à H:i" }}</em>
         </p>
