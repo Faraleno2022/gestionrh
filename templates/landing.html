@@ -611,19 +611,9 @@
         /* Footer */
         footer {
             background: #1a1a2e;
-            border-top: 1px solid var(--dark-border);
+            border-top: 1px solid rgba(255,255,255,0.1);
             padding: 80px 0 40px;
             color: #ffffff;
-        }
-        
-        footer .footer-text,
-        footer .footer-links a,
-        footer .footer-contact li {
-            color: rgba(255,255,255,0.7) !important;
-        }
-        
-        footer .footer-links a:hover {
-            color: var(--guinea-yellow) !important;
         }
         
         .footer-brand {
@@ -633,7 +623,7 @@
         }
         
         .footer-text {
-            color: var(--text-secondary);
+            color: rgba(255,255,255,0.8) !important;
             font-size: 0.95rem;
             line-height: 1.7;
             margin-bottom: 25px;
@@ -643,6 +633,7 @@
             font-weight: 700;
             margin-bottom: 25px;
             font-size: 1.1rem;
+            color: #ffffff !important;
         }
         
         .footer-links {
@@ -656,14 +647,14 @@
         }
         
         .footer-links a {
-            color: var(--text-secondary);
+            color: rgba(255,255,255,0.8) !important;
             text-decoration: none;
             transition: all 0.3s ease;
             font-size: 0.95rem;
         }
         
         .footer-links a:hover {
-            color: var(--guinea-yellow);
+            color: var(--guinea-yellow) !important;
             padding-left: 5px;
         }
         
@@ -672,7 +663,11 @@
             align-items: center;
             gap: 12px;
             margin-bottom: 15px;
-            color: var(--text-secondary);
+            color: rgba(255,255,255,0.8) !important;
+        }
+        
+        .footer-contact li span {
+            color: rgba(255,255,255,0.8) !important;
         }
         
         .footer-contact i {
@@ -681,14 +676,14 @@
         }
         
         .footer-bottom {
-            border-top: 1px solid var(--dark-border);
+            border-top: 1px solid rgba(255,255,255,0.1);
             padding-top: 30px;
             margin-top: 50px;
             text-align: center;
         }
         
         .footer-bottom p {
-            color: var(--text-muted);
+            color: rgba(255,255,255,0.7) !important;
             font-size: 0.9rem;
         }
         
@@ -1089,8 +1084,8 @@
                             <div class="green"></div>
                         </div>
                         <div>
-                            <div style="font-weight: 600; font-size: 0.95rem;">République de Guinée</div>
-                            <small style="color: var(--text-muted);">Travail - Justice - Solidarité</small>
+                            <div style="font-weight: 600; font-size: 0.95rem; color: #ffffff;">République de Guinée</div>
+                            <small style="color: rgba(255,255,255,0.7);">Travail - Justice - Solidarité</small>
                         </div>
                     </div>
                 </div>
