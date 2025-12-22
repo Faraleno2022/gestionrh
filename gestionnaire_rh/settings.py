@@ -36,7 +36,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'axes',
-    # 'defender',  # Désactivé - nécessite Redis
+    # 'defender',
     'csp',
     
     # Local apps
@@ -61,7 +61,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Security middlewares
     'axes.middleware.AxesMiddleware',
-    # 'defender.middleware.FailedLoginMiddleware',  # Désactivé - nécessite Redis
     # 'csp.middleware.CSPMiddleware',  # Désactivé temporairement
     'core.middleware.SecurityHeadersMiddleware',
     'core.middleware.SQLInjectionProtectionMiddleware',
@@ -189,8 +188,8 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
 # Celery Configuration
-CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379/0')
+# CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
+# CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -312,7 +311,7 @@ AXES_IPWARE_META_PRECEDENCE_ORDER = [
 ]
 
 # Django Defender - Protection supplémentaire
-DEFENDER_REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/1')
+# DEFENDER_REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/1')
 DEFENDER_LOGIN_FAILURE_LIMIT = 5
 DEFENDER_BEHIND_REVERSE_PROXY = True
 DEFENDER_DISABLE_IP_LOCKOUT = False
@@ -436,3 +435,28 @@ ADMINS = [
     ('Admin', config('ADMIN_EMAIL', default='admin@example.com')),
 ]
 MANAGERS = ADMINS
+
+# Override Redis config (Redis not available on PythonAnywhere free tier)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+# Disable Redis-dependent features (not available on PythonAnywhere free tier)
+DEFENDER_DISABLE_IP_LOCKOUT = True
+DEFENDER_DISABLE_USERNAME_LOCKOUT = True
+DEFENDER_STORE_ACCESS_ATTEMPTS = False
+
+# CSRF Trusted Origins
+CSRF_TRUSTED_ORIGINS = [
+    'https://www.guineerh.space',
+    'https://guineerh.space',
+]
+
+# CSRF Trusted Origins
+CSRF_TRUSTED_ORIGINS = [
+    'https://www.guineerh.space',
+    'https://guineerh.space',
+]
