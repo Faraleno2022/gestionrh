@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from .views_irpp import bareme_irpp
+from . import views_envoi
 
 app_name = 'paie'
 
@@ -20,6 +21,13 @@ urlpatterns = [
     path('bulletins/', views.liste_bulletins, name='liste_bulletins'),
     path('bulletins/<int:pk>/', views.detail_bulletin, name='detail_bulletin'),
     path('bulletins/<int:pk>/imprimer/', views.imprimer_bulletin, name='imprimer_bulletin'),
+    
+    # Envoi des bulletins
+    path('bulletins/<int:pk>/envoyer-email/', views_envoi.envoyer_bulletin_email, name='envoyer_email'),
+    path('bulletins/<int:pk>/envoyer-whatsapp/', views_envoi.envoyer_bulletin_whatsapp, name='envoyer_whatsapp'),
+    path('bulletins/envoyer-masse/', views_envoi.envoyer_bulletins_masse, name='envoyer_masse'),
+    path('bulletins/envoyer-masse/email/', views_envoi.envoyer_masse_email, name='envoyer_masse_email'),
+    path('bulletins/envoyer-masse/whatsapp/', views_envoi.generer_liens_whatsapp_masse, name='generer_liens_whatsapp'),
     
     # Livre de paie
     path('livre/', views.livre_paie, name='livre_paie'),
