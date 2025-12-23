@@ -52,7 +52,25 @@
                     <i class="bi bi-shield-check"></i> Super Administrateur
                 </span>
                 {% endif %}
+                {% if user.est_admin_entreprise %}
+                <span class="badge bg-warning text-dark">
+                    <i class="bi bi-building"></i> Admin Entreprise
+                </span>
+                {% endif %}
             </div>
+            {% if user.est_admin_entreprise %}
+            <div class="mt-3">
+                <a href="{% url 'core:manage_users' %}" class="btn btn-light btn-sm me-2">
+                    <i class="bi bi-people-fill"></i> Gestion des utilisateurs
+                </a>
+                <a href="{% url 'core:admin_dashboard' %}" class="btn btn-light btn-sm me-2">
+                    <i class="bi bi-speedometer2"></i> Tableau de bord Admin
+                </a>
+                <a href="{% url 'core:entreprise_settings' %}" class="btn btn-light btn-sm">
+                    <i class="bi bi-gear-fill"></i> Paramètres entreprise
+                </a>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
