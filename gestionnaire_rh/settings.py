@@ -244,7 +244,7 @@ SECURE_BROWSER_XSS_FILTER = True
 # Session Security
 SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Strict'
+SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
@@ -252,8 +252,8 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 # CSRF Protection
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=True, cast=bool)
 CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'Strict'
-CSRF_USE_SESSIONS = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_USE_SESSIONS = False
 CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 
 # Désactiver CSP temporairement pour debug
@@ -340,7 +340,7 @@ ALLOWED_UPLOAD_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 
 
 # Database Security
 if not DEBUG:
-    DATABASES['default']['CONN_MAX_AGE'] = 600
+    DATABASES['default']['CONN_MAX_AGE'] = 0
     DATABASES['default']['OPTIONS'] = {
         'connect_timeout': 10,
     }

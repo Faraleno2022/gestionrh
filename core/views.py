@@ -143,7 +143,7 @@ def register_entreprise(request):
             # Connecter automatiquement l'administrateur
             admin_user = entreprise.utilisateurs.filter(est_admin_entreprise=True).first()
             if admin_user:
-                login(request, admin_user)
+                login(request, admin_user, backend='django.contrib.auth.backends.ModelBackend')
                 messages.success(
                     request,
                     f'Entreprise {entreprise.nom_entreprise} créée avec succès! Bienvenue {admin_user.get_full_name()}!'
