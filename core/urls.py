@@ -22,6 +22,8 @@ urlpatterns = [
     # Superuser - contrôle global
     path('superuser/users/', views.superuser_manage_users, name='superuser_manage_users'),
     path('superuser/toggle-user/<int:user_id>/', views.superuser_toggle_user, name='superuser_toggle_user'),
+    path('superuser/delete-user/<int:user_id>/', views.superuser_delete_user, name='superuser_delete_user'),
+    path('superuser/delete-entreprise/<int:entreprise_id>/', views.superuser_delete_entreprise, name='superuser_delete_entreprise'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('entreprise-settings/', views.entreprise_settings, name='entreprise_settings'),
     

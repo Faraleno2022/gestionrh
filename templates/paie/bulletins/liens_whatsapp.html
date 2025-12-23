@@ -30,7 +30,7 @@
                 {% for item in liens %}
                 <tr>
                     <td>{{ item.employe }}</td>
-                    <td>{{ item.telephone|default:"N/A" }}</td>
+                    <td>{{ item.telephone|default:"Non renseigné" }}</td>
                     <td>{{ item.bulletin.periode }}</td>
                     <td class="text-end">{{ item.bulletin.net_a_payer|floatformat:0|intcomma }} GNF</td>
                     <td>

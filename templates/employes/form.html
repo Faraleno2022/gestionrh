@@ -71,31 +71,6 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    // Validation côté client
-    $('form').on('submit', function(e) {
-        let isValid = true;
-        
-        // Vérifier les champs obligatoires
-        $('input[required], select[required]').each(function() {
-            if (!$(this).val()) {
-                isValid = false;
-                $(this).addClass('is-invalid');
-            } else {
-                $(this).removeClass('is-invalid');
-            }
-        });
-        
-        if (!isValid) {
-            e.preventDefault();
-            alert('Veuillez remplir tous les champs obligatoires');
-            // Aller au premier onglet avec erreur
-            $('.is-invalid').first().closest('.tab-pane').each(function() {
-                let tabId = $(this).attr('id');
-                $('a[href="#' + tabId + '"]').tab('show');
-            });
-        }
-    });
-    
     // Retirer la classe d'erreur quand l'utilisateur corrige
     $('input, select').on('change', function() {
         if ($(this).val()) {

@@ -58,8 +58,15 @@ class EmployeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # Rendre le matricule optionnel (sera généré automatiquement)
-        self.fields['matricule'].required = False
+        # Rendre plusieurs champs optionnels pour permettre un enregistrement rapide
+        # L'utilisateur pourra mettre à jour les informations manquantes plus tard
+        optional_fields = [
+            'matricule', 'sexe', 'date_naissance', 'nationalite',
+            'date_embauche', 'type_contrat', 'nombre_enfants'
+        ]
+        for field_name in optional_fields:
+            if field_name in self.fields:
+                self.fields[field_name].required = False
         
         # Filtrer les devises actives uniquement
         self.fields['devise_paie'].queryset = Devise.objects.filter(actif=True)
@@ -68,6 +75,7 @@ class EmployeForm(forms.ModelForm):
         # Helper Crispy Forms
         self.helper = FormHelper()
         self.helper.form_method = 'post'
+        self.helper.form_enctype = 'multipart/form-data'
         self.helper.form_class = 'form-horizontal'
         
         self.helper.layout = Layout(

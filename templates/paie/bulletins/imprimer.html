@@ -329,7 +329,7 @@
             <td>Matricule:</td>
             <td>{{ bulletin.employe.matricule }}</td>
             <td>N° CNSS:</td>
-            <td>{{ bulletin.employe.numero_cnss|default:"N/A" }}</td>
+            <td>{{ bulletin.employe.numero_cnss|default:"Non renseigné" }}</td>
         </tr>
         <tr>
             <td>Nom et Prénoms:</td>
@@ -337,15 +337,15 @@
         </tr>
         <tr>
             <td>Fonction:</td>
-            <td>{{ bulletin.employe.fonction|default:"N/A" }}</td>
+            <td>{{ bulletin.employe.fonction|default:"Non renseigné" }}</td>
             <td>Département:</td>
-            <td>{{ bulletin.employe.departement|default:"N/A" }}</td>
+            <td>{{ bulletin.employe.departement|default:"Non renseigné" }}</td>
         </tr>
         <tr>
             <td>Date d'embauche:</td>
-            <td>{{ bulletin.employe.date_embauche|date:"d/m/Y"|default:"N/A" }}</td>
+            <td>{{ bulletin.employe.date_embauche|date:"d/m/Y"|default:"Non renseigné" }}</td>
             <td>Situation familiale:</td>
-            <td>{{ bulletin.employe.situation_matrimoniale|default:"N/A" }}</td>
+            <td>{{ bulletin.employe.situation_matrimoniale|default:"Non renseigné" }}</td>
         </tr>
     </table>
 
@@ -451,8 +451,8 @@
                 {% if params %}
                 <span class="company-footer-item">📍 {{ params.adresse_societe|default:"Adresse" }}</span>
                 <span class="company-footer-item">📞 {{ params.telephone_societe|default:"Téléphone" }}</span>
-                <span class="company-footer-item">🏛️ NIF: {{ params.nif_societe|default:"N/A" }}</span>
-                <span class="company-footer-item">🔢 CNSS: {{ params.num_cnss_employeur|default:"N/A" }}</span>
+                <span class="company-footer-item">🏛️ NIF: {{ params.nif_societe|default:"Non renseigné" }}</span>
+                <span class="company-footer-item">🔢 CNSS: {{ params.num_cnss_employeur|default:"Non renseigné" }}</span>
                 {% endif %}
             </div>
         </div>

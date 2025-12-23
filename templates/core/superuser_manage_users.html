@@ -159,15 +159,32 @@
                                     </td>
                                     <td>
                                         {% if utilisateur != user %}
-                                            <a href="{% url 'core:superuser_toggle_user' utilisateur.id %}" 
-                                               class="btn btn-sm {% if utilisateur.actif %}btn-danger{% else %}btn-success{% endif %}"
-                                               onclick="return confirm('{% if utilisateur.actif %}Voulez-vous BLOQUER {{ utilisateur.username }} ? Cet utilisateur ne pourra plus se connecter.{% else %}Voulez-vous DÉBLOQUER {{ utilisateur.username }} ?{% endif %}');">
-                                                {% if utilisateur.actif %}
-                                                    <i class="bi bi-lock-fill"></i> Bloquer
-                                                {% else %}
-                                                    <i class="bi bi-unlock-fill"></i> Débloquer
+                                            <div class="btn-group" role="group">
+                                                <a href="{% url 'core:superuser_toggle_user' utilisateur.id %}" 
+                                                   class="btn btn-sm {% if utilisateur.actif %}btn-warning{% else %}btn-success{% endif %}"
+                                                   onclick="return confirm('{% if utilisateur.actif %}Voulez-vous BLOQUER {{ utilisateur.username }} ?{% else %}Voulez-vous DÉBLOQUER {{ utilisateur.username }} ?{% endif %}');"
+                                                   title="{% if utilisateur.actif %}Bloquer{% else %}Débloquer{% endif %}">
+                                                    {% if utilisateur.actif %}
+                                                        <i class="bi bi-lock-fill"></i>
+                                                    {% else %}
+                                                        <i class="bi bi-unlock-fill"></i>
+                                                    {% endif %}
+                                                </a>
+                                                <a href="{% url 'core:superuser_delete_user' utilisateur.id %}" 
+                                                   class="btn btn-sm btn-danger"
+                                                   onclick="return confirm('⚠️ ATTENTION: Voulez-vous SUPPRIMER DÉFINITIVEMENT {{ utilisateur.username }} ? Cette action est irréversible.');"
+                                                   title="Supprimer l'utilisateur">
+                                                    <i class="bi bi-trash-fill"></i>
+                                                </a>
+                                                {% if utilisateur.entreprise and utilisateur.est_admin_entreprise %}
+                                                <a href="{% url 'core:superuser_delete_entreprise' utilisateur.entreprise.id %}" 
+                                                   class="btn btn-sm btn-outline-danger"
+                                                   onclick="return confirm('⚠️⚠️ DANGER: Voulez-vous SUPPRIMER L\'ENTREPRISE {{ utilisateur.entreprise.nom_entreprise }} ET TOUS SES UTILISATEURS ? Cette action est IRRÉVERSIBLE!');"
+                                                   title="Supprimer l'entreprise et tous ses utilisateurs">
+                                                    <i class="bi bi-building-x"></i>
+                                                </a>
                                                 {% endif %}
-                                            </a>
+                                            </div>
                                         {% else %}
                                             <span class="badge bg-secondary">Vous</span>
                                         {% endif %}

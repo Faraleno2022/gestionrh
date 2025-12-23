@@ -542,3 +542,57 @@ def superuser_toggle_user(request, user_id):
         messages.warning(request, f"L'utilisateur {user_to_toggle.get_full_name()} a été bloqué.")
     
     return redirect('core:superuser_manage_users')
+
+
+@login_required
+def superuser_delete_user(request, user_id):
+    """Supprimer un utilisateur - réservé aux superusers"""
+    if not request.user.is_superuser:
+        messages.error(request, "Accès réservé aux super administrateurs.")
+        return redirect('dashboard:index')
+    
+    user_to_delete = get_object_or_404(Utilisateur, pk=user_id)
+    
+    # Empêcher le superuser de se supprimer lui-même
+    if user_to_delete == request.user:
+        messages.error(request, "Vous ne pouvez pas vous supprimer vous-même.")
+        return redirect('core:superuser_manage_users')
+    
+    username = user_to_delete.username
+    full_name = user_to_delete.get_full_name()
+    
+    # Supprimer l'utilisateur
+    user_to_delete.delete()
+    
+    log_activity(request, f'Suppression utilisateur {username} (superuser)', 'core')
+    messages.success(request, f"L'utilisateur {full_name} ({username}) a été supprimé définitivement.")
+    
+    return redirect('core:superuser_manage_users')
+
+
+@login_required
+def superuser_delete_entreprise(request, entreprise_id):
+    """Supprimer une entreprise et tous ses utilisateurs - réservé aux superusers"""
+    from .models import Entreprise
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Accès réservé aux super administrateurs.")
+        return redirect('dashboard:index')
+    
+    entreprise = get_object_or_404(Entreprise, pk=entreprise_id)
+    
+    # Vérifier que le superuser ne supprime pas sa propre entreprise
+    if request.user.entreprise == entreprise:
+        messages.error(request, "Vous ne pouvez pas supprimer votre propre entreprise.")
+        return redirect('core:superuser_manage_users')
+    
+    nom_entreprise = entreprise.nom_entreprise
+    nb_users = entreprise.utilisateurs.count()
+    
+    # Supprimer l'entreprise (cascade supprimera les utilisateurs)
+    entreprise.delete()
+    
+    log_activity(request, f'Suppression entreprise {nom_entreprise} et {nb_users} utilisateurs (superuser)', 'core')
+    messages.success(request, f"L'entreprise {nom_entreprise} et ses {nb_users} utilisateur(s) ont été supprimés définitivement.")
+    
+    return redirect('core:superuser_manage_users')
