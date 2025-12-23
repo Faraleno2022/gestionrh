@@ -16,6 +16,7 @@ urlpatterns = [
     path('register-entreprise/', views.register_entreprise, name='register_entreprise'),
     path('reauth/', views.reauth_view, name='reauth'),
     path('manage-users/', views.manage_users, name='manage_users'),
+    path('toggle-user-status/<int:user_id>/', views.toggle_user_status, name='toggle_user_status'),
     path('send-invitation/', views.send_invitation, name='send_invitation'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('entreprise-settings/', views.entreprise_settings, name='entreprise_settings'),

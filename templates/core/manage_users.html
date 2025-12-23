@@ -151,6 +151,7 @@
                                     <th>Réauth</th>
                                     <th>Statut</th>
                                     <th>Date création</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -186,10 +187,25 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ utilisateur.date_joined|date:"d/m/Y" }}</td>
+                                    <td>
+                                        {% if utilisateur != user %}
+                                            <a href="{% url 'core:toggle_user_status' utilisateur.id %}" 
+                                               class="btn btn-sm {% if utilisateur.actif %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
+                                               onclick="return confirm('{% if utilisateur.actif %}Voulez-vous bloquer cet utilisateur ?{% else %}Voulez-vous débloquer cet utilisateur ?{% endif %}');">
+                                                {% if utilisateur.actif %}
+                                                    <i class="bi bi-lock"></i> Bloquer
+                                                {% else %}
+                                                    <i class="bi bi-unlock"></i> Débloquer
+                                                {% endif %}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted">Aucun utilisateur trouvé</td>
+                                    <td colspan="8" class="text-center text-muted">Aucun utilisateur trouvé</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

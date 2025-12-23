@@ -413,3 +413,38 @@ def entreprise_settings(request):
         'form': form,
         'entreprise': entreprise,
     })
+
+
+@login_required
+def toggle_user_status(request, user_id):
+    """Bloquer ou débloquer un utilisateur"""
+    if not request.user.est_admin_entreprise:
+        messages.error(request, "Vous n'avez pas les permissions pour cette action.")
+        return redirect('dashboard:index')
+    
+    # Récupérer l'utilisateur à modifier (doit appartenir à la même entreprise)
+    user_to_toggle = get_object_or_404(
+        Utilisateur,
+        pk=user_id,
+        entreprise=request.user.entreprise
+    )
+    
+    # Empêcher l'admin de se bloquer lui-même
+    if user_to_toggle == request.user:
+        messages.error(request, "Vous ne pouvez pas vous bloquer vous-même.")
+        return redirect('core:manage_users')
+    
+    # Inverser le statut actif
+    user_to_toggle.actif = not user_to_toggle.actif
+    user_to_toggle.save(update_fields=['actif'])
+    
+    # Log et message
+    action = 'Déblocage' if user_to_toggle.actif else 'Blocage'
+    log_activity(request, f'{action} utilisateur {user_to_toggle.username}', 'core')
+    
+    if user_to_toggle.actif:
+        messages.success(request, f"L'utilisateur {user_to_toggle.get_full_name()} a été débloqué.")
+    else:
+        messages.warning(request, f"L'utilisateur {user_to_toggle.get_full_name()} a été bloqué.")
+    
+    return redirect('core:manage_users')
