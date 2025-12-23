@@ -68,6 +68,7 @@ class EmployeForm(forms.ModelForm):
         # Helper Crispy Forms
         self.helper = FormHelper()
         self.helper.form_method = 'post'
+        self.helper.form_enctype = 'multipart/form-data'
         self.helper.form_class = 'form-horizontal'
         
         self.helper.layout = Layout(
