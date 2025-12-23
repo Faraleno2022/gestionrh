@@ -99,7 +99,13 @@
         <div class="card border-left-primary shadow-sm">
             <div class="card-body">
                 <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Âge</div>
-                <div class="h5 mb-0">{{ age|default:"N/A" }} ans</div>
+                <div class="h5 mb-0">
+                    {% if age %}
+                        {{ age }} ans
+                    {% else %}
+                        <span class="text-muted small">Non renseigné</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -107,7 +113,13 @@
         <div class="card border-left-success shadow-sm">
             <div class="card-body">
                 <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Ancienneté</div>
-                <div class="h5 mb-0">{{ anciennete|default:"N/A" }} ans</div>
+                <div class="h5 mb-0">
+                    {% if anciennete %}
+                        {{ anciennete }} ans
+                    {% else %}
+                        <span class="text-muted small">Non renseigné</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -119,7 +131,7 @@
                     {% if solde_conges %}
                         {{ solde_conges.conges_restants }} jours
                     {% else %}
-                        N/A
+                        <span class="text-muted small">Non défini</span>
                     {% endif %}
                 </div>
             </div>
@@ -133,7 +145,7 @@
                     {% if salaire_base %}
                         {{ salaire_base|floatformat:0|intcomma }} GNF
                     {% else %}
-                        N/A
+                        <span class="text-muted small">Non défini</span>
                     {% endif %}
                 </div>
             </div>
