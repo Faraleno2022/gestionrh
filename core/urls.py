@@ -18,6 +18,10 @@ urlpatterns = [
     path('manage-users/', views.manage_users, name='manage_users'),
     path('toggle-user-status/<int:user_id>/', views.toggle_user_status, name='toggle_user_status'),
     path('send-invitation/', views.send_invitation, name='send_invitation'),
+    
+    # Superuser - contrôle global
+    path('superuser/users/', views.superuser_manage_users, name='superuser_manage_users'),
+    path('superuser/toggle-user/<int:user_id>/', views.superuser_toggle_user, name='superuser_toggle_user'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('entreprise-settings/', views.entreprise_settings, name='entreprise_settings'),
     
