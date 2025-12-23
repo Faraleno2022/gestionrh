@@ -105,8 +105,11 @@ class EntrepriseRegistrationForm(forms.ModelForm):
                 last_name=self.cleaned_data['admin_last_name'],
                 entreprise=entreprise,
                 profil=profil_admin,
-                est_admin_entreprise=True,
-                actif=True
+                est_admin_entreprise=True,  # Admin de son entreprise uniquement
+                actif=True,
+                # Sécurité : pas d'accès superuser ni staff
+                is_superuser=False,
+                is_staff=False
             )
         
         return entreprise
