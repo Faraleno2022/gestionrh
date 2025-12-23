@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.conf import settings
+from django.db import models
 from .models import LogActivite, Utilisateur
 
 
@@ -203,6 +204,7 @@ def manage_users(request):
     entreprise = request.user.entreprise
     current_users = entreprise.utilisateurs.filter(actif=True).count()
     quota_reached = current_users >= entreprise.max_utilisateurs
+    quota_percentage = int((current_users / entreprise.max_utilisateurs) * 100) if entreprise.max_utilisateurs > 0 else 0
     
     if request.method == 'POST':
         if quota_reached:
@@ -235,6 +237,7 @@ def manage_users(request):
         'quota_reached': quota_reached,
         'current_users': current_users,
         'max_users': entreprise.max_utilisateurs,
+        'quota_percentage': quota_percentage,
     })
 
 
@@ -448,3 +451,85 @@ def toggle_user_status(request, user_id):
         messages.warning(request, f"L'utilisateur {user_to_toggle.get_full_name()} a été bloqué.")
     
     return redirect('core:manage_users')
+
+
+@login_required
+def superuser_manage_users(request):
+    """Vue de gestion de TOUS les utilisateurs - réservée aux superusers"""
+    if not request.user.is_superuser:
+        messages.error(request, "Accès réservé aux super administrateurs.")
+        return redirect('dashboard:index')
+    
+    # Filtres
+    entreprise_filter = request.GET.get('entreprise', '')
+    status_filter = request.GET.get('status', '')
+    search = request.GET.get('search', '')
+    
+    # Récupérer tous les utilisateurs
+    users = Utilisateur.objects.all().select_related('entreprise', 'profil').order_by('-date_joined')
+    
+    # Appliquer les filtres
+    if entreprise_filter:
+        users = users.filter(entreprise_id=entreprise_filter)
+    if status_filter == 'actif':
+        users = users.filter(actif=True)
+    elif status_filter == 'inactif':
+        users = users.filter(actif=False)
+    if search:
+        users = users.filter(
+            models.Q(username__icontains=search) |
+            models.Q(email__icontains=search) |
+            models.Q(first_name__icontains=search) |
+            models.Q(last_name__icontains=search)
+        )
+    
+    # Liste des entreprises pour le filtre
+    from .models import Entreprise
+    entreprises = Entreprise.objects.all().order_by('nom_entreprise')
+    
+    # Statistiques
+    stats = {
+        'total': Utilisateur.objects.count(),
+        'actifs': Utilisateur.objects.filter(actif=True).count(),
+        'inactifs': Utilisateur.objects.filter(actif=False).count(),
+        'total_entreprises': Entreprise.objects.count(),
+    }
+    
+    return render(request, 'core/superuser_manage_users.html', {
+        'users': users,
+        'entreprises': entreprises,
+        'stats': stats,
+        'entreprise_filter': entreprise_filter,
+        'status_filter': status_filter,
+        'search': search,
+    })
+
+
+@login_required
+def superuser_toggle_user(request, user_id):
+    """Bloquer/débloquer un utilisateur - réservé aux superusers"""
+    if not request.user.is_superuser:
+        messages.error(request, "Accès réservé aux super administrateurs.")
+        return redirect('dashboard:index')
+    
+    user_to_toggle = get_object_or_404(Utilisateur, pk=user_id)
+    
+    # Empêcher le superuser de se bloquer lui-même
+    if user_to_toggle == request.user:
+        messages.error(request, "Vous ne pouvez pas vous bloquer vous-même.")
+        return redirect('core:superuser_manage_users')
+    
+    # Inverser le statut actif
+    user_to_toggle.actif = not user_to_toggle.actif
+    user_to_toggle.save(update_fields=['actif'])
+    
+    # Log et message
+    action = 'Déblocage' if user_to_toggle.actif else 'Blocage'
+    log_activity(request, f'{action} utilisateur {user_to_toggle.username} (superuser)', 'core')
+    
+    if user_to_toggle.actif:
+        messages.success(request, f"L'utilisateur {user_to_toggle.get_full_name()} a été débloqué.")
+    else:
+        messages.warning(request, f"L'utilisateur {user_to_toggle.get_full_name()} a été bloqué.")
+    
+    return redirect('core:superuser_manage_users')

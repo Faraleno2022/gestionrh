@@ -29,7 +29,7 @@
                 <div class="progress mt-2" style="height: 10px;">
                     <div class="progress-bar {% if quota_reached %}bg-danger{% else %}bg-success{% endif %}" 
                          role="progressbar" 
-                         style="width: {{ current_users|floatformat:0|add:"0"|mul:100|div:max_users }}%">
+                         style="width: {{ quota_percentage }}%">
                     </div>
                 </div>
             </div>
