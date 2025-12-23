@@ -220,6 +220,11 @@ def manage_users(request):
             user = form.save(commit=False)
             user.entreprise = request.user.entreprise
             user.set_password(form.cleaned_data['password'])
+            # Sécurité : forcer les valeurs par défaut pour les nouveaux utilisateurs
+            user.est_admin_entreprise = False
+            user.is_superuser = False
+            user.is_staff = False
+            user.actif = True  # Compte actif par défaut
             user.save()
             
             log_activity(request, f'Création utilisateur {user.username}', 'core')
@@ -287,8 +292,12 @@ def send_invitation(request):
             last_name=last_name,
             entreprise=entreprise,
             profil=profil,
-            actif=False,  # Inactif jusqu'à activation
-            is_active=False
+            actif=False,  # Inactif jusqu'à activation par email
+            is_active=False,
+            # Sécurité : empêcher l'accès admin
+            est_admin_entreprise=False,
+            is_superuser=False,
+            is_staff=False
         )
         user.set_password(token)  # Mot de passe temporaire
         user.save()
