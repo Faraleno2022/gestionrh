@@ -97,10 +97,9 @@ class EntrepriseRegistrationForm(forms.ModelForm):
             )
             
             # Créer l'utilisateur administrateur
-            admin_user = Utilisateur.objects.create_user(
+            admin_user = Utilisateur(
                 username=self.cleaned_data['admin_username'],
                 email=self.cleaned_data['admin_email'],
-                password=self.cleaned_data['admin_password'],
                 first_name=self.cleaned_data['admin_first_name'],
                 last_name=self.cleaned_data['admin_last_name'],
                 entreprise=entreprise,
@@ -111,6 +110,8 @@ class EntrepriseRegistrationForm(forms.ModelForm):
                 is_superuser=False,
                 is_staff=False
             )
+            admin_user.set_password(self.cleaned_data['admin_password'])
+            admin_user.save()
         
         return entreprise
 
