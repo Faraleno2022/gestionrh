@@ -62,7 +62,8 @@ class EmployeForm(forms.ModelForm):
         # L'utilisateur pourra mettre à jour les informations manquantes plus tard
         optional_fields = [
             'matricule', 'sexe', 'date_naissance', 'nationalite',
-            'date_embauche', 'type_contrat', 'nombre_enfants'
+            'date_embauche', 'type_contrat', 'nombre_enfants',
+            'etablissement', 'service', 'poste'
         ]
         for field_name in optional_fields:
             if field_name in self.fields:
