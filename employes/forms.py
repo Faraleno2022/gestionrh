@@ -46,11 +46,11 @@ class EmployeForm(forms.ModelForm):
         ]
         
         widgets = {
-            'date_naissance': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'date_delivrance_piece': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'date_expiration_piece': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'date_embauche': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'date_anciennete': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_naissance': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            'date_delivrance_piece': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            'date_expiration_piece': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            'date_embauche': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            'date_anciennete': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
             'photo': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
             'adresse_actuelle': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
