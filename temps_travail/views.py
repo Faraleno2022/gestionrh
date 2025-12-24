@@ -108,9 +108,8 @@ def liste_pointages(request):
     )
     
     employes = Employe.objects.filter(
-        entreprise=request.user.entreprise,
-        statut_employe='actif'
-    )
+        entreprise=request.user.entreprise
+    ).exclude(statut_employe__in=['demissionnaire', 'licencie', 'retraite'])
     
     return render(request, 'temps_travail/pointages/liste.html', {
         'pointages': pointages,
@@ -177,9 +176,8 @@ def creer_pointage(request):
             messages.error(request, f'Erreur lors de la création : {str(e)}')
     
     employes = Employe.objects.filter(
-        entreprise=request.user.entreprise,
-        statut_employe='actif'
-    )
+        entreprise=request.user.entreprise
+    ).exclude(statut_employe__in=['demissionnaire', 'licencie', 'retraite'])
     return render(request, 'temps_travail/pointages/creer.html', {
         'employes': employes,
         'date_defaut': date.today().isoformat()
@@ -293,9 +291,8 @@ def liste_conges(request):
         conges = conges.filter(date_debut__year=annee)
     
     employes = Employe.objects.filter(
-        entreprise=request.user.entreprise,
-        statut_employe='actif'
-    )
+        entreprise=request.user.entreprise
+    ).exclude(statut_employe__in=['demissionnaire', 'licencie', 'retraite'])
     annees = range(date.today().year - 2, date.today().year + 2)
     
     return render(request, 'temps_travail/conges/liste.html', {
@@ -358,9 +355,8 @@ def creer_conge(request):
             messages.error(request, f'Erreur lors de la création : {str(e)}')
     
     employes = Employe.objects.filter(
-        entreprise=request.user.entreprise,
-        statut_employe='actif'
-    )
+        entreprise=request.user.entreprise
+    ).exclude(statut_employe__in=['demissionnaire', 'licencie', 'retraite'])
     return render(request, 'temps_travail/conges/creer.html', {
         'employes': employes
     })
@@ -436,9 +432,8 @@ def liste_absences(request):
         )
     
     employes = Employe.objects.filter(
-        entreprise=request.user.entreprise,
-        statut_employe='actif'
-    )
+        entreprise=request.user.entreprise
+    ).exclude(statut_employe__in=['demissionnaire', 'licencie', 'retraite'])
     
     return render(request, 'temps_travail/absences/liste.html', {
         'absences': absences,
@@ -490,9 +485,8 @@ def creer_absence(request):
             messages.error(request, f'Erreur lors de l\'enregistrement : {str(e)}')
     
     employes = Employe.objects.filter(
-        entreprise=request.user.entreprise,
-        statut_employe='actif'
-    )
+        entreprise=request.user.entreprise
+    ).exclude(statut_employe__in=['demissionnaire', 'licencie', 'retraite'])
     return render(request, 'temps_travail/absences/creer.html', {
         'employes': employes
     })
