@@ -100,8 +100,8 @@
             <div class="card-body">
                 <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Âge</div>
                 <div class="h5 mb-0">
-                    {% if age %}
-                        {{ age }} ans
+                    {% if age is not None %}
+                        {{ age }} an{{ age|pluralize }}
                     {% else %}
                         <span class="text-muted small">Non renseigné</span>
                     {% endif %}
@@ -114,8 +114,10 @@
             <div class="card-body">
                 <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Ancienneté</div>
                 <div class="h5 mb-0">
-                    {% if anciennete %}
-                        {{ anciennete }} ans
+                    {% if anciennete is not None %}
+                        {{ anciennete }} an{{ anciennete|pluralize }}
+                    {% elif employe.date_embauche %}
+                        0 an
                     {% else %}
                         <span class="text-muted small">Non renseigné</span>
                     {% endif %}

@@ -100,14 +100,15 @@ class EmployeDetailView(EntrepriseEmployeQuerysetMixin, DetailView):
         ).order_by('-date_debut')
         
         # Âge et ancienneté
+        context['age'] = None
+        context['anciennete'] = None
+        
         if employe.date_naissance:
             today = datetime.now().date()
-            age = (today - employe.date_naissance).days // 365
-            context['age'] = age
+            context['age'] = (today - employe.date_naissance).days // 365
         
         if employe.date_embauche:
-            anciennete = (datetime.now().date() - employe.date_embauche).days // 365
-            context['anciennete'] = anciennete
+            context['anciennete'] = (datetime.now().date() - employe.date_embauche).days // 365
         
         # Salaire actuel (éléments de salaire)
         from paie.models import ElementSalaire
