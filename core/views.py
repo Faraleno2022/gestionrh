@@ -596,3 +596,227 @@ def superuser_delete_entreprise(request, entreprise_id):
     messages.success(request, f"L'entreprise {nom_entreprise} et ses {nb_users} utilisateur(s) ont été supprimés définitivement.")
     
     return redirect('core:superuser_manage_users')
+
+
+# ============= GESTION STRUCTURE ENTREPRISE =============
+
+@login_required
+def gestion_structure(request):
+    """Vue principale pour gérer la structure de l'entreprise (Etablissements, Services, Postes)"""
+    from .models import Societe, Etablissement, Service, Poste
+    
+    if not request.user.est_admin_entreprise:
+        messages.error(request, "Accès réservé aux administrateurs d'entreprise.")
+        return redirect('dashboard:index')
+    
+    entreprise = request.user.entreprise
+    
+    # Récupérer ou créer la société liée à l'entreprise
+    societe = Societe.objects.filter(entreprise=entreprise).first()
+    if not societe:
+        societe = Societe.objects.create(
+            entreprise=entreprise,
+            raison_sociale=entreprise.nom_entreprise,
+            forme_juridique='SARL'
+        )
+    
+    etablissements = Etablissement.objects.filter(societe=societe)
+    services = Service.objects.filter(etablissement__societe=societe)
+    postes = Poste.objects.filter(service__etablissement__societe=societe)
+    
+    return render(request, 'core/gestion_structure.html', {
+        'societe': societe,
+        'etablissements': etablissements,
+        'services': services,
+        'postes': postes
+    })
+
+
+@login_required
+def creer_etablissement(request):
+    """Créer un établissement"""
+    from .models import Societe, Etablissement
+    
+    if not request.user.est_admin_entreprise:
+        messages.error(request, "Accès réservé aux administrateurs d'entreprise.")
+        return redirect('dashboard:index')
+    
+    entreprise = request.user.entreprise
+    societe = Societe.objects.filter(entreprise=entreprise).first()
+    
+    if not societe:
+        societe = Societe.objects.create(
+            entreprise=entreprise,
+            raison_sociale=entreprise.nom_entreprise,
+            forme_juridique='SARL'
+        )
+    
+    if request.method == 'POST':
+        code = request.POST.get('code_etablissement')
+        nom = request.POST.get('nom_etablissement')
+        type_etab = request.POST.get('type_etablissement')
+        ville = request.POST.get('ville')
+        adresse = request.POST.get('adresse')
+        telephone = request.POST.get('telephone')
+        
+        if Etablissement.objects.filter(code_etablissement=code).exists():
+            messages.error(request, f"Le code '{code}' existe déjà.")
+            return redirect('core:creer_etablissement')
+        
+        Etablissement.objects.create(
+            societe=societe,
+            code_etablissement=code,
+            nom_etablissement=nom,
+            type_etablissement=type_etab,
+            ville=ville,
+            adresse=adresse,
+            telephone=telephone,
+            actif=True
+        )
+        
+        log_activity(request, f'Création établissement {code}', 'core')
+        messages.success(request, f"Établissement '{nom}' créé avec succès.")
+        return redirect('core:gestion_structure')
+    
+    return render(request, 'core/creer_etablissement.html', {
+        'types': Etablissement.TYPES
+    })
+
+
+@login_required
+def supprimer_etablissement(request, pk):
+    """Supprimer un établissement"""
+    from .models import Etablissement
+    
+    if not request.user.est_admin_entreprise:
+        messages.error(request, "Accès réservé aux administrateurs d'entreprise.")
+        return redirect('dashboard:index')
+    
+    etablissement = get_object_or_404(Etablissement, pk=pk, societe__entreprise=request.user.entreprise)
+    nom = etablissement.nom_etablissement
+    etablissement.delete()
+    
+    log_activity(request, f'Suppression établissement {nom}', 'core')
+    messages.success(request, f"Établissement '{nom}' supprimé.")
+    return redirect('core:gestion_structure')
+
+
+@login_required
+def creer_service(request):
+    """Créer un service"""
+    from .models import Etablissement, Service
+    
+    if not request.user.est_admin_entreprise:
+        messages.error(request, "Accès réservé aux administrateurs d'entreprise.")
+        return redirect('dashboard:index')
+    
+    etablissements = Etablissement.objects.filter(societe__entreprise=request.user.entreprise, actif=True)
+    
+    if request.method == 'POST':
+        code = request.POST.get('code_service')
+        nom = request.POST.get('nom_service')
+        etablissement_id = request.POST.get('etablissement')
+        description = request.POST.get('description')
+        
+        if Service.objects.filter(code_service=code).exists():
+            messages.error(request, f"Le code '{code}' existe déjà.")
+            return redirect('core:creer_service')
+        
+        etablissement = get_object_or_404(Etablissement, pk=etablissement_id) if etablissement_id else None
+        
+        Service.objects.create(
+            etablissement=etablissement,
+            code_service=code,
+            nom_service=nom,
+            description=description,
+            actif=True
+        )
+        
+        log_activity(request, f'Création service {code}', 'core')
+        messages.success(request, f"Service '{nom}' créé avec succès.")
+        return redirect('core:gestion_structure')
+    
+    return render(request, 'core/creer_service.html', {
+        'etablissements': etablissements
+    })
+
+
+@login_required
+def supprimer_service(request, pk):
+    """Supprimer un service"""
+    from .models import Service
+    
+    if not request.user.est_admin_entreprise:
+        messages.error(request, "Accès réservé aux administrateurs d'entreprise.")
+        return redirect('dashboard:index')
+    
+    service = get_object_or_404(Service, pk=pk, etablissement__societe__entreprise=request.user.entreprise)
+    nom = service.nom_service
+    service.delete()
+    
+    log_activity(request, f'Suppression service {nom}', 'core')
+    messages.success(request, f"Service '{nom}' supprimé.")
+    return redirect('core:gestion_structure')
+
+
+@login_required
+def creer_poste(request):
+    """Créer un poste"""
+    from .models import Service, Poste
+    
+    if not request.user.est_admin_entreprise:
+        messages.error(request, "Accès réservé aux administrateurs d'entreprise.")
+        return redirect('dashboard:index')
+    
+    services = Service.objects.filter(etablissement__societe__entreprise=request.user.entreprise, actif=True)
+    
+    if request.method == 'POST':
+        code = request.POST.get('code_poste')
+        intitule = request.POST.get('intitule_poste')
+        service_id = request.POST.get('service')
+        categorie = request.POST.get('categorie_professionnelle')
+        classification = request.POST.get('classification')
+        description = request.POST.get('description_poste')
+        
+        if Poste.objects.filter(code_poste=code).exists():
+            messages.error(request, f"Le code '{code}' existe déjà.")
+            return redirect('core:creer_poste')
+        
+        service = get_object_or_404(Service, pk=service_id) if service_id else None
+        
+        Poste.objects.create(
+            code_poste=code,
+            intitule_poste=intitule,
+            service=service,
+            categorie_professionnelle=categorie,
+            classification=classification,
+            description_poste=description,
+            actif=True
+        )
+        
+        log_activity(request, f'Création poste {code}', 'core')
+        messages.success(request, f"Poste '{intitule}' créé avec succès.")
+        return redirect('core:gestion_structure')
+    
+    return render(request, 'core/creer_poste.html', {
+        'services': services,
+        'categories': Poste.CATEGORIES
+    })
+
+
+@login_required
+def supprimer_poste(request, pk):
+    """Supprimer un poste"""
+    from .models import Poste
+    
+    if not request.user.est_admin_entreprise:
+        messages.error(request, "Accès réservé aux administrateurs d'entreprise.")
+        return redirect('dashboard:index')
+    
+    poste = get_object_or_404(Poste, pk=pk, service__etablissement__societe__entreprise=request.user.entreprise)
+    nom = poste.intitule_poste
+    poste.delete()
+    
+    log_activity(request, f'Suppression poste {nom}', 'core')
+    messages.success(request, f"Poste '{nom}' supprimé.")
+    return redirect('core:gestion_structure')

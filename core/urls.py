@@ -27,6 +27,15 @@ urlpatterns = [
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('entreprise-settings/', views.entreprise_settings, name='entreprise_settings'),
     
+    # Gestion structure entreprise (Etablissements, Services, Postes)
+    path('structure/', views.gestion_structure, name='gestion_structure'),
+    path('structure/etablissement/creer/', views.creer_etablissement, name='creer_etablissement'),
+    path('structure/etablissement/<int:pk>/supprimer/', views.supprimer_etablissement, name='supprimer_etablissement'),
+    path('structure/service/creer/', views.creer_service, name='creer_service'),
+    path('structure/service/<int:pk>/supprimer/', views.supprimer_service, name='supprimer_service'),
+    path('structure/poste/creer/', views.creer_poste, name='creer_poste'),
+    path('structure/poste/<int:pk>/supprimer/', views.supprimer_poste, name='supprimer_poste'),
+    
     # CNSS Télédéclaration
     path('cnss/', cnss.cnss_dashboard, name='cnss_dashboard'),
     path('cnss/configuration/', cnss.cnss_configuration, name='cnss_configuration'),
