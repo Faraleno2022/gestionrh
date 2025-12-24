@@ -73,8 +73,11 @@
                 <a href="{% url 'core:admin_dashboard' %}" class="btn btn-light btn-sm me-2">
                     <i class="bi bi-speedometer2"></i> Tableau de bord Admin
                 </a>
-                <a href="{% url 'core:entreprise_settings' %}" class="btn btn-light btn-sm">
+                <a href="{% url 'core:entreprise_settings' %}" class="btn btn-light btn-sm me-2">
                     <i class="bi bi-gear-fill"></i> Paramètres entreprise
+                </a>
+                <a href="{% url 'core:gestion_structure' %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-diagram-3"></i> Structure Entreprise
                 </a>
             </div>
             {% endif %}
