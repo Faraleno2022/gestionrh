@@ -23,11 +23,13 @@ def plans_liste(request):
     
     # Abonnement actuel de l'entreprise
     abonnement_actuel = None
-    if request.user.entreprise:
+    if hasattr(request.user, 'entreprise') and request.user.entreprise:
         try:
             abonnement_actuel = Abonnement.objects.get(entreprise=request.user.entreprise)
         except Abonnement.DoesNotExist:
             pass
+        except Exception as e:
+            logger.error(f"Erreur récupération abonnement: {e}")
     
     return render(request, 'payments/plans_liste.html', {
         'plans': plans,
