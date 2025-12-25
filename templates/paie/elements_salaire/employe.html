@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block title %}Éléments de Salaire - {{ employe.nom_complet }} - Gestionnaire RH Guinée{% endblock %}
 
@@ -25,7 +26,7 @@
         <div class="card border-start border-success border-3 shadow-sm h-100">
             <div class="card-body py-2">
                 <div class="small text-success text-uppercase mb-1">Total Gains</div>
-                <div class="h6 mb-0">{{ total_gains|floatformat:0|default:"0" }} <small class="text-muted">GNF</small></div>
+                <div class="h6 mb-0">{{ total_gains|floatformat:0|intcomma }} <small class="text-muted">GNF</small></div>
             </div>
         </div>
     </div>
@@ -33,7 +34,7 @@
         <div class="card border-start border-danger border-3 shadow-sm h-100">
             <div class="card-body py-2">
                 <div class="small text-danger text-uppercase mb-1">Total Retenues</div>
-                <div class="h6 mb-0">{{ total_retenues|floatformat:0|default:"0" }} <small class="text-muted">GNF</small></div>
+                <div class="h6 mb-0">{{ total_retenues|floatformat:0|intcomma }} <small class="text-muted">GNF</small></div>
             </div>
         </div>
     </div>
@@ -41,7 +42,7 @@
         <div class="card border-start border-primary border-3 shadow-sm h-100">
             <div class="card-body py-2">
                 <div class="small text-primary text-uppercase mb-1">Net Estimé</div>
-                <div class="h6 mb-0">{{ net_estime|floatformat:0|default:"0" }} <small class="text-muted">GNF</small></div>
+                <div class="h6 mb-0">{{ net_estime|floatformat:0|intcomma }} <small class="text-muted">GNF</small></div>
             </div>
         </div>
     </div>
@@ -78,7 +79,7 @@
                         <td><span class="badge bg-success">{{ element.rubrique.get_type_rubrique_display }}</span></td>
                         <td>
                             {% if element.montant %}
-                                <strong>{{ element.montant|floatformat:0 }} GNF</strong>
+                                <strong>{{ element.montant|floatformat:0|intcomma }} GNF</strong>
                             {% elif element.taux %}
                                 <strong>{{ element.taux }}%</strong>
                                 <br><small class="text-muted">Base: {{ element.base_calcul }}</small>
@@ -156,7 +157,7 @@
                         <td><span class="badge bg-danger">{{ element.rubrique.get_type_rubrique_display }}</span></td>
                         <td>
                             {% if element.montant %}
-                                <strong>{{ element.montant|floatformat:0 }} GNF</strong>
+                                <strong>{{ element.montant|floatformat:0|intcomma }} GNF</strong>
                             {% elif element.taux %}
                                 <strong>{{ element.taux }}%</strong>
                                 <br><small class="text-muted">Base: {{ element.base_calcul }}</small>
