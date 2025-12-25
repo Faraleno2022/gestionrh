@@ -179,7 +179,10 @@
                                                     </div>
                                                     <div class="modal-footer">
                                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                                        <a href="{% url 'temps_travail:supprimer_conge' conge.id %}" class="btn btn-danger">Supprimer</a>
+                                                        <form action="{% url 'temps_travail:supprimer_conge' conge.id %}" method="post" style="display: inline;">
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="btn btn-danger">Supprimer</button>
+                                                        </form>
                                                     </div>
                                                 </div>
                                             </div>

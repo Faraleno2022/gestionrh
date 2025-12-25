@@ -455,10 +455,13 @@ def supprimer_conge(request, pk):
     """Supprimer une demande de congé"""
     conge = get_object_or_404(Conge, pk=pk, employe__entreprise=request.user.entreprise)
     
-    employe_nom = f"{conge.employe.nom} {conge.employe.prenoms}"
-    conge.delete()
+    if request.method == 'POST':
+        employe_nom = f"{conge.employe.nom} {conge.employe.prenoms}"
+        conge.delete()
+        messages.success(request, f'Demande de congé de {employe_nom} supprimée avec succès.')
+        return redirect('temps_travail:conges')
     
-    messages.success(request, f'Demande de congé de {employe_nom} supprimée avec succès.')
+    # Si GET, rediriger vers la liste
     return redirect('temps_travail:conges')
 
 
