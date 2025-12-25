@@ -349,7 +349,7 @@ def creer_conge(request):
             )
             
             messages.success(request, 'Demande de congé créée avec succès.')
-            return redirect('temps_travail:liste_conges')
+            return redirect('temps_travail:conges')
             
         except Exception as e:
             messages.error(request, f'Erreur lors de la création : {str(e)}')
@@ -398,7 +398,7 @@ def approuver_conge(request, pk):
             conge.save()
             messages.success(request, 'Congé rejeté.')
         
-        return redirect('temps_travail:liste_conges')
+        return redirect('temps_travail:conges')
     
     return render(request, 'temps_travail/conges/approuver.html', {
         'conge': conge
