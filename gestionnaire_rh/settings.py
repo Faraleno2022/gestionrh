@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'recrutement',
     'formation',
     'dashboard',
+    'payments',
 ]
 
 MIDDLEWARE = [
@@ -455,8 +456,13 @@ CSRF_TRUSTED_ORIGINS = [
     'https://guineerh.space',
 ]
 
-# CSRF Trusted Origins
-CSRF_TRUSTED_ORIGINS = [
-    'https://www.guineerh.space',
-    'https://guineerh.space',
-]
+# ============================================================================
+# CINETPAY CONFIGURATION
+# ============================================================================
+CINETPAY_API_KEY = config('CINETPAY_API_KEY', default='')
+CINETPAY_SITE_ID = config('CINETPAY_SITE_ID', default='')
+CINETPAY_SECRET_KEY = config('CINETPAY_SECRET_KEY', default='')
+CINETPAY_MODE = config('CINETPAY_MODE', default='test')  # 'test' ou 'live'
+
+# Site URL pour les callbacks CinetPay
+SITE_URL = config('SITE_URL', default='https://www.guineerh.space')
