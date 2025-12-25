@@ -1,4 +1,25 @@
 <div class="position-sticky pt-3">
+    <!-- Moyens de paiement et Plans -->
+    <div class="px-3 mb-3">
+        <a href="{% url 'payments:plans' %}" class="btn btn-outline-primary btn-sm w-100 mb-2">
+            <i class="bi bi-gem"></i> Nos Plans & Tarifs
+        </a>
+        <div class="d-flex justify-content-center gap-2">
+            <span class="badge bg-light text-dark border" title="Orange Money">
+                <i class="bi bi-phone text-warning"></i> OM
+            </span>
+            <span class="badge bg-light text-dark border" title="MTN Money">
+                <i class="bi bi-phone text-warning"></i> MTN
+            </span>
+            <span class="badge bg-light text-dark border" title="Visa">
+                <i class="bi bi-credit-card text-primary"></i> Visa
+            </span>
+            <span class="badge bg-light text-dark border" title="Mastercard">
+                <i class="bi bi-credit-card text-danger"></i> MC
+            </span>
+        </div>
+    </div>
+    
     <ul class="nav flex-column">
         <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'dashboard:index' %}">
