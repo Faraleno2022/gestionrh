@@ -17,6 +17,8 @@ urlpatterns = [
     path('conges/', views.liste_conges, name='conges'),
     path('conges/creer/', views.creer_conge, name='creer_conge'),
     path('conges/<int:pk>/approuver/', views.approuver_conge, name='approuver_conge'),
+    path('conges/<int:pk>/modifier/', views.modifier_conge, name='modifier_conge'),
+    path('conges/<int:pk>/supprimer/', views.supprimer_conge, name='supprimer_conge'),
     
     # Absences
     path('absences/', views.liste_absences, name='absences'),

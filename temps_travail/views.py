@@ -405,6 +405,63 @@ def approuver_conge(request, pk):
     })
 
 
+@login_required
+@entreprise_active_required
+def modifier_conge(request, pk):
+    """Modifier une demande de congé (seulement si en attente)"""
+    conge = get_object_or_404(Conge, pk=pk, employe__entreprise=request.user.entreprise)
+    
+    if conge.statut_demande != 'en_attente':
+        messages.error(request, 'Seules les demandes en attente peuvent être modifiées.')
+        return redirect('temps_travail:conges')
+    
+    if request.method == 'POST':
+        try:
+            type_conge = request.POST.get('type_conge')
+            date_debut = request.POST.get('date_debut')
+            date_fin = request.POST.get('date_fin')
+            motif = request.POST.get('motif', '')
+            
+            debut = datetime.strptime(date_debut, '%Y-%m-%d').date()
+            fin = datetime.strptime(date_fin, '%Y-%m-%d').date()
+            
+            if fin < debut:
+                messages.error(request, 'La date de fin doit être après la date de début.')
+                return redirect('temps_travail:modifier_conge', pk=pk)
+            
+            nombre_jours = (fin - debut).days + 1
+            
+            conge.type_conge = type_conge
+            conge.date_debut = debut
+            conge.date_fin = fin
+            conge.nombre_jours = nombre_jours
+            conge.motif = motif
+            conge.save()
+            
+            messages.success(request, 'Demande de congé modifiée avec succès.')
+            return redirect('temps_travail:conges')
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la modification : {str(e)}')
+    
+    return render(request, 'temps_travail/conges/modifier.html', {
+        'conge': conge
+    })
+
+
+@login_required
+@entreprise_active_required
+def supprimer_conge(request, pk):
+    """Supprimer une demande de congé"""
+    conge = get_object_or_404(Conge, pk=pk, employe__entreprise=request.user.entreprise)
+    
+    employe_nom = f"{conge.employe.nom} {conge.employe.prenoms}"
+    conge.delete()
+    
+    messages.success(request, f'Demande de congé de {employe_nom} supprimée avec succès.')
+    return redirect('temps_travail:conges')
+
+
 # ============= ABSENCES =============
 
 @login_required
