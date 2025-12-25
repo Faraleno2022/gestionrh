@@ -20,28 +20,28 @@
 </div>
 
 <!-- Résumé -->
-<div class="row mb-4">
+<div class="row mb-4 g-3">
     <div class="col-md-4">
-        <div class="card border-left-success shadow-sm">
-            <div class="card-body">
-                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Gains</div>
-                <div class="h5 mb-0">{{ total_gains|floatformat:0 }} GNF</div>
+        <div class="card border-start border-success border-3 shadow-sm h-100">
+            <div class="card-body py-2">
+                <div class="small text-success text-uppercase mb-1">Total Gains</div>
+                <div class="h6 mb-0">{{ total_gains|floatformat:0|default:"0" }} <small class="text-muted">GNF</small></div>
             </div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card border-left-danger shadow-sm">
-            <div class="card-body">
-                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total Retenues</div>
-                <div class="h5 mb-0">{{ total_retenues|floatformat:0 }} GNF</div>
+        <div class="card border-start border-danger border-3 shadow-sm h-100">
+            <div class="card-body py-2">
+                <div class="small text-danger text-uppercase mb-1">Total Retenues</div>
+                <div class="h6 mb-0">{{ total_retenues|floatformat:0|default:"0" }} <small class="text-muted">GNF</small></div>
             </div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card border-left-primary shadow-sm">
-            <div class="card-body">
-                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Net Estimé</div>
-                <div class="h5 mb-0">{{ net_estime|floatformat:0 }} GNF</div>
+        <div class="card border-start border-primary border-3 shadow-sm h-100">
+            <div class="card-body py-2">
+                <div class="small text-primary text-uppercase mb-1">Net Estimé</div>
+                <div class="h6 mb-0">{{ net_estime|floatformat:0|default:"0" }} <small class="text-muted">GNF</small></div>
             </div>
         </div>
     </div>
