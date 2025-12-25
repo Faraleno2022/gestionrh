@@ -136,7 +136,7 @@ def creer_pointage(request):
             # Vérifier si le pointage existe déjà
             if Pointage.objects.filter(employe=employe, date_pointage=date_pointage).exists():
                 messages.error(request, 'Un pointage existe déjà pour cet employé à cette date.')
-                return redirect('temps_travail:liste_pointages')
+                return redirect('temps_travail:pointages')
             
             # Calculer les heures travaillées
             heures_travaillees = None
@@ -170,7 +170,7 @@ def creer_pointage(request):
             )
             
             messages.success(request, 'Pointage créé avec succès.')
-            return redirect('temps_travail:liste_pointages')
+            return redirect('temps_travail:pointages')
             
         except Exception as e:
             messages.error(request, f'Erreur lors de la création : {str(e)}')
