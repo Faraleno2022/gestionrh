@@ -522,13 +522,15 @@ def elements_salaire_employe(request, employe_id):
     # Calculer les totaux
     total_gains = sum(e.montant or 0 for e in gains if e.actif)
     total_retenues = sum(e.montant or 0 for e in retenues if e.actif)
+    net_estime = total_gains - total_retenues
     
     return render(request, 'paie/elements_salaire/employe.html', {
         'employe': employe,
         'gains': gains,
         'retenues': retenues,
         'total_gains': total_gains,
-        'total_retenues': total_retenues
+        'total_retenues': total_retenues,
+        'net_estime': net_estime
     })
 
 
