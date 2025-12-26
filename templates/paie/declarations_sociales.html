@@ -77,25 +77,25 @@
                     
                     <div class="row text-center mb-4">
                         <div class="col-md-3">
-                            <div class="p-3 bg-light rounded">
+                            <div class="p-3 bg-light rounded montant-card">
                                 <h6 class="text-muted">Nombre de Salariés</h6>
                                 <h3 class="text-primary">{{ declaration_cnss.total_salaries }}</h3>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="p-3 bg-light rounded">
+                            <div class="p-3 bg-light rounded montant-card">
                                 <h6 class="text-muted">Masse Salariale</h6>
                                 <h4>{{ declaration_cnss.masse_salariale|floatformat:0|intcomma }} GNF</h4>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="p-3 bg-light rounded">
+                            <div class="p-3 bg-light rounded montant-card">
                                 <h6 class="text-muted">Cotisation Employé (5%)</h6>
                                 <h4>{{ declaration_cnss.cotisation_employe|floatformat:0|intcomma }} GNF</h4>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="p-3 bg-light rounded">
+                            <div class="p-3 bg-light rounded montant-card">
                                 <h6 class="text-muted">Cotisation Employeur (18%)</h6>
                                 <h4>{{ declaration_cnss.cotisation_employeur|floatformat:0|intcomma }} GNF</h4>
                             </div>
@@ -124,19 +124,19 @@
                 <div class="card-body">
                     <div class="row text-center mb-4">
                         <div class="col-md-4">
-                            <div class="p-3 bg-light rounded">
+                            <div class="p-3 bg-light rounded montant-card">
                                 <h6 class="text-muted">Nombre de Salariés</h6>
                                 <h3 class="text-warning">{{ declaration_irg.total_salaries }}</h3>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="p-3 bg-light rounded">
+                            <div class="p-3 bg-light rounded montant-card">
                                 <h6 class="text-muted">Masse Imposable</h6>
                                 <h4>{{ declaration_irg.masse_imposable|floatformat:0|intcomma }} GNF</h4>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="p-3 bg-light rounded">
+                            <div class="p-3 bg-light rounded montant-card">
                                 <h6 class="text-muted">IRG Retenu à la Source</h6>
                                 <h4>{{ declaration_irg.total_irg|floatformat:0|intcomma }} GNF</h4>
                             </div>
@@ -165,19 +165,19 @@
                 <div class="card-body">
                     <div class="row text-center mb-4">
                         <div class="col-md-4">
-                            <div class="p-3 bg-light rounded">
+                            <div class="p-3 bg-light rounded montant-card">
                                 <h6 class="text-muted">Masse Salariale</h6>
                                 <h4>{{ declaration_inam.masse_salariale|floatformat:0|intcomma }} GNF</h4>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="p-3 bg-light rounded">
+                            <div class="p-3 bg-light rounded montant-card">
                                 <h6 class="text-muted">Taux INAM</h6>
                                 <h3 class="text-info">{{ declaration_inam.taux }}%</h3>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="p-3 bg-light rounded">
+                            <div class="p-3 bg-light rounded montant-card">
                                 <h6 class="text-muted">Cotisation INAM</h6>
                                 <h4>{{ declaration_inam.montant|floatformat:0|intcomma }} GNF</h4>
                             </div>
@@ -246,7 +246,7 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover table-sm">
+                        <table class="table table-bordered table-hover table-sm detail-table">
                             <thead class="table-light">
                                 <tr>
                                     <th>Matricule</th>
@@ -305,6 +305,28 @@
 </div>
 
 <style>
+    /* Réduction des polices pour les montants */
+    .montant-card h4 {
+        font-size: 0.95rem !important;
+    }
+    .montant-card h3 {
+        font-size: 1.1rem !important;
+    }
+    .montant-card h6 {
+        font-size: 0.75rem !important;
+    }
+    .alert h5 {
+        font-size: 0.9rem !important;
+    }
+    .table td, .table th {
+        font-size: 0.8rem !important;
+        padding: 0.4rem !important;
+    }
+    .detail-table td, .detail-table th {
+        font-size: 0.75rem !important;
+        padding: 0.3rem !important;
+    }
+    
     @media print {
         .no-print {
             display: none !important;
@@ -315,7 +337,13 @@
         }
         
         table {
-            font-size: 9pt;
+            font-size: 8pt;
+        }
+        .montant-card h4 {
+            font-size: 9pt !important;
+        }
+        .montant-card h3 {
+            font-size: 10pt !important;
         }
     }
 </style>
