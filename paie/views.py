@@ -714,7 +714,7 @@ def telecharger_bulletin_public(request, token):
         f"Matricule: {emp.matricule}",
         f"Nom: {emp.nom} {emp.prenoms}",
         f"Poste: {emp.poste.intitule_poste if emp.poste else '-'}",
-        f"Service: {emp.service.nom if emp.service else '-'}",
+        f"Service: {emp.service.nom_service if emp.service else '-'}",
         f"N° CNSS: {emp.num_cnss_individuel or '-'}",
     ]
     
