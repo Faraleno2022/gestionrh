@@ -674,19 +674,23 @@ def telecharger_bulletin_public(request, token):
         except:
             pass
     
-    # Drapeau de la Guinée à droite
+    # Drapeau de la Guinée à droite (Rouge - Jaune - Vert)
     flag_width = 1.5*cm
     flag_height = 1*cm
     flag_x = width - 1.5*cm - flag_width
     flag_y = y - 1.5*cm
     stripe_width = flag_width / 3
     
+    # Bande rouge
     p.setFillColor(colors.HexColor("#ce1126"))
     p.rect(flag_x, flag_y, stripe_width, flag_height, stroke=0, fill=1)
+    # Bande jaune
     p.setFillColor(colors.HexColor("#fcd116"))
     p.rect(flag_x + stripe_width, flag_y, stripe_width, flag_height, stroke=0, fill=1)
+    # Bande verte
     p.setFillColor(colors.HexColor("#009460"))
     p.rect(flag_x + 2*stripe_width, flag_y, stripe_width, flag_height, stroke=0, fill=1)
+    # Bordure du drapeau
     p.setStrokeColor(colors.black)
     p.setLineWidth(0.5)
     p.rect(flag_x, flag_y, flag_width, flag_height, stroke=1, fill=0)
@@ -694,60 +698,86 @@ def telecharger_bulletin_public(request, token):
     
     # Titre centré
     p.setFont("Helvetica-Bold", 11)
-    nom_entreprise = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
-    p.drawCentredString(width/2, y - 0.5*cm, nom_entreprise)
-    p.setFont("Helvetica-Bold", 13)
-    p.drawCentredString(width/2, y - 1.2*cm, "BULLETIN DE PAIE")
-    p.setFont("Helvetica", 9)
-    p.drawCentredString(width/2, y - 1.8*cm, f"Période: {bulletin.periode}")
-    
-    y -= 2.8*cm
-    
-    # === INFORMATIONS EMPLOYÉ ===
-    emp = bulletin.employe
-    p.setFont("Helvetica-Bold", 9)
-    p.drawString(1.5*cm, y, "INFORMATIONS EMPLOYÉ")
+    p.drawCentredString(width/2, y, "RÉPUBLIQUE DE GUINÉE")
+    y -= 0.4*cm
+    p.setFont("Helvetica-Oblique", 8)
+    p.drawCentredString(width/2, y, "Travail - Justice - Solidarité")
     y -= 0.5*cm
     
-    p.setFont("Helvetica", 8)
-    infos = [
-        f"Matricule: {emp.matricule}",
-        f"Nom: {emp.nom} {emp.prenoms}",
-        f"Poste: {emp.poste.intitule_poste if emp.poste else '-'}",
-        f"Service: {emp.service.nom_service if emp.service else '-'}",
-        f"N° CNSS: {emp.num_cnss_individuel or '-'}",
-    ]
+    # Nom entreprise
+    p.setFont("Helvetica-Bold", 12)
+    nom_entreprise = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
+    p.drawCentredString(width/2, y, nom_entreprise)
+    y -= 0.6*cm
     
-    col1_x = 1.5*cm
-    col2_x = width/2
-    for i, info in enumerate(infos):
-        if i < 3:
-            p.drawString(col1_x, y - (i * 0.4*cm), info)
-        else:
-            p.drawString(col2_x, y - ((i-3) * 0.4*cm), info)
+    # Titre bulletin
+    p.setFont("Helvetica-Bold", 14)
+    p.drawCentredString(width/2, y, "BULLETIN DE PAIE")
+    y -= 0.4*cm
     
-    y -= 1.5*cm
+    # Ligne de séparation
+    p.setStrokeColor(colors.HexColor("#ce1126"))
+    p.setLineWidth(2)
+    p.line(1.5*cm, y, width - 1.5*cm, y)
+    y -= 0.6*cm
     
-    # === TABLEAU GAINS ===
+    # Infos bulletin sur une ligne
+    p.setFont("Helvetica", 9)
+    p.setFillColor(colors.black)
+    p.drawString(1.5*cm, y, f"N°: {bulletin.numero_bulletin}")
+    p.drawCentredString(width/2, y, f"Période: {bulletin.periode}")
+    p.drawRightString(width - 1.5*cm, y, f"Date: {bulletin.date_calcul.strftime('%d/%m/%Y') if bulletin.date_calcul else '-'}")
+    y -= 0.8*cm
+    
+    # === INFORMATIONS EMPLOYÉ ===
+    p.setFillColor(colors.HexColor("#ce1126"))
     p.setFont("Helvetica-Bold", 9)
-    p.setFillColor(colors.HexColor("#28a745"))
-    p.drawString(1.5*cm, y, "GAINS ET RÉMUNÉRATIONS")
+    p.drawString(1.5*cm, y, "INFORMATIONS EMPLOYÉ")
     p.setFillColor(colors.black)
     y -= 0.5*cm
     
-    gains_data = [["Rubrique", "Base", "Taux", "Montant"]]
-    for ligne in gains:
+    emp = bulletin.employe
+    infos_emp = [
+        ["Matricule:", emp.matricule or "-", "N° CNSS:", emp.num_cnss_individuel or "-"],
+        ["Nom et Prénoms:", f"{emp.nom} {emp.prenoms}", "", ""],
+        ["Poste:", str(emp.poste or "-"), "Service:", str(emp.service or "-")],
+        ["Date embauche:", emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else "-", "Mode paiement:", emp.mode_paiement or "-"],
+    ]
+    
+    for row in infos_emp:
+        p.setFont("Helvetica-Bold", 8)
+        p.drawString(1.5*cm, y, row[0])
+        p.setFont("Helvetica", 8)
+        p.drawString(4*cm, y, str(row[1]))
+        if row[2]:
+            p.setFont("Helvetica-Bold", 8)
+            p.drawString(11*cm, y, row[2])
+            p.setFont("Helvetica", 8)
+            p.drawString(14*cm, y, str(row[3]))
+        y -= 0.4*cm
+    
+    y -= 0.3*cm
+    
+    # === GAINS ===
+    p.setFillColor(colors.HexColor("#28a745"))
+    p.setFont("Helvetica-Bold", 9)
+    p.drawString(1.5*cm, y, "GAINS ET RÉMUNÉRATIONS")
+    p.setFillColor(colors.black)
+    y -= 0.3*cm
+    
+    # Tableau des gains
+    gains_data = [["Libellé", "Base", "Taux", "Montant"]]
+    for g in gains:
         gains_data.append([
-            ligne.rubrique.libelle_rubrique[:30],
-            f"{ligne.base_calcul:,.0f}".replace(",", " ") if ligne.base_calcul else "-",
-            f"{ligne.taux_applique}%" if ligne.taux_applique else "-",
-            f"{ligne.montant:,.0f}".replace(",", " ")
+            g.rubrique.libelle_rubrique[:35],
+            f"{g.base:,.0f}".replace(",", " ") if g.base else "-",
+            f"{g.taux}%" if g.taux else "-",
+            f"{g.montant:,.0f}".replace(",", " ")
         ])
+    gains_data.append(["TOTAL BRUT", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " ")])
     
-    if len(gains_data) == 1:
-        gains_data.append(["Salaire de base", "-", "-", f"{bulletin.salaire_brut:,.0f}".replace(",", " ")])
-    
-    gains_table = Table(gains_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm])
+    row_height = 14
+    gains_table = Table(gains_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     gains_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#28a745")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -755,37 +785,37 @@ def telecharger_bulletin_public(request, token):
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('ROWHEIGHT', (0, 0), (-1, -1), 0.5*cm),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#d4edda")),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     
-    row_height = 0.5*cm
     table_height = len(gains_data) * row_height
     gains_table.wrapOn(p, width, height)
     gains_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.6*cm
+    y -= table_height + 0.5*cm
     
-    # === TABLEAU RETENUES ===
-    p.setFont("Helvetica-Bold", 9)
+    # === RETENUES ===
     p.setFillColor(colors.HexColor("#dc3545"))
+    p.setFont("Helvetica-Bold", 9)
     p.drawString(1.5*cm, y, "RETENUES ET COTISATIONS")
     p.setFillColor(colors.black)
-    y -= 0.5*cm
+    y -= 0.3*cm
     
-    retenues_data = [["Rubrique", "Base", "Taux", "Montant"]]
-    for ligne in retenues:
+    retenues_data = [["Libellé", "Base", "Taux", "Montant"]]
+    for r in retenues:
         retenues_data.append([
-            ligne.rubrique.libelle_rubrique[:30],
-            f"{ligne.base_calcul:,.0f}".replace(",", " ") if ligne.base_calcul else "-",
-            f"{ligne.taux_applique}%" if ligne.taux_applique else "-",
-            f"{ligne.montant:,.0f}".replace(",", " ")
+            r.rubrique.libelle_rubrique[:35],
+            f"{r.base:,.0f}".replace(",", " ") if r.base else "-",
+            f"{r.taux}%" if r.taux else "-",
+            f"{r.montant:,.0f}".replace(",", " ")
         ])
     
-    if len(retenues_data) == 1:
-        retenues_data.append(["CNSS (5%)", f"{bulletin.salaire_brut:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
-        if bulletin.irg > 0:
-            retenues_data.append(["IRG", "-", "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
+    # Ajouter CNSS et IRG
+    retenues_data.append(["CNSS Employé (5%)", f"{bulletin.salaire_brut:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
+    retenues_data.append(["IRG (Impôt sur le Revenu)", "", "", f"{bulletin.irg:,.0f}".replace(",", " ")])
     
-    retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm])
+    retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#dc3545")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -793,7 +823,7 @@ def telecharger_bulletin_public(request, token):
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('ROWHEIGHT', (0, 0), (-1, -1), 0.5*cm),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     
     table_height = len(retenues_data) * row_height
@@ -827,11 +857,19 @@ def telecharger_bulletin_public(request, token):
     
     y -= recap_height + 0.5*cm
     
+    # === COTISATIONS PATRONALES ===
+    p.setFont("Helvetica-Bold", 8)
+    p.drawString(1.5*cm, y, "Cotisations patronales:")
+    p.setFont("Helvetica", 8)
+    p.drawString(5*cm, y, f"CNSS Employeur (18%): {bulletin.cnss_employeur:,.0f} GNF".replace(",", " "))
+    total_cnss = bulletin.cnss_employe + bulletin.cnss_employeur
+    p.drawString(11*cm, y, f"Total CNSS: {total_cnss:,.0f} GNF".replace(",", " "))
+    
     # === PIED DE PAGE ===
     p.setFont("Helvetica", 7)
     p.drawCentredString(width/2, 2.2*cm, "Ce bulletin est conforme à la législation guinéenne en vigueur.")
     if entreprise:
-        p.drawCentredString(width/2, 1.7*cm, f"{entreprise.nom_entreprise} - {entreprise.adresse or ''}")
+        p.drawCentredString(width/2, 1.7*cm, f"{entreprise.nom_entreprise} - {entreprise.adresse or ''} - Tél: {entreprise.telephone or ''}")
         p.drawCentredString(width/2, 1.3*cm, f"NIF: {entreprise.nif or '-'} - CNSS: {entreprise.num_cnss or '-'}")
     
     p.drawCentredString(width/2, 0.8*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")

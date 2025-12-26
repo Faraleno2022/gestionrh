@@ -147,7 +147,7 @@
                                     <td class="text-end">{{ bulletin.salaire_brut|floatformat:0|intcomma }}</td>
                                     <td class="text-end">{{ bulletin.cnss_employe|floatformat:0|intcomma }}</td>
                                     <td class="text-end">{{ bulletin.irg|floatformat:0|intcomma }}</td>
-                                    <td class="text-end">{% widthratio bulletin.cnss_employe 1 1|add:bulletin.irg|floatformat:0 %}</td>
+                                    <td class="text-end">{{ bulletin.total_retenues|floatformat:0|intcomma }}</td>
                                     <td class="text-end text-success"><strong>{{ bulletin.net_a_payer|floatformat:0|intcomma }}</strong></td>
                                 </tr>
                                 {% empty %}
@@ -166,7 +166,7 @@
                                     <th class="text-end">{{ totaux.total_brut|floatformat:0|intcomma }}</th>
                                     <th class="text-end">{{ totaux.total_cnss_employe|floatformat:0|intcomma }}</th>
                                     <th class="text-end">{{ totaux.total_irg|floatformat:0|intcomma }}</th>
-                                    <th class="text-end">{% widthratio totaux.total_cnss_employe 1 1|add:totaux.total_irg|floatformat:0 %}</th>
+                                    <th class="text-end">{{ totaux.total_retenues|floatformat:0|intcomma }}</th>
                                     <th class="text-end text-success"><strong>{{ totaux.total_net|floatformat:0|intcomma }}</strong></th>
                                 </tr>
                             </tfoot>
