@@ -552,6 +552,21 @@ def ajouter_element_salaire(request, employe_id):
         try:
             rubrique = RubriquePaie.objects.get(pk=rubrique_id)
             
+            # Vérifier si un élément actif existe déjà pour cette rubrique
+            element_existant = ElementSalaire.objects.filter(
+                employe=employe,
+                rubrique=rubrique,
+                actif=True
+            ).first()
+            
+            if element_existant:
+                messages.error(
+                    request,
+                    f'Un élément "{rubrique.libelle_rubrique}" actif existe déjà pour {employe.nom_complet}. '
+                    f'Veuillez le modifier ou le désactiver avant d\'en ajouter un nouveau.'
+                )
+                return redirect('paie:elements_salaire_employe', employe_id=employe.id)
+            
             element = ElementSalaire.objects.create(
                 employe=employe,
                 rubrique=rubrique,
