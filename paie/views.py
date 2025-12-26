@@ -271,6 +271,8 @@ def cloturer_periode(request, pk):
 @reauth_required
 def liste_bulletins(request):
     """Liste de tous les bulletins de paie (y compris périodes clôturées)"""
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    
     bulletins = BulletinPaie.objects.filter(
         employe__entreprise=request.user.entreprise,
         periode__entreprise=request.user.entreprise,
@@ -291,6 +293,16 @@ def liste_bulletins(request):
     if statut:
         bulletins = bulletins.filter(statut_bulletin=statut)
     
+    # Pagination - 50 bulletins par page
+    paginator = Paginator(bulletins, 50)
+    page = request.GET.get('page')
+    try:
+        bulletins_page = paginator.page(page)
+    except PageNotAnInteger:
+        bulletins_page = paginator.page(1)
+    except EmptyPage:
+        bulletins_page = paginator.page(paginator.num_pages)
+    
     # Toutes les périodes (y compris clôturées) pour le filtre
     periodes = PeriodePaie.objects.filter(
         entreprise=request.user.entreprise
@@ -307,11 +319,12 @@ def liste_bulletins(request):
     ).values_list('annee', flat=True).distinct().order_by('-annee')
     
     return render(request, 'paie/bulletins/liste.html', {
-        'bulletins': bulletins,
+        'bulletins': bulletins_page,
         'periodes': periodes,
         'employes': employes,
         'annees_disponibles': annees_disponibles,
         'annee_selectionnee': annee,
+        'total_bulletins': paginator.count,
     })
 
 

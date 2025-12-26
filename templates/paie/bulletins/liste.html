@@ -81,6 +81,14 @@
         <div class="col-12">
             <div class="card shadow-sm">
                 <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">
+                            <strong>{{ total_bulletins }}</strong> bulletin(s) trouvé(s)
+                            {% if bulletins.paginator.num_pages > 1 %}
+                            - Page {{ bulletins.number }} sur {{ bulletins.paginator.num_pages }}
+                            {% endif %}
+                        </span>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead class="table-light">
@@ -137,6 +145,49 @@
                             </tbody>
                         </table>
                     </div>
+                    
+                    <!-- Pagination -->
+                    {% if bulletins.paginator.num_pages > 1 %}
+                    <nav aria-label="Pagination des bulletins" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if bulletins.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if request.GET.annee %}&annee={{ request.GET.annee }}{% endif %}{% if request.GET.periode %}&periode={{ request.GET.periode }}{% endif %}{% if request.GET.employe %}&employe={{ request.GET.employe }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ bulletins.previous_page_number }}{% if request.GET.annee %}&annee={{ request.GET.annee }}{% endif %}{% if request.GET.periode %}&periode={{ request.GET.periode }}{% endif %}{% if request.GET.employe %}&employe={{ request.GET.employe }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                    <i class="fas fa-angle-left"></i> Précédent
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for num in bulletins.paginator.page_range %}
+                                {% if bulletins.number == num %}
+                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                                {% elif num > bulletins.number|add:'-3' and num < bulletins.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if request.GET.annee %}&annee={{ request.GET.annee }}{% endif %}{% if request.GET.periode %}&periode={{ request.GET.periode }}{% endif %}{% if request.GET.employe %}&employe={{ request.GET.employe }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">{{ num }}</a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if bulletins.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ bulletins.next_page_number }}{% if request.GET.annee %}&annee={{ request.GET.annee }}{% endif %}{% if request.GET.periode %}&periode={{ request.GET.periode }}{% endif %}{% if request.GET.employe %}&employe={{ request.GET.employe }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                    Suivant <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ bulletins.paginator.num_pages }}{% if request.GET.annee %}&annee={{ request.GET.annee }}{% endif %}{% if request.GET.periode %}&periode={{ request.GET.periode }}{% endif %}{% if request.GET.employe %}&employe={{ request.GET.employe }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
                 </div>
             </div>
         </div>
