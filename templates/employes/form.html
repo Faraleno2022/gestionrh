@@ -25,6 +25,31 @@
         content: " *";
         color: red;
     }
+    /* Styles pour la capture caméra */
+    #camera-container {
+        display: none;
+        margin-top: 10px;
+    }
+    #camera-preview {
+        width: 100%;
+        max-width: 320px;
+        border-radius: 8px;
+        border: 2px solid #dee2e6;
+    }
+    #camera-canvas {
+        display: none;
+    }
+    .camera-controls {
+        margin-top: 10px;
+    }
+    .photo-preview-container {
+        margin-top: 10px;
+    }
+    .photo-preview-container img {
+        max-width: 200px;
+        border-radius: 8px;
+        border: 2px solid #667eea;
+    }
 </style>
 {% endblock %}
 
@@ -128,11 +153,89 @@ $(document).ready(function() {
         if (file) {
             let reader = new FileReader();
             reader.onload = function(e) {
-                let preview = '<div class="mt-2"><img src="' + e.target.result + '" class="img-thumbnail" style="max-width: 200px;"></div>';
-                $('#id_photo').after(preview);
+                $('.photo-preview-container').remove();
+                let preview = '<div class="photo-preview-container mt-2"><img src="' + e.target.result + '" class="img-thumbnail"></div>';
+                $('#id_photo').closest('.mb-3, .form-group').append(preview);
             };
             reader.readAsDataURL(file);
         }
+    });
+    
+    // ===== CAPTURE PHOTO VIA CAMÉRA =====
+    let cameraStream = null;
+    
+    // Ajouter le bouton caméra après le champ photo
+    const cameraHTML = `
+        <div class="mt-2">
+            <button type="button" id="btn-open-camera" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-camera"></i> Prendre une photo
+            </button>
+        </div>
+        <div id="camera-container">
+            <video id="camera-preview" autoplay playsinline></video>
+            <canvas id="camera-canvas"></canvas>
+            <div class="camera-controls">
+                <button type="button" id="btn-capture" class="btn btn-success btn-sm">
+                    <i class="bi bi-camera-fill"></i> Capturer
+                </button>
+                <button type="button" id="btn-close-camera" class="btn btn-secondary btn-sm">
+                    <i class="bi bi-x-lg"></i> Fermer
+                </button>
+            </div>
+        </div>
+    `;
+    $('#id_photo').closest('.mb-3, .form-group').append(cameraHTML);
+    
+    // Ouvrir la caméra
+    $('#btn-open-camera').on('click', async function() {
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } 
+            });
+            $('#camera-preview').get(0).srcObject = cameraStream;
+            $('#camera-container').slideDown();
+            $(this).hide();
+        } catch (err) {
+            alert('Impossible d\'accéder à la caméra. Vérifiez les permissions.');
+            console.error('Erreur caméra:', err);
+        }
+    });
+    
+    // Capturer la photo
+    $('#btn-capture').on('click', function() {
+        const video = $('#camera-preview').get(0);
+        const canvas = $('#camera-canvas').get(0);
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        
+        // Convertir en fichier
+        canvas.toBlob(function(blob) {
+            const file = new File([blob], 'photo_employe.jpg', { type: 'image/jpeg' });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            $('#id_photo').get(0).files = dataTransfer.files;
+            
+            // Afficher preview
+            $('.photo-preview-container').remove();
+            const preview = `<div class="photo-preview-container mt-2"><img src="${canvas.toDataURL('image/jpeg')}" class="img-thumbnail"></div>`;
+            $('#id_photo').closest('.mb-3, .form-group').append(preview);
+            
+            // Fermer la caméra
+            $('#btn-close-camera').click();
+        }, 'image/jpeg', 0.9);
+    });
+    
+    // Fermer la caméra
+    $('#btn-close-camera').on('click', function() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        $('#camera-container').slideUp();
+        $('#btn-open-camera').show();
     });
     
     // Confirmation avant annulation
