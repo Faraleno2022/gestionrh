@@ -34,25 +34,37 @@
         <div class="col-md-6">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Informations Employé</h5>
+                    <h5 class="mb-0"><i class="fas fa-user me-2"></i>Informations Employé</h5>
                 </div>
                 <div class="card-body">
-                    <table class="table table-borderless mb-0">
+                    <table class="table table-borderless table-sm mb-0">
                         <tr>
                             <th width="40%">Matricule :</th>
-                            <td>{{ bulletin.employe.matricule }}</td>
+                            <td><strong>{{ bulletin.employe.matricule }}</strong></td>
                         </tr>
                         <tr>
                             <th>Nom complet :</th>
                             <td>{{ bulletin.employe.nom }} {{ bulletin.employe.prenoms }}</td>
                         </tr>
                         <tr>
-                            <th>Fonction :</th>
-                            <td>{{ bulletin.employe.fonction|default:"Non renseigné" }}</td>
+                            <th>Poste :</th>
+                            <td>{{ bulletin.employe.poste|default:"Non renseigné" }}</td>
                         </tr>
                         <tr>
-                            <th>Département :</th>
-                            <td>{{ bulletin.employe.departement|default:"Non renseigné" }}</td>
+                            <th>Service :</th>
+                            <td>{{ bulletin.employe.service|default:"Non renseigné" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date embauche :</th>
+                            <td>{{ bulletin.employe.date_embauche|date:"d/m/Y"|default:"Non renseigné" }}</td>
+                        </tr>
+                        <tr>
+                            <th>N° CNSS :</th>
+                            <td>{{ bulletin.employe.num_cnss_individuel|default:"Non renseigné" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Mode paiement :</th>
+                            <td>{{ bulletin.employe.mode_paiement|default:"Non renseigné" }}</td>
                         </tr>
                     </table>
                 </div>
@@ -61,17 +73,29 @@
         <div class="col-md-6">
             <div class="card shadow-sm">
                 <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">Informations Période</h5>
+                    <h5 class="mb-0"><i class="fas fa-calendar me-2"></i>Informations Période</h5>
                 </div>
                 <div class="card-body">
-                    <table class="table table-borderless mb-0">
+                    <table class="table table-borderless table-sm mb-0">
                         <tr>
                             <th width="40%">Période :</th>
-                            <td>{{ bulletin.periode }}</td>
+                            <td><strong>{{ bulletin.periode }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>N° Bulletin :</th>
+                            <td>{{ bulletin.numero_bulletin }}</td>
                         </tr>
                         <tr>
                             <th>Date de calcul :</th>
                             <td>{{ bulletin.date_calcul|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Jours travaillés :</th>
+                            <td>{{ bulletin.periode.nombre_jours_travailles }} jours</td>
+                        </tr>
+                        <tr>
+                            <th>Heures/mois :</th>
+                            <td>{{ bulletin.periode.nombre_heures_mois }} h</td>
                         </tr>
                         <tr>
                             <th>Statut :</th>
@@ -196,26 +220,84 @@
 
     <!-- Informations complémentaires -->
     <div class="row mt-4">
-        <div class="col-12">
+        <div class="col-md-6">
             <div class="card shadow-sm">
-                <div class="card-header">
-                    <h5 class="mb-0">Cotisations Patronales</h5>
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-building me-2"></i>Cotisations Patronales</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <p class="mb-1 text-muted">CNSS Employeur (18%)</p>
-                            <h5>{{ bulletin.cnss_employeur|floatformat:0|intcomma }} GNF</h5>
-                        </div>
-                        <div class="col-md-4">
-                            <p class="mb-1 text-muted">Total CNSS</p>
-                            <h5>{{ bulletin.cnss_employe|add:bulletin.cnss_employeur|floatformat:0|intcomma }} GNF</h5>
-                        </div>
-                    </div>
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                            <td>CNSS Employeur (18%)</td>
+                            <td class="text-end"><strong>{{ bulletin.cnss_employeur|floatformat:0|intcomma }} GNF</strong></td>
+                        </tr>
+                        <tr class="border-top">
+                            <th>Total CNSS (Employé + Employeur)</th>
+                            <th class="text-end">{{ bulletin.cnss_employe|add:bulletin.cnss_employeur|floatformat:0|intcomma }} GNF</th>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Informations Bancaires</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        {% if bulletin.employe.mode_paiement == 'Virement' %}
+                        <tr>
+                            <td>Banque :</td>
+                            <td class="text-end">{{ bulletin.employe.nom_banque|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td>Agence :</td>
+                            <td class="text-end">{{ bulletin.employe.agence_banque|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td>N° Compte :</td>
+                            <td class="text-end">{{ bulletin.employe.numero_compte|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td>RIB :</td>
+                            <td class="text-end">{{ bulletin.employe.rib|default:"-" }}</td>
+                        </tr>
+                        {% elif bulletin.employe.mode_paiement == 'Mobile Money' %}
+                        <tr>
+                            <td>Opérateur :</td>
+                            <td class="text-end">{{ bulletin.employe.operateur_mobile_money|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td>N° Mobile Money :</td>
+                            <td class="text-end">{{ bulletin.employe.numero_mobile_money|default:"-" }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="2" class="text-muted text-center">Paiement en espèces</td>
+                        </tr>
+                        {% endif %}
+                    </table>
                 </div>
             </div>
         </div>
     </div>
+    
+    <!-- Observations -->
+    {% if bulletin.observations %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-comment me-2"></i>Observations</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ bulletin.observations }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
