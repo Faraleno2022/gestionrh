@@ -65,9 +65,14 @@
                 </ol>
                 <hr>
                 <p class="small text-muted">
-                    <i class="bi bi-info-circle"></i> Pour joindre le bulletin PDF, 
-                    <a href="{% url 'paie:imprimer_bulletin' bulletin.pk %}" target="_blank">téléchargez-le d'abord</a>.
+                    <i class="bi bi-info-circle"></i> Le lien de téléchargement du PDF est inclus dans le message.
                 </p>
+                {% if lien_pdf %}
+                <div class="alert alert-success small mt-2">
+                    <strong>📄 Lien PDF public :</strong><br>
+                    <a href="{{ lien_pdf }}" target="_blank" class="text-break">{{ lien_pdf }}</a>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
