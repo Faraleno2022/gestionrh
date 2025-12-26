@@ -62,7 +62,7 @@
     </div>
 
     <!-- Totaux -->
-    <div class="row mb-4">
+    <div class="row mb-4 totaux-cards">
         <div class="col-md-3">
             <div class="card shadow-sm border-primary">
                 <div class="card-body text-center">
@@ -117,7 +117,7 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover table-sm">
+                        <table class="table table-bordered table-hover table-sm livre-paie-table">
                             <thead class="table-light">
                                 <tr>
                                     <th rowspan="2">Période</th>
@@ -147,7 +147,7 @@
                                     <td class="text-end">{{ bulletin.salaire_brut|floatformat:0|intcomma }}</td>
                                     <td class="text-end">{{ bulletin.cnss_employe|floatformat:0|intcomma }}</td>
                                     <td class="text-end">{{ bulletin.irg|floatformat:0|intcomma }}</td>
-                                    <td class="text-end">{% widthratio bulletin.cnss_employe 1 1|add:bulletin.irg|floatformat:0 %}</td>
+                                    <td class="text-end">{{ bulletin.total_retenues|floatformat:0|intcomma }}</td>
                                     <td class="text-end text-success"><strong>{{ bulletin.net_a_payer|floatformat:0|intcomma }}</strong></td>
                                 </tr>
                                 {% empty %}
@@ -166,7 +166,7 @@
                                     <th class="text-end">{{ totaux.total_brut|floatformat:0|intcomma }}</th>
                                     <th class="text-end">{{ totaux.total_cnss_employe|floatformat:0|intcomma }}</th>
                                     <th class="text-end">{{ totaux.total_irg|floatformat:0|intcomma }}</th>
-                                    <th class="text-end">{% widthratio totaux.total_cnss_employe 1 1|add:totaux.total_irg|floatformat:0 %}</th>
+                                    <th class="text-end">{{ totaux.total_retenues|floatformat:0|intcomma }}</th>
                                     <th class="text-end text-success"><strong>{{ totaux.total_net|floatformat:0|intcomma }}</strong></th>
                                 </tr>
                             </tfoot>
@@ -200,6 +200,31 @@
 </div>
 
 <style>
+    /* Réduire la taille de police pour le livre de paie */
+    .livre-paie-table {
+        font-size: 0.75rem;
+    }
+    
+    .livre-paie-table th,
+    .livre-paie-table td {
+        padding: 0.25rem 0.4rem;
+        white-space: nowrap;
+    }
+    
+    .totaux-cards h4,
+    .totaux-cards h5 {
+        font-size: 0.75rem;
+        margin-bottom: 0;
+    }
+    
+    .totaux-cards h6 {
+        font-size: 0.65rem;
+    }
+    
+    .totaux-cards .card-body {
+        padding: 0.4rem;
+    }
+    
     @media print {
         .btn, .card-header, .no-print {
             display: none !important;
@@ -211,7 +236,7 @@
         }
         
         table {
-            font-size: 9pt;
+            font-size: 8pt;
         }
     }
 </style>
