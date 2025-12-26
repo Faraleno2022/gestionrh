@@ -26,7 +26,7 @@ class EmployeListView(LoginRequiredMixin, ListView):
     model = Employe
     template_name = 'employes/list.html'
     context_object_name = 'employes'
-    paginate_by = 20
+    paginate_by = 50
     
     def get_queryset(self):
         queryset = Employe.objects.select_related(

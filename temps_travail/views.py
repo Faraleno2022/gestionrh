@@ -78,6 +78,8 @@ def temps_travail_home(request):
 @entreprise_active_required
 def liste_pointages(request):
     """Liste des pointages"""
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    
     # Filtres
     date_filter = request.GET.get('date', date.today().isoformat())
     employe_id = request.GET.get('employe')
@@ -91,14 +93,14 @@ def liste_pointages(request):
     pointages = Pointage.objects.filter(
         date_pointage=date_pointage,
         employe__entreprise=request.user.entreprise,
-    ).select_related('employe')
+    ).select_related('employe').order_by('employe__nom')
     
     if employe_id:
         pointages = pointages.filter(employe_id=employe_id)
     if statut:
         pointages = pointages.filter(statut_pointage=statut)
     
-    # Statistiques du jour
+    # Statistiques du jour (avant pagination)
     stats = pointages.aggregate(
         total=Count('id'),
         presents=Count('id', filter=Q(statut_pointage='present')),
@@ -107,15 +109,26 @@ def liste_pointages(request):
         heures_sup_total=Sum('heures_supplementaires')
     )
     
+    # Pagination - 50 par page
+    paginator = Paginator(pointages, 50)
+    page = request.GET.get('page')
+    try:
+        pointages_page = paginator.page(page)
+    except PageNotAnInteger:
+        pointages_page = paginator.page(1)
+    except EmptyPage:
+        pointages_page = paginator.page(paginator.num_pages)
+    
     employes = Employe.objects.filter(
         entreprise=request.user.entreprise
     ).exclude(statut_employe__in=['demissionnaire', 'licencie', 'retraite'])
     
     return render(request, 'temps_travail/pointages/liste.html', {
-        'pointages': pointages,
+        'pointages': pointages_page,
         'date_pointage': date_pointage,
         'stats': stats,
-        'employes': employes
+        'employes': employes,
+        'total_pointages': paginator.count,
     })
 
 
@@ -274,6 +287,8 @@ def pointer_sortie(request):
 @entreprise_active_required
 def liste_conges(request):
     """Liste des congés"""
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    
     # Filtres
     statut = request.GET.get('statut')
     employe_id = request.GET.get('employe')
@@ -281,7 +296,7 @@ def liste_conges(request):
     
     conges = Conge.objects.filter(
         employe__entreprise=request.user.entreprise
-    ).select_related('employe', 'approbateur')
+    ).select_related('employe', 'approbateur').order_by('-date_debut')
     
     if statut:
         conges = conges.filter(statut_demande=statut)
@@ -290,15 +305,26 @@ def liste_conges(request):
     if annee:
         conges = conges.filter(date_debut__year=annee)
     
+    # Pagination - 50 par page
+    paginator = Paginator(conges, 50)
+    page = request.GET.get('page')
+    try:
+        conges_page = paginator.page(page)
+    except PageNotAnInteger:
+        conges_page = paginator.page(1)
+    except EmptyPage:
+        conges_page = paginator.page(paginator.num_pages)
+    
     employes = Employe.objects.filter(
         entreprise=request.user.entreprise
     ).exclude(statut_employe__in=['demissionnaire', 'licencie', 'retraite'])
     annees = range(date.today().year - 2, date.today().year + 2)
     
     return render(request, 'temps_travail/conges/liste.html', {
-        'conges': conges,
+        'conges': conges_page,
         'employes': employes,
-        'annees': annees
+        'annees': annees,
+        'total_conges': paginator.count,
     })
 
 
@@ -471,6 +497,8 @@ def supprimer_conge(request, pk):
 @entreprise_active_required
 def liste_absences(request):
     """Liste des absences"""
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    
     # Filtres
     employe_id = request.GET.get('employe')
     type_absence = request.GET.get('type')
@@ -479,7 +507,7 @@ def liste_absences(request):
     
     absences = Absence.objects.filter(
         employe__entreprise=request.user.entreprise
-    ).select_related('employe')
+    ).select_related('employe').order_by('-date_absence')
     
     if employe_id:
         absences = absences.filter(employe_id=employe_id)
@@ -491,13 +519,24 @@ def liste_absences(request):
             date_absence__year=annee
         )
     
+    # Pagination - 50 par page
+    paginator = Paginator(absences, 50)
+    page = request.GET.get('page')
+    try:
+        absences_page = paginator.page(page)
+    except PageNotAnInteger:
+        absences_page = paginator.page(1)
+    except EmptyPage:
+        absences_page = paginator.page(paginator.num_pages)
+    
     employes = Employe.objects.filter(
         entreprise=request.user.entreprise
     ).exclude(statut_employe__in=['demissionnaire', 'licencie', 'retraite'])
     
     return render(request, 'temps_travail/absences/liste.html', {
-        'absences': absences,
-        'employes': employes
+        'absences': absences_page,
+        'employes': employes,
+        'total_absences': paginator.count,
     })
 
 

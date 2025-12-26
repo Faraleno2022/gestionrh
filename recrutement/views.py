@@ -68,12 +68,14 @@ def recrutement_home(request):
 @entreprise_active_required
 def liste_offres(request):
     """Liste des offres d'emploi"""
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    
     statut = request.GET.get('statut')
     service_id = request.GET.get('service')
     
     offres = OffreEmploi.objects.filter(
         entreprise=request.user.entreprise
-    ).select_related('poste', 'service', 'responsable_recrutement')
+    ).select_related('poste', 'service', 'responsable_recrutement').order_by('-date_creation')
     
     if statut:
         offres = offres.filter(statut_offre=statut)
@@ -83,13 +85,24 @@ def liste_offres(request):
     # Ajouter le nombre de candidatures pour chaque offre
     offres = offres.annotate(nb_candidatures=Count('candidatures'))
     
+    # Pagination - 50 par page
+    paginator = Paginator(offres, 50)
+    page = request.GET.get('page')
+    try:
+        offres_page = paginator.page(page)
+    except PageNotAnInteger:
+        offres_page = paginator.page(1)
+    except EmptyPage:
+        offres_page = paginator.page(paginator.num_pages)
+    
     services = Service.objects.filter(
         etablissement__societe__entreprise=request.user.entreprise
     )
     
     return render(request, 'recrutement/offres/liste.html', {
-        'offres': offres,
-        'services': services
+        'offres': offres_page,
+        'services': services,
+        'total_offres': paginator.count,
     })
 
 
@@ -217,17 +230,29 @@ def modifier_offre(request, pk):
 @entreprise_active_required
 def liste_candidatures(request):
     """Liste des candidatures"""
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    
     statut = request.GET.get('statut')
     offre_id = request.GET.get('offre')
     
     candidatures = Candidature.objects.filter(
         offre__entreprise=request.user.entreprise
-    ).select_related('offre')
+    ).select_related('offre').order_by('-date_candidature')
     
     if statut:
         candidatures = candidatures.filter(statut_candidature=statut)
     if offre_id:
         candidatures = candidatures.filter(offre_id=offre_id)
+    
+    # Pagination - 50 par page
+    paginator = Paginator(candidatures, 50)
+    page = request.GET.get('page')
+    try:
+        candidatures_page = paginator.page(page)
+    except PageNotAnInteger:
+        candidatures_page = paginator.page(1)
+    except EmptyPage:
+        candidatures_page = paginator.page(paginator.num_pages)
     
     offres = OffreEmploi.objects.filter(
         entreprise=request.user.entreprise,
@@ -235,8 +260,9 @@ def liste_candidatures(request):
     )
     
     return render(request, 'recrutement/candidatures/liste.html', {
-        'candidatures': candidatures,
-        'offres': offres
+        'candidatures': candidatures_page,
+        'offres': offres,
+        'total_candidatures': paginator.count,
     })
 
 

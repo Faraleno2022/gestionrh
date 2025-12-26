@@ -760,6 +760,8 @@ def declarations_sociales(request):
 @login_required
 def liste_elements_salaire(request):
     """Liste tous les éléments de salaire"""
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    
     # Filtres
     employe_id = request.GET.get('employe')
     type_rubrique = request.GET.get('type')
@@ -767,7 +769,7 @@ def liste_elements_salaire(request):
     
     elements = ElementSalaire.objects.select_related(
         'employe', 'rubrique'
-    ).filter(employe__entreprise=request.user.entreprise)
+    ).filter(employe__entreprise=request.user.entreprise).order_by('employe__nom', 'rubrique__ordre_calcul')
     
     if employe_id:
         elements = elements.filter(employe_id=employe_id)
@@ -776,6 +778,16 @@ def liste_elements_salaire(request):
     if actif:
         elements = elements.filter(actif=(actif == 'true'))
     
+    # Pagination - 50 par page
+    paginator = Paginator(elements, 50)
+    page = request.GET.get('page')
+    try:
+        elements_page = paginator.page(page)
+    except PageNotAnInteger:
+        elements_page = paginator.page(1)
+    except EmptyPage:
+        elements_page = paginator.page(paginator.num_pages)
+    
     # Liste des employés pour le filtre
     employes = Employe.objects.filter(
         entreprise=request.user.entreprise,
@@ -783,8 +795,9 @@ def liste_elements_salaire(request):
     ).order_by('nom', 'prenoms')
     
     return render(request, 'paie/elements_salaire/liste.html', {
-        'elements': elements,
-        'employes': employes
+        'elements': elements_page,
+        'employes': employes,
+        'total_elements': paginator.count,
     })
 
 
