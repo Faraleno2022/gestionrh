@@ -270,17 +270,20 @@ def cloturer_periode(request, pk):
 @entreprise_active_required
 @reauth_required
 def liste_bulletins(request):
-    """Liste de tous les bulletins de paie"""
+    """Liste de tous les bulletins de paie (y compris périodes clôturées)"""
     bulletins = BulletinPaie.objects.filter(
         employe__entreprise=request.user.entreprise,
         periode__entreprise=request.user.entreprise,
-    ).select_related('employe', 'periode')
+    ).select_related('employe', 'periode').order_by('-periode__annee', '-periode__mois', 'employe__nom')
     
     # Filtres
+    annee = request.GET.get('annee')
     periode_id = request.GET.get('periode')
     employe_id = request.GET.get('employe')
     statut = request.GET.get('statut')
     
+    if annee:
+        bulletins = bulletins.filter(periode__annee=annee)
     if periode_id:
         bulletins = bulletins.filter(periode_id=periode_id)
     if employe_id:
@@ -288,16 +291,27 @@ def liste_bulletins(request):
     if statut:
         bulletins = bulletins.filter(statut_bulletin=statut)
     
-    periodes = PeriodePaie.objects.filter(entreprise=request.user.entreprise)
+    # Toutes les périodes (y compris clôturées) pour le filtre
+    periodes = PeriodePaie.objects.filter(
+        entreprise=request.user.entreprise
+    ).order_by('-annee', '-mois')
+    
+    # Tous les employés (actifs et inactifs) pour pouvoir consulter les anciens bulletins
     employes = Employe.objects.filter(
-        entreprise=request.user.entreprise,
-        statut_employe='actif'
-    )
+        entreprise=request.user.entreprise
+    ).order_by('nom', 'prenoms')
+    
+    # Liste des années disponibles
+    annees_disponibles = PeriodePaie.objects.filter(
+        entreprise=request.user.entreprise
+    ).values_list('annee', flat=True).distinct().order_by('-annee')
     
     return render(request, 'paie/bulletins/liste.html', {
         'bulletins': bulletins,
         'periodes': periodes,
-        'employes': employes
+        'employes': employes,
+        'annees_disponibles': annees_disponibles,
+        'annee_selectionnee': annee,
     })
 
 

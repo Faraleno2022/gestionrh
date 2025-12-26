@@ -16,20 +16,34 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <i class="fas fa-filter me-2"></i>Filtres - <small class="text-muted">Consultez les bulletins de toutes les périodes (y compris clôturées)</small>
+                </div>
                 <div class="card-body">
                     <form method="get" class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-2">
+                            <label for="annee" class="form-label">Année</label>
+                            <select class="form-select" id="annee" name="annee">
+                                <option value="">Toutes</option>
+                                {% for a in annees_disponibles %}
+                                <option value="{{ a }}" {% if annee_selectionnee == a|stringformat:"s" %}selected{% endif %}>
+                                    {{ a }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
                             <label for="periode" class="form-label">Période</label>
                             <select class="form-select" id="periode" name="periode">
                                 <option value="">Toutes les périodes</option>
                                 {% for p in periodes %}
                                 <option value="{{ p.pk }}" {% if request.GET.periode == p.pk|stringformat:"s" %}selected{% endif %}>
-                                    {{ p }}
+                                    {{ p }} {% if p.statut_periode == 'cloturee' %}(Clôturée){% endif %}
                                 </option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="employe" class="form-label">Employé</label>
                             <select class="form-select" id="employe" name="employe">
                                 <option value="">Tous les employés</option>
@@ -53,7 +67,7 @@
                         <div class="col-md-2">
                             <label class="form-label">&nbsp;</label>
                             <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-filter me-2"></i>Filtrer
+                                <i class="fas fa-search me-2"></i>Rechercher
                             </button>
                         </div>
                     </form>
