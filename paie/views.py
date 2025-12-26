@@ -637,6 +637,217 @@ def telecharger_bulletin_pdf(request, pk):
     return response
 
 
+def telecharger_bulletin_public(request, token):
+    """Télécharger un bulletin de paie en PDF via lien public (sans authentification)"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm, mm
+    from reportlab.pdfgen import canvas
+    from reportlab.lib import colors
+    from reportlab.platypus import Table, TableStyle
+    import io
+    import os
+    
+    # Récupérer le bulletin par son token
+    bulletin = get_object_or_404(BulletinPaie, token_public=token)
+    
+    lignes = LigneBulletin.objects.filter(bulletin=bulletin).select_related('rubrique')
+    gains = lignes.filter(rubrique__type_rubrique='gain')
+    retenues = lignes.filter(rubrique__type_rubrique__in=['retenue', 'cotisation'])
+    
+    # Créer le buffer PDF
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    # Variables de position
+    y = height - 1*cm
+    
+    # === EN-TÊTE ===
+    entreprise = bulletin.employe.entreprise
+    
+    # Logo entreprise à gauche
+    if entreprise and entreprise.logo:
+        try:
+            logo_path = entreprise.logo.path
+            if os.path.exists(logo_path):
+                p.drawImage(logo_path, 1.5*cm, y - 2*cm, width=2*cm, height=2*cm, preserveAspectRatio=True)
+        except:
+            pass
+    
+    # Drapeau de la Guinée à droite
+    flag_width = 1.5*cm
+    flag_height = 1*cm
+    flag_x = width - 1.5*cm - flag_width
+    flag_y = y - 1.5*cm
+    stripe_width = flag_width / 3
+    
+    p.setFillColor(colors.HexColor("#ce1126"))
+    p.rect(flag_x, flag_y, stripe_width, flag_height, stroke=0, fill=1)
+    p.setFillColor(colors.HexColor("#fcd116"))
+    p.rect(flag_x + stripe_width, flag_y, stripe_width, flag_height, stroke=0, fill=1)
+    p.setFillColor(colors.HexColor("#009460"))
+    p.rect(flag_x + 2*stripe_width, flag_y, stripe_width, flag_height, stroke=0, fill=1)
+    p.setStrokeColor(colors.black)
+    p.setLineWidth(0.5)
+    p.rect(flag_x, flag_y, flag_width, flag_height, stroke=1, fill=0)
+    p.setFillColor(colors.black)
+    
+    # Titre centré
+    p.setFont("Helvetica-Bold", 11)
+    nom_entreprise = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
+    p.drawCentredString(width/2, y - 0.5*cm, nom_entreprise)
+    p.setFont("Helvetica-Bold", 13)
+    p.drawCentredString(width/2, y - 1.2*cm, "BULLETIN DE PAIE")
+    p.setFont("Helvetica", 9)
+    p.drawCentredString(width/2, y - 1.8*cm, f"Période: {bulletin.periode}")
+    
+    y -= 2.8*cm
+    
+    # === INFORMATIONS EMPLOYÉ ===
+    emp = bulletin.employe
+    p.setFont("Helvetica-Bold", 9)
+    p.drawString(1.5*cm, y, "INFORMATIONS EMPLOYÉ")
+    y -= 0.5*cm
+    
+    p.setFont("Helvetica", 8)
+    infos = [
+        f"Matricule: {emp.matricule}",
+        f"Nom: {emp.nom} {emp.prenoms}",
+        f"Poste: {emp.poste.intitule_poste if emp.poste else '-'}",
+        f"Service: {emp.service.nom if emp.service else '-'}",
+        f"N° CNSS: {emp.num_cnss_individuel or '-'}",
+    ]
+    
+    col1_x = 1.5*cm
+    col2_x = width/2
+    for i, info in enumerate(infos):
+        if i < 3:
+            p.drawString(col1_x, y - (i * 0.4*cm), info)
+        else:
+            p.drawString(col2_x, y - ((i-3) * 0.4*cm), info)
+    
+    y -= 1.5*cm
+    
+    # === TABLEAU GAINS ===
+    p.setFont("Helvetica-Bold", 9)
+    p.setFillColor(colors.HexColor("#28a745"))
+    p.drawString(1.5*cm, y, "GAINS ET RÉMUNÉRATIONS")
+    p.setFillColor(colors.black)
+    y -= 0.5*cm
+    
+    gains_data = [["Rubrique", "Base", "Taux", "Montant"]]
+    for ligne in gains:
+        gains_data.append([
+            ligne.rubrique.libelle_rubrique[:30],
+            f"{ligne.base_calcul:,.0f}".replace(",", " ") if ligne.base_calcul else "-",
+            f"{ligne.taux_applique}%" if ligne.taux_applique else "-",
+            f"{ligne.montant:,.0f}".replace(",", " ")
+        ])
+    
+    if len(gains_data) == 1:
+        gains_data.append(["Salaire de base", "-", "-", f"{bulletin.salaire_brut:,.0f}".replace(",", " ")])
+    
+    gains_table = Table(gains_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm])
+    gains_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#28a745")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWHEIGHT', (0, 0), (-1, -1), 0.5*cm),
+    ]))
+    
+    row_height = 0.5*cm
+    table_height = len(gains_data) * row_height
+    gains_table.wrapOn(p, width, height)
+    gains_table.drawOn(p, 1.5*cm, y - table_height)
+    y -= table_height + 0.6*cm
+    
+    # === TABLEAU RETENUES ===
+    p.setFont("Helvetica-Bold", 9)
+    p.setFillColor(colors.HexColor("#dc3545"))
+    p.drawString(1.5*cm, y, "RETENUES ET COTISATIONS")
+    p.setFillColor(colors.black)
+    y -= 0.5*cm
+    
+    retenues_data = [["Rubrique", "Base", "Taux", "Montant"]]
+    for ligne in retenues:
+        retenues_data.append([
+            ligne.rubrique.libelle_rubrique[:30],
+            f"{ligne.base_calcul:,.0f}".replace(",", " ") if ligne.base_calcul else "-",
+            f"{ligne.taux_applique}%" if ligne.taux_applique else "-",
+            f"{ligne.montant:,.0f}".replace(",", " ")
+        ])
+    
+    if len(retenues_data) == 1:
+        retenues_data.append(["CNSS (5%)", f"{bulletin.salaire_brut:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
+        if bulletin.irg > 0:
+            retenues_data.append(["IRG", "-", "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
+    
+    retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm])
+    retenues_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#dc3545")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWHEIGHT', (0, 0), (-1, -1), 0.5*cm),
+    ]))
+    
+    table_height = len(retenues_data) * row_height
+    retenues_table.wrapOn(p, width, height)
+    retenues_table.drawOn(p, 1.5*cm, y - table_height)
+    y -= table_height + 0.6*cm
+    
+    # === RÉCAPITULATIF ===
+    recap_height = 2.5*cm
+    p.setStrokeColor(colors.HexColor("#ce1126"))
+    p.setLineWidth(2)
+    p.rect(1.5*cm, y - recap_height, width - 3*cm, recap_height, stroke=1, fill=0)
+    
+    p.setFont("Helvetica-Bold", 10)
+    p.setFillColor(colors.black)
+    p.drawString(2*cm, y - 0.5*cm, "SALAIRE BRUT:")
+    p.drawRightString(width - 2*cm, y - 0.5*cm, f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " "))
+    
+    p.setFont("Helvetica", 9)
+    p.setFillColor(colors.HexColor("#dc3545"))
+    p.drawString(2*cm, y - 1*cm, "Cotisation CNSS (5%):")
+    p.drawRightString(width - 2*cm, y - 1*cm, f"- {bulletin.cnss_employe:,.0f} GNF".replace(",", " "))
+    p.drawString(2*cm, y - 1.4*cm, "IRG:")
+    p.drawRightString(width - 2*cm, y - 1.4*cm, f"- {bulletin.irg:,.0f} GNF".replace(",", " "))
+    
+    p.setFillColor(colors.HexColor("#28a745"))
+    p.setFont("Helvetica-Bold", 11)
+    p.drawString(2*cm, y - 2.1*cm, "NET À PAYER:")
+    p.drawRightString(width - 2*cm, y - 2.1*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
+    p.setFillColor(colors.black)
+    
+    y -= recap_height + 0.5*cm
+    
+    # === PIED DE PAGE ===
+    p.setFont("Helvetica", 7)
+    p.drawCentredString(width/2, 2.2*cm, "Ce bulletin est conforme à la législation guinéenne en vigueur.")
+    if entreprise:
+        p.drawCentredString(width/2, 1.7*cm, f"{entreprise.nom_entreprise} - {entreprise.adresse or ''}")
+        p.drawCentredString(width/2, 1.3*cm, f"NIF: {entreprise.nif or '-'} - CNSS: {entreprise.num_cnss or '-'}")
+    
+    p.drawCentredString(width/2, 0.8*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
+    
+    # Finaliser le PDF
+    p.showPage()
+    p.save()
+    
+    # Retourner le PDF
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    filename = f"bulletin_{bulletin.numero_bulletin}_{emp.matricule}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
 @login_required
 def livre_paie(request):
     """Livre de paie conforme"""

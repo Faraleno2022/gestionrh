@@ -107,6 +107,10 @@ class BulletinPaie(models.Model):
     date_calcul = models.DateTimeField(blank=True, null=True)
     observations = models.TextField(blank=True, null=True)
     
+    # Token pour accès public au PDF
+    token_public = models.CharField(max_length=64, blank=True, null=True, unique=True,
+                                   help_text='Token pour téléchargement public du PDF')
+    
     class Meta:
         db_table = 'bulletins_paie'
         verbose_name = 'Bulletin de paie'
@@ -116,6 +120,14 @@ class BulletinPaie(models.Model):
     
     def __str__(self):
         return f"{self.numero_bulletin} - {self.employe.nom} {self.employe.prenoms}"
+    
+    def generer_token_public(self):
+        """Génère un token unique pour l'accès public au PDF"""
+        import secrets
+        if not self.token_public:
+            self.token_public = secrets.token_urlsafe(32)
+            self.save(update_fields=['token_public'])
+        return self.token_public
 
 
 class ParametrePaie(models.Model):

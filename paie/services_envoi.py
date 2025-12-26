@@ -42,7 +42,7 @@ class BulletinEnvoiService:
             return False, f"Erreur lors de l'envoi: {str(e)}"
     
     def generer_lien_whatsapp(self, bulletin, numero_telephone, message=None):
-        """Génère un lien WhatsApp pour envoyer le bulletin"""
+        """Génère un lien WhatsApp pour envoyer le bulletin avec lien PDF public"""
         if not numero_telephone:
             return None, "Numéro de téléphone non renseigné"
         
@@ -53,18 +53,30 @@ class BulletinEnvoiService:
         if not numero.startswith('224'):
             numero = '224' + numero
         
-        # Message par défaut
+        # Générer le token public pour le PDF si pas encore fait
+        token = bulletin.generer_token_public()
+        
+        # Construire le lien public du PDF
+        lien_pdf = f"https://www.guineerh.space/paie/bulletins/public/{token}/"
+        
+        # Message par défaut avec lien PDF
         if not message:
             message = f"""Bonjour {bulletin.employe.prenoms},
 
-Veuillez trouver ci-joint votre bulletin de paie pour la période {bulletin.periode}.
+Veuillez trouver votre bulletin de paie pour la période {bulletin.periode}.
 
-Détails:
+📄 *Télécharger votre bulletin PDF:*
+{lien_pdf}
+
+💰 *Détails:*
 - Salaire brut: {bulletin.salaire_brut:,.0f} GNF
 - Net à payer: {bulletin.net_a_payer:,.0f} GNF
 
 Cordialement,
 {self.entreprise.nom if self.entreprise else 'Service RH'}"""
+        else:
+            # Ajouter le lien PDF au message personnalisé
+            message = f"{message}\n\n📄 Télécharger le bulletin PDF:\n{lien_pdf}"
         
         # Encoder le message pour l'URL
         message_encode = quote(message)
