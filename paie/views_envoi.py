@@ -94,19 +94,35 @@ def envoyer_bulletin_whatsapp(request, pk):
             return JsonResponse({'success': False, 'error': msg})
     
     # Générer le token public pour le PDF
-    token = bulletin.generer_token_public()
-    lien_pdf = f"https://www.guineerh.space/paie/bulletins/public/{token}/"
+    try:
+        token = bulletin.generer_token_public()
+        lien_pdf = f"https://www.guineerh.space/paie/bulletins/public/{token}/"
+    except Exception:
+        # Si le champ token_public n'existe pas encore (migration non appliquée)
+        lien_pdf = ""
     
     # Nom de l'entreprise
-    nom_entreprise = request.user.entreprise.nom if request.user.entreprise else 'Service RH'
+    nom_entreprise = request.user.entreprise.nom_entreprise if request.user.entreprise else 'Service RH'
     
     # Message par défaut avec lien PDF
-    message_defaut = f"""Bonjour {bulletin.employe.prenoms},
+    if lien_pdf:
+        message_defaut = f"""Bonjour {bulletin.employe.prenoms},
 
 Veuillez trouver votre bulletin de paie pour la période {bulletin.periode}.
 
 📄 *Télécharger votre bulletin PDF:*
 {lien_pdf}
+
+💰 *Détails:*
+- Salaire brut: {bulletin.salaire_brut:,.0f} GNF
+- Net à payer: {bulletin.net_a_payer:,.0f} GNF
+
+Cordialement,
+{nom_entreprise}"""
+    else:
+        message_defaut = f"""Bonjour {bulletin.employe.prenoms},
+
+Veuillez trouver votre bulletin de paie pour la période {bulletin.periode}.
 
 💰 *Détails:*
 - Salaire brut: {bulletin.salaire_brut:,.0f} GNF
