@@ -289,7 +289,9 @@
     <div class="official-header">
         <!-- Logo entreprise à gauche -->
         <div class="logo-left">
-            {% if params and params.logo %}
+            {% if bulletin.employe.entreprise.logo %}
+            <img src="{{ bulletin.employe.entreprise.logo.url }}" alt="Logo {{ bulletin.employe.entreprise.nom_entreprise }}">
+            {% elif params and params.logo %}
             <img src="{{ params.logo.url }}" alt="Logo">
             {% else %}
             <div class="logo-placeholder">LOGO</div>
@@ -300,7 +302,7 @@
         <div class="header-center">
             <p class="republique">République de Guinée</p>
             <p class="devise-nationale">Travail - Justice - Solidarité</p>
-            <p class="company-name">{% if params %}{{ params.nom_societe }}{% else %}ENTREPRISE{% endif %}</p>
+            <p class="company-name">{% if bulletin.employe.entreprise %}{{ bulletin.employe.entreprise.nom_entreprise }}{% elif params %}{{ params.nom_societe }}{% else %}ENTREPRISE{% endif %}</p>
             <h1 class="bulletin-title">BULLETIN DE PAIE</h1>
         </div>
         
@@ -327,19 +329,19 @@
     <table class="info-table">
         <tr>
             <td>Matricule:</td>
-            <td>{{ bulletin.employe.matricule }}</td>
+            <td><strong>{{ bulletin.employe.matricule }}</strong></td>
             <td>N° CNSS:</td>
-            <td>{{ bulletin.employe.numero_cnss|default:"Non renseigné" }}</td>
+            <td>{{ bulletin.employe.num_cnss_individuel|default:"Non renseigné" }}</td>
         </tr>
         <tr>
             <td>Nom et Prénoms:</td>
-            <td colspan="3">{{ bulletin.employe.nom }} {{ bulletin.employe.prenoms }}</td>
+            <td colspan="3"><strong>{{ bulletin.employe.nom }} {{ bulletin.employe.prenoms }}</strong></td>
         </tr>
         <tr>
-            <td>Fonction:</td>
-            <td>{{ bulletin.employe.fonction|default:"Non renseigné" }}</td>
-            <td>Département:</td>
-            <td>{{ bulletin.employe.departement|default:"Non renseigné" }}</td>
+            <td>Poste:</td>
+            <td>{{ bulletin.employe.poste|default:"Non renseigné" }}</td>
+            <td>Service:</td>
+            <td>{{ bulletin.employe.service|default:"Non renseigné" }}</td>
         </tr>
         <tr>
             <td>Date d'embauche:</td>
@@ -347,6 +349,27 @@
             <td>Situation familiale:</td>
             <td>{{ bulletin.employe.situation_matrimoniale|default:"Non renseigné" }}</td>
         </tr>
+        <tr>
+            <td>Mode de paiement:</td>
+            <td>{{ bulletin.employe.mode_paiement|default:"Non renseigné" }}</td>
+            <td>Nombre d'enfants:</td>
+            <td>{{ bulletin.employe.nombre_enfants|default:"0" }}</td>
+        </tr>
+        {% if bulletin.employe.mode_paiement == 'Virement' %}
+        <tr>
+            <td>Banque:</td>
+            <td>{{ bulletin.employe.nom_banque|default:"-" }}</td>
+            <td>N° Compte:</td>
+            <td>{{ bulletin.employe.numero_compte|default:"-" }}</td>
+        </tr>
+        {% elif bulletin.employe.mode_paiement == 'Mobile Money' %}
+        <tr>
+            <td>Opérateur:</td>
+            <td>{{ bulletin.employe.operateur_mobile_money|default:"-" }}</td>
+            <td>N° Mobile Money:</td>
+            <td>{{ bulletin.employe.numero_mobile_money|default:"-" }}</td>
+        </tr>
+        {% endif %}
     </table>
 
     <!-- Éléments de Gains -->
@@ -445,10 +468,16 @@
         <!-- Informations de l'entreprise en bas -->
         <div class="company-footer">
             <div style="text-align: center; margin-bottom: 8px;">
-                <strong style="color: #ce1126;">{% if params %}{{ params.nom_societe }}{% else %}ENTREPRISE{% endif %}</strong>
+                <strong style="color: #ce1126;">{% if bulletin.employe.entreprise %}{{ bulletin.employe.entreprise.nom_entreprise }}{% elif params %}{{ params.nom_societe }}{% else %}ENTREPRISE{% endif %}</strong>
             </div>
             <div class="company-footer-content" style="justify-content: center; text-align: center;">
-                {% if params %}
+                {% if bulletin.employe.entreprise %}
+                <span class="company-footer-item">📍 {{ bulletin.employe.entreprise.adresse|default:"Adresse" }}</span>
+                <span class="company-footer-item">📞 {{ bulletin.employe.entreprise.telephone|default:"Téléphone" }}</span>
+                <span class="company-footer-item">✉️ {{ bulletin.employe.entreprise.email|default:"Email" }}</span>
+                <span class="company-footer-item">🏛️ NIF: {{ bulletin.employe.entreprise.nif|default:"Non renseigné" }}</span>
+                <span class="company-footer-item">🔢 CNSS: {{ bulletin.employe.entreprise.num_cnss|default:"Non renseigné" }}</span>
+                {% elif params %}
                 <span class="company-footer-item">📍 {{ params.adresse_societe|default:"Adresse" }}</span>
                 <span class="company-footer-item">📞 {{ params.telephone_societe|default:"Téléphone" }}</span>
                 <span class="company-footer-item">🏛️ NIF: {{ params.nif_societe|default:"Non renseigné" }}</span>
