@@ -22,10 +22,10 @@ def envoyer_bulletin_email(request, pk):
     )
     
     # Récupérer les paramètres de paie
-    from paie.models import ParametresPaie
+    from paie.models import ParametrePaie
     try:
-        params = ParametresPaie.objects.get(entreprise=request.user.entreprise)
-    except ParametresPaie.DoesNotExist:
+        params = ParametrePaie.objects.filter(entreprise=request.user.entreprise).first()
+    except:
         params = None
     
     if request.method == 'POST':
@@ -161,10 +161,10 @@ def envoyer_masse_email(request):
     ).select_related('employe')
     
     # Paramètres de paie
-    from paie.models import ParametresPaie
+    from paie.models import ParametrePaie
     try:
-        params = ParametresPaie.objects.get(entreprise=request.user.entreprise)
-    except ParametresPaie.DoesNotExist:
+        params = ParametrePaie.objects.filter(entreprise=request.user.entreprise).first()
+    except:
         params = None
     
     message_perso = request.POST.get('message', '')
