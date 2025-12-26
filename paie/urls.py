@@ -22,6 +22,7 @@ urlpatterns = [
     path('bulletins/<int:pk>/', views.detail_bulletin, name='detail_bulletin'),
     path('bulletins/<int:pk>/imprimer/', views.imprimer_bulletin, name='imprimer_bulletin'),
     path('bulletins/<int:pk>/telecharger-pdf/', views.telecharger_bulletin_pdf, name='telecharger_bulletin_pdf'),
+    path('bulletins/public/<str:token>/', views.telecharger_bulletin_public, name='telecharger_bulletin_public'),
     
     # Envoi des bulletins
     path('bulletins/<int:pk>/envoyer-email/', views_envoi.envoyer_bulletin_email, name='envoyer_email'),
