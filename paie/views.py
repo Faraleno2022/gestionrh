@@ -1008,18 +1008,19 @@ def telecharger_livre_paie_pdf(request):
     y -= 0.6 * cm
 
     data = [[
-        'Période', 'Matricule', 'Nom et Prénoms', 'Fonction',
-        'Brut', 'Imposable', 'CNSS (5%)', 'IRG', 'Total', 'Net à Payer'
+        'Période', 'Matr.', 'Nom et Prénoms',
+        'Brut', 'CNSS', 'IRG', 'Retenues', 'Net'
     ]]
 
     for b in bulletins:
         emp = b.employe
+        nom_complet = f"{emp.nom} {emp.prenoms}"
+        if len(nom_complet) > 28:
+            nom_complet = nom_complet[:26] + '..'
         data.append([
             str(b.periode),
             emp.matricule or '-',
-            f"{emp.nom} {emp.prenoms}",
-            getattr(emp, 'fonction', None) or '-',
-            fmt(b.salaire_brut),
+            nom_complet,
             fmt(b.salaire_brut),
             fmt(b.cnss_employe),
             fmt(b.irg),
@@ -1028,8 +1029,7 @@ def telecharger_livre_paie_pdf(request):
         ])
 
     data.append([
-        'TOTAUX:', '', '', '',
-        fmt(totaux.get('total_brut')),
+        'TOTAUX:', '', '',
         fmt(totaux.get('total_brut')),
         fmt(totaux.get('total_cnss_employe')),
         fmt(totaux.get('total_irg')),
@@ -1037,21 +1037,27 @@ def telecharger_livre_paie_pdf(request):
         fmt(totaux.get('total_net')),
     ])
 
+    # Largeur disponible en A4 paysage: ~29.7cm - 2*0.8cm marges = ~28cm
     col_widths = [
-        3.2 * cm, 3.0 * cm, 6.5 * cm, 3.5 * cm,
-        2.8 * cm, 2.8 * cm, 2.6 * cm, 2.3 * cm, 2.8 * cm, 3.0 * cm
+        2.8 * cm, 2.0 * cm, 6.0 * cm,
+        3.5 * cm, 3.0 * cm, 3.0 * cm, 3.5 * cm, 3.5 * cm
     ]
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
-        ('FONT', (0, 0), (-1, -1), 'Helvetica', 7),
-        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 7),
+        ('FONT', (0, 0), (-1, -1), 'Helvetica', 6),
+        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 6),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e9ecef')),
-        ('ALIGN', (4, 1), (-1, -1), 'RIGHT'),
+        ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
+        ('ALIGN', (0, 0), (2, -1), 'LEFT'),
         ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f8f9fa')),
-        ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 7),
+        ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 6),
         ('LINEABOVE', (0, -1), (-1, -1), 0.8, colors.black),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
     ]))
 
     table_w, table_h = table.wrapOn(p, width - 2.4 * cm, y)
