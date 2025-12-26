@@ -62,7 +62,7 @@
     </div>
 
     <!-- Totaux -->
-    <div class="row mb-4">
+    <div class="row mb-4 totaux-cards">
         <div class="col-md-3">
             <div class="card shadow-sm border-primary">
                 <div class="card-body text-center">
@@ -117,7 +117,7 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover table-sm">
+                        <table class="table table-bordered table-hover table-sm livre-paie-table">
                             <thead class="table-light">
                                 <tr>
                                     <th rowspan="2">Période</th>
@@ -200,6 +200,31 @@
 </div>
 
 <style>
+    /* Réduire la taille de police pour le livre de paie */
+    .livre-paie-table {
+        font-size: 0.75rem;
+    }
+    
+    .livre-paie-table th,
+    .livre-paie-table td {
+        padding: 0.25rem 0.4rem;
+        white-space: nowrap;
+    }
+    
+    .totaux-cards h4,
+    .totaux-cards h5 {
+        font-size: 0.9rem;
+        margin-bottom: 0;
+    }
+    
+    .totaux-cards h6 {
+        font-size: 0.7rem;
+    }
+    
+    .totaux-cards .card-body {
+        padding: 0.5rem;
+    }
+    
     @media print {
         .btn, .card-header, .no-print {
             display: none !important;
@@ -211,7 +236,7 @@
         }
         
         table {
-            font-size: 9pt;
+            font-size: 8pt;
         }
     }
 </style>
