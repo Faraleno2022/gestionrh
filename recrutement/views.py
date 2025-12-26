@@ -75,7 +75,7 @@ def liste_offres(request):
     
     offres = OffreEmploi.objects.filter(
         entreprise=request.user.entreprise
-    ).select_related('poste', 'service', 'responsable_recrutement').order_by('-date_creation')
+    ).select_related('poste', 'service', 'responsable_recrutement').order_by('-date_publication')
     
     if statut:
         offres = offres.filter(statut_offre=statut)
