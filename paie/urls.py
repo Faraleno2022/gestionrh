@@ -33,6 +33,7 @@ urlpatterns = [
     
     # Livre de paie
     path('livre/', views.livre_paie, name='livre_paie'),
+    path('livre/telecharger-pdf/', views.telecharger_livre_paie_pdf, name='telecharger_livre_paie_pdf'),
     
     # Déclarations sociales
     path('declarations/', views.declarations_sociales, name='declarations_sociales'),
