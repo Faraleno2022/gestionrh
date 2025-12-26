@@ -900,11 +900,14 @@ def livre_paie(request):
     if mois:
         periodes = periodes.filter(mois=mois)
     
-    # Récupérer tous les bulletins des périodes
+    # Récupérer tous les bulletins des périodes avec total_retenues calculé
+    from django.db.models import F
     bulletins = BulletinPaie.objects.filter(
         periode__in=periodes,
         employe__entreprise=request.user.entreprise,
-    ).select_related('employe', 'periode').order_by('periode__mois', 'employe__matricule')
+    ).select_related('employe', 'periode').annotate(
+        total_retenues=F('cnss_employe') + F('irg')
+    ).order_by('periode__mois', 'employe__matricule')
     
     # Calcul des totaux
     totaux = bulletins.aggregate(
@@ -912,7 +915,8 @@ def livre_paie(request):
         total_cnss_employe=Sum('cnss_employe'),
         total_cnss_employeur=Sum('cnss_employeur'),
         total_irg=Sum('irg'),
-        total_net=Sum('net_a_payer')
+        total_net=Sum('net_a_payer'),
+        total_retenues=Sum(F('cnss_employe') + F('irg'))
     )
     
     # Années disponibles
