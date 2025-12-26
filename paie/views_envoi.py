@@ -29,7 +29,7 @@ def envoyer_bulletin_email(request, pk):
         params = None
     
     if request.method == 'POST':
-        email_destinataire = request.POST.get('email', bulletin.employe.email)
+        email_destinataire = request.POST.get('email', bulletin.employe.email_professionnel)
         message_perso = request.POST.get('message', '')
         
         if not email_destinataire:
@@ -58,7 +58,7 @@ def envoyer_bulletin_email(request, pk):
     
     return render(request, 'paie/bulletins/envoyer_email.html', {
         'bulletin': bulletin,
-        'email_defaut': bulletin.employe.email,
+        'email_defaut': bulletin.employe.email_professionnel,
     })
 
 
@@ -74,7 +74,7 @@ def envoyer_bulletin_whatsapp(request, pk):
     service = BulletinEnvoiService(request.user.entreprise)
     
     if request.method == 'POST':
-        telephone = request.POST.get('telephone', bulletin.employe.telephone)
+        telephone = request.POST.get('telephone', bulletin.employe.telephone_principal)
         message_perso = request.POST.get('message', '')
         
         lien, msg = service.generer_lien_whatsapp(
@@ -107,7 +107,7 @@ Service RH"""
     
     return render(request, 'paie/bulletins/envoyer_whatsapp.html', {
         'bulletin': bulletin,
-        'telephone_defaut': bulletin.employe.telephone,
+        'telephone_defaut': bulletin.employe.telephone_principal,
         'message_defaut': message_defaut,
     })
 

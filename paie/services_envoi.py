@@ -14,7 +14,6 @@ class BulletinEnvoiService:
         self.entreprise = entreprise
     
     def envoyer_email(self, bulletin, destinataire_email, params=None, message_personnalise=None):
-        """Envoie le bulletin par email (HTML sans PDF)"""
         if not destinataire_email:
             return False, "Adresse email non renseignée"
         
@@ -92,7 +91,7 @@ Cordialement,
         }
         
         for bulletin in bulletins:
-            email = bulletin.employe.email
+            email = bulletin.employe.email_professionnel
             if email:
                 success, message = self.envoyer_email(
                     bulletin, email, params, message_personnalise
@@ -122,7 +121,7 @@ Cordialement,
         liens = []
         
         for bulletin in bulletins:
-            telephone = bulletin.employe.telephone
+            telephone = bulletin.employe.telephone_principal
             if telephone:
                 lien, _ = self.generer_lien_whatsapp(bulletin, telephone)
                 liens.append({
