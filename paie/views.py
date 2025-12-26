@@ -934,6 +934,143 @@ def livre_paie(request):
 
 
 @login_required
+@entreprise_active_required
+def telecharger_livre_paie_pdf(request):
+    """Télécharger le livre de paie en PDF"""
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.units import cm
+    from reportlab.pdfgen import canvas
+    from reportlab.lib import colors
+    from reportlab.platypus import Table, TableStyle
+    from django.db.models import F
+    import io
+
+    annee = request.GET.get('annee', timezone.now().year)
+    mois = request.GET.get('mois')
+
+    periodes = PeriodePaie.objects.filter(
+        entreprise=request.user.entreprise,
+        annee=annee
+    )
+    if mois:
+        periodes = periodes.filter(mois=mois)
+
+    bulletins = BulletinPaie.objects.filter(
+        periode__in=periodes,
+        employe__entreprise=request.user.entreprise,
+    ).select_related('employe', 'periode').annotate(
+        total_retenues=F('cnss_employe') + F('irg')
+    ).order_by('periode__mois', 'employe__matricule')
+
+    totaux = bulletins.aggregate(
+        total_brut=Sum('salaire_brut'),
+        total_cnss_employe=Sum('cnss_employe'),
+        total_cnss_employeur=Sum('cnss_employeur'),
+        total_irg=Sum('irg'),
+        total_net=Sum('net_a_payer'),
+        total_retenues=Sum(F('cnss_employe') + F('irg'))
+    )
+
+    def fmt(val):
+        try:
+            n = float(val or 0)
+        except Exception:
+            n = 0
+        return f"{n:,.0f}".replace(",", " ")
+
+    buffer = io.BytesIO()
+    page_size = landscape(A4)
+    p = canvas.Canvas(buffer, pagesize=page_size)
+    width, height = page_size
+
+    y = height - 1.2 * cm
+    p.setFont('Helvetica-Bold', 12)
+    titre = f"Livre de Paie - Année {int(annee)}"
+    if mois:
+        titre += f" - Mois {int(mois)}"
+    p.drawCentredString(width / 2, y, titre)
+    y -= 0.6 * cm
+
+    p.setStrokeColor(colors.HexColor('#0d6efd'))
+    p.setLineWidth(2)
+    p.line(1.2 * cm, y, width - 1.2 * cm, y)
+    y -= 0.7 * cm
+
+    p.setFont('Helvetica', 8)
+    tot_line = (
+        f"Brut: {fmt(totaux.get('total_brut'))} GNF   "
+        f"CNSS Employé: {fmt(totaux.get('total_cnss_employe'))}   "
+        f"CNSS Employeur: {fmt(totaux.get('total_cnss_employeur'))}   "
+        f"IRG: {fmt(totaux.get('total_irg'))}   "
+        f"Net: {fmt(totaux.get('total_net'))}"
+    )
+    p.drawString(1.2 * cm, y, tot_line)
+    y -= 0.6 * cm
+
+    data = [[
+        'Période', 'Matricule', 'Nom et Prénoms', 'Fonction',
+        'Brut', 'Imposable', 'CNSS (5%)', 'IRG', 'Total', 'Net à Payer'
+    ]]
+
+    for b in bulletins:
+        emp = b.employe
+        data.append([
+            str(b.periode),
+            emp.matricule or '-',
+            f"{emp.nom} {emp.prenoms}",
+            getattr(emp, 'fonction', None) or '-',
+            fmt(b.salaire_brut),
+            fmt(b.salaire_brut),
+            fmt(b.cnss_employe),
+            fmt(b.irg),
+            fmt(getattr(b, 'total_retenues', (b.cnss_employe or 0) + (b.irg or 0))),
+            fmt(b.net_a_payer),
+        ])
+
+    data.append([
+        'TOTAUX:', '', '', '',
+        fmt(totaux.get('total_brut')),
+        fmt(totaux.get('total_brut')),
+        fmt(totaux.get('total_cnss_employe')),
+        fmt(totaux.get('total_irg')),
+        fmt(totaux.get('total_retenues')),
+        fmt(totaux.get('total_net')),
+    ])
+
+    col_widths = [
+        3.2 * cm, 3.0 * cm, 6.5 * cm, 3.5 * cm,
+        2.8 * cm, 2.8 * cm, 2.6 * cm, 2.3 * cm, 2.8 * cm, 3.0 * cm
+    ]
+    table = Table(data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('FONT', (0, 0), (-1, -1), 'Helvetica', 7),
+        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 7),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e9ecef')),
+        ('ALIGN', (4, 1), (-1, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f8f9fa')),
+        ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 7),
+        ('LINEABOVE', (0, -1), (-1, -1), 0.8, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+
+    table_w, table_h = table.wrapOn(p, width - 2.4 * cm, y)
+    table.drawOn(p, 1.2 * cm, max(1.2 * cm, y - table_h))
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    filename = f"livre_paie_{int(annee)}"
+    if mois:
+        filename += f"_{int(mois)}"
+    filename += ".pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
 def declarations_sociales(request):
     """Déclarations sociales (CNSS, IRG, INAM)"""
     # Filtres
