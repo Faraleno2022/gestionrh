@@ -14,10 +14,6 @@
                     <a href="{% url 'paie:telecharger_bulletin_pdf' bulletin.pk %}" class="btn btn-danger">
                         <i class="fas fa-file-pdf me-2"></i>Télécharger PDF
                     </a>
-                    <a href="{% url 'paie:imprimer_bulletin' bulletin.pk %}" 
-                       class="btn btn-secondary" target="_blank">
-                        <i class="fas fa-print me-2"></i>Imprimer
-                    </a>
                     <a href="{% url 'paie:envoyer_email' bulletin.pk %}" class="btn btn-primary">
                         <i class="fas fa-envelope me-2"></i>Email
                     </a>
