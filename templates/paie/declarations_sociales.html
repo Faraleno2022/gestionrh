@@ -226,9 +226,7 @@
                             </tr>
                             <tr class="table-danger">
                                 <th>TOTAL GÉNÉRAL</th>
-                                <th class="text-end">
-                                    {% widthratio declaration_cnss.total_cotisation 1 1|add:declaration_irg.total_irg|add:declaration_inam.montant|floatformat:0 %} GNF
-                                </th>
+                                <th class="text-end">{{ total_general|floatformat:0|intcomma }} GNF</th>
                             </tr>
                         </tbody>
                     </table>

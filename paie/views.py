@@ -1127,6 +1127,13 @@ def declarations_sociales(request):
         'montant': (declaration_cnss['masse_salariale'] * taux_inam / Decimal('100')).quantize(Decimal('0.01'))
     }
     
+    # Total général des charges
+    total_general = (
+        declaration_cnss['total_cotisation'] +
+        declaration_irg['total_irg'] +
+        declaration_inam['montant']
+    )
+    
     # Détail par employé
     detail_employes = []
     for bulletin in bulletins:
@@ -1149,6 +1156,7 @@ def declarations_sociales(request):
         'declaration_cnss': declaration_cnss,
         'declaration_irg': declaration_irg,
         'declaration_inam': declaration_inam,
+        'total_general': total_general,
         'detail_employes': detail_employes,
         'annee': int(annee),
         'mois': int(mois) if mois else None,
