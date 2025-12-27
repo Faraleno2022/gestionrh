@@ -225,237 +225,548 @@ def telecharger_manuel(request):
     from reportlab.lib.units import cm
     from reportlab.pdfgen import canvas
     from reportlab.lib import colors
-    from reportlab.platypus import Table, TableStyle, Paragraph
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import Table, TableStyle
     import io
     
     buffer = io.BytesIO()
     p = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
-    styles = getSampleStyleSheet()
     
     def nouvelle_page():
         p.showPage()
         return height - 2*cm
     
-    def draw_title(y, text, size=16):
+    def check_page(y, needed=3*cm):
+        if y < needed:
+            return nouvelle_page()
+        return y
+    
+    def draw_title(y, text, size=14):
+        y = check_page(y, 2*cm)
         p.setFont("Helvetica-Bold", size)
         p.setFillColor(colors.HexColor("#0d6efd"))
         p.drawString(2*cm, y, text)
         p.setFillColor(colors.black)
-        return y - 0.8*cm
+        return y - 0.7*cm
     
-    def draw_subtitle(y, text, size=12):
+    def draw_subtitle(y, text, size=11):
+        y = check_page(y, 1.5*cm)
         p.setFont("Helvetica-Bold", size)
         p.setFillColor(colors.HexColor("#198754"))
         p.drawString(2*cm, y, text)
         p.setFillColor(colors.black)
-        return y - 0.6*cm
+        return y - 0.5*cm
+    
+    def draw_definition(y, term, definition):
+        y = check_page(y, 1.5*cm)
+        p.setFont("Helvetica-Bold", 9)
+        p.setFillColor(colors.HexColor("#6c757d"))
+        p.drawString(2.2*cm, y, f"{term}:")
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica", 9)
+        # Dessiner la définition sur la même ligne ou ligne suivante
+        term_width = p.stringWidth(f"{term}: ", "Helvetica-Bold", 9)
+        remaining_width = width - 4*cm - term_width
+        if p.stringWidth(definition, "Helvetica", 9) < remaining_width:
+            p.drawString(2.2*cm + term_width, y, definition)
+            return y - 0.45*cm
+        else:
+            y -= 0.35*cm
+            return draw_text(y, definition, 2.2)
     
     def draw_text(y, text, indent=2):
-        p.setFont("Helvetica", 10)
-        max_width = width - 4*cm
+        y = check_page(y, 1*cm)
+        p.setFont("Helvetica", 9)
+        max_width = width - (indent + 2)*cm
         words = text.split()
         line = ""
         for word in words:
             test_line = line + " " + word if line else word
-            if p.stringWidth(test_line, "Helvetica", 10) < max_width:
+            if p.stringWidth(test_line, "Helvetica", 9) < max_width:
                 line = test_line
             else:
                 p.drawString(indent*cm, y, line)
-                y -= 0.4*cm
+                y -= 0.35*cm
+                y = check_page(y, 0.5*cm)
                 line = word
         if line:
             p.drawString(indent*cm, y, line)
-            y -= 0.4*cm
-        return y - 0.2*cm
+            y -= 0.35*cm
+        return y - 0.15*cm
     
     def draw_bullet(y, text, indent=2.5):
+        y = check_page(y, 0.8*cm)
         p.drawString(indent*cm - 0.3*cm, y, "•")
         return draw_text(y, text, indent)
+    
+    def draw_note(y, text):
+        y = check_page(y, 1.2*cm)
+        p.setFillColor(colors.HexColor("#0dcaf0"))
+        p.rect(1.8*cm, y - 0.1*cm, 0.15*cm, 0.4*cm, fill=1, stroke=0)
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica-Oblique", 8)
+        return draw_text(y, text, 2.2)
     
     y = height - 2*cm
     
     # === PAGE DE COUVERTURE ===
-    p.setFont("Helvetica-Bold", 24)
+    p.setFont("Helvetica-Bold", 26)
     p.setFillColor(colors.HexColor("#0d6efd"))
-    p.drawCentredString(width/2, height - 8*cm, "MANUEL D'UTILISATION")
-    p.setFont("Helvetica-Bold", 18)
-    p.drawCentredString(width/2, height - 9.5*cm, "Gestionnaire RH Guinée")
+    p.drawCentredString(width/2, height - 7*cm, "MANUEL D'UTILISATION")
+    p.setFont("Helvetica-Bold", 20)
+    p.drawCentredString(width/2, height - 8.5*cm, "Gestionnaire RH Guinée")
     
     p.setFillColor(colors.black)
     p.setFont("Helvetica", 12)
-    p.drawCentredString(width/2, height - 12*cm, "Application de Gestion des Ressources Humaines")
-    p.drawCentredString(width/2, height - 12.8*cm, "Paie, Congés, Pointages, Formations, Recrutement")
+    p.drawCentredString(width/2, height - 11*cm, "Application de Gestion des Ressources Humaines")
+    p.drawCentredString(width/2, height - 11.8*cm, "Paie, Congés, Pointages, Formations, Recrutement")
+    
+    p.setFont("Helvetica", 10)
+    p.drawCentredString(width/2, height - 14*cm, "Conforme à la législation guinéenne")
+    p.drawCentredString(width/2, height - 14.6*cm, "Code du Travail - CNSS - Direction Générale des Impôts")
     
     p.setFont("Helvetica-Oblique", 10)
-    p.drawCentredString(width/2, height - 16*cm, f"Version 1.0 - {timezone.now().strftime('%B %Y')}")
-    p.drawCentredString(width/2, height - 16.6*cm, "www.guineerh.space")
+    p.drawCentredString(width/2, height - 17*cm, f"Version 1.0 - {timezone.now().strftime('%B %Y')}")
+    p.drawCentredString(width/2, height - 17.6*cm, "www.guineerh.space")
     
     y = nouvelle_page()
     
     # === TABLE DES MATIÈRES ===
     y = draw_title(y, "TABLE DES MATIÈRES", 14)
-    y -= 0.5*cm
+    y -= 0.3*cm
     toc = [
-        "1. Introduction",
-        "2. Gestion des Employés",
-        "3. Gestion de la Paie",
-        "   3.1 Formules de calcul",
-        "   3.2 Calcul du salaire net",
-        "4. Gestion du Temps de Travail",
-        "5. Gestion des Congés",
-        "6. Déclarations Sociales",
-        "7. Formations",
-        "8. Recrutement",
+        "1. Introduction et Présentation",
+        "2. Glossaire et Définitions RH",
+        "3. Gestion des Employés",
+        "4. Gestion de la Paie",
+        "   4.1 Éléments du bulletin de paie",
+        "   4.2 Formules de calcul",
+        "   4.3 Barème IRG",
+        "   4.4 Exemple de calcul complet",
+        "5. Gestion du Temps de Travail",
+        "6. Gestion des Congés",
+        "7. Déclarations Sociales",
+        "8. Gestion des Formations",
+        "9. Recrutement",
+        "10. Guide d'utilisation rapide",
     ]
     for item in toc:
-        p.setFont("Helvetica", 11)
+        p.setFont("Helvetica", 10)
         p.drawString(2.5*cm, y, item)
-        y -= 0.5*cm
+        y -= 0.4*cm
     
     y = nouvelle_page()
     
     # === 1. INTRODUCTION ===
-    y = draw_title(y, "1. INTRODUCTION")
-    y = draw_text(y, "Le Gestionnaire RH Guinée est une application complète de gestion des ressources humaines adaptée au contexte guinéen. Elle permet de gérer l'ensemble du cycle de vie des employés, de la paie, des congés et des déclarations sociales.")
+    y = draw_title(y, "1. INTRODUCTION ET PRÉSENTATION")
+    y = draw_text(y, "Le Gestionnaire RH Guinée est une application complète de gestion des ressources humaines spécialement conçue pour les entreprises guinéennes. Elle intègre tous les aspects de la gestion du personnel: administration, paie, temps de travail, congés, formations et recrutement.")
+    y -= 0.2*cm
+    y = draw_subtitle(y, "Objectifs de l'application")
+    y = draw_bullet(y, "Centraliser toutes les données RH dans un seul système sécurisé")
+    y = draw_bullet(y, "Automatiser les calculs de paie selon la législation guinéenne")
+    y = draw_bullet(y, "Générer les déclarations sociales (CNSS, IRG) automatiquement")
+    y = draw_bullet(y, "Suivre les présences, absences et congés des employés")
+    y = draw_bullet(y, "Faciliter le processus de recrutement et d'intégration")
+    
     y -= 0.3*cm
-    y = draw_text(y, "L'application respecte la législation guinéenne en matière de travail et de cotisations sociales (CNSS, IRG).")
-    
-    y -= 0.8*cm
-    y = draw_title(y, "2. GESTION DES EMPLOYÉS")
-    y = draw_text(y, "Le module Employés permet de gérer les informations personnelles et professionnelles de chaque salarié:")
-    y = draw_bullet(y, "Informations personnelles: nom, prénom, date de naissance, adresse, contact")
-    y = draw_bullet(y, "Informations professionnelles: matricule, poste, service, établissement")
-    y = draw_bullet(y, "Contrat: type (CDI, CDD, Stage), dates, salaire de base")
-    y = draw_bullet(y, "Documents: pièce d'identité, diplômes, contrat signé")
-    
-    y -= 0.8*cm
-    y = draw_title(y, "3. GESTION DE LA PAIE")
-    y = draw_text(y, "Le module Paie permet de calculer et générer les bulletins de paie mensuels pour tous les employés.")
+    y = draw_subtitle(y, "Conformité légale")
+    y = draw_text(y, "L'application respecte intégralement le Code du Travail guinéen, les règlements de la Caisse Nationale de Sécurité Sociale (CNSS) et les dispositions fiscales de la Direction Générale des Impôts concernant l'Impôt sur le Revenu Guinéen (IRG).")
     
     y -= 0.5*cm
-    y = draw_subtitle(y, "3.1 Formules de Calcul")
-    y -= 0.3*cm
     
-    # Tableau des formules
+    # === 2. GLOSSAIRE ===
+    y = draw_title(y, "2. GLOSSAIRE ET DÉFINITIONS RH")
+    y = draw_text(y, "Cette section définit les termes clés utilisés dans l'application et en gestion des ressources humaines.")
+    y -= 0.2*cm
+    
+    y = draw_subtitle(y, "Termes relatifs à l'emploi")
+    y = draw_definition(y, "Matricule", "Identifiant unique attribué à chaque employé dans l'entreprise")
+    y = draw_definition(y, "CDI", "Contrat à Durée Indéterminée - contrat sans date de fin prédéfinie")
+    y = draw_definition(y, "CDD", "Contrat à Durée Déterminée - contrat avec une date de fin fixée")
+    y = draw_definition(y, "Période d'essai", "Période initiale permettant d'évaluer les compétences du salarié")
+    y = draw_definition(y, "Ancienneté", "Durée de présence d'un employé dans l'entreprise")
+    y = draw_definition(y, "Établissement", "Lieu physique de travail (siège, agence, usine)")
+    y = draw_definition(y, "Service", "Département ou unité organisationnelle (RH, Comptabilité, etc.)")
+    y = draw_definition(y, "Poste", "Fonction occupée par l'employé (Directeur, Comptable, etc.)")
+    
+    y -= 0.3*cm
+    y = draw_subtitle(y, "Termes relatifs à la paie")
+    y = draw_definition(y, "Salaire de base", "Rémunération fixe mensuelle prévue au contrat")
+    y = draw_definition(y, "Salaire brut", "Total des gains avant déduction des cotisations et impôts")
+    y = draw_definition(y, "Salaire net", "Montant effectivement versé au salarié après retenues")
+    y = draw_definition(y, "Prime", "Complément de rémunération (ancienneté, rendement, transport)")
+    y = draw_definition(y, "Indemnité", "Compensation pour frais ou sujétions particulières")
+    y = draw_definition(y, "Retenue", "Montant prélevé sur le salaire (cotisations, impôts, avances)")
+    y = draw_definition(y, "Bulletin de paie", "Document détaillant la rémunération mensuelle")
+    y = draw_definition(y, "Période de paie", "Mois de référence pour le calcul du salaire")
+    
+    y -= 0.3*cm
+    y = draw_subtitle(y, "Termes relatifs aux cotisations sociales")
+    y = draw_definition(y, "CNSS", "Caisse Nationale de Sécurité Sociale - organisme de protection sociale")
+    y = draw_definition(y, "Cotisation salariale", "Part des cotisations payée par l'employé (5% CNSS)")
+    y = draw_definition(y, "Cotisation patronale", "Part des cotisations payée par l'employeur (18% CNSS)")
+    y = draw_definition(y, "IRG", "Impôt sur le Revenu Guinéen - impôt sur les salaires")
+    y = draw_definition(y, "Assiette", "Base de calcul des cotisations ou impôts")
+    y = draw_definition(y, "Plafond", "Limite maximale de l'assiette de cotisation")
+    
+    y = nouvelle_page()
+    
+    # === 3. GESTION DES EMPLOYÉS ===
+    y = draw_title(y, "3. GESTION DES EMPLOYÉS")
+    y = draw_text(y, "Le module Employés est le cœur de l'application. Il centralise toutes les informations relatives au personnel de l'entreprise.")
+    
+    y -= 0.2*cm
+    y = draw_subtitle(y, "À quoi sert ce module ?")
+    y = draw_bullet(y, "Créer et maintenir un dossier complet pour chaque employé")
+    y = draw_bullet(y, "Suivre l'évolution de carrière (promotions, mutations, augmentations)")
+    y = draw_bullet(y, "Gérer les documents administratifs (contrats, pièces d'identité)")
+    y = draw_bullet(y, "Calculer automatiquement l'ancienneté et l'âge")
+    y = draw_bullet(y, "Générer des rapports sur l'effectif (pyramide des âges, répartition)")
+    
+    y -= 0.2*cm
+    y = draw_subtitle(y, "Informations gérées")
+    y = draw_text(y, "Pour chaque employé, l'application enregistre:")
+    y = draw_bullet(y, "État civil: nom, prénoms, date/lieu de naissance, nationalité, situation matrimoniale")
+    y = draw_bullet(y, "Coordonnées: adresse, téléphone, email, personne à contacter en cas d'urgence")
+    y = draw_bullet(y, "Données professionnelles: matricule, date d'embauche, type de contrat, poste, service")
+    y = draw_bullet(y, "Rémunération: salaire de base, primes fixes, avantages en nature")
+    y = draw_bullet(y, "Documents: photo, pièce d'identité, diplômes, contrat signé")
+    
+    y -= 0.2*cm
+    y = draw_subtitle(y, "Statuts d'un employé")
+    statuts_data = [
+        ['Statut', 'Description', 'Impact sur la paie'],
+        ['Actif', 'Employé en poste', 'Inclus dans la paie'],
+        ['En congé', 'Absence temporaire autorisée', 'Selon type de congé'],
+        ['Suspendu', 'Contrat temporairement suspendu', 'Exclu de la paie'],
+        ['Démissionnaire', 'A quitté volontairement', 'Solde de tout compte'],
+        ['Licencié', 'Contrat rompu par l\'employeur', 'Solde de tout compte'],
+        ['Retraité', 'Fin de carrière', 'Exclu définitivement'],
+    ]
+    table_statuts = Table(statuts_data, colWidths=[3*cm, 6*cm, 5*cm])
+    table_statuts.setStyle(TableStyle([
+        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 8),
+        ('FONT', (0, 1), (-1, -1), 'Helvetica', 7),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e9ecef')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    tw, th = table_statuts.wrapOn(p, width, height)
+    y = check_page(y, th + 1*cm)
+    table_statuts.drawOn(p, 2*cm, y - th)
+    y = y - th - 0.5*cm
+    
+    # === 4. GESTION DE LA PAIE ===
+    y = draw_title(y, "4. GESTION DE LA PAIE")
+    y = draw_text(y, "Le module Paie automatise le calcul des salaires conformément à la législation guinéenne. Il génère les bulletins de paie et prépare les déclarations sociales.")
+    
+    y -= 0.2*cm
+    y = draw_subtitle(y, "4.1 Éléments du bulletin de paie")
+    y = draw_text(y, "Un bulletin de paie se compose de trois parties principales:")
+    
+    y -= 0.2*cm
+    p.setFont("Helvetica-Bold", 9)
+    p.drawString(2.2*cm, y, "A) Les GAINS (ce que l'employé reçoit)")
+    y -= 0.4*cm
+    y = draw_bullet(y, "Salaire de base: rémunération fixe mensuelle selon le contrat")
+    y = draw_bullet(y, "Heures supplémentaires: majoration de 25% à 100% selon les cas")
+    y = draw_bullet(y, "Primes: ancienneté, rendement, assiduité, transport, logement")
+    y = draw_bullet(y, "Indemnités: déplacement, représentation, panier")
+    y = draw_bullet(y, "Avantages en nature: logement, véhicule (valorisés)")
+    
+    y -= 0.2*cm
+    p.setFont("Helvetica-Bold", 9)
+    p.drawString(2.2*cm, y, "B) Les RETENUES (ce qui est prélevé)")
+    y -= 0.4*cm
+    y = draw_bullet(y, "CNSS employé: 5% du salaire brut - cotisation retraite et maladie")
+    y = draw_bullet(y, "IRG: impôt progressif sur le revenu selon barème")
+    y = draw_bullet(y, "Avances sur salaire: remboursement des avances consenties")
+    y = draw_bullet(y, "Autres retenues: prêts, saisies sur salaire")
+    
+    y -= 0.2*cm
+    p.setFont("Helvetica-Bold", 9)
+    p.drawString(2.2*cm, y, "C) Le NET À PAYER")
+    y -= 0.4*cm
+    y = draw_text(y, "C'est le montant effectivement versé à l'employé: Salaire Brut - Total des Retenues")
+    
+    y = nouvelle_page()
+    
+    y = draw_subtitle(y, "4.2 Formules de calcul détaillées")
+    y -= 0.2*cm
+    
     formules_data = [
-        ['Élément', 'Formule / Taux', 'Description'],
-        ['Salaire Brut', 'Base + Primes - Absences', 'Total des gains avant retenues'],
-        ['CNSS Employé', 'Brut × 5%', 'Part salariale CNSS'],
-        ['CNSS Employeur', 'Brut × 18%', 'Part patronale CNSS'],
-        ['Base IRG', 'Brut - CNSS Employé', 'Assiette imposable'],
-        ['IRG', 'Barème progressif', 'Impôt sur le Revenu Guinéen'],
-        ['Net à Payer', 'Brut - CNSS - IRG', 'Montant versé au salarié'],
+        ['Élément', 'Formule', 'Explication'],
+        ['Salaire Brut', 'Base + Primes + HS - Absences', 'Somme de tous les gains'],
+        ['CNSS Employé', 'Brut × 5%', 'Cotisation sociale obligatoire'],
+        ['CNSS Employeur', 'Brut × 18%', 'Charge patronale (non visible sur bulletin)'],
+        ['Base imposable IRG', 'Brut - CNSS Employé', 'Assiette de l\'impôt'],
+        ['IRG', 'Selon barème progressif', 'Voir tableau ci-dessous'],
+        ['Total Retenues', 'CNSS + IRG + Autres', 'Somme des prélèvements'],
+        ['Net à Payer', 'Brut - Total Retenues', 'Montant viré au salarié'],
     ]
     
-    table = Table(formules_data, colWidths=[4*cm, 4.5*cm, 7*cm])
+    table = Table(formules_data, colWidths=[3.5*cm, 4.5*cm, 7*cm])
     table.setStyle(TableStyle([
-        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 9),
-        ('FONT', (0, 1), (-1, -1), 'Helvetica', 8),
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e9ecef')),
+        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 8),
+        ('FONT', (0, 1), (-1, -1), 'Helvetica', 7),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0d6efd')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('ALIGN', (1, 1), (1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 4),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
     ]))
     
     tw, th = table.wrapOn(p, width, height)
     table.drawOn(p, 2*cm, y - th)
-    y = y - th - 0.8*cm
+    y = y - th - 0.5*cm
     
-    y = draw_subtitle(y, "3.2 Barème IRG (Impôt sur le Revenu Guinéen)")
-    y -= 0.3*cm
+    y = draw_subtitle(y, "4.3 Barème IRG (Impôt sur le Revenu Guinéen)")
+    y = draw_text(y, "L'IRG est un impôt progressif par tranches. Chaque tranche de revenu est imposée à son propre taux:")
+    y -= 0.2*cm
     
     irg_data = [
-        ['Tranche de revenu mensuel', 'Taux'],
-        ['0 - 1 000 000 GNF', '0%'],
-        ['1 000 001 - 5 000 000 GNF', '5%'],
-        ['5 000 001 - 10 000 000 GNF', '10%'],
-        ['10 000 001 - 20 000 000 GNF', '15%'],
-        ['Au-delà de 20 000 000 GNF', '20%'],
+        ['Tranche de revenu mensuel', 'Taux', 'Impôt maximum de la tranche'],
+        ['0 - 1 000 000 GNF', '0%', '0 GNF'],
+        ['1 000 001 - 5 000 000 GNF', '5%', '200 000 GNF'],
+        ['5 000 001 - 10 000 000 GNF', '10%', '500 000 GNF'],
+        ['10 000 001 - 20 000 000 GNF', '15%', '1 500 000 GNF'],
+        ['Au-delà de 20 000 000 GNF', '20%', 'Variable'],
     ]
     
-    table_irg = Table(irg_data, colWidths=[7*cm, 4*cm])
+    table_irg = Table(irg_data, colWidths=[6*cm, 2.5*cm, 5*cm])
     table_irg.setStyle(TableStyle([
-        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 9),
-        ('FONT', (0, 1), (-1, -1), 'Helvetica', 8),
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#fff3cd')),
+        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 8),
+        ('FONT', (0, 1), (-1, -1), 'Helvetica', 7),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#ffc107')),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+        ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     
     tw, th = table_irg.wrapOn(p, width, height)
     table_irg.drawOn(p, 2*cm, y - th)
+    y = y - th - 0.4*cm
+    
+    y = draw_note(y, "Important: L'IRG est calculé par tranches successives. Un salaire de 6 000 000 GNF paiera 0% sur le 1er million, 5% sur les 4 millions suivants, et 10% sur le dernier million.")
+    
+    y -= 0.3*cm
+    y = draw_subtitle(y, "4.4 Exemple de calcul complet")
+    y = draw_text(y, "Prenons l'exemple d'un employé avec un salaire brut de 8 000 000 GNF:")
+    y -= 0.2*cm
+    
+    exemple_data = [
+        ['Étape', 'Calcul', 'Montant'],
+        ['1. Salaire Brut', 'Donné', '8 000 000 GNF'],
+        ['2. CNSS Employé', '8 000 000 × 5%', '400 000 GNF'],
+        ['3. Base IRG', '8 000 000 - 400 000', '7 600 000 GNF'],
+        ['4. IRG Tranche 1', '1 000 000 × 0%', '0 GNF'],
+        ['5. IRG Tranche 2', '4 000 000 × 5%', '200 000 GNF'],
+        ['6. IRG Tranche 3', '2 600 000 × 10%', '260 000 GNF'],
+        ['7. Total IRG', '0 + 200 000 + 260 000', '460 000 GNF'],
+        ['8. Total Retenues', '400 000 + 460 000', '860 000 GNF'],
+        ['9. Net à Payer', '8 000 000 - 860 000', '7 140 000 GNF'],
+    ]
+    
+    table_ex = Table(exemple_data, colWidths=[4*cm, 5.5*cm, 4*cm])
+    table_ex.setStyle(TableStyle([
+        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 8),
+        ('FONT', (0, 1), (-1, -1), 'Helvetica', 7),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#198754')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d4edda')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ALIGN', (2, 1), (2, -1), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),
+    ]))
+    
+    tw, th = table_ex.wrapOn(p, width, height)
+    y = check_page(y, th + 1*cm)
+    table_ex.drawOn(p, 2*cm, y - th)
     y = y - th - 0.5*cm
     
-    y = draw_text(y, "Note: L'IRG est calculé de manière progressive. Chaque tranche est imposée à son taux propre.")
+    y = draw_note(y, "Note: L'employeur paie en plus 18% de CNSS patronale (1 440 000 GNF), non visible sur le bulletin mais déclaré à la CNSS.")
     
     y = nouvelle_page()
     
-    # === 4. TEMPS DE TRAVAIL ===
-    y = draw_title(y, "4. GESTION DU TEMPS DE TRAVAIL")
-    y = draw_text(y, "Le module Pointage permet de suivre les heures de travail des employés:")
-    y = draw_bullet(y, "Saisie des pointages quotidiens (heure d'arrivée et de départ)")
-    y = draw_bullet(y, "Calcul automatique des heures travaillées")
-    y = draw_bullet(y, "Gestion des absences et retards")
-    y = draw_bullet(y, "Rapports de présence par période")
+    # === 5. TEMPS DE TRAVAIL ===
+    y = draw_title(y, "5. GESTION DU TEMPS DE TRAVAIL")
+    y = draw_text(y, "Le module Pointage permet de suivre la présence des employés et de calculer les heures travaillées pour la paie.")
     
-    y -= 0.8*cm
-    y = draw_title(y, "5. GESTION DES CONGÉS")
-    y = draw_text(y, "Le module Congés permet de gérer les demandes et le suivi des congés:")
-    y = draw_bullet(y, "Types de congés: Annuel, Maladie, Maternité, Paternité, Sans solde, Exceptionnel")
-    y = draw_bullet(y, "Workflow de validation: Demande → Approbation → Congé effectif")
-    y = draw_bullet(y, "Calcul automatique du solde de congés (2.5 jours/mois travaillé)")
-    y = draw_bullet(y, "Historique complet des congés par employé")
+    y -= 0.2*cm
+    y = draw_subtitle(y, "À quoi sert ce module ?")
+    y = draw_bullet(y, "Enregistrer les heures d'arrivée et de départ quotidiennes")
+    y = draw_bullet(y, "Détecter automatiquement les retards et absences")
+    y = draw_bullet(y, "Calculer les heures supplémentaires")
+    y = draw_bullet(y, "Générer des rapports de présence par employé ou service")
+    y = draw_bullet(y, "Alimenter automatiquement le calcul de la paie")
+    
+    y -= 0.2*cm
+    y = draw_subtitle(y, "Statuts de pointage")
+    y = draw_definition(y, "Présent", "L'employé a travaillé normalement")
+    y = draw_definition(y, "Absent", "L'employé n'est pas venu sans justification")
+    y = draw_definition(y, "Retard", "L'employé est arrivé après l'heure prévue")
+    y = draw_definition(y, "Congé", "Absence autorisée (lié au module Congés)")
+    y = draw_definition(y, "Mission", "Déplacement professionnel hors du lieu de travail")
+    y = draw_definition(y, "Maladie", "Absence pour raison de santé (avec justificatif)")
+    
+    y -= 0.2*cm
+    y = draw_subtitle(y, "Heures supplémentaires")
+    y = draw_text(y, "Selon le Code du Travail guinéen, les heures au-delà de la durée légale (40h/semaine) sont majorées:")
+    y = draw_bullet(y, "Heures de jour (6h-21h): majoration de 25%")
+    y = draw_bullet(y, "Heures de nuit (21h-6h): majoration de 50%")
+    y = draw_bullet(y, "Dimanches et jours fériés: majoration de 100%")
     
     y -= 0.5*cm
-    y = draw_subtitle(y, "Calcul des droits à congés")
-    y = draw_text(y, "Selon le Code du Travail guinéen, chaque employé acquiert 2.5 jours ouvrables de congé par mois de travail effectif, soit 30 jours par an.")
     
-    y -= 0.8*cm
-    y = draw_title(y, "6. DÉCLARATIONS SOCIALES")
-    y = draw_text(y, "Le module Déclarations génère automatiquement les déclarations obligatoires:")
+    # === 6. CONGÉS ===
+    y = draw_title(y, "6. GESTION DES CONGÉS")
+    y = draw_text(y, "Le module Congés gère l'ensemble du cycle des absences autorisées: demande, validation, suivi du solde.")
     
-    y -= 0.3*cm
-    y = draw_subtitle(y, "6.1 Déclaration CNSS")
-    y = draw_bullet(y, "Cotisation employé: 5% du salaire brut")
-    y = draw_bullet(y, "Cotisation employeur: 18% du salaire brut")
-    y = draw_bullet(y, "Total CNSS: 23% du salaire brut")
-    y = draw_bullet(y, "Échéance: avant le 15 du mois suivant")
+    y -= 0.2*cm
+    y = draw_subtitle(y, "Types de congés")
+    conges_data = [
+        ['Type', 'Durée', 'Rémunération', 'Conditions'],
+        ['Annuel', '30 jours/an', '100%', '2.5 jours acquis par mois'],
+        ['Maladie', 'Variable', '50-100%', 'Certificat médical requis'],
+        ['Maternité', '14 semaines', '100%', 'Femmes enceintes'],
+        ['Paternité', '3 jours', '100%', 'Naissance d\'un enfant'],
+        ['Mariage', '3 jours', '100%', 'Mariage de l\'employé'],
+        ['Décès', '3-5 jours', '100%', 'Décès d\'un proche'],
+        ['Sans solde', 'Variable', '0%', 'Accord de l\'employeur'],
+    ]
+    table_conges = Table(conges_data, colWidths=[2.5*cm, 2.5*cm, 2.5*cm, 6*cm])
+    table_conges.setStyle(TableStyle([
+        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 7),
+        ('FONT', (0, 1), (-1, -1), 'Helvetica', 7),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#17a2b8')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    tw, th = table_conges.wrapOn(p, width, height)
+    y = check_page(y, th + 1*cm)
+    table_conges.drawOn(p, 2*cm, y - th)
+    y = y - th - 0.4*cm
     
-    y -= 0.3*cm
-    y = draw_subtitle(y, "6.2 Déclaration IRG")
-    y = draw_bullet(y, "Retenue à la source sur les salaires")
-    y = draw_bullet(y, "Reversement au Trésor Public avant le 10 du mois suivant")
+    y = draw_subtitle(y, "Calcul du solde de congés")
+    y = draw_text(y, "Chaque employé acquiert 2.5 jours ouvrables de congé par mois de travail effectif. Le solde est calculé automatiquement:")
+    y = draw_bullet(y, "Solde = Jours acquis - Jours pris")
+    y = draw_bullet(y, "Les congés non pris peuvent être reportés selon la politique de l'entreprise")
+    y = draw_bullet(y, "En cas de départ, les congés non pris sont indemnisés")
     
     y = nouvelle_page()
     
-    # === 7. FORMATIONS ===
-    y = draw_title(y, "7. GESTION DES FORMATIONS")
-    y = draw_text(y, "Le module Formation permet de planifier et suivre les formations des employés:")
-    y = draw_bullet(y, "Catalogue de formations (internes, externes, en ligne, certifiantes)")
-    y = draw_bullet(y, "Planification des sessions avec dates, lieu et formateur")
-    y = draw_bullet(y, "Inscription des employés aux sessions")
-    y = draw_bullet(y, "Suivi des compétences acquises")
+    # === 7. DÉCLARATIONS SOCIALES ===
+    y = draw_title(y, "7. DÉCLARATIONS SOCIALES")
+    y = draw_text(y, "L'application génère automatiquement les déclarations obligatoires à partir des bulletins de paie validés.")
+    
+    y -= 0.2*cm
+    y = draw_subtitle(y, "7.1 Déclaration CNSS")
+    y = draw_text(y, "La Caisse Nationale de Sécurité Sociale collecte les cotisations pour financer:")
+    y = draw_bullet(y, "Les pensions de retraite")
+    y = draw_bullet(y, "Les allocations familiales")
+    y = draw_bullet(y, "L'assurance maladie et accidents du travail")
+    
+    y -= 0.2*cm
+    cnss_data = [
+        ['Cotisation', 'Taux', 'Payée par', 'Échéance'],
+        ['Part salariale', '5%', 'Employé (retenue)', '15 du mois suivant'],
+        ['Part patronale', '18%', 'Employeur', '15 du mois suivant'],
+        ['Total', '23%', '-', '-'],
+    ]
+    table_cnss = Table(cnss_data, colWidths=[4*cm, 2.5*cm, 4*cm, 4*cm])
+    table_cnss.setStyle(TableStyle([
+        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 8),
+        ('FONT', (0, 1), (-1, -1), 'Helvetica', 7),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0d6efd')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#cfe2ff')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    tw, th = table_cnss.wrapOn(p, width, height)
+    table_cnss.drawOn(p, 2*cm, y - th)
+    y = y - th - 0.4*cm
+    
+    y = draw_subtitle(y, "7.2 Déclaration IRG")
+    y = draw_text(y, "L'Impôt sur le Revenu Guinéen est retenu à la source par l'employeur et reversé au Trésor Public:")
+    y = draw_bullet(y, "Calcul: selon le barème progressif (voir section 4.3)")
+    y = draw_bullet(y, "Échéance: avant le 10 du mois suivant")
+    y = draw_bullet(y, "Déclaration annuelle récapitulative obligatoire")
+    
+    y -= 0.2*cm
+    y = draw_note(y, "Pénalités: Le non-respect des échéances entraîne des majorations de retard (10% + intérêts).")
+    
+    y -= 0.5*cm
+    
+    # === 8. FORMATIONS ===
+    y = draw_title(y, "8. GESTION DES FORMATIONS")
+    y = draw_text(y, "Le module Formation permet de développer les compétences des employés et de suivre leur parcours de formation.")
+    
+    y -= 0.2*cm
+    y = draw_subtitle(y, "Fonctionnalités")
+    y = draw_bullet(y, "Catalogue de formations: créer et gérer les formations disponibles")
+    y = draw_bullet(y, "Sessions: planifier des sessions avec dates, lieu, formateur et places")
+    y = draw_bullet(y, "Inscriptions: inscrire les employés aux sessions")
+    y = draw_bullet(y, "Suivi: évaluer les formations et suivre les compétences acquises")
+    y = draw_bullet(y, "Budget: suivre les coûts de formation par employé et par service")
+    
+    y -= 0.2*cm
+    y = draw_subtitle(y, "Types de formations")
+    y = draw_definition(y, "Interne", "Dispensée par un formateur de l'entreprise")
+    y = draw_definition(y, "Externe", "Dispensée par un organisme extérieur")
+    y = draw_definition(y, "En ligne", "Formation à distance (e-learning)")
+    y = draw_definition(y, "Certifiante", "Délivre un certificat ou diplôme reconnu")
+    
+    y = nouvelle_page()
+    
+    # === 9. RECRUTEMENT ===
+    y = draw_title(y, "9. RECRUTEMENT")
+    y = draw_text(y, "Le module Recrutement accompagne tout le processus d'embauche, de la publication de l'offre à l'intégration du nouvel employé.")
+    
+    y -= 0.2*cm
+    y = draw_subtitle(y, "Étapes du processus")
+    y = draw_bullet(y, "1. Création de l'offre: définir le poste, les compétences requises, le salaire")
+    y = draw_bullet(y, "2. Publication: diffuser l'offre sur différents canaux")
+    y = draw_bullet(y, "3. Réception des candidatures: centraliser les CV et lettres de motivation")
+    y = draw_bullet(y, "4. Présélection: trier les candidatures selon les critères définis")
+    y = draw_bullet(y, "5. Entretiens: planifier et conduire les entretiens")
+    y = draw_bullet(y, "6. Sélection: choisir le candidat retenu")
+    y = draw_bullet(y, "7. Embauche: créer le dossier employé et le contrat")
+    
+    y -= 0.5*cm
+    
+    # === 10. GUIDE RAPIDE ===
+    y = draw_title(y, "10. GUIDE D'UTILISATION RAPIDE")
+    
+    y = draw_subtitle(y, "Créer un employé")
+    y = draw_text(y, "Menu Employés → Nouvel employé → Remplir le formulaire → Enregistrer")
+    
+    y = draw_subtitle(y, "Calculer la paie mensuelle")
+    y = draw_text(y, "Menu Paie → Périodes → Créer/Sélectionner le mois → Générer les bulletins → Valider")
+    
+    y = draw_subtitle(y, "Gérer une demande de congé")
+    y = draw_text(y, "Menu Temps → Congés → Nouvelle demande ou Valider une demande en attente")
+    
+    y = draw_subtitle(y, "Générer les déclarations")
+    y = draw_text(y, "Menu Paie → Déclarations sociales → Sélectionner la période → Télécharger/Imprimer")
     
     y -= 0.8*cm
-    y = draw_title(y, "8. RECRUTEMENT")
-    y = draw_text(y, "Le module Recrutement permet de gérer le processus d'embauche:")
-    y = draw_bullet(y, "Publication d'offres d'emploi")
-    y = draw_bullet(y, "Réception et tri des candidatures")
-    y = draw_bullet(y, "Planification des entretiens")
-    y = draw_bullet(y, "Suivi du processus de recrutement")
-    
-    y -= 1*cm
     y = draw_title(y, "SUPPORT ET CONTACT")
     y = draw_text(y, "Pour toute question ou assistance technique:")
     y = draw_bullet(y, "Site web: www.guineerh.space")
     y = draw_bullet(y, "Email: support@guineerh.space")
+    y -= 0.3*cm
+    y = draw_text(y, "Notre équipe est disponible du lundi au vendredi, de 8h à 17h.")
     
     p.showPage()
     p.save()

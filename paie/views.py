@@ -905,7 +905,7 @@ def livre_paie(request):
     bulletins = BulletinPaie.objects.filter(
         periode__in=periodes,
         employe__entreprise=request.user.entreprise,
-    ).select_related('employe', 'periode').annotate(
+    ).select_related('employe', 'employe__poste', 'periode').annotate(
         total_retenues=F('cnss_employe') + F('irg')
     ).order_by('periode__mois', 'employe__matricule')
     
@@ -958,7 +958,7 @@ def telecharger_livre_paie_pdf(request):
     bulletins = BulletinPaie.objects.filter(
         periode__in=periodes,
         employe__entreprise=request.user.entreprise,
-    ).select_related('employe', 'periode').annotate(
+    ).select_related('employe', 'employe__poste', 'periode').annotate(
         total_retenues=F('cnss_employe') + F('irg')
     ).order_by('periode__mois', 'employe__matricule')
 
@@ -1008,19 +1008,23 @@ def telecharger_livre_paie_pdf(request):
     y -= 0.6 * cm
 
     data = [[
-        'Période', 'Matr.', 'Nom et Prénoms',
+        'Période', 'Matr.', 'Nom et Prénoms', 'Fonction',
         'Brut', 'CNSS', 'IRG', 'Retenues', 'Net'
     ]]
 
     for b in bulletins:
         emp = b.employe
         nom_complet = f"{emp.nom} {emp.prenoms}"
-        if len(nom_complet) > 28:
-            nom_complet = nom_complet[:26] + '..'
+        if len(nom_complet) > 25:
+            nom_complet = nom_complet[:23] + '..'
+        fonction = emp.poste.intitule_poste if emp.poste else '-'
+        if len(fonction) > 18:
+            fonction = fonction[:16] + '..'
         data.append([
             str(b.periode),
             emp.matricule or '-',
             nom_complet,
+            fonction,
             fmt(b.salaire_brut),
             fmt(b.cnss_employe),
             fmt(b.irg),
@@ -1029,7 +1033,7 @@ def telecharger_livre_paie_pdf(request):
         ])
 
     data.append([
-        'TOTAUX:', '', '',
+        'TOTAUX:', '', '', '',
         fmt(totaux.get('total_brut')),
         fmt(totaux.get('total_cnss_employe')),
         fmt(totaux.get('total_irg')),
@@ -1039,16 +1043,16 @@ def telecharger_livre_paie_pdf(request):
 
     # Largeur disponible en A4 paysage: ~29.7cm - 2*0.8cm marges = ~28cm
     col_widths = [
-        2.8 * cm, 2.0 * cm, 6.0 * cm,
-        3.5 * cm, 3.0 * cm, 3.0 * cm, 3.5 * cm, 3.5 * cm
+        2.5 * cm, 2.0 * cm, 5.0 * cm, 3.5 * cm,
+        3.0 * cm, 2.5 * cm, 2.5 * cm, 3.0 * cm, 3.0 * cm
     ]
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
         ('FONT', (0, 0), (-1, -1), 'Helvetica', 6),
         ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 6),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e9ecef')),
-        ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
-        ('ALIGN', (0, 0), (2, -1), 'LEFT'),
+        ('ALIGN', (4, 1), (-1, -1), 'RIGHT'),
+        ('ALIGN', (0, 0), (3, -1), 'LEFT'),
         ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f8f9fa')),
         ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 6),
