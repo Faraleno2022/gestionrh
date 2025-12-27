@@ -142,7 +142,7 @@
                                     <td>{{ bulletin.periode }}</td>
                                     <td>{{ bulletin.employe.matricule }}</td>
                                     <td>{{ bulletin.employe.nom }} {{ bulletin.employe.prenoms }}</td>
-                                    <td>{{ bulletin.employe.fonction|default:"-" }}</td>
+                                    <td>{{ bulletin.employe.poste.intitule_poste|default:"-" }}</td>
                                     <td class="text-end">{{ bulletin.salaire_brut|floatformat:0|intcomma }}</td>
                                     <td class="text-end">{{ bulletin.salaire_brut|floatformat:0|intcomma }}</td>
                                     <td class="text-end">{{ bulletin.cnss_employe|floatformat:0|intcomma }}</td>
