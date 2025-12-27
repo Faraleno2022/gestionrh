@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestionnaireRH - Solution complète de gestion des ressources humaines</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --guinea-red: #ce1126;
+            --guinea-yellow: #fcd116;
+            --guinea-green: #009a49;
+            --dark-bg: #f0f2f5;
+            --dark-card: #ffffff;
+            --dark-border: rgba(0,0,0,0.1);
+            --text-primary: #1a1a2e;
+            --text-secondary: rgba(0,0,0,0.6);
+            --text-muted: rgba(0,0,0,0.4);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+        
+        /* Scrollbar personnalisé */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--dark-bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, var(--guinea-red), var(--guinea-green));
+            border-radius: 4px;
+        }
+        
+        /* Navbar Glass Effect */
+        .navbar-glass {
+            background: rgba(45, 45, 55, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 15px 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .navbar-glass.scrolled {
+            background: rgba(35, 35, 45, 0.98);
+            padding: 10px 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.6rem;
+            letter-spacing: -0.5px;
+        }
+        
+        .nav-link {
+            font-weight: 500;
+            padding: 8px 20px !important;
+            transition: all 0.3s ease;
+            position: relative;
+            color: #ffffff !important;
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(to right, var(--guinea-red), var(--guinea-yellow), var(--guinea-green));
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+        
+        .nav-link:hover::after {
+            width: 80%;
+        }
+        
+        .btn-login {
+            background: linear-gradient(135deg, var(--guinea-red), #ff4757);
+            border: none;
+            padding: 10px 28px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(206, 17, 38, 0.3);
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(206, 17, 38, 0.4);
+            background: linear-gradient(135deg, #ff4757, var(--guinea-red));
+        }
+        
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            position: relative;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            padding-top: 80px;
+        }
+        
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(206, 17, 38, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(252, 209, 22, 0.06) 0%, transparent 40%),
+                radial-gradient(ellipse at 60% 80%, rgba(0, 154, 73, 0.06) 0%, transparent 40%),
+                linear-gradient(135deg, #e8ecf1 0%, #f5f7fa 50%, #e8ecf1 100%);
+        }
+        
+        .hero-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+        }
+        
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            animation: particleFloat 20s infinite ease-in-out;
+            opacity: 0.5;
+        }
+        
+        @keyframes particleFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(100px, -100px) rotate(90deg); }
+            50% { transform: translate(50px, 100px) rotate(180deg); }
+            75% { transform: translate(-50px, 50px) rotate(270deg); }
+        }
+        
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(206, 17, 38, 0.1);
+            border: 1px solid rgba(206, 17, 38, 0.3);
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--guinea-red);
+            margin-bottom: 25px;
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes badgePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(252, 209, 22, 0.2); }
+            50% { box-shadow: 0 0 0 10px rgba(252, 209, 22, 0); }
+        }
+        
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 25px;
+            letter-spacing: -2px;
+        }
+        
+        .hero h1 .gradient-text {
+            background: linear-gradient(135deg, var(--guinea-red), var(--guinea-yellow), var(--guinea-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero .lead {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 35px;
+            max-width: 540px;
+        }
+        
+        .hero-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 50px;
+        }
+        
+        .btn-primary-gradient {
+            background: linear-gradient(135deg, var(--guinea-red), var(--guinea-yellow), var(--guinea-green));
+            background-size: 200% 200%;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: white;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 30px rgba(206, 17, 38, 0.3);
+            animation: gradientShift 3s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .btn-primary-gradient:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(206, 17, 38, 0.4);
+            color: white;
+        }
+        
+        .btn-outline-glass {
+            background: rgba(0,0,0,0.05);
+            border: 2px solid var(--text-primary);
+            padding: 16px 40px;
+            border-radius: 50px;
+            font-weight: 600;
+            color: var(--text-primary);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn-outline-glass:hover {
+            background: var(--text-primary);
+            border-color: var(--text-primary);
+            transform: translateY(-4px);
+            color: white;
+        }
+        
+        .hero-visual {
+            position: relative;
+        }
+        
+        .hero-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 24px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .hero-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to right, var(--guinea-red), var(--guinea-yellow), var(--guinea-green));
+        }
+        
+        .floating-card {
+            position: absolute;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 16px;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: floatCard 4s ease-in-out infinite;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        
+        .floating-card.card-1 {
+            top: 10%;
+            right: -20px;
+            animation-delay: 0s;
+        }
+        
+        .floating-card.card-2 {
+            bottom: 20%;
+            left: -30px;
+            animation-delay: 1s;
+        }
+        
+        .floating-card.card-3 {
+            bottom: 5%;
+            right: 10%;
+            animation-delay: 2s;
+        }
+        
+        @keyframes floatCard {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+        
+        .floating-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        
+        .floating-card-text {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+        
+        .floating-card-text strong {
+            display: block;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+        
+        /* Section Titles */
+        .section-header {
+            text-align: center;
+            margin-bottom: 70px;
+        }
+        
+        .section-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, rgba(206,17,38,0.1), rgba(0,154,73,0.1));
+            border: 1px solid var(--dark-border);
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--guinea-red);
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .section-header h2 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+        }
+        
+        .section-header p {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 120px 0;
+            position: relative;
+        }
+        
+        .feature-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 24px;
+            padding: 40px 30px;
+            height: 100%;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(206,17,38,0.05), transparent);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(206, 17, 38, 0.3);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+        }
+        
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+        
+        .feature-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .feature-icon.red { 
+            background: linear-gradient(135deg, rgba(206,17,38,0.2), rgba(206,17,38,0.05));
+            color: var(--guinea-red);
+        }
+        .feature-icon.yellow { 
+            background: linear-gradient(135deg, rgba(252,209,22,0.3), rgba(252,209,22,0.1));
+            color: #b8860b;
+        }
+        .feature-icon.green { 
+            background: linear-gradient(135deg, rgba(0,154,73,0.2), rgba(0,154,73,0.05));
+            color: var(--guinea-green);
+        }
+        .feature-icon.blue { 
+            background: linear-gradient(135deg, rgba(0,123,255,0.2), rgba(0,123,255,0.05));
+            color: #4dabf7;
+        }
+        .feature-icon.purple { 
+            background: linear-gradient(135deg, rgba(111,66,193,0.2), rgba(111,66,193,0.05));
+            color: #b197fc;
+        }
+        .feature-icon.orange { 
+            background: linear-gradient(135deg, rgba(253,126,20,0.2), rgba(253,126,20,0.05));
+            color: #ffa94d;
+        }
+        
+        .feature-card h4 {
+            font-weight: 700;
+            margin-bottom: 15px;
+            font-size: 1.25rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.7;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Modules Section */
+        .modules {
+            padding: 120px 0;
+            background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 50%, #ffffff 100%);
+        }
+        
+        .module-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            padding: 25px;
+            border-radius: 16px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+        
+        .module-card:hover {
+            background: rgba(255,255,255,0.03);
+            border-color: var(--dark-border);
+            transform: translateX(10px);
+        }
+        
+        .module-icon {
+            width: 55px;
+            height: 55px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+        
+        .module-card h5 {
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+        
+        .module-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin: 0;
+            line-height: 1.6;
+        }
+        
+        /* Stats Section */
+        .stats {
+            padding: 100px 0;
+            position: relative;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+        }
+        
+        @media (max-width: 992px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 40px 20px;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 20px;
+            transition: all 0.4s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(252, 209, 22, 0.3);
+        }
+        
+        .stat-number {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--guinea-red), var(--guinea-yellow), var(--guinea-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        /* CTA Section */
+        .cta {
+            padding: 120px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at center, rgba(206, 17, 38, 0.05) 0%, transparent 60%),
+                linear-gradient(135deg, #f0f2f5 0%, #e8ecf1 100%);
+        }
+        
+        .cta-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 30px;
+            padding: 80px 60px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .cta-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to right, var(--guinea-red), var(--guinea-yellow), var(--guinea-green));
+        }
+        
+        .cta h2 {
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+        
+        .cta p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 35px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Footer */
+        footer {
+            background: #1a1a2e;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding: 80px 0 40px;
+            color: #ffffff;
+        }
+        
+        .footer-brand {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+        
+        .footer-text {
+            color: rgba(255,255,255,0.8) !important;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            margin-bottom: 25px;
+        }
+        
+        .footer-title {
+            font-weight: 700;
+            margin-bottom: 25px;
+            font-size: 1.1rem;
+            color: #ffffff !important;
+        }
+        
+        .footer-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .footer-links li {
+            margin-bottom: 12px;
+        }
+        
+        .footer-links a {
+            color: rgba(255,255,255,0.8) !important;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+        
+        .footer-links a:hover {
+            color: var(--guinea-yellow) !important;
+            padding-left: 5px;
+        }
+        
+        .footer-contact li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+            color: rgba(255,255,255,0.8) !important;
+        }
+        
+        .footer-contact li span {
+            color: rgba(255,255,255,0.8) !important;
+        }
+        
+        .footer-contact i {
+            color: var(--guinea-yellow);
+            font-size: 1.1rem;
+        }
+        
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 30px;
+            margin-top: 50px;
+            text-align: center;
+        }
+        
+        .footer-bottom p {
+            color: rgba(255,255,255,0.7) !important;
+            font-size: 0.9rem;
+        }
+        
+        .guinea-flag {
+            display: inline-flex;
+            width: 50px;
+            height: 30px;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .guinea-flag div { flex: 1; }
+        .guinea-flag .red { background: var(--guinea-red); }
+        .guinea-flag .yellow { background: var(--guinea-yellow); }
+        .guinea-flag .green { background: var(--guinea-green); }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.5rem; }
+            .hero .lead { font-size: 1.1rem; }
+            .section-header h2 { font-size: 2rem; }
+            .floating-card { display: none; }
+            .cta-card { padding: 50px 30px; }
+        }
+        
+        /* Animations supplémentaires */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Glow effects */
+        .glow-red { filter: drop-shadow(0 0 20px rgba(206, 17, 38, 0.3)); }
+        .glow-yellow { filter: drop-shadow(0 0 20px rgba(252, 209, 22, 0.3)); }
+        .glow-green { filter: drop-shadow(0 0 20px rgba(0, 154, 73, 0.3)); }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top navbar-glass">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <span style="color: var(--guinea-red);">Gestion</span><span style="color: var(--guinea-yellow);">naire</span><span style="color: var(--guinea-green);">RH</span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link" href="#features">Fonctionnalités</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#modules">Modules</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#stats">Statistiques</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+                    <li class="nav-item ms-lg-3">
+                        <a class="btn btn-login" href="{% url 'core:login' %}">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Connexion
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-particles">
+            <div class="particle" style="width: 6px; height: 6px; background: var(--guinea-red); top: 20%; left: 10%;"></div>
+            <div class="particle" style="width: 4px; height: 4px; background: var(--guinea-yellow); top: 60%; left: 20%; animation-delay: -5s;"></div>
+            <div class="particle" style="width: 8px; height: 8px; background: var(--guinea-green); top: 30%; right: 15%; animation-delay: -10s;"></div>
+            <div class="particle" style="width: 5px; height: 5px; background: var(--guinea-red); bottom: 30%; right: 25%; animation-delay: -15s;"></div>
+            <div class="particle" style="width: 6px; height: 6px; background: var(--guinea-yellow); top: 70%; left: 60%; animation-delay: -8s;"></div>
+        </div>
+        <div class="container position-relative">
+            <div class="row align-items-center">
+                <div class="col-lg-6" data-aos="fade-right" data-aos-duration="1000">
+                    <div class="hero-badge">
+                        <i class="bi bi-stars"></i>
+                        <span>Solution RH #1 en Guinée</span>
+                    </div>
+                    <h1>
+                        Gérez vos <span class="gradient-text">Ressources Humaines</span> en toute simplicité
+                    </h1>
+                    <p class="lead">
+                        Une plateforme moderne et intuitive pour la gestion complète de vos RH, 
+                        100% conforme à la législation guinéenne.
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="{% url 'core:login' %}" class="btn btn-primary-gradient">
+                            <i class="bi bi-rocket-takeoff me-2"></i>Commencer maintenant
+                        </a>
+                        <a href="#features" class="btn btn-outline-glass">
+                            <i class="bi bi-play-circle me-2"></i>Découvrir
+                        </a>
+                    </div>
+                    <div class="d-flex align-items-center gap-4">
+                        <div class="guinea-flag">
+                            <div class="red"></div>
+                            <div class="yellow"></div>
+                            <div class="green"></div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 600;">République de Guinée</div>
+                            <small style="color: var(--text-muted);">Travail - Justice - Solidarité</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 mt-5 mt-lg-0" data-aos="fade-left" data-aos-duration="1000" data-aos-delay="200">
+                    <div class="hero-visual">
+                        <div class="hero-card">
+                            <div class="d-flex align-items-center gap-3 mb-4">
+                                <div style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--guinea-red), var(--guinea-yellow)); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="bi bi-graph-up-arrow text-white fs-4"></i>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.85rem; color: var(--text-muted);">Tableau de bord</div>
+                                    <div style="font-weight: 700; font-size: 1.2rem;">Vue d'ensemble RH</div>
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div style="background: rgba(206,17,38,0.1); border-radius: 12px; padding: 20px; text-align: center;">
+                                        <div style="font-size: 2rem; font-weight: 800; color: var(--guinea-red);">247</div>
+                                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Employés</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div style="background: rgba(0,154,73,0.1); border-radius: 12px; padding: 20px; text-align: center;">
+                                        <div style="font-size: 2rem; font-weight: 800; color: var(--guinea-green);">98%</div>
+                                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Présence</div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div style="background: rgba(252,209,22,0.1); border-radius: 12px; padding: 15px;">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span style="color: var(--text-secondary);">Masse salariale</span>
+                                            <span style="font-weight: 700; color: #b8860b;">+12.5%</span>
+                                        </div>
+                                        <div style="height: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; margin-top: 10px; overflow: hidden;">
+                                            <div style="height: 100%; width: 75%; background: linear-gradient(to right, var(--guinea-red), var(--guinea-yellow), var(--guinea-green)); border-radius: 4px;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="floating-card card-1" data-aos="fade-down" data-aos-delay="600">
+                            <div class="floating-card-icon" style="background: rgba(0,154,73,0.2); color: var(--guinea-green);">
+                                <i class="bi bi-check-circle"></i>
+                            </div>
+                            <div class="floating-card-text">
+                                <strong>CNSS</strong>
+                                <span style="color: var(--text-muted);">Conforme</span>
+                            </div>
+                        </div>
+                        
+                        <div class="floating-card card-2" data-aos="fade-up" data-aos-delay="800">
+                            <div class="floating-card-icon" style="background: rgba(206,17,38,0.2); color: var(--guinea-red);">
+                                <i class="bi bi-file-earmark-text"></i>
+                            </div>
+                            <div class="floating-card-text">
+                                <strong>Bulletins</strong>
+                                <span style="color: var(--text-muted);">Automatisés</span>
+                            </div>
+                        </div>
+                        
+                        <div class="floating-card card-3" data-aos="fade-left" data-aos-delay="1000">
+                            <div class="floating-card-icon" style="background: rgba(252,209,22,0.3); color: #b8860b;">
+                                <i class="bi bi-shield-check"></i>
+                            </div>
+                            <div class="floating-card-text">
+                                <strong>Sécurisé</strong>
+                                <span style="color: var(--text-muted);">100%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <div class="section-badge">Fonctionnalités</div>
+                <h2>Tout ce dont vous avez besoin</h2>
+                <p>Une suite complète d'outils pour gérer efficacement vos ressources humaines</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
+                    <div class="feature-card">
+                        <div class="feature-icon red">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <h4>Gestion des Employés</h4>
+                        <p>Centralisez toutes les informations de vos employés : contrats, documents, historique de carrière et informations personnelles.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="feature-card">
+                        <div class="feature-icon yellow">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+                        <h4>Paie & Bulletins</h4>
+                        <p>Calcul automatique des salaires, CNSS et IRPP selon la législation guinéenne. Envoi par email et WhatsApp.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="300">
+                    <div class="feature-card">
+                        <div class="feature-icon green">
+                            <i class="bi bi-calendar-check-fill"></i>
+                        </div>
+                        <h4>Congés & Absences</h4>
+                        <p>Gestion complète des demandes de congés, suivi des soldes, validation hiérarchique et calendrier partagé.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="400">
+                    <div class="feature-card">
+                        <div class="feature-icon blue">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <h4>Pointage & Temps</h4>
+                        <p>Suivi des heures de travail, gestion des heures supplémentaires et des retards. Rapports détaillés.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="500">
+                    <div class="feature-card">
+                        <div class="feature-icon purple">
+                            <i class="bi bi-file-earmark-ruled-fill"></i>
+                        </div>
+                        <h4>Déclarations Sociales</h4>
+                        <p>Génération automatique des déclarations CNSS, télédéclaration et suivi des cotisations sociales.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="600">
+                    <div class="feature-card">
+                        <div class="feature-icon orange">
+                            <i class="bi bi-graph-up-arrow"></i>
+                        </div>
+                        <h4>Tableaux de Bord</h4>
+                        <p>Visualisez vos indicateurs RH clés : effectifs, masse salariale, turnover et statistiques en temps réel.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modules Section -->
+    <section class="modules" id="modules">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <div class="section-badge">Modules</div>
+                <h2>Une suite complète d'outils</h2>
+                <p>Des modules puissants pour répondre à tous vos besoins RH</p>
+            </div>
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="module-card" data-aos="fade-right" data-aos-delay="100">
+                        <div class="module-icon" style="background: linear-gradient(135deg, rgba(206,17,38,0.2), rgba(206,17,38,0.05)); color: var(--guinea-red);">
+                            <i class="bi bi-person-badge-fill"></i>
+                        </div>
+                        <div>
+                            <h5>Gestion du Personnel</h5>
+                            <p>Fiches employés complètes, contrats, documents administratifs et suivi des compétences.</p>
+                        </div>
+                    </div>
+                    <div class="module-card" data-aos="fade-right" data-aos-delay="200">
+                        <div class="module-icon" style="background: linear-gradient(135deg, rgba(252,209,22,0.2), rgba(252,209,22,0.05)); color: var(--guinea-yellow);">
+                            <i class="bi bi-wallet2"></i>
+                        </div>
+                        <div>
+                            <h5>Module Paie</h5>
+                            <p>Calcul automatisé, rubriques personnalisables, barème IRPP progressif et simulateur fiscal.</p>
+                        </div>
+                    </div>
+                    <div class="module-card" data-aos="fade-right" data-aos-delay="300">
+                        <div class="module-icon" style="background: linear-gradient(135deg, rgba(0,154,73,0.2), rgba(0,154,73,0.05)); color: var(--guinea-green);">
+                            <i class="bi bi-building"></i>
+                        </div>
+                        <div>
+                            <h5>Interface CNSS</h5>
+                            <p>Télédéclaration, génération de fichiers (CSV, XML, JSON) et historique des déclarations.</p>
+                        </div>
+                    </div>
+                    <div class="module-card" data-aos="fade-right" data-aos-delay="400">
+                        <div class="module-icon" style="background: linear-gradient(135deg, rgba(0,123,255,0.2), rgba(0,123,255,0.05)); color: #4dabf7;">
+                            <i class="bi bi-airplane-fill"></i>
+                        </div>
+                        <div>
+                            <h5>Gestion des Expatriés</h5>
+                            <p>Suivi des visas et permis de travail, alertes d'expiration et conformité administrative.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="module-card" data-aos="fade-left" data-aos-delay="100">
+                        <div class="module-icon" style="background: linear-gradient(135deg, rgba(111,66,193,0.2), rgba(111,66,193,0.05)); color: #b197fc;">
+                            <i class="bi bi-calendar2-week-fill"></i>
+                        </div>
+                        <div>
+                            <h5>Gestion des Congés</h5>
+                            <p>Demandes en ligne, workflow de validation, calcul automatique des soldes et jours fériés.</p>
+                        </div>
+                    </div>
+                    <div class="module-card" data-aos="fade-left" data-aos-delay="200">
+                        <div class="module-icon" style="background: linear-gradient(135deg, rgba(253,126,20,0.2), rgba(253,126,20,0.05)); color: #ffa94d;">
+                            <i class="bi bi-clipboard2-check-fill"></i>
+                        </div>
+                        <div>
+                            <h5>Conformité Inspection</h5>
+                            <p>Checklist de conformité, registres obligatoires et rapports pour l'inspection du travail.</p>
+                        </div>
+                    </div>
+                    <div class="module-card" data-aos="fade-left" data-aos-delay="300">
+                        <div class="module-icon" style="background: linear-gradient(135deg, rgba(220,53,69,0.2), rgba(220,53,69,0.05)); color: #ff6b6b;">
+                            <i class="bi bi-send-fill"></i>
+                        </div>
+                        <div>
+                            <h5>Envoi Bulletins</h5>
+                            <p>Envoi des bulletins par email et WhatsApp, individuel ou en masse avec message personnalisé.</p>
+                        </div>
+                    </div>
+                    <div class="module-card" data-aos="fade-left" data-aos-delay="400">
+                        <div class="module-icon" style="background: linear-gradient(135deg, rgba(32,201,151,0.2), rgba(32,201,151,0.05)); color: #38d9a9;">
+                            <i class="bi bi-shield-lock-fill"></i>
+                        </div>
+                        <div>
+                            <h5>Sécurité & Audit</h5>
+                            <p>Gestion des utilisateurs, journal d'activité et traçabilité complète des actions.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats" id="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card" data-aos="zoom-in" data-aos-delay="100">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Conforme à la législation</div>
+                </div>
+                <div class="stat-card" data-aos="zoom-in" data-aos-delay="200">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">Accessible partout</div>
+                </div>
+                <div class="stat-card" data-aos="zoom-in" data-aos-delay="300">
+                    <div class="stat-number">10+</div>
+                    <div class="stat-label">Modules intégrés</div>
+                </div>
+                <div class="stat-card" data-aos="zoom-in" data-aos-delay="400">
+                    <div class="stat-number">∞</div>
+                    <div class="stat-label">Employés gérés</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta" id="contact">
+        <div class="cta-bg"></div>
+        <div class="container position-relative">
+            <div class="cta-card" data-aos="zoom-in-up">
+                <h2>Prêt à transformer votre gestion RH ?</h2>
+                <p>Rejoignez les entreprises qui ont déjà simplifié leur gestion des ressources humaines</p>
+                <a href="{% url 'core:login' %}" class="btn btn-primary-gradient btn-lg">
+                    <i class="bi bi-rocket-takeoff me-2"></i>Commencer gratuitement
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4 mb-lg-0" data-aos="fade-up">
+                    <div class="footer-brand">
+                        <span style="color: var(--guinea-red);">Gestion</span><span style="color: var(--guinea-yellow);">naire</span><span style="color: var(--guinea-green);">RH</span>
+                    </div>
+                    <p class="footer-text">
+                        Solution complète de gestion des ressources humaines, conçue spécialement pour les entreprises guinéennes.
+                    </p>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="guinea-flag">
+                            <div class="red"></div>
+                            <div class="yellow"></div>
+                            <div class="green"></div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; font-size: 0.95rem; color: #ffffff;">République de Guinée</div>
+                            <small style="color: rgba(255,255,255,0.7);">Travail - Justice - Solidarité</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-2" data-aos="fade-up" data-aos-delay="100">
+                    <h5 class="footer-title">Modules</h5>
+                    <ul class="footer-links">
+                        <li><a href="#">Personnel</a></li>
+                        <li><a href="#">Paie</a></li>
+                        <li><a href="#">Congés</a></li>
+                        <li><a href="#">Pointage</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-lg-2" data-aos="fade-up" data-aos-delay="200">
+                    <h5 class="footer-title">Légal</h5>
+                    <ul class="footer-links">
+                        <li><a href="#">CNSS</a></li>
+                        <li><a href="#">IRPP</a></li>
+                        <li><a href="#">Inspection</a></li>
+                        <li><a href="#">Conformité</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-4" data-aos="fade-up" data-aos-delay="300">
+                    <h5 class="footer-title">Contact</h5>
+                    <ul class="footer-contact list-unstyled">
+                        <li><i class="bi bi-geo-alt-fill"></i><span>Conakry, Guinée</span></li>
+                        <li><i class="bi bi-envelope-fill"></i><span>faraleno02@gmail.com</span></li>
+                        <li><i class="bi bi-phone-fill"></i><span>+224 622 613 559</span></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2024 GestionnaireRH. Tous droits réservés. | Travail - Justice - Solidarité</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            easing: 'ease-out-cubic',
+            once: true,
+            offset: 50
+        });
+        
+        // Navbar scroll effect
+        const navbar = document.querySelector('.navbar-glass');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+        
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+        
+        // Counter animation for stats
+        const animateCounter = (el, target) => {
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    el.textContent = target;
+                    clearInterval(timer);
+                } else {
+                    el.textContent = Math.floor(current);
+                }
+            }, 30);
+        };
+        
+        // Intersection Observer for stat counters
+        const observerOptions = {
+            threshold: 0.5
+        };
+        
+        const statObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const statNumber = entry.target.querySelector('.stat-number');
+                    const value = statNumber.textContent;
+                    if (!isNaN(parseInt(value))) {
+                        animateCounter(statNumber, parseInt(value));
+                    }
+                    statObserver.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+        
+        document.querySelectorAll('.stat-card').forEach(card => {
+            statObserver.observe(card);
+        });
+        
+        // Parallax effect for particles
+        document.addEventListener('mousemove', (e) => {
+            const particles = document.querySelectorAll('.particle');
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            
+            particles.forEach((particle, index) => {
+                const speed = (index + 1) * 20;
+                particle.style.transform = `translate(${x * speed}px, ${y * speed}px)`;
+            });
+        });
+    </script>
+</body>
+</html>

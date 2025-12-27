@@ -1,0 +1,349 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Déclarations Sociales{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2><i class="fas fa-file-alt me-2"></i>Déclarations Sociales</h2>
+                <button onclick="window.print()" class="btn btn-secondary no-print">
+                    <i class="fas fa-print me-2"></i>Imprimer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="row mb-4 no-print">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="annee" class="form-label">Année</label>
+                            <select class="form-select" id="annee" name="annee">
+                                {% for a in annees %}
+                                <option value="{{ a }}" {% if a == annee %}selected{% endif %}>{{ a }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="mois" class="form-label">Mois</label>
+                            <select class="form-select" id="mois" name="mois">
+                                <option value="">Toute l'année</option>
+                                <option value="1" {% if mois == 1 %}selected{% endif %}>Janvier</option>
+                                <option value="2" {% if mois == 2 %}selected{% endif %}>Février</option>
+                                <option value="3" {% if mois == 3 %}selected{% endif %}>Mars</option>
+                                <option value="4" {% if mois == 4 %}selected{% endif %}>Avril</option>
+                                <option value="5" {% if mois == 5 %}selected{% endif %}>Mai</option>
+                                <option value="6" {% if mois == 6 %}selected{% endif %}>Juin</option>
+                                <option value="7" {% if mois == 7 %}selected{% endif %}>Juillet</option>
+                                <option value="8" {% if mois == 8 %}selected{% endif %}>Août</option>
+                                <option value="9" {% if mois == 9 %}selected{% endif %}>Septembre</option>
+                                <option value="10" {% if mois == 10 %}selected{% endif %}>Octobre</option>
+                                <option value="11" {% if mois == 11 %}selected{% endif %}>Novembre</option>
+                                <option value="12" {% if mois == 12 %}selected{% endif %}>Décembre</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-filter me-2"></i>Filtrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Déclaration CNSS -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Déclaration CNSS</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <h5>Période: Année {{ annee }}{% if mois %} - Mois {{ mois }}{% endif %}</h5>
+                        </div>
+                    </div>
+                    
+                    <div class="row text-center mb-4">
+                        <div class="col-md-3">
+                            <div class="p-3 bg-light rounded montant-card">
+                                <h6 class="text-muted">Nombre de Salariés</h6>
+                                <h3 class="text-primary">{{ declaration_cnss.total_salaries }}</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 bg-light rounded montant-card">
+                                <h6 class="text-muted">Masse Salariale</h6>
+                                <h4>{{ declaration_cnss.masse_salariale|floatformat:0|intcomma }} GNF</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 bg-light rounded montant-card">
+                                <h6 class="text-muted">Cotisation Employé (5%)</h6>
+                                <h4>{{ declaration_cnss.cotisation_employe|floatformat:0|intcomma }} GNF</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 bg-light rounded montant-card">
+                                <h6 class="text-muted">Cotisation Employeur (18%)</h6>
+                                <h4>{{ declaration_cnss.cotisation_employeur|floatformat:0|intcomma }} GNF</h4>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-success">
+                        <h5 class="mb-0">
+                            <i class="fas fa-money-bill-wave me-2"></i>
+                            Total à verser à la CNSS: 
+                            <strong>{{ declaration_cnss.total_cotisation|floatformat:0|intcomma }} GNF</strong>
+                        </h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Déclaration IRG -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0"><i class="fas fa-percentage me-2"></i>Déclaration IRG (Impôt sur le Revenu)</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-4">
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded montant-card">
+                                <h6 class="text-muted">Nombre de Salariés</h6>
+                                <h3 class="text-warning">{{ declaration_irg.total_salaries }}</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded montant-card">
+                                <h6 class="text-muted">Masse Imposable</h6>
+                                <h4>{{ declaration_irg.masse_imposable|floatformat:0|intcomma }} GNF</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded montant-card">
+                                <h6 class="text-muted">IRG Retenu à la Source</h6>
+                                <h4>{{ declaration_irg.total_irg|floatformat:0|intcomma }} GNF</h4>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <h5 class="mb-0">
+                            <i class="fas fa-money-bill-wave me-2"></i>
+                            Total à verser au Trésor Public: 
+                            <strong>{{ declaration_irg.total_irg|floatformat:0|intcomma }} GNF</strong>
+                        </h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Déclaration INAM -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-info">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="fas fa-hospital me-2"></i>Déclaration INAM (Institut National d'Assurance Maladie)</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-4">
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded montant-card">
+                                <h6 class="text-muted">Masse Salariale</h6>
+                                <h4>{{ declaration_inam.masse_salariale|floatformat:0|intcomma }} GNF</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded montant-card">
+                                <h6 class="text-muted">Taux INAM</h6>
+                                <h3 class="text-info">{{ declaration_inam.taux }}%</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded montant-card">
+                                <h6 class="text-muted">Cotisation INAM</h6>
+                                <h4>{{ declaration_inam.montant|floatformat:0|intcomma }} GNF</h4>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h5 class="mb-0">
+                            <i class="fas fa-money-bill-wave me-2"></i>
+                            Total à verser à l'INAM: 
+                            <strong>{{ declaration_inam.montant|floatformat:0|intcomma }} GNF</strong>
+                        </h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Récapitulatif Total -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-calculator me-2"></i>Récapitulatif Total des Charges</h4>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Organisme</th>
+                                <th class="text-end">Montant à Verser</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>CNSS (Total)</strong></td>
+                                <td class="text-end">{{ declaration_cnss.total_cotisation|floatformat:0 }} GNF</td>
+                            </tr>
+                            <tr>
+                                <td><strong>IRG (Trésor Public)</strong></td>
+                                <td class="text-end">{{ declaration_irg.total_irg|floatformat:0 }} GNF</td>
+                            </tr>
+                            <tr>
+                                <td><strong>INAM</strong></td>
+                                <td class="text-end">{{ declaration_inam.montant|floatformat:0 }} GNF</td>
+                            </tr>
+                            <tr class="table-danger">
+                                <th>TOTAL GÉNÉRAL</th>
+                                <th class="text-end">{{ total_general|floatformat:0|intcomma }} GNF</th>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Détail par employé -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Détail par Employé</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover table-sm detail-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Matricule</th>
+                                    <th>Nom et Prénoms</th>
+                                    <th>Période</th>
+                                    <th class="text-end">Brut</th>
+                                    <th class="text-end">CNSS Employé</th>
+                                    <th class="text-end">CNSS Employeur</th>
+                                    <th class="text-end">IRG</th>
+                                    <th class="text-end">Net</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for employe in detail_employes %}
+                                <tr>
+                                    <td>{{ employe.matricule }}</td>
+                                    <td>{{ employe.nom_complet }}</td>
+                                    <td>{{ employe.periode }}</td>
+                                    <td class="text-end">{{ employe.brut|floatformat:0|intcomma }}</td>
+                                    <td class="text-end">{{ employe.cnss_employe|floatformat:0|intcomma }}</td>
+                                    <td class="text-end">{{ employe.cnss_employeur|floatformat:0|intcomma }}</td>
+                                    <td class="text-end">{{ employe.irg|floatformat:0|intcomma }}</td>
+                                    <td class="text-end text-success">{{ employe.net|floatformat:0|intcomma }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        Aucune donnée disponible
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes légales -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm bg-light">
+                <div class="card-body">
+                    <h6><i class="fas fa-info-circle me-2"></i>Notes Importantes</h6>
+                    <ul class="mb-0 small">
+                        <li><strong>CNSS:</strong> Les cotisations doivent être versées avant le 15 du mois suivant</li>
+                        <li><strong>IRG:</strong> L'impôt retenu à la source doit être reversé au Trésor Public avant le 10 du mois suivant</li>
+                        <li><strong>INAM:</strong> La cotisation doit être versée mensuellement</li>
+                        <li><strong>Conservation:</strong> Ces déclarations doivent être conservées pendant 10 ans minimum</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Réduction des polices pour les montants */
+    .montant-card h4 {
+        font-size: 0.95rem !important;
+    }
+    .montant-card h3 {
+        font-size: 1.1rem !important;
+    }
+    .montant-card h6 {
+        font-size: 0.75rem !important;
+    }
+    .alert h5 {
+        font-size: 0.9rem !important;
+    }
+    .table td, .table th {
+        font-size: 0.8rem !important;
+        padding: 0.4rem !important;
+    }
+    .detail-table td, .detail-table th {
+        font-size: 0.75rem !important;
+        padding: 0.3rem !important;
+    }
+    
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        
+        .card {
+            page-break-inside: avoid;
+        }
+        
+        table {
+            font-size: 8pt;
+        }
+        .montant-card h4 {
+            font-size: 9pt !important;
+        }
+        .montant-card h3 {
+            font-size: 10pt !important;
+        }
+    }
+</style>
+{% endblock %}
+

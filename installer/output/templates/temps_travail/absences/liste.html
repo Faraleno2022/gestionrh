@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Absences{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2><i class="fas fa-user-times me-2"></i>Suivi des Absences</h2>
+                <a href="{% url 'temps_travail:creer_absence' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Enregistrer une Absence
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="employe" class="form-label">Employé</label>
+                            <select class="form-select" id="employe" name="employe">
+                                <option value="">Tous</option>
+                                {% for emp in employes %}
+                                <option value="{{ emp.id }}">{{ emp.nom }} {{ emp.prenoms }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="type" class="form-label">Type</label>
+                            <select class="form-select" id="type" name="type">
+                                <option value="">Tous</option>
+                                <option value="maladie">Maladie</option>
+                                <option value="accident_travail">Accident de travail</option>
+                                <option value="absence_injustifiee">Absence injustifiée</option>
+                                <option value="permission">Permission</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-filter me-2"></i>Filtrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Employé</th>
+                                    <th>Type</th>
+                                    <th>Durée</th>
+                                    <th>Justifiée</th>
+                                    <th>Impact Paie</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for absence in absences %}
+                                <tr>
+                                    <td>{{ absence.date_absence|date:"d/m/Y" }}</td>
+                                    <td>{{ absence.employe.nom }} {{ absence.employe.prenoms }}</td>
+                                    <td>{{ absence.get_type_absence_display }}</td>
+                                    <td>{{ absence.duree_jours }} jour(s)</td>
+                                    <td>
+                                        {% if absence.justifie %}
+                                        <span class="badge bg-success">Oui</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Non</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ absence.get_impact_paie_display }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        Aucune absence enregistrée
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

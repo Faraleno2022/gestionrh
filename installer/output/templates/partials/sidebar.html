@@ -1,0 +1,194 @@
+<div class="position-sticky pt-3">
+    <!-- Moyens de paiement et Plans -->
+    <div class="px-3 mb-2">
+        <a href="{% url 'payments:plans' %}" class="btn btn-outline-primary btn-sm w-100 py-1" style="font-size: 0.75rem;">
+            <i class="bi bi-gem"></i> Plans & Tarifs
+        </a>
+        <div class="d-flex justify-content-center gap-1 mt-1" style="font-size: 0.65rem;">
+            <span class="badge bg-light text-muted border px-1 py-0" title="Orange Money">OM</span>
+            <span class="badge bg-light text-muted border px-1 py-0" title="MTN">MTN</span>
+            <span class="badge bg-light text-muted border px-1 py-0" title="Visa">Visa</span>
+            <span class="badge bg-light text-muted border px-1 py-0" title="MC">MC</span>
+        </div>
+    </div>
+    
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'dashboard:index' %}">
+                <i class="bi bi-speedometer2"></i> Tableau de bord
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>GESTION</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'employes:list' %}">
+                <i class="bi bi-people"></i> Employés
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'employes:create' %}">
+                <i class="bi bi-person-plus"></i> Nouvel Employé
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>TEMPS DE TRAVAIL</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'temps_travail:home' %}">
+                <i class="bi bi-house-door"></i> Tableau de bord
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'temps_travail:pointages' %}">
+                <i class="bi bi-clock"></i> Pointages
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'temps_travail:conges' %}">
+                <i class="bi bi-calendar-check"></i> Congés
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'temps_travail:absences' %}">
+                <i class="bi bi-person-x"></i> Absences
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'temps_travail:liste_jours_feries' %}">
+                <i class="bi bi-calendar-event"></i> Jours Fériés
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>PAIE</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'paie:home' %}">
+                <i class="bi bi-house-door"></i> Tableau de bord
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'paie:liste_periodes' %}">
+                <i class="bi bi-calendar3"></i> Périodes de paie
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'paie:liste_bulletins' %}">
+                <i class="bi bi-file-earmark-text"></i> Bulletins
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'paie:liste_elements_salaire' %}">
+                <i class="bi bi-cash-coin"></i> Éléments de Salaire
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'paie:liste_rubriques' %}">
+                <i class="bi bi-list-check"></i> Rubriques de Paie
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'paie:livre_paie' %}">
+                <i class="bi bi-book"></i> Livre de paie
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>MODULES</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'recrutement:offres' %}">
+                <i class="bi bi-briefcase"></i> Recrutement
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'formation:home' %}">
+                <i class="bi bi-mortarboard"></i> Formation
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>RAPPORTS</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'dashboard:rapports' %}">
+                <i class="bi bi-graph-up"></i> Statistiques
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'temps_travail:rapport_presence' %}">
+                <i class="bi bi-clipboard-data"></i> Rapport Présence
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'temps_travail:rapport_heures_supplementaires' %}">
+                <i class="bi bi-clock-history"></i> Heures Supplémentaires
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'paie:declarations_sociales' %}">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Déclarations
+            </a>
+        </li>
+        
+        {% if user.profil.niveau_acces >= 4 %}
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>ADMINISTRATION</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:users' %}">
+                <i class="bi bi-person-badge"></i> Utilisateurs
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:parametres' %}">
+                <i class="bi bi-gear"></i> Paramètres
+            </a>
+        </li>
+        {% endif %}
+        
+        <!-- Mon Profil (visible pour tous) -->
+        <li class="nav-item mt-4 border-top pt-3">
+            <a class="nav-link" href="{% url 'core:profile' %}">
+                <i class="bi bi-person-circle"></i> Mon Profil
+            </a>
+        </li>
+    </ul>
+</div>
+

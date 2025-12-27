@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Formation - Gestionnaire RH Guinée{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="bi bi-mortarboard"></i> Gestion de la Formation</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'formation:creer_formation' %}" class="btn btn-primary me-2">
+            <i class="bi bi-plus-circle"></i> Nouvelle Formation
+        </a>
+        <a href="{% url 'formation:planifier_session' %}" class="btn btn-success">
+            <i class="bi bi-calendar-plus"></i> Planifier Session
+        </a>
+    </div>
+</div>
+
+<!-- Statistiques -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card border-left-primary shadow h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Formations Actives
+                        </div>
+                        <div class="h2 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.total_formations }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-book fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card border-left-success shadow h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Sessions Planifiées
+                        </div>
+                        <div class="h2 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.sessions_planifiees }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-calendar-check fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card border-left-warning shadow h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Sessions En Cours
+                        </div>
+                        <div class="h2 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.sessions_en_cours }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-hourglass-split fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card border-left-info shadow h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Total Participants
+                        </div>
+                        <div class="h2 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.total_participants }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-people fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Plan de Formation -->
+{% if plan_actuel %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-clipboard-data"></i> Plan de Formation {{ plan_actuel.annee }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Budget Total :</strong></p>
+                        <h4>{{ plan_actuel.budget_total|floatformat:0 }} GNF</h4>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Budget Consommé :</strong></p>
+                        <h4 class="text-warning">{{ plan_actuel.budget_consomme|floatformat:0 }} GNF</h4>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Budget Restant :</strong></p>
+                        <h4 class="text-success">{{ plan_actuel.budget_restant|floatformat:0 }} GNF</h4>
+                    </div>
+                </div>
+                <div class="progress mt-3" style="height: 25px;">
+                    <div class="progress-bar bg-warning" role="progressbar" style="width: {{ plan_actuel.taux_consommation }}%">
+                        {{ plan_actuel.taux_consommation }}%
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <span class="badge bg-{{ plan_actuel.statut }}">
+                        {{ plan_actuel.get_statut_display }}
+                    </span>
+                    <a href="{% url 'formation:detail_plan' plan_actuel.annee %}" class="btn btn-sm btn-primary float-end">
+                        <i class="bi bi-eye"></i> Voir le plan
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Prochaines Sessions et Formations Populaires -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-event"></i> Prochaines Sessions</h5>
+            </div>
+            <div class="card-body">
+                {% if prochaines_sessions %}
+                <div class="list-group list-group-flush">
+                    {% for session in prochaines_sessions %}
+                    <a href="{% url 'formation:detail_session' session.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ session.formation.intitule }}</h6>
+                            <small>{{ session.date_debut|date:"d/m/Y" }}</small>
+                        </div>
+                        <p class="mb-1">
+                            <i class="bi bi-geo-alt"></i> {{ session.lieu }}
+                            <span class="badge bg-info ms-2">{{ session.nombre_inscrits }}/{{ session.nombre_places }}</span>
+                        </p>
+                        <small class="text-muted">{{ session.reference_session }}</small>
+                    </a>
+                    {% endfor %}
+                </div>
+                <a href="{% url 'formation:sessions' %}" class="btn btn-success btn-sm mt-3 w-100">
+                    <i class="bi bi-list"></i> Voir toutes les sessions
+                </a>
+                {% else %}
+                <p class="text-muted mb-0">Aucune session planifiée</p>
+                <a href="{% url 'formation:planifier_session' %}" class="btn btn-success btn-sm mt-2">
+                    <i class="bi bi-calendar-plus"></i> Planifier une session
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-star"></i> Formations Populaires</h5>
+            </div>
+            <div class="card-body">
+                {% if formations_populaires %}
+                <div class="list-group list-group-flush">
+                    {% for formation in formations_populaires %}
+                    <a href="{% url 'formation:detail_formation' formation.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ formation.intitule }}</h6>
+                            <span class="badge bg-primary">{{ formation.nb_sessions }} sessions</span>
+                        </div>
+                        <p class="mb-1">
+                            <span class="badge bg-secondary">{{ formation.get_type_formation_display }}</span>
+                            <span class="badge bg-info">{{ formation.get_domaine_display }}</span>
+                        </p>
+                        <small class="text-muted">{{ formation.duree_jours }} jours ({{ formation.duree_heures }}h)</small>
+                    </a>
+                    {% endfor %}
+                </div>
+                <a href="{% url 'formation:catalogue' %}" class="btn btn-info btn-sm mt-3 w-100">
+                    <i class="bi bi-book"></i> Voir le catalogue
+                </a>
+                {% else %}
+                <p class="text-muted mb-0">Aucune formation dans le catalogue</p>
+                <a href="{% url 'formation:creer_formation' %}" class="btn btn-info btn-sm mt-2">
+                    <i class="bi bi-plus-circle"></i> Créer une formation
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Accès Rapides -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> Accès Rapides</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'formation:catalogue' %}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-book"></i><br>
+                            Catalogue
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'formation:sessions' %}" class="btn btn-outline-success w-100">
+                            <i class="bi bi-calendar"></i><br>
+                            Sessions
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'formation:inscriptions' %}" class="btn btn-outline-info w-100">
+                            <i class="bi bi-person-check"></i><br>
+                            Inscriptions
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'formation:plans' %}" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-clipboard-data"></i><br>
+                            Plan de Formation
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

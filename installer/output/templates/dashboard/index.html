@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Tableau de bord - Gestionnaire RH Guinée{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="bi bi-speedometer2"></i> Tableau de bord</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-download"></i> Export
+            </button>
+            <a href="{% url 'dashboard:telecharger_manuel' %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-book"></i> Manuel d'utilisation
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Cartes statistiques -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Effectif Total
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_employes }}</div>
+                        <small class="text-muted">
+                            <i class="bi bi-gender-male"></i> {{ employes_hommes }} H | 
+                            <i class="bi bi-gender-female"></i> {{ employes_femmes }} F
+                        </small>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-people fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Masse Salariale
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ masse_salariale|floatformat:0|intcomma }} GNF
+                        </div>
+                        <small class="text-muted">Mois en cours</small>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-cash-stack fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Congés en cours
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ conges_en_cours }}</div>
+                        <small class="text-muted">
+                            <i class="bi bi-hourglass-split"></i> {{ conges_en_attente }} en attente
+                        </small>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-calendar-check fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Bulletins de paie
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ bulletins_valides }}</div>
+                        <small class="text-muted">
+                            <i class="bi bi-check-circle"></i> Validés / {{ bulletins_calcules }} calculés
+                        </small>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-file-earmark-text fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alertes -->
+{% if alertes %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h5><i class="bi bi-bell"></i> Alertes</h5>
+        {% for alerte in alertes %}
+        <div class="alert alert-{{ alerte.type }} alert-dismissible fade show" role="alert">
+            <i class="{{ alerte.icon }}"></i> {{ alerte.message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Graphiques et tableaux -->
+<div class="row">
+    <!-- Répartition par type de contrat -->
+    <div class="col-xl-4 col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-pie-chart"></i> Répartition par contrat
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="contratChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employés en congé -->
+    <div class="col-xl-8 col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-calendar-x"></i> Employés en congé aujourd'hui
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if employes_en_conge %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Matricule</th>
+                                <th>Nom complet</th>
+                                <th>Service</th>
+                                <th>Type</th>
+                                <th>Période</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for conge in employes_en_conge %}
+                            <tr>
+                                <td>{{ conge.employe.matricule }}</td>
+                                <td>{{ conge.employe.nom }} {{ conge.employe.prenoms }}</td>
+                                <td>{{ conge.employe.service.nom_service|default:"-" }}</td>
+                                <td><span class="badge bg-info">{{ conge.type_conge }}</span></td>
+                                <td>{{ conge.date_debut|date:"d/m" }} - {{ conge.date_fin|date:"d/m" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center">Aucun employé en congé aujourd'hui</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Accès rapides -->
+<div class="row">
+    <div class="col-12">
+        <h5 class="mb-3"><i class="bi bi-lightning"></i> Accès rapides</h5>
+    </div>
+    <div class="col-md-3 mb-3">
+        <a href="{% url 'employes:create' %}" class="btn btn-outline-primary w-100">
+            <i class="bi bi-person-plus"></i><br>Nouvel employé
+        </a>
+    </div>
+    <div class="col-md-3 mb-3">
+        <a href="{% url 'temps_travail:creer_pointage' %}" class="btn btn-outline-success w-100">
+            <i class="bi bi-clock-history"></i><br>Saisir pointage
+        </a>
+    </div>
+    <div class="col-md-3 mb-3">
+        <a href="{% url 'paie:liste_periodes' %}" class="btn btn-outline-warning w-100">
+            <i class="bi bi-calculator"></i><br>Gérer paie
+        </a>
+    </div>
+    <div class="col-md-3 mb-3">
+        <a href="{% url 'dashboard:rapports' %}" class="btn btn-outline-info w-100">
+            <i class="bi bi-graph-up"></i><br>Voir rapports
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+// Graphique répartition par contrat
+const ctx = document.getElementById('contratChart');
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['CDI', 'CDD', 'Stage'],
+        datasets: [{
+            data: [{{ employes_cdi }}, {{ employes_cdd }}, {{ employes_stage }}],
+            backgroundColor: [
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 206, 86, 0.8)',
+                'rgba(75, 192, 192, 0.8)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom',
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
+

@@ -109,6 +109,32 @@
                             <strong>{{ declaration_cnss.total_cotisation|floatformat:0|intcomma }} GNF</strong>
                         </h5>
                     </div>
+                    
+                    <!-- Informations sur les règles CNSS -->
+                    <div class="alert alert-info mt-3">
+                        <h6><i class="fas fa-info-circle me-2"></i>Règles de calcul CNSS (Guinée)</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="mb-0 small">
+                                    <li><strong>Plancher (SMIG):</strong> {{ declaration_cnss.plancher|floatformat:0|intcomma }} GNF</li>
+                                    <li><strong>Plafond:</strong> {{ declaration_cnss.plafond|floatformat:0|intcomma }} GNF</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="mb-0 small">
+                                    <li><strong>Taux employé:</strong> {{ declaration_cnss.taux_employe }}% (Retraite 2,5% + Maladie 2,5%)</li>
+                                    <li><strong>Taux employeur:</strong> {{ declaration_cnss.taux_employeur }}% (PF 6% + AT/MP 4% + Retraite 4% + Maladie 4%)</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <hr class="my-2">
+                        <small class="text-muted">
+                            <i class="fas fa-calculator me-1"></i>
+                            L'assiette de cotisation est comprise entre le plancher (SMIG) et le plafond. 
+                            Si le salaire est inférieur au SMIG, on cotise sur le SMIG. 
+                            Si le salaire dépasse le plafond, on cotise sur le plafond.
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
