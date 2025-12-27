@@ -62,7 +62,8 @@ class Command(BaseCommand):
         constantes_requises = [
             ('TAUX_CNSS_EMPLOYE', Decimal('5.00'), '%'),
             ('TAUX_CNSS_EMPLOYEUR', Decimal('18.00'), '%'),
-            ('PLAFOND_CNSS', Decimal('3000000'), 'GNF'),
+            ('PLAFOND_CNSS', Decimal('2500000'), 'GNF'),
+            ('PLANCHER_CNSS', Decimal('550000'), 'GNF'),
             ('SMIG', Decimal('440000'), 'GNF'),
             ('DEDUC_CONJOINT', Decimal('100000'), 'GNF'),
             ('DEDUC_ENFANT', Decimal('50000'), 'GNF'),
@@ -114,14 +115,20 @@ class Command(BaseCommand):
         # Exemple: Salaire brut de 2,500,000 GNF
         salaire_brut = Decimal('2500000')
         
-        # 1. Calcul CNSS employé (5% plafonné à 3,000,000)
-        plafond_cnss = Decimal('3000000')
-        base_cnss = min(salaire_brut, plafond_cnss)
+        # 1. Calcul CNSS employé (5% avec plancher SMIG et plafond 2,500,000)
+        # Règles CNSS Guinée:
+        # - Plancher: SMIG (440 000 GNF) - on cotise au minimum sur ce montant
+        # - Plafond: 2 500 000 GNF - on cotise au maximum sur ce montant
+        plancher_cnss = Decimal('550000')  # Plancher CNSS
+        plafond_cnss = Decimal('2500000')
+        base_cnss = max(min(salaire_brut, plafond_cnss), plancher_cnss)
         taux_cnss_employe = Decimal('5.00')
         cnss_employe = base_cnss * taux_cnss_employe / Decimal('100')
         
         self.stdout.write(f'  Salaire brut: {salaire_brut:,.0f} GNF')
-        self.stdout.write(f'  Base CNSS (plafonnée): {base_cnss:,.0f} GNF')
+        self.stdout.write(f'  Plancher CNSS (SMIG): {plancher_cnss:,.0f} GNF')
+        self.stdout.write(f'  Plafond CNSS: {plafond_cnss:,.0f} GNF')
+        self.stdout.write(f'  Base CNSS (avec plancher/plafond): {base_cnss:,.0f} GNF')
         self.stdout.write(f'  CNSS employé (5%): {cnss_employe:,.0f} GNF')
         
         # 2. Calcul CNSS employeur (18%)

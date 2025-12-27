@@ -1101,12 +1101,24 @@ def declarations_sociales(request):
         employe__entreprise=request.user.entreprise,
     ).select_related('employe', 'periode')
     
+    # Récupérer les constantes CNSS (plancher et plafond)
+    from .models import Constante
+    plancher_cnss = Constante.objects.filter(code='SMIG', actif=True).first()
+    plafond_cnss = Constante.objects.filter(code='PLAFOND_CNSS', actif=True).first()
+    taux_cnss_employe = Constante.objects.filter(code='TAUX_CNSS_EMPLOYE', actif=True).first()
+    taux_cnss_employeur = Constante.objects.filter(code='TAUX_CNSS_EMPLOYEUR', actif=True).first()
+    
     # Calculs pour CNSS
     declaration_cnss = {
         'total_salaries': bulletins.values('employe').distinct().count(),
         'masse_salariale': bulletins.aggregate(Sum('salaire_brut'))['salaire_brut__sum'] or 0,
         'cotisation_employe': bulletins.aggregate(Sum('cnss_employe'))['cnss_employe__sum'] or 0,
         'cotisation_employeur': bulletins.aggregate(Sum('cnss_employeur'))['cnss_employeur__sum'] or 0,
+        # Informations sur plancher et plafond
+        'plancher': plancher_cnss.valeur if plancher_cnss else Decimal('440000'),
+        'plafond': plafond_cnss.valeur if plafond_cnss else Decimal('2500000'),
+        'taux_employe': taux_cnss_employe.valeur if taux_cnss_employe else Decimal('5.00'),
+        'taux_employeur': taux_cnss_employeur.valeur if taux_cnss_employeur else Decimal('18.00'),
     }
     declaration_cnss['total_cotisation'] = (
         declaration_cnss['cotisation_employe'] + declaration_cnss['cotisation_employeur']

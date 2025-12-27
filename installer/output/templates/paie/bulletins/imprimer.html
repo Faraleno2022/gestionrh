@@ -1,0 +1,502 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulletin de Paie - {{ bulletin.numero_bulletin }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #000;
+        }
+        
+        /* En-tête officiel */
+        .official-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 3px solid #ce1126;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .logo-left {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo-left img {
+            max-width: 80px;
+            max-height: 80px;
+        }
+        
+        .logo-placeholder {
+            width: 70px;
+            height: 70px;
+            border: 2px dashed #ccc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8pt;
+            color: #999;
+            text-align: center;
+        }
+        
+        .header-center {
+            flex: 1;
+            text-align: center;
+            padding: 0 15px;
+        }
+        
+        .republique {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #000;
+            margin: 0;
+            text-transform: uppercase;
+        }
+        
+        .devise-nationale {
+            font-size: 9pt;
+            font-style: italic;
+            color: #ce1126;
+            margin: 3px 0 0 0;
+            padding-bottom: 8px;
+            border-bottom: 3px solid #ce1126;
+        }
+        
+        .company-name {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #ce1126;
+            margin: 12px 0 5px 0;
+        }
+        
+        .bulletin-title {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #000;
+            margin: 10px 0 5px 0;
+            padding: 5px 15px;
+            background: linear-gradient(to right, #ce1126, #fcd116, #009a49);
+            -webkit-background-clip: text;
+            background-clip: text;
+            display: inline-block;
+        }
+        
+        .bulletin-ref {
+            font-size: 10pt;
+            color: #666;
+        }
+        
+        .flag-right {
+            width: 80px;
+            text-align: center;
+        }
+        
+        .guinea-flag {
+            display: flex;
+            width: 60px;
+            height: 40px;
+            border: 1px solid #ddd;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .flag-red {
+            background-color: #ce1126;
+            flex: 1;
+        }
+        
+        .flag-yellow {
+            background-color: #fcd116;
+            flex: 1;
+        }
+        
+        .flag-green {
+            background-color: #009a49;
+            flex: 1;
+        }
+        
+        .header {
+            margin-bottom: 15px;
+        }
+        
+        .bulletin-info-row {
+            display: flex;
+            justify-content: space-between;
+            background-color: #f8f9fa;
+            padding: 8px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .bulletin-info-item {
+            font-size: 10pt;
+        }
+        
+        .bulletin-info-item strong {
+            color: #ce1126;
+        }
+        
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        
+        .section-title {
+            background-color: #f0f0f0;
+            padding: 8px;
+            font-weight: bold;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ce1126;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        
+        table.info-table td {
+            padding: 5px;
+            border: none;
+        }
+        
+        table.info-table td:first-child {
+            font-weight: bold;
+            width: 40%;
+        }
+        
+        table.detail-table {
+            border: 1px solid #ddd;
+        }
+        
+        table.detail-table th {
+            background-color: #f8f9fa;
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+            font-weight: bold;
+        }
+        
+        table.detail-table td {
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .total-row {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .net-row {
+            background-color: #d4edda;
+            font-weight: bold;
+            font-size: 12pt;
+        }
+        
+        .summary-box {
+            border: 2px solid #ce1126;
+            padding: 15px;
+            margin-top: 20px;
+            background-color: #fff8f8;
+        }
+        
+        .summary-box table td {
+            padding: 8px;
+            border: none;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 2px solid #ce1126;
+            font-size: 9pt;
+            color: #333;
+        }
+        
+        .company-footer {
+            background: linear-gradient(to right, rgba(206,17,38,0.1), rgba(252,209,22,0.1), rgba(0,154,73,0.1));
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+        
+        .company-footer-content {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        
+        .company-footer-item {
+            margin: 3px 10px;
+        }
+        
+        @media print {
+            .no-print {
+                display: none;
+            }
+            
+            body {
+                margin: 0;
+            }
+        }
+        
+        .print-button {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background-color: #ce1126;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14pt;
+        }
+        
+        .print-button:hover {
+            background-color: #a00e1e;
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button no-print" onclick="window.print()">
+        🖨️ Imprimer
+    </button>
+
+    <!-- En-tête Officiel -->
+    <div class="official-header">
+        <!-- Logo entreprise à gauche -->
+        <div class="logo-left">
+            {% if bulletin.employe.entreprise.logo %}
+            <img src="{{ bulletin.employe.entreprise.logo.url }}" alt="Logo {{ bulletin.employe.entreprise.nom_entreprise }}">
+            {% elif params and params.logo %}
+            <img src="{{ params.logo.url }}" alt="Logo">
+            {% else %}
+            <div class="logo-placeholder">LOGO</div>
+            {% endif %}
+        </div>
+        
+        <!-- Informations centrales -->
+        <div class="header-center">
+            <p class="republique">République de Guinée</p>
+            <p class="devise-nationale">Travail - Justice - Solidarité</p>
+            <p class="company-name">{% if bulletin.employe.entreprise %}{{ bulletin.employe.entreprise.nom_entreprise }}{% elif params %}{{ params.nom_societe }}{% else %}ENTREPRISE{% endif %}</p>
+            <h1 class="bulletin-title">BULLETIN DE PAIE</h1>
+        </div>
+        
+        <!-- Drapeau Guinée à droite -->
+        <div class="flag-right">
+            <div class="guinea-flag">
+                <div class="flag-red"></div>
+                <div class="flag-yellow"></div>
+                <div class="flag-green"></div>
+            </div>
+            <div style="font-size: 7pt; color: #666; margin-top: 3px;">GUINÉE</div>
+        </div>
+    </div>
+    
+    <!-- Informations du bulletin -->
+    <div class="bulletin-info-row">
+        <span class="bulletin-info-item"><strong>N°:</strong> {{ bulletin.numero_bulletin }}</span>
+        <span class="bulletin-info-item"><strong>Période:</strong> {{ bulletin.periode }}</span>
+        <span class="bulletin-info-item"><strong>Date:</strong> {{ bulletin.date_calcul|date:"d/m/Y" }}</span>
+    </div>
+
+    <!-- Informations Employé -->
+    <div class="section-title">INFORMATIONS EMPLOYÉ</div>
+    <table class="info-table">
+        <tr>
+            <td>Matricule:</td>
+            <td><strong>{{ bulletin.employe.matricule }}</strong></td>
+            <td>N° CNSS:</td>
+            <td>{{ bulletin.employe.num_cnss_individuel|default:"Non renseigné" }}</td>
+        </tr>
+        <tr>
+            <td>Nom et Prénoms:</td>
+            <td colspan="3"><strong>{{ bulletin.employe.nom }} {{ bulletin.employe.prenoms }}</strong></td>
+        </tr>
+        <tr>
+            <td>Poste:</td>
+            <td>{{ bulletin.employe.poste|default:"Non renseigné" }}</td>
+            <td>Service:</td>
+            <td>{{ bulletin.employe.service|default:"Non renseigné" }}</td>
+        </tr>
+        <tr>
+            <td>Date d'embauche:</td>
+            <td>{{ bulletin.employe.date_embauche|date:"d/m/Y"|default:"Non renseigné" }}</td>
+            <td>Situation familiale:</td>
+            <td>{{ bulletin.employe.situation_matrimoniale|default:"Non renseigné" }}</td>
+        </tr>
+        <tr>
+            <td>Mode de paiement:</td>
+            <td>{{ bulletin.employe.mode_paiement|default:"Non renseigné" }}</td>
+            <td>Nombre d'enfants:</td>
+            <td>{{ bulletin.employe.nombre_enfants|default:"0" }}</td>
+        </tr>
+        {% if bulletin.employe.mode_paiement == 'Virement' %}
+        <tr>
+            <td>Banque:</td>
+            <td>{{ bulletin.employe.nom_banque|default:"-" }}</td>
+            <td>N° Compte:</td>
+            <td>{{ bulletin.employe.numero_compte|default:"-" }}</td>
+        </tr>
+        {% elif bulletin.employe.mode_paiement == 'Mobile Money' %}
+        <tr>
+            <td>Opérateur:</td>
+            <td>{{ bulletin.employe.operateur_mobile_money|default:"-" }}</td>
+            <td>N° Mobile Money:</td>
+            <td>{{ bulletin.employe.numero_mobile_money|default:"-" }}</td>
+        </tr>
+        {% endif %}
+    </table>
+
+    <!-- Éléments de Gains -->
+    <div class="section-title">GAINS ET RÉMUNÉRATIONS</div>
+    <table class="detail-table">
+        <thead>
+            <tr>
+                <th style="width: 50%;">Libellé</th>
+                <th class="text-right" style="width: 20%;">Base</th>
+                <th class="text-center" style="width: 10%;">Taux</th>
+                <th class="text-right" style="width: 20%;">Montant</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in gains %}
+            <tr>
+                <td>{{ ligne.rubrique.libelle_rubrique }}</td>
+                <td class="text-right">{{ ligne.base|floatformat:0|intcomma }}</td>
+                <td class="text-center">{% if ligne.taux %}{{ ligne.taux }}%{% else %}-{% endif %}</td>
+                <td class="text-right">{{ ligne.montant|floatformat:0|intcomma }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td colspan="3">TOTAL BRUT</td>
+                <td class="text-right">{{ bulletin.salaire_brut|floatformat:0|intcomma }} GNF</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Retenues et Cotisations -->
+    <div class="section-title">RETENUES ET COTISATIONS</div>
+    <table class="detail-table">
+        <thead>
+            <tr>
+                <th style="width: 50%;">Libellé</th>
+                <th class="text-right" style="width: 20%;">Base</th>
+                <th class="text-center" style="width: 10%;">Taux</th>
+                <th class="text-right" style="width: 20%;">Montant</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in retenues %}
+            <tr>
+                <td>{{ ligne.rubrique.libelle_rubrique }}</td>
+                <td class="text-right">{{ ligne.base|floatformat:0|intcomma }}</td>
+                <td class="text-center">{% if ligne.taux %}{{ ligne.taux }}%{% else %}-{% endif %}</td>
+                <td class="text-right">{{ ligne.montant|floatformat:0|intcomma }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Récapitulatif -->
+    <div class="summary-box">
+        <table style="width: 100%;">
+            <tr>
+                <td style="width: 60%; font-size: 12pt;"><strong>SALAIRE BRUT</strong></td>
+                <td class="text-right" style="font-size: 12pt;"><strong>{{ bulletin.salaire_brut|floatformat:0|intcomma }} GNF</strong></td>
+            </tr>
+            <tr>
+                <td>Cotisation CNSS Employé (5%)</td>
+                <td class="text-right" style="color: #d62828;">- {{ bulletin.cnss_employe|floatformat:0|intcomma }} GNF</td>
+            </tr>
+            <tr>
+                <td>Impôt sur le Revenu (IRG)</td>
+                <td class="text-right" style="color: #d62828;">- {{ bulletin.irg|floatformat:0|intcomma }} GNF</td>
+            </tr>
+            <tr style="border-top: 2px solid #d62828;">
+                <td style="font-size: 14pt; padding-top: 10px;"><strong>NET À PAYER</strong></td>
+                <td class="text-right" style="font-size: 14pt; color: #28a745; padding-top: 10px;">
+                    <strong>{{ bulletin.net_a_payer|floatformat:0|intcomma }} GNF</strong>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Cotisations Patronales -->
+    <div class="section-title">COTISATIONS PATRONALES</div>
+    <table class="info-table">
+        <tr>
+            <td>Cotisation CNSS Employeur (18%):</td>
+            <td class="text-right"><strong>{{ bulletin.cnss_employeur|floatformat:0|intcomma }} GNF</strong></td>
+        </tr>
+        <tr>
+            <td>Total Cotisations CNSS (Employé + Employeur):</td>
+            <td class="text-right"><strong>{{ bulletin.cnss_employe|add:bulletin.cnss_employeur|floatformat:0|intcomma }} GNF</strong></td>
+        </tr>
+    </table>
+
+    <!-- Pied de page avec informations entreprise -->
+    <div class="footer">
+        <p><strong>Note:</strong> Ce bulletin de paie est conforme à la législation guinéenne en vigueur.</p>
+        <p>Les cotisations sociales sont calculées selon les taux CNSS: 5% (employé) et 18% (employeur).</p>
+        <p>L'IRG est calculé selon le barème progressif avec application des déductions familiales et abattements professionnels.</p>
+        
+        <!-- Informations de l'entreprise en bas -->
+        <div class="company-footer">
+            <div style="text-align: center; margin-bottom: 8px;">
+                <strong style="color: #ce1126;">{% if bulletin.employe.entreprise %}{{ bulletin.employe.entreprise.nom_entreprise }}{% elif params %}{{ params.nom_societe }}{% else %}ENTREPRISE{% endif %}</strong>
+            </div>
+            <div class="company-footer-content" style="justify-content: center; text-align: center;">
+                {% if bulletin.employe.entreprise %}
+                <span class="company-footer-item">📍 {{ bulletin.employe.entreprise.adresse|default:"Adresse" }}</span>
+                <span class="company-footer-item">📞 {{ bulletin.employe.entreprise.telephone|default:"Téléphone" }}</span>
+                <span class="company-footer-item">✉️ {{ bulletin.employe.entreprise.email|default:"Email" }}</span>
+                <span class="company-footer-item">🏛️ NIF: {{ bulletin.employe.entreprise.nif|default:"Non renseigné" }}</span>
+                <span class="company-footer-item">🔢 CNSS: {{ bulletin.employe.entreprise.num_cnss|default:"Non renseigné" }}</span>
+                {% elif params %}
+                <span class="company-footer-item">📍 {{ params.adresse_societe|default:"Adresse" }}</span>
+                <span class="company-footer-item">📞 {{ params.telephone_societe|default:"Téléphone" }}</span>
+                <span class="company-footer-item">🏛️ NIF: {{ params.nif_societe|default:"Non renseigné" }}</span>
+                <span class="company-footer-item">🔢 CNSS: {{ params.num_cnss_employeur|default:"Non renseigné" }}</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <p style="margin-top: 15px; text-align: center;">
+            <em>Document généré le {{ bulletin.date_calcul|date:"d/m/Y à H:i" }}</em>
+        </p>
+    </div>
+
+    <script>
+        // Auto-print on load (optionnel)
+        // window.onload = function() { window.print(); }
+    </script>
+</body>
+</html>
+

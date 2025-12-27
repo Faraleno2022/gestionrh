@@ -350,7 +350,14 @@ class MoteurCalculPaie:
                 })
     
     def _calculer_cotisations_sociales(self):
-        """Calculer les cotisations sociales (CNSS, etc.)"""
+        """Calculer les cotisations sociales (CNSS, etc.)
+        
+        Règles CNSS Guinée:
+        - Plancher: SMIG (440 000 GNF) - on cotise au minimum sur ce montant
+        - Plafond: 2 500 000 GNF - on cotise au maximum sur ce montant
+        - Taux employé: 5% (retraite 2.5% + assurance maladie 2.5%)
+        - Taux employeur: 18% (prestations familiales 6% + AT/MP 4% + retraite 4% + maladie 4%)
+        """
         # Convertir la base CNSS en GNF si nécessaire (les cotisations sociales sont toujours en GNF)
         base_cnss_gnf = self.montants['cnss_base']
         if self.devise_employe != self.devise_base:
@@ -360,9 +367,17 @@ class MoteurCalculPaie:
                 self.date_conversion
             )
         
-        # Appliquer le plafond CNSS (toujours en GNF)
-        plafond_cnss = self.constantes.get('PLAFOND_CNSS', Decimal('3000000'))
-        base_cnss_plafonnee = min(base_cnss_gnf, plafond_cnss)
+        # Récupérer plancher et plafond CNSS (en GNF)
+        # Plancher = 550 000 GNF - assiette minimale de cotisation
+        plancher_cnss = self.constantes.get('PLANCHER_CNSS', Decimal('550000'))
+        # Plafond = 2 500 000 GNF - assiette maximale de cotisation
+        plafond_cnss = self.constantes.get('PLAFOND_CNSS', Decimal('2500000'))
+        
+        # Appliquer plancher et plafond CNSS
+        # Si salaire < plancher : on cotise sur le plancher
+        # Si plancher <= salaire <= plafond : on cotise sur le salaire réel
+        # Si salaire > plafond : on cotise sur le plafond
+        base_cnss_plafonnee = max(min(base_cnss_gnf, plafond_cnss), plancher_cnss)
         
         # CNSS salarié (utiliser TAUX_CNSS_EMPLOYE au lieu de TAUX_CNSS_SALARIE)
         taux_cnss = self.constantes.get('TAUX_CNSS_EMPLOYE', Decimal('5.00'))

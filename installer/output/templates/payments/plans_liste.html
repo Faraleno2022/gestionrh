@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Plans d'abonnement - GuinéeRH{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h2><i class="bi bi-gem text-primary"></i> Nos Plans d'Abonnement</h2>
+            <p class="text-muted">Choisissez le plan adapté à votre entreprise</p>
+        </div>
+    </div>
+    
+    {% if abonnement_actuel %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info d-flex align-items-center">
+                <i class="bi bi-info-circle-fill me-2 fs-4"></i>
+                <div>
+                    <strong>Votre abonnement actuel :</strong> {{ abonnement_actuel.plan.nom }}
+                    {% if abonnement_actuel.est_actif %}
+                        <span class="badge bg-success ms-2">Actif</span>
+                        - Expire le {{ abonnement_actuel.date_fin|date:"d/m/Y" }}
+                        ({{ abonnement_actuel.jours_restants }} jours restants)
+                    {% else %}
+                        <span class="badge bg-danger ms-2">Expiré</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="row justify-content-center">
+        {% for plan in plans %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 {% if plan.slug == 'premium' %}border-primary shadow-lg{% else %}shadow-sm{% endif %}">
+                {% if plan.slug == 'premium' %}
+                <div class="card-header bg-primary text-white text-center py-2">
+                    <i class="bi bi-star-fill"></i> Recommandé
+                </div>
+                {% endif %}
+                <div class="card-body d-flex flex-column">
+                    <h4 class="card-title text-center mb-3">
+                        {% if plan.slug == 'gratuit' %}
+                            <i class="bi bi-gift text-success"></i>
+                        {% elif plan.slug == 'basique' %}
+                            <i class="bi bi-box text-info"></i>
+                        {% elif plan.slug == 'premium' %}
+                            <i class="bi bi-gem text-primary"></i>
+                        {% else %}
+                            <i class="bi bi-building text-warning"></i>
+                        {% endif %}
+                        {{ plan.nom }}
+                    </h4>
+                    
+                    <div class="text-center mb-4">
+                        <h2 class="mb-0">{{ plan.prix_mensuel|intcomma }} <small class="text-muted fs-6">GNF/mois</small></h2>
+                        {% if plan.prix_annuel %}
+                        <small class="text-success">
+                            <i class="bi bi-tag-fill"></i> {{ plan.prix_annuel|intcomma }} GNF/an (économisez 2 mois)
+                        </small>
+                        {% endif %}
+                    </div>
+                    
+                    <ul class="list-unstyled mb-4 flex-grow-1">
+                        <li class="mb-2">
+                            <i class="bi bi-people-fill text-primary"></i>
+                            <strong>{{ plan.max_utilisateurs }}</strong> utilisateurs
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-person-badge text-primary"></i>
+                            <strong>{{ plan.max_employes }}</strong> employés max
+                        </li>
+                        <li class="mb-2">
+                            {% if plan.module_paie %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                                <i class="bi bi-x-circle text-danger"></i>
+                            {% endif %}
+                            Module Paie
+                        </li>
+                        <li class="mb-2">
+                            {% if plan.module_conges %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                                <i class="bi bi-x-circle text-danger"></i>
+                            {% endif %}
+                            Gestion Congés
+                        </li>
+                        <li class="mb-2">
+                            {% if plan.module_recrutement %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                                <i class="bi bi-x-circle text-danger"></i>
+                            {% endif %}
+                            Module Recrutement
+                        </li>
+                        <li class="mb-2">
+                            {% if plan.module_formation %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                                <i class="bi bi-x-circle text-danger"></i>
+                            {% endif %}
+                            Module Formation
+                        </li>
+                        <li class="mb-2">
+                            {% if plan.support_prioritaire %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                                <i class="bi bi-x-circle text-danger"></i>
+                            {% endif %}
+                            Support prioritaire
+                        </li>
+                    </ul>
+                    
+                    {% if plan.description %}
+                    <p class="text-muted small">{{ plan.description }}</p>
+                    {% endif %}
+                    
+                    <div class="mt-auto">
+                        {% if abonnement_actuel and abonnement_actuel.plan == plan and abonnement_actuel.est_actif %}
+                            <button class="btn btn-secondary w-100" disabled>
+                                <i class="bi bi-check-lg"></i> Plan actuel
+                            </button>
+                        {% elif plan.prix_mensuel == 0 %}
+                            <span class="btn btn-outline-success w-100">
+                                <i class="bi bi-check-lg"></i> Plan Gratuit Actif
+                            </span>
+                        {% else %}
+                            <a href="{% url 'payments:checkout' plan.slug %}" class="btn {% if plan.slug == 'premium' %}btn-primary{% else %}btn-outline-primary{% endif %} w-100">
+                                <i class="bi bi-cart-plus"></i> Choisir ce plan
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center">
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i> Aucun plan disponible pour le moment.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Méthodes de paiement -->
+    <div class="row mt-5">
+        <div class="col-12 text-center">
+            <h5 class="text-muted mb-3">Méthodes de paiement acceptées</h5>
+            <div class="d-flex justify-content-center gap-4 flex-wrap">
+                <div class="text-center">
+                    <img src="{% static 'img/orange-money.png' %}" alt="Orange Money" height="40" onerror="this.style.display='none'">
+                    <br><small class="text-muted">Orange Money</small>
+                </div>
+                <div class="text-center">
+                    <img src="{% static 'img/mtn-money.png' %}" alt="MTN Money" height="40" onerror="this.style.display='none'">
+                    <br><small class="text-muted">MTN Money</small>
+                </div>
+                <div class="text-center">
+                    <img src="{% static 'img/visa.png' %}" alt="Visa" height="40" onerror="this.style.display='none'">
+                    <br><small class="text-muted">Visa</small>
+                </div>
+                <div class="text-center">
+                    <img src="{% static 'img/mastercard.png' %}" alt="Mastercard" height="40" onerror="this.style.display='none'">
+                    <br><small class="text-muted">Mastercard</small>
+                </div>
+            </div>
+            <p class="mt-3 text-muted small">
+                <i class="bi bi-shield-check"></i> Paiements sécurisés via CinetPay
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

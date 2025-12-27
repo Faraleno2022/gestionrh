@@ -81,11 +81,20 @@ class Command(BaseCommand):
             {
                 'code': 'PLAFOND_CNSS',
                 'libelle': 'Plafond de cotisation CNSS',
-                'valeur': Decimal('3000000'),
+                'valeur': Decimal('2500000'),
                 'type_valeur': 'montant',
                 'categorie': 'cnss',
                 'unite': 'GNF',
-                'description': 'Plafond mensuel pour le calcul des cotisations CNSS'
+                'description': 'Plafond mensuel pour le calcul des cotisations CNSS (2 500 000 GNF)'
+            },
+            {
+                'code': 'PLANCHER_CNSS',
+                'libelle': 'Plancher de cotisation CNSS (SMIG)',
+                'valeur': Decimal('440000'),
+                'type_valeur': 'montant',
+                'categorie': 'cnss',
+                'unite': 'GNF',
+                'description': 'Plancher mensuel = SMIG (440 000 GNF) - assiette minimale de cotisation'
             },
             {
                 'code': 'TAUX_CNSS_EMPLOYE',
