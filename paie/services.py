@@ -374,10 +374,18 @@ class MoteurCalculPaie:
         plafond_cnss = self.constantes.get('PLAFOND_CNSS', Decimal('2500000'))
         
         # Appliquer plancher et plafond CNSS
-        # Si salaire < plancher : on cotise sur le plancher
-        # Si plancher <= salaire <= plafond : on cotise sur le salaire réel
-        # Si salaire > plafond : on cotise sur le plafond
-        base_cnss_plafonnee = max(min(base_cnss_gnf, plafond_cnss), plancher_cnss)
+        # IMPORTANT: Le plancher ne s'applique que si le salarié a effectivement travaillé
+        # Si salaire brut = 0 ou très faible (< 10% du plancher), pas de cotisation CNSS
+        # Sinon: Si salaire < plancher : on cotise sur le plancher
+        #        Si plancher <= salaire <= plafond : on cotise sur le salaire réel
+        #        Si salaire > plafond : on cotise sur le plafond
+        seuil_minimum = plancher_cnss * Decimal('0.10')  # 10% du plancher = 55 000 GNF
+        
+        if base_cnss_gnf < seuil_minimum:
+            # Pas de cotisation CNSS si le salaire est quasi nul (absence totale, congé sans solde)
+            base_cnss_plafonnee = Decimal('0')
+        else:
+            base_cnss_plafonnee = max(min(base_cnss_gnf, plafond_cnss), plancher_cnss)
         
         # CNSS salarié (utiliser TAUX_CNSS_EMPLOYE au lieu de TAUX_CNSS_SALARIE)
         taux_cnss = self.constantes.get('TAUX_CNSS_EMPLOYE', Decimal('5.00'))
