@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from .views_irpp import bareme_irpp
 from . import views_envoi
+from . import views_export
 
 app_name = 'paie'
 
@@ -63,4 +64,12 @@ urlpatterns = [
     path('echeances/', views.tableau_bord_echeances, name='tableau_bord_echeances'),
     path('echeances/<int:pk>/traiter/', views.marquer_alerte_traitee, name='marquer_alerte_traitee'),
     path('api/alertes-echeances/', views.api_alertes_echeances, name='api_alertes_echeances'),
+    
+    # Export CNSS
+    path('export/cnss/excel/', views_export.export_cnss_excel, name='export_cnss_excel'),
+    path('export/cnss/pdf/', views_export.export_cnss_pdf, name='export_cnss_pdf'),
+    
+    # Export DMU (Déclaration Mensuelle Unique)
+    path('export/dmu/excel/', views_export.export_dmu_excel, name='export_dmu_excel'),
+    path('export/dmu/pdf/', views_export.export_dmu_pdf, name='export_dmu_pdf'),
 ]
