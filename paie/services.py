@@ -147,19 +147,22 @@ class MoteurCalculPaie:
         self._calculer_autres_retenues()
         
         # 7. Calculer le net
-        self.montants['net'] = (
-            self.montants['brut'] - 
-            self.montants['total_retenues']
-        )
+        net_calcule = self.montants['brut'] - self.montants['total_retenues']
         
-        # 7.1 Vérification: Net négatif
-        if self.montants['net'] < 0:
+        # 7.1 Protection: Empêcher le net négatif
+        # Si les retenues dépassent le brut, on plafonne les retenues au brut
+        if net_calcule < 0:
             self.montants['alertes'].append({
                 'type': 'critique',
-                'message': f"Net à payer négatif ({self.montants['net']:,.0f} GNF). Les retenues ({self.montants['total_retenues']:,.0f} GNF) dépassent le brut ({self.montants['brut']:,.0f} GNF)."
+                'message': f"Net à payer serait négatif ({net_calcule:,.0f} GNF). Les retenues ({self.montants['total_retenues']:,.0f} GNF) dépassent le brut ({self.montants['brut']:,.0f} GNF). Retenues plafonnées."
             })
-            # Option: Plafonner les retenues pour éviter un net négatif
-            # self.montants['net'] = Decimal('0')
+            # Plafonner les retenues au montant du brut pour éviter un net négatif
+            self.montants['retenues_excessives'] = abs(net_calcule)
+            self.montants['total_retenues'] = self.montants['brut']
+            self.montants['net'] = Decimal('0')
+        else:
+            self.montants['retenues_excessives'] = Decimal('0')
+            self.montants['net'] = net_calcule
         
         return self.montants
     
