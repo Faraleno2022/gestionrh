@@ -36,6 +36,10 @@ class MoteurCalculPaie:
             'net': Decimal('0'),
             'total_gains': Decimal('0'),
             'total_retenues': Decimal('0'),
+            # Charges patronales supplémentaires
+            'versement_forfaitaire': Decimal('0'),  # VF 6%
+            'taxe_apprentissage': Decimal('0'),     # TA 1.5%
+            'total_charges_patronales': Decimal('0'),
             # Temps de travail
             'jours_travailles': Decimal('0'),
             'jours_ouvrables': Decimal('0'),
@@ -415,6 +419,25 @@ class MoteurCalculPaie:
         taux_cnss_pat = self.constantes.get('TAUX_CNSS_EMPLOYEUR', Decimal('18.00'))
         self.montants['cnss_employeur'] = self._arrondir(
             base_cnss_plafonnee * taux_cnss_pat / Decimal('100')
+        )
+        
+        # Versement Forfaitaire (VF) - 6% de la masse salariale (charge patronale)
+        taux_vf = self.constantes.get('TAUX_VF', Decimal('6.00'))
+        self.montants['versement_forfaitaire'] = self._arrondir(
+            self.montants['brut'] * taux_vf / Decimal('100')
+        )
+        
+        # Taxe d'Apprentissage - 1.5% de la masse salariale (charge patronale)
+        taux_ta = self.constantes.get('TAUX_TAXE_APPRENTISSAGE', Decimal('1.50'))
+        self.montants['taxe_apprentissage'] = self._arrondir(
+            self.montants['brut'] * taux_ta / Decimal('100')
+        )
+        
+        # Total charges patronales
+        self.montants['total_charges_patronales'] = (
+            self.montants['cnss_employeur'] +
+            self.montants['versement_forfaitaire'] +
+            self.montants['taxe_apprentissage']
         )
         
         # Autres cotisations (mutuelle, retraite complémentaire, etc.)

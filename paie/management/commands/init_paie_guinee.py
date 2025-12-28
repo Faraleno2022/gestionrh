@@ -135,6 +135,26 @@ class Command(BaseCommand):
                 'description': 'Taux de cotisation INAM'
             },
             
+            # Charges patronales supplémentaires
+            {
+                'code': 'TAUX_VF',
+                'libelle': 'Versement Forfaitaire (VF)',
+                'valeur': Decimal('6.00'),
+                'type_valeur': 'pourcentage',
+                'categorie': 'general',
+                'unite': '%',
+                'description': 'Versement Forfaitaire - impôt sur la masse salariale à charge de l\'employeur'
+            },
+            {
+                'code': 'TAUX_TAXE_APPRENTISSAGE',
+                'libelle': 'Taxe d\'Apprentissage',
+                'valeur': Decimal('1.50'),
+                'type_valeur': 'pourcentage',
+                'categorie': 'general',
+                'unite': '%',
+                'description': 'Taxe d\'apprentissage à charge de l\'employeur (1.5% de la masse salariale)'
+            },
+            
             # Temps de travail
             {
                 'code': 'JOURS_MOIS',
@@ -180,8 +200,17 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f'  ⚠ {const_data["code"]} déjà existant'))
 
     def creer_tranches_irg(self):
-        """Créer les tranches du barème IRG 2025"""
-        self.stdout.write('📊 Création des tranches IRG...')
+        """Créer les tranches du barème RTS (Retenue sur Traitements et Salaires) 2022+
+        
+        Barème officiel depuis 2022 (Code Général des Impôts modifié):
+        - 0 à 1 000 000 GNF : 0%
+        - 1 000 001 à 3 000 000 GNF : 5%
+        - 3 000 001 à 5 000 000 GNF : 8% (nouvelle tranche ajoutée en 2022)
+        - 5 000 001 à 10 000 000 GNF : 10%
+        - 10 000 001 à 20 000 000 GNF : 15%
+        - Plus de 20 000 000 GNF : 20%
+        """
+        self.stdout.write('📊 Création des tranches RTS (IRG)...')
         
         tranches = [
             {
@@ -199,26 +228,26 @@ class Command(BaseCommand):
             {
                 'numero_tranche': 3,
                 'borne_inferieure': Decimal('3000001'),
-                'borne_superieure': Decimal('6000000'),
-                'taux_irg': Decimal('10.00'),
+                'borne_superieure': Decimal('5000000'),
+                'taux_irg': Decimal('8.00'),  # Nouvelle tranche depuis 2022
             },
             {
                 'numero_tranche': 4,
-                'borne_inferieure': Decimal('6000001'),
-                'borne_superieure': Decimal('12000000'),
-                'taux_irg': Decimal('15.00'),
+                'borne_inferieure': Decimal('5000001'),
+                'borne_superieure': Decimal('10000000'),
+                'taux_irg': Decimal('10.00'),
             },
             {
                 'numero_tranche': 5,
-                'borne_inferieure': Decimal('12000001'),
-                'borne_superieure': Decimal('25000000'),
-                'taux_irg': Decimal('20.00'),
+                'borne_inferieure': Decimal('10000001'),
+                'borne_superieure': Decimal('20000000'),
+                'taux_irg': Decimal('15.00'),
             },
             {
                 'numero_tranche': 6,
-                'borne_inferieure': Decimal('25000001'),
+                'borne_inferieure': Decimal('20000001'),
                 'borne_superieure': None,  # Illimité
-                'taux_irg': Decimal('25.00'),
+                'taux_irg': Decimal('20.00'),
             },
         ]
         
