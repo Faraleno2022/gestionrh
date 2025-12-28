@@ -155,6 +155,17 @@ class Command(BaseCommand):
                 'description': 'Taxe d\'apprentissage à charge de l\'employeur (1.5% de la masse salariale)'
             },
             
+            # Exonération RTS stagiaires/apprentis
+            {
+                'code': 'SEUIL_EXON_STAGIAIRE',
+                'libelle': 'Seuil exonération RTS stagiaires/apprentis',
+                'valeur': Decimal('1200000'),
+                'type_valeur': 'montant',
+                'categorie': 'rts',
+                'unite': 'GNF',
+                'description': 'Seuil d\'exonération RTS pour stagiaires et apprentis (≤ 1 200 000 GNF/mois pendant 12 mois max)'
+            },
+            
             # Temps de travail
             {
                 'code': 'JOURS_MOIS',

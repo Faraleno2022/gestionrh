@@ -40,6 +40,9 @@ class MoteurCalculPaie:
             'versement_forfaitaire': Decimal('0'),  # VF 6%
             'taxe_apprentissage': Decimal('0'),     # TA 1.5%
             'total_charges_patronales': Decimal('0'),
+            # Exonération RTS stagiaires/apprentis
+            'exoneration_rts': False,
+            'raison_exoneration_rts': '',
             # Temps de travail
             'jours_travailles': Decimal('0'),
             'jours_ouvrables': Decimal('0'),
@@ -472,11 +475,11 @@ class MoteurCalculPaie:
             self.montants['total_retenues'] += montant
     
     def _calculer_irg(self):
-        """Calculer l'IRG/IRSA selon le barème progressif"""
+        """Calculer l'IRG/RTS selon le barème progressif"""
         # Base imposable = imposable - CNSS - autres déductions
         base_imposable = self.montants['imposable'] - self.montants['cnss_employe']
         
-        # Convertir en GNF si nécessaire (l'IRG est toujours calculé en GNF)
+        # Convertir en GNF si nécessaire (la RTS est toujours calculée en GNF)
         if self.devise_employe != self.devise_base:
             base_imposable = DeviseService.convertir_vers_gnf(
                 base_imposable, 
@@ -484,22 +487,32 @@ class MoteurCalculPaie:
                 self.date_conversion
             )
         
-        # Appliquer déductions familiales
-        deductions = self._calculer_deductions_familiales()
-        base_imposable -= deductions
+        # Vérifier exonération RTS pour stagiaires/apprentis
+        exoneration_rts, raison_exoneration = self._verifier_exoneration_rts_stagiaire()
         
-        # Appliquer abattements professionnels
-        abattement = self._calculer_abattement_professionnel(base_imposable)
-        base_imposable -= abattement
-        
-        # Calculer IRG progressif
-        irg_brut = self._calculer_irg_progressif(base_imposable)
-        
-        # Appliquer crédits d'impôt
-        credits = self._calculer_credits_impot()
-        irg_net = max(Decimal('0'), irg_brut - credits)
-        
-        self.montants['irg'] = self._arrondir(irg_net)
+        if exoneration_rts:
+            # Stagiaire/apprenti exonéré de RTS
+            self.montants['irg'] = Decimal('0')
+            self.montants['exoneration_rts'] = True
+            self.montants['raison_exoneration_rts'] = raison_exoneration
+        else:
+            # Appliquer déductions familiales
+            deductions = self._calculer_deductions_familiales()
+            base_imposable -= deductions
+            
+            # Appliquer abattements professionnels
+            abattement = self._calculer_abattement_professionnel(base_imposable)
+            base_imposable -= abattement
+            
+            # Calculer RTS progressif
+            irg_brut = self._calculer_irg_progressif(base_imposable)
+            
+            # Appliquer crédits d'impôt
+            credits = self._calculer_credits_impot()
+            irg_net = max(Decimal('0'), irg_brut - credits)
+            
+            self.montants['irg'] = self._arrondir(irg_net)
+            self.montants['exoneration_rts'] = False
         self.montants['total_retenues'] += self.montants['irg']
         
         # Ajouter ligne IRG
@@ -518,6 +531,50 @@ class MoteurCalculPaie:
                 'montant': self.montants['irg'],
                 'ordre': rubrique_irg.ordre_affichage
             })
+    
+    def _verifier_exoneration_rts_stagiaire(self):
+        """
+        Vérifie si l'employé est éligible à l'exonération RTS pour stagiaires/apprentis.
+        
+        Conditions (législation guinéenne):
+        - Type de contrat: Stage ou Apprentissage
+        - Durée: Maximum 12 mois depuis le début du contrat
+        - Indemnité: ≤ 1 200 000 GNF/mois
+        
+        Returns:
+            tuple: (exonere: bool, raison: str)
+        """
+        from datetime import date
+        
+        # Seuil d'exonération pour stagiaires/apprentis (depuis constantes ou défaut)
+        SEUIL_EXONERATION = self.constantes.get('SEUIL_EXON_STAGIAIRE', Decimal('1200000'))
+        
+        # Vérifier si l'employé est stagiaire ou apprenti
+        if not hasattr(self.employe, 'est_stagiaire_ou_apprenti') or not self.employe.est_stagiaire_ou_apprenti:
+            return False, "Non stagiaire/apprenti"
+        
+        # Vérifier l'éligibilité (durée max 12 mois)
+        date_calcul = date(self.periode.annee, self.periode.mois, 1)
+        eligible, raison = self.employe.est_eligible_exoneration_rts(date_calcul)
+        
+        if not eligible:
+            return False, raison
+        
+        # Vérifier le montant de l'indemnité (≤ 1 200 000 GNF)
+        salaire_brut = self.montants['brut']
+        
+        # Convertir en GNF si nécessaire
+        if self.devise_employe != self.devise_base:
+            salaire_brut = DeviseService.convertir_vers_gnf(
+                salaire_brut, 
+                self.devise_employe, 
+                self.date_conversion
+            )
+        
+        if salaire_brut > SEUIL_EXONERATION:
+            return False, f"Indemnité {salaire_brut:,.0f} GNF > seuil {SEUIL_EXONERATION:,.0f} GNF"
+        
+        return True, f"Exonéré RTS: {raison} - Indemnité ≤ {SEUIL_EXONERATION:,.0f} GNF"
     
     def _calculer_deductions_familiales(self):
         """Calculer les déductions familiales selon la législation guinéenne"""

@@ -44,6 +44,11 @@ class Command(BaseCommand):
         tests_reussis += r4
         total_tests += t4
         
+        # Test 5: Exonération RTS stagiaires/apprentis
+        r5, t5 = self.test_exoneration_stagiaire()
+        tests_reussis += r5
+        total_tests += t5
+        
         # Résumé
         self.stdout.write('')
         self.stdout.write('=' * 70)
@@ -303,3 +308,56 @@ class Command(BaseCommand):
         self.stdout.write(f'     Coût total employeur:{salaire_brut + total_charges:>12,.0f} GNF')
         
         return tests_ok, total_tests
+
+    def test_exoneration_stagiaire(self):
+        """Test de l'exonération RTS pour stagiaires/apprentis"""
+        self.stdout.write('\n📊 TEST 5: EXONÉRATION RTS STAGIAIRES/APPRENTIS')
+        self.stdout.write('-' * 50)
+        
+        SEUIL_EXONERATION = Decimal('1200000')
+        
+        tests = [
+            # (type_contrat, salaire_brut, mois_ecoules, exonere_attendu, description)
+            ('stage', Decimal('800000'), 3, True, 'Stagiaire 800K, 3 mois'),
+            ('stage', Decimal('1200000'), 6, True, 'Stagiaire 1.2M (seuil), 6 mois'),
+            ('stage', Decimal('1500000'), 3, False, 'Stagiaire 1.5M > seuil'),
+            ('stage', Decimal('800000'), 15, False, 'Stagiaire 800K, 15 mois > 12'),
+            ('apprentissage', Decimal('900000'), 8, True, 'Apprenti 900K, 8 mois'),
+            ('apprentissage', Decimal('1200000'), 12, True, 'Apprenti 1.2M, 12 mois (limite)'),
+            ('apprentissage', Decimal('1200001'), 6, False, 'Apprenti 1.2M+1 > seuil'),
+            ('CDI', Decimal('800000'), 3, False, 'CDI non éligible'),
+            ('CDD', Decimal('900000'), 6, False, 'CDD non éligible'),
+        ]
+        
+        reussis = 0
+        for type_contrat, salaire, mois, exonere_attendu, desc in tests:
+            # Simuler la vérification d'exonération
+            est_stagiaire_apprenti = type_contrat in ('stage', 'apprentissage')
+            duree_ok = mois <= 12
+            montant_ok = salaire <= SEUIL_EXONERATION
+            
+            exonere = est_stagiaire_apprenti and duree_ok and montant_ok
+            
+            ok = (exonere == exonere_attendu)
+            
+            status = "EXONÉRÉ" if exonere else "IMPOSABLE"
+            status_att = "EXONÉRÉ" if exonere_attendu else "IMPOSABLE"
+            
+            if ok:
+                self.stdout.write(self.style.SUCCESS(
+                    f'  ✓ {desc} → {status}'
+                ))
+                reussis += 1
+            else:
+                self.stdout.write(self.style.ERROR(
+                    f'  ✗ {desc} → {status} (attendu {status_att})'
+                ))
+        
+        # Afficher les règles
+        self.stdout.write('')
+        self.stdout.write('  📋 RÈGLES D\'EXONÉRATION RTS:')
+        self.stdout.write(f'     - Type contrat: Stage ou Apprentissage')
+        self.stdout.write(f'     - Durée max: 12 mois')
+        self.stdout.write(f'     - Indemnité max: {SEUIL_EXONERATION:,.0f} GNF/mois')
+        
+        return reussis, len(tests)
