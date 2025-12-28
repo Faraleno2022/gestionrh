@@ -90,11 +90,11 @@ class Command(BaseCommand):
             {
                 'code': 'PLANCHER_CNSS',
                 'libelle': 'Plancher de cotisation CNSS (SMIG)',
-                'valeur': Decimal('440000'),
+                'valeur': Decimal('550000'),
                 'type_valeur': 'montant',
                 'categorie': 'cnss',
                 'unite': 'GNF',
-                'description': 'Plancher mensuel = SMIG (440 000 GNF) - assiette minimale de cotisation'
+                'description': 'Plancher mensuel = SMIG (550 000 GNF) - assiette minimale de cotisation'
             },
             {
                 'code': 'TAUX_CNSS_EMPLOYE',
