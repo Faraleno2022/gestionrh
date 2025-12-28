@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import views_hs
+from . import views_absence
 
 app_name = 'temps_travail'
 
@@ -40,4 +41,15 @@ urlpatterns = [
     path('heures-sup/<int:pk>/rejeter/', views_hs.rejeter_heure_supplementaire, name='rejeter_heure_supplementaire'),
     path('heures-sup/<int:pk>/supprimer/', views_hs.supprimer_heure_supplementaire, name='supprimer_heure_supplementaire'),
     path('heures-sup/recap/', views_hs.recap_heures_supplementaires, name='recap_heures_supplementaires'),
+    
+    # Gestion des absences (nouveau système)
+    path('gestion-absences/', views_absence.liste_absences, name='liste_absences'),
+    path('gestion-absences/declarer/', views_absence.declarer_absence, name='declarer_absence'),
+    path('gestion-absences/<int:pk>/', views_absence.detail_absence, name='detail_absence'),
+    path('gestion-absences/<int:pk>/justifier/', views_absence.justifier_absence, name='justifier_absence'),
+    path('gestion-absences/<int:pk>/non-justifiee/', views_absence.marquer_non_justifiee, name='marquer_non_justifiee'),
+    path('gestion-absences/<int:pk>/prolonger/', views_absence.prolonger_absence, name='prolonger_absence'),
+    path('gestion-absences/<int:pk>/supprimer/', views_absence.supprimer_absence, name='supprimer_absence'),
+    path('gestion-absences/recap/', views_absence.recap_absences, name='recap_absences'),
+    path('gestion-absences/calendrier/', views_absence.calendrier_absences, name='calendrier_absences'),
 ]
