@@ -146,7 +146,7 @@ class Command(BaseCommand):
                 'description': 'Versement Forfaitaire - impôt sur la masse salariale à charge de l\'employeur'
             },
             {
-                'code': 'TAUX_TAXE_APPRENTISSAGE',
+                'code': 'TAUX_TA',
                 'libelle': 'Taxe d\'Apprentissage',
                 'valeur': Decimal('1.50'),
                 'type_valeur': 'pourcentage',

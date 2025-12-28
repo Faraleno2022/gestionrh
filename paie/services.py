@@ -428,7 +428,7 @@ class MoteurCalculPaie:
         )
         
         # Taxe d'Apprentissage - 1.5% de la masse salariale (charge patronale)
-        taux_ta = self.constantes.get('TAUX_TAXE_APPRENTISSAGE', Decimal('1.50'))
+        taux_ta = self.constantes.get('TAUX_TA', Decimal('1.50'))
         self.montants['taxe_apprentissage'] = self._arrondir(
             self.montants['brut'] * taux_ta / Decimal('100')
         )
