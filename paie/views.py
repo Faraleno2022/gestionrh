@@ -1724,3 +1724,161 @@ def attestation_salaire(request, employe_id):
     }
     
     return render(request, 'paie/attestation_salaire.html', context)
+
+
+@login_required
+@entreprise_active_required
+def simulation_paie(request):
+    """Simulateur de paie - Calcul sans enregistrement"""
+    entreprise = request.user.entreprise
+    resultat = None
+    employe_selectionne = None
+    
+    # Liste des employés actifs
+    employes = Employe.objects.filter(
+        entreprise=entreprise,
+        statut_employe='actif'
+    ).order_by('nom', 'prenoms')
+    
+    if request.method == 'POST':
+        employe_id = request.POST.get('employe')
+        salaire_base = request.POST.get('salaire_base', '0')
+        
+        # Récupérer les primes/indemnités du formulaire
+        prime_transport = request.POST.get('prime_transport', '0')
+        prime_logement = request.POST.get('prime_logement', '0')
+        prime_panier = request.POST.get('prime_panier', '0')
+        prime_anciennete = request.POST.get('prime_anciennete', '0')
+        prime_responsabilite = request.POST.get('prime_responsabilite', '0')
+        autres_primes = request.POST.get('autres_primes', '0')
+        
+        # Convertir en Decimal
+        try:
+            salaire_base = Decimal(salaire_base.replace(' ', '').replace(',', '.'))
+            prime_transport = Decimal(prime_transport.replace(' ', '').replace(',', '.') or '0')
+            prime_logement = Decimal(prime_logement.replace(' ', '').replace(',', '.') or '0')
+            prime_panier = Decimal(prime_panier.replace(' ', '').replace(',', '.') or '0')
+            prime_anciennete = Decimal(prime_anciennete.replace(' ', '').replace(',', '.') or '0')
+            prime_responsabilite = Decimal(prime_responsabilite.replace(' ', '').replace(',', '.') or '0')
+            autres_primes = Decimal(autres_primes.replace(' ', '').replace(',', '.') or '0')
+        except:
+            messages.error(request, "Erreur dans les montants saisis")
+            return redirect('paie:simulation_paie')
+        
+        # Calculer le brut
+        salaire_brut = (salaire_base + prime_transport + prime_logement + 
+                       prime_panier + prime_anciennete + prime_responsabilite + autres_primes)
+        
+        # Récupérer les constantes
+        plancher_cnss = Decimal('550000')
+        plafond_cnss = Decimal('2500000')
+        taux_cnss_employe = Decimal('5')
+        taux_cnss_employeur = Decimal('18')
+        taux_vf = Decimal('6')
+        taux_ta = Decimal('1.5')
+        
+        try:
+            const = Constante.objects.filter(code='PLANCHER_CNSS', actif=True).first()
+            if const: plancher_cnss = const.valeur
+            const = Constante.objects.filter(code='PLAFOND_CNSS', actif=True).first()
+            if const: plafond_cnss = const.valeur
+        except:
+            pass
+        
+        # Calcul CNSS
+        assiette_cnss = min(max(salaire_brut, plancher_cnss), plafond_cnss)
+        cnss_employe = (assiette_cnss * taux_cnss_employe / Decimal('100')).quantize(Decimal('1'))
+        cnss_employeur = (assiette_cnss * taux_cnss_employeur / Decimal('100')).quantize(Decimal('1'))
+        
+        # Vérifier plafond 25% indemnités
+        total_indemnites = prime_transport + prime_logement + prime_panier
+        plafond_indemnites = salaire_brut * Decimal('0.25')
+        exces_indemnites = max(Decimal('0'), total_indemnites - plafond_indemnites)
+        
+        # Base imposable RTS
+        base_imposable = salaire_brut - cnss_employe + exces_indemnites
+        
+        # Calcul RTS par tranches
+        tranches_rts = [
+            (Decimal('0'), Decimal('1000000'), Decimal('0')),
+            (Decimal('1000001'), Decimal('3000000'), Decimal('5')),
+            (Decimal('3000001'), Decimal('5000000'), Decimal('8')),
+            (Decimal('5000001'), Decimal('10000000'), Decimal('10')),
+            (Decimal('10000001'), Decimal('20000000'), Decimal('15')),
+            (Decimal('20000001'), None, Decimal('20')),
+        ]
+        
+        rts = Decimal('0')
+        detail_rts = []
+        reste = base_imposable
+        
+        for borne_inf, borne_sup, taux in tranches_rts:
+            if reste <= 0:
+                break
+            if borne_sup:
+                montant_tranche = min(reste, borne_sup - borne_inf + 1)
+            else:
+                montant_tranche = reste
+            
+            if base_imposable >= borne_inf:
+                impot_tranche = (montant_tranche * taux / Decimal('100')).quantize(Decimal('1'))
+                rts += impot_tranche
+                if montant_tranche > 0:
+                    detail_rts.append({
+                        'borne_inf': borne_inf,
+                        'borne_sup': borne_sup,
+                        'taux': taux,
+                        'montant': montant_tranche,
+                        'impot': impot_tranche,
+                    })
+                reste -= montant_tranche
+        
+        # Charges patronales
+        vf = (salaire_brut * taux_vf / Decimal('100')).quantize(Decimal('1'))
+        ta = (salaire_brut * taux_ta / Decimal('100')).quantize(Decimal('1'))
+        
+        # Totaux
+        total_retenues = cnss_employe + rts
+        net_a_payer = salaire_brut - total_retenues
+        total_charges_patronales = cnss_employeur + vf + ta
+        cout_total_employeur = salaire_brut + total_charges_patronales
+        
+        # Employé sélectionné
+        if employe_id:
+            employe_selectionne = Employe.objects.filter(pk=employe_id).first()
+        
+        resultat = {
+            'salaire_base': salaire_base,
+            'prime_transport': prime_transport,
+            'prime_logement': prime_logement,
+            'prime_panier': prime_panier,
+            'prime_anciennete': prime_anciennete,
+            'prime_responsabilite': prime_responsabilite,
+            'autres_primes': autres_primes,
+            'salaire_brut': salaire_brut,
+            'assiette_cnss': assiette_cnss,
+            'cnss_employe': cnss_employe,
+            'cnss_employeur': cnss_employeur,
+            'total_indemnites': total_indemnites,
+            'plafond_indemnites': plafond_indemnites,
+            'exces_indemnites': exces_indemnites,
+            'base_imposable': base_imposable,
+            'rts': rts,
+            'detail_rts': detail_rts,
+            'vf': vf,
+            'ta': ta,
+            'total_retenues': total_retenues,
+            'net_a_payer': net_a_payer,
+            'total_charges_patronales': total_charges_patronales,
+            'cout_total_employeur': cout_total_employeur,
+            'taux_cnss_employe': taux_cnss_employe,
+            'taux_cnss_employeur': taux_cnss_employeur,
+            'taux_vf': taux_vf,
+            'taux_ta': taux_ta,
+        }
+    
+    return render(request, 'paie/simulation_paie.html', {
+        'employes': employes,
+        'resultat': resultat,
+        'employe_selectionne': employe_selectionne,
+    })
