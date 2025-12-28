@@ -77,4 +77,7 @@ urlpatterns = [
     path('historique/', views.historique_bulletins, name='historique_bulletins'),
     path('historique/telecharger-masse/', views.telecharger_bulletins_masse, name='telecharger_bulletins_masse'),
     path('attestation/<int:employe_id>/', views.attestation_salaire, name='attestation_salaire'),
+    
+    # Simulation de paie
+    path('simulation/', views.simulation_paie, name='simulation_paie'),
 ]
