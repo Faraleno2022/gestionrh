@@ -107,6 +107,9 @@ class MoteurCalculPaie:
     def calculer_bulletin(self):
         """Calculer le bulletin de paie complet"""
         
+        # Initialiser les alertes
+        self.montants['alertes'] = []
+        
         # 0. Calculer le temps de travail (pointages, absences, congés)
         self._calculer_temps_travail()
         
@@ -118,6 +121,21 @@ class MoteurCalculPaie:
         
         # 3. Calculer le brut
         self.montants['brut'] = self.montants['total_gains'] - self.montants['retenue_absence']
+        
+        # 3.1 Vérification: Salaire brut très faible ou nul
+        plancher_cnss = self.constantes.get('PLANCHER_CNSS', Decimal('550000'))
+        seuil_minimum = plancher_cnss * Decimal('0.10')  # 10% du plancher = 55 000 GNF
+        
+        if self.montants['brut'] <= 0:
+            self.montants['alertes'].append({
+                'type': 'critique',
+                'message': f"Salaire brut nul ou négatif ({self.montants['brut']:,.0f} GNF). Vérifiez les éléments de salaire."
+            })
+        elif self.montants['brut'] < seuil_minimum:
+            self.montants['alertes'].append({
+                'type': 'avertissement',
+                'message': f"Salaire brut très faible ({self.montants['brut']:,.0f} GNF < {seuil_minimum:,.0f} GNF). Pas de cotisation CNSS calculée."
+            })
         
         # 4. Calculer les cotisations sociales
         self._calculer_cotisations_sociales()
@@ -133,6 +151,15 @@ class MoteurCalculPaie:
             self.montants['brut'] - 
             self.montants['total_retenues']
         )
+        
+        # 7.1 Vérification: Net négatif
+        if self.montants['net'] < 0:
+            self.montants['alertes'].append({
+                'type': 'critique',
+                'message': f"Net à payer négatif ({self.montants['net']:,.0f} GNF). Les retenues ({self.montants['total_retenues']:,.0f} GNF) dépassent le brut ({self.montants['brut']:,.0f} GNF)."
+            })
+            # Option: Plafonner les retenues pour éviter un net négatif
+            # self.montants['net'] = Decimal('0')
         
         return self.montants
     

@@ -1785,10 +1785,31 @@ def simulation_paie(request):
         except:
             pass
         
-        # Calcul CNSS
-        assiette_cnss = min(max(salaire_brut, plancher_cnss), plafond_cnss)
-        cnss_employe = (assiette_cnss * taux_cnss_employe / Decimal('100')).quantize(Decimal('1'))
-        cnss_employeur = (assiette_cnss * taux_cnss_employeur / Decimal('100')).quantize(Decimal('1'))
+        # Calcul CNSS avec vérification du seuil minimum
+        # Si salaire brut < 10% du plancher (55 000 GNF), pas de cotisation CNSS
+        seuil_minimum_cnss = plancher_cnss * Decimal('0.10')
+        alertes = []
+        
+        if salaire_brut <= 0:
+            assiette_cnss = Decimal('0')
+            cnss_employe = Decimal('0')
+            cnss_employeur = Decimal('0')
+            alertes.append({
+                'type': 'critique',
+                'message': f"Salaire brut nul ou négatif ({salaire_brut:,.0f} GNF). Vérifiez les éléments de salaire."
+            })
+        elif salaire_brut < seuil_minimum_cnss:
+            assiette_cnss = Decimal('0')
+            cnss_employe = Decimal('0')
+            cnss_employeur = Decimal('0')
+            alertes.append({
+                'type': 'avertissement',
+                'message': f"Salaire brut très faible ({salaire_brut:,.0f} GNF < {seuil_minimum_cnss:,.0f} GNF). Pas de cotisation CNSS calculée."
+            })
+        else:
+            assiette_cnss = min(max(salaire_brut, plancher_cnss), plafond_cnss)
+            cnss_employe = (assiette_cnss * taux_cnss_employe / Decimal('100')).quantize(Decimal('1'))
+            cnss_employeur = (assiette_cnss * taux_cnss_employeur / Decimal('100')).quantize(Decimal('1'))
         
         # Vérifier plafond 25% indemnités
         total_indemnites = prime_transport + prime_logement + prime_panier
@@ -1843,6 +1864,13 @@ def simulation_paie(request):
         total_charges_patronales = cnss_employeur + vf + ta
         cout_total_employeur = salaire_brut + total_charges_patronales
         
+        # Vérification: Net négatif
+        if net_a_payer < 0:
+            alertes.append({
+                'type': 'critique',
+                'message': f"Net à payer négatif ({net_a_payer:,.0f} GNF). Les retenues ({total_retenues:,.0f} GNF) dépassent le brut ({salaire_brut:,.0f} GNF)."
+            })
+        
         # Employé sélectionné
         if employe_id:
             employe_selectionne = Employe.objects.filter(pk=employe_id).first()
@@ -1875,6 +1903,8 @@ def simulation_paie(request):
             'taux_cnss_employeur': taux_cnss_employeur,
             'taux_vf': taux_vf,
             'taux_ta': taux_ta,
+            'alertes': alertes,
+            'seuil_minimum_cnss': seuil_minimum_cnss,
         }
     
     return render(request, 'paie/simulation_paie.html', {
