@@ -12,7 +12,7 @@ import json
 from .models import (
     PeriodePaie, BulletinPaie, LigneBulletin, RubriquePaie,
     ElementSalaire, CumulPaie, HistoriquePaie, Constante, TrancheIRG,
-    ParametrePaie, AlerteEcheance
+    ParametrePaie, AlerteEcheance, ArchiveBulletin
 )
 from employes.models import Employe
 from .services import MoteurCalculPaie
@@ -1571,3 +1571,156 @@ def api_alertes_echeances(request):
     }
     
     return JsonResponse(data)
+
+
+@login_required
+@entreprise_active_required
+def historique_bulletins(request):
+    """Historique des bulletins de paie avec recherche"""
+    entreprise = request.user.entreprise
+    
+    # Filtres
+    annee = request.GET.get('annee', date.today().year)
+    mois = request.GET.get('mois', '')
+    employe_id = request.GET.get('employe', '')
+    recherche = request.GET.get('q', '')
+    
+    # Base query
+    bulletins = BulletinPaie.objects.filter(
+        employe__entreprise=entreprise,
+        statut_bulletin__in=['valide', 'paye']
+    ).select_related('employe', 'periode')
+    
+    # Appliquer les filtres
+    if annee:
+        bulletins = bulletins.filter(periode__annee=int(annee))
+    if mois:
+        bulletins = bulletins.filter(periode__mois=int(mois))
+    if employe_id:
+        bulletins = bulletins.filter(employe_id=employe_id)
+    if recherche:
+        bulletins = bulletins.filter(
+            Q(employe__nom__icontains=recherche) |
+            Q(employe__prenoms__icontains=recherche) |
+            Q(employe__matricule__icontains=recherche) |
+            Q(numero_bulletin__icontains=recherche)
+        )
+    
+    bulletins = bulletins.order_by('-periode__annee', '-periode__mois', 'employe__nom')
+    
+    # Pagination
+    from django.core.paginator import Paginator
+    paginator = Paginator(bulletins, 25)
+    page = request.GET.get('page', 1)
+    bulletins_page = paginator.get_page(page)
+    
+    # Statistiques
+    stats = {
+        'total_bulletins': bulletins.count(),
+        'total_brut': bulletins.aggregate(Sum('salaire_brut'))['salaire_brut__sum'] or 0,
+        'total_net': bulletins.aggregate(Sum('net_a_payer'))['net_a_payer__sum'] or 0,
+    }
+    
+    # Listes pour les filtres
+    annees = PeriodePaie.objects.filter(
+        entreprise=entreprise
+    ).values_list('annee', flat=True).distinct().order_by('-annee')
+    
+    employes = Employe.objects.filter(
+        entreprise=entreprise,
+        statut_employe='actif'
+    ).order_by('nom', 'prenoms')
+    
+    return render(request, 'paie/historique_bulletins.html', {
+        'bulletins': bulletins_page,
+        'stats': stats,
+        'annees': annees,
+        'employes': employes,
+        'annee_selectionnee': int(annee) if annee else None,
+        'mois_selectionne': int(mois) if mois else None,
+        'employe_selectionne': int(employe_id) if employe_id else None,
+        'recherche': recherche,
+    })
+
+
+@login_required
+@entreprise_active_required
+def telecharger_bulletins_masse(request):
+    """Télécharge plusieurs bulletins en ZIP"""
+    import zipfile
+    import io
+    
+    entreprise = request.user.entreprise
+    annee = request.GET.get('annee')
+    mois = request.GET.get('mois')
+    
+    if not annee or not mois:
+        messages.error(request, "Veuillez sélectionner une année et un mois")
+        return redirect('paie:historique_bulletins')
+    
+    bulletins = BulletinPaie.objects.filter(
+        employe__entreprise=entreprise,
+        periode__annee=int(annee),
+        periode__mois=int(mois),
+        statut_bulletin__in=['valide', 'paye']
+    ).select_related('employe', 'periode')
+    
+    if not bulletins.exists():
+        messages.warning(request, "Aucun bulletin trouvé pour cette période")
+        return redirect('paie:historique_bulletins')
+    
+    # Créer le ZIP en mémoire
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for bulletin in bulletins:
+            # Générer le PDF du bulletin
+            from .utils import generer_bulletin_pdf
+            try:
+                pdf_content = generer_bulletin_pdf(bulletin)
+                filename = f"Bulletin_{bulletin.employe.matricule}_{annee}_{mois:02d}.pdf"
+                zip_file.writestr(filename, pdf_content)
+            except Exception as e:
+                continue
+    
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer.read(), content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="Bulletins_{annee}_{mois:02d}.zip"'
+    return response
+
+
+@login_required
+@entreprise_active_required
+def attestation_salaire(request, employe_id):
+    """Génère une attestation de salaire pour un employé"""
+    employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
+    
+    # Récupérer les 12 derniers bulletins
+    bulletins = BulletinPaie.objects.filter(
+        employe=employe,
+        statut_bulletin__in=['valide', 'paye']
+    ).order_by('-periode__annee', '-periode__mois')[:12]
+    
+    if not bulletins:
+        messages.warning(request, "Aucun bulletin trouvé pour cet employé")
+        return redirect('paie:historique_bulletins')
+    
+    # Calculer les moyennes
+    from django.db.models import Avg
+    stats = bulletins.aggregate(
+        salaire_moyen=Avg('salaire_brut'),
+        net_moyen=Avg('net_a_payer'),
+    )
+    
+    dernier_bulletin = bulletins.first()
+    
+    context = {
+        'employe': employe,
+        'bulletins': bulletins,
+        'stats': stats,
+        'dernier_bulletin': dernier_bulletin,
+        'date_attestation': date.today(),
+        'entreprise': request.user.entreprise,
+    }
+    
+    return render(request, 'paie/attestation_salaire.html', context)
