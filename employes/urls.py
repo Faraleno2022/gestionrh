@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import views_evaluation
 from . import views_mission
+from . import views_reclamation
 
 app_name = 'employes'
 
@@ -62,4 +63,18 @@ urlpatterns = [
     path('missions/<int:pk>/avance/', views_mission.accorder_avance, name='accorder_avance'),
     path('missions/recap/', views_mission.recap_missions, name='recap_missions'),
     path('missions/baremes/', views_mission.gestion_baremes_indemnites, name='gestion_baremes_indemnites'),
+    
+    # Réclamations
+    path('reclamations/', views_reclamation.liste_reclamations, name='liste_reclamations'),
+    path('reclamations/creer/', views_reclamation.creer_reclamation, name='creer_reclamation'),
+    path('reclamations/<int:pk>/', views_reclamation.detail_reclamation, name='detail_reclamation'),
+    path('reclamations/<int:pk>/prendre-en-charge/', views_reclamation.prendre_en_charge, name='prendre_en_charge'),
+    path('reclamations/<int:pk>/assigner/', views_reclamation.assigner_reclamation, name='assigner_reclamation'),
+    path('reclamations/<int:pk>/commentaire/', views_reclamation.ajouter_commentaire, name='ajouter_commentaire'),
+    path('reclamations/<int:pk>/resoudre/', views_reclamation.resoudre_reclamation, name='resoudre_reclamation'),
+    path('reclamations/<int:pk>/rejeter/', views_reclamation.rejeter_reclamation, name='rejeter_reclamation'),
+    path('reclamations/<int:pk>/fermer/', views_reclamation.fermer_reclamation, name='fermer_reclamation'),
+    path('reclamations/<int:pk>/satisfaction/', views_reclamation.noter_satisfaction, name='noter_satisfaction'),
+    path('reclamations/recap/', views_reclamation.recap_reclamations, name='recap_reclamations'),
+    path('reclamations/categories/', views_reclamation.gestion_categories_reclamations, name='gestion_categories_reclamations'),
 ]

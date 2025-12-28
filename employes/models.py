@@ -742,3 +742,6 @@ from .models_evaluation import CampagneEvaluation, Evaluation, ObjectifEvaluatio
 
 # Import des modèles de mission
 from .models_mission import Mission, FraisMission, BaremeIndemnite
+
+# Import des modèles de réclamation
+from .models_reclamation import CategorieReclamation, Reclamation, CommentaireReclamation
