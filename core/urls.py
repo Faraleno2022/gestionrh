@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from .views_modules import cnss, expatries, inspection
+from . import views_dashboard
 
 app_name = 'core'
 
@@ -64,4 +65,7 @@ urlpatterns = [
     path('inspection/visites/<int:pk>/', inspection.visite_detail, name='visite_detail'),
     path('inspection/checklist/', inspection.checklist_conformite, name='checklist_conformite'),
     path('inspection/rapport/', inspection.generer_rapport_conformite, name='generer_rapport'),
+    
+    # Tableau de bord RH
+    path('dashboard-rh/', views_dashboard.tableau_bord_rh, name='tableau_bord_rh'),
 ]
