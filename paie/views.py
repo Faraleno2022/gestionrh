@@ -1863,13 +1863,17 @@ def simulation_paie(request):
         net_a_payer = salaire_brut - total_retenues
         total_charges_patronales = cnss_employeur + vf + ta
         cout_total_employeur = salaire_brut + total_charges_patronales
+        retenues_excessives = Decimal('0')
         
-        # Vérification: Net négatif
+        # Protection: Empêcher le net négatif
         if net_a_payer < 0:
             alertes.append({
                 'type': 'critique',
-                'message': f"Net à payer négatif ({net_a_payer:,.0f} GNF). Les retenues ({total_retenues:,.0f} GNF) dépassent le brut ({salaire_brut:,.0f} GNF)."
+                'message': f"Net à payer serait négatif ({net_a_payer:,.0f} GNF). Les retenues ({total_retenues:,.0f} GNF) dépassent le brut ({salaire_brut:,.0f} GNF). Retenues plafonnées."
             })
+            retenues_excessives = abs(net_a_payer)
+            total_retenues = salaire_brut
+            net_a_payer = Decimal('0')
         
         # Employé sélectionné
         if employe_id:
@@ -1905,6 +1909,7 @@ def simulation_paie(request):
             'taux_ta': taux_ta,
             'alertes': alertes,
             'seuil_minimum_cnss': seuil_minimum_cnss,
+            'retenues_excessives': retenues_excessives,
         }
     
     return render(request, 'paie/simulation_paie.html', {
