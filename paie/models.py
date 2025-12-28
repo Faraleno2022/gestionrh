@@ -745,3 +745,41 @@ class AlerteEcheance(models.Model):
             alertes_creees.append(alerte)
         
         return alertes_creees
+
+
+class ArchiveBulletin(models.Model):
+    """Archive des bulletins de paie en PDF - Conservation légale 10 ans"""
+    bulletin = models.OneToOneField(BulletinPaie, on_delete=models.CASCADE, related_name='archive')
+    
+    # Fichier PDF
+    fichier_pdf = models.FileField(upload_to='archives/bulletins/%Y/%m/', help_text='Bulletin PDF archivé')
+    taille_fichier = models.IntegerField(default=0, help_text='Taille en octets')
+    hash_fichier = models.CharField(max_length=64, blank=True, help_text='SHA256 pour vérification intégrité')
+    
+    # Métadonnées
+    employe_matricule = models.CharField(max_length=20)
+    employe_nom = models.CharField(max_length=200)
+    periode_annee = models.IntegerField()
+    periode_mois = models.IntegerField()
+    montant_net = models.DecimalField(max_digits=15, decimal_places=2)
+    
+    # Dates
+    date_generation = models.DateTimeField(auto_now_add=True)
+    date_archivage = models.DateTimeField(auto_now_add=True)
+    
+    # Accès
+    nombre_telechargements = models.IntegerField(default=0)
+    dernier_telechargement = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'archives_bulletins'
+        verbose_name = 'Archive bulletin'
+        verbose_name_plural = 'Archives bulletins'
+        ordering = ['-periode_annee', '-periode_mois', 'employe_nom']
+        indexes = [
+            models.Index(fields=['employe_matricule', 'periode_annee', 'periode_mois']),
+            models.Index(fields=['periode_annee', 'periode_mois']),
+        ]
+    
+    def __str__(self):
+        return f"{self.employe_matricule} - {self.periode_mois:02d}/{self.periode_annee}"
