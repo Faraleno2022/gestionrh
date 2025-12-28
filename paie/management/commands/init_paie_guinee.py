@@ -166,6 +166,17 @@ class Command(BaseCommand):
                 'description': 'Seuil d\'exonération RTS pour stagiaires et apprentis (≤ 1 200 000 GNF/mois pendant 12 mois max)'
             },
             
+            # Plafond indemnités forfaitaires
+            {
+                'code': 'PLAFOND_INDEMNITES_PCT',
+                'libelle': 'Plafond indemnités forfaitaires',
+                'valeur': Decimal('25'),
+                'type_valeur': 'pourcentage',
+                'categorie': 'rts',
+                'unite': '%',
+                'description': 'Plafond des indemnités forfaitaires exonérées (logement, transport, panier) = 25% du salaire brut'
+            },
+            
             # Temps de travail
             {
                 'code': 'JOURS_MOIS',

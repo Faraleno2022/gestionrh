@@ -49,6 +49,11 @@ class Command(BaseCommand):
         tests_reussis += r5
         total_tests += t5
         
+        # Test 6: Plafond 25% indemnités forfaitaires
+        r6, t6 = self.test_plafond_indemnites()
+        tests_reussis += r6
+        total_tests += t6
+        
         # Résumé
         self.stdout.write('')
         self.stdout.write('=' * 70)
@@ -359,5 +364,61 @@ class Command(BaseCommand):
         self.stdout.write(f'     - Type contrat: Stage ou Apprentissage')
         self.stdout.write(f'     - Durée max: 12 mois')
         self.stdout.write(f'     - Indemnité max: {SEUIL_EXONERATION:,.0f} GNF/mois')
+        
+        return reussis, len(tests)
+
+    def test_plafond_indemnites(self):
+        """Test du plafond 25% pour les indemnités forfaitaires"""
+        self.stdout.write('\n📊 TEST 6: PLAFOND 25% INDEMNITÉS FORFAITAIRES')
+        self.stdout.write('-' * 50)
+        
+        TAUX_PLAFOND = Decimal('25')
+        
+        tests = [
+            # (salaire_brut, indemnites_forfaitaires, depassement_attendu, reintegration_attendue, description)
+            (Decimal('2000000'), Decimal('400000'), Decimal('0'), Decimal('0'), 'Indemnités 400K = 20% < 25%'),
+            (Decimal('2000000'), Decimal('500000'), Decimal('0'), Decimal('0'), 'Indemnités 500K = 25% (limite)'),
+            (Decimal('2000000'), Decimal('600000'), Decimal('100000'), Decimal('100000'), 'Indemnités 600K = 30% > 25%'),
+            (Decimal('4000000'), Decimal('800000'), Decimal('0'), Decimal('0'), 'Indemnités 800K = 20% < 25%'),
+            (Decimal('4000000'), Decimal('1200000'), Decimal('200000'), Decimal('200000'), 'Indemnités 1.2M = 30% > 25%'),
+            (Decimal('1000000'), Decimal('300000'), Decimal('50000'), Decimal('50000'), 'Indemnités 300K = 30% > 25%'),
+        ]
+        
+        reussis = 0
+        for brut, indemnites, depassement_att, reintegration_att, desc in tests:
+            # Calculer le plafond (25% du brut)
+            plafond = self._arrondir(brut * TAUX_PLAFOND / Decimal('100'))
+            
+            # Calculer le dépassement
+            if indemnites > plafond:
+                depassement = indemnites - plafond
+                reintegration = depassement
+            else:
+                depassement = Decimal('0')
+                reintegration = Decimal('0')
+            
+            ok = (depassement == depassement_att and reintegration == reintegration_att)
+            
+            if ok:
+                if depassement > 0:
+                    self.stdout.write(self.style.WARNING(
+                        f'  ✓ {desc} → Dépassement {depassement:,.0f} GNF réintégré'
+                    ))
+                else:
+                    self.stdout.write(self.style.SUCCESS(
+                        f'  ✓ {desc} → OK (pas de dépassement)'
+                    ))
+                reussis += 1
+            else:
+                self.stdout.write(self.style.ERROR(
+                    f'  ✗ {desc} → Dépassement {depassement:,.0f} (attendu {depassement_att:,.0f})'
+                ))
+        
+        # Afficher les règles
+        self.stdout.write('')
+        self.stdout.write('  📋 RÈGLES PLAFOND INDEMNITÉS:')
+        self.stdout.write(f'     - Indemnités concernées: logement, transport, panier')
+        self.stdout.write(f'     - Plafond: 25% du salaire brut')
+        self.stdout.write(f'     - Excédent: réintégré dans la base imposable RTS')
         
         return reussis, len(tests)
