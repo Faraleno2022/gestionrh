@@ -43,6 +43,11 @@ class MoteurCalculPaie:
             # Exonération RTS stagiaires/apprentis
             'exoneration_rts': False,
             'raison_exoneration_rts': '',
+            # Plafond 25% indemnités forfaitaires
+            'indemnites_forfaitaires': Decimal('0'),
+            'plafond_indemnites': Decimal('0'),
+            'depassement_plafond_indemnites': Decimal('0'),
+            'reintegration_base_imposable': Decimal('0'),
             # Temps de travail
             'jours_travailles': Decimal('0'),
             'jours_ouvrables': Decimal('0'),
@@ -282,6 +287,9 @@ class MoteurCalculPaie:
         
         # Ajouter les heures supplémentaires si présentes
         self._calculer_heures_supplementaires()
+        
+        # Vérifier le plafond 25% des indemnités forfaitaires
+        self._verifier_plafond_indemnites_forfaitaires()
     
     def _calculer_element(self, element):
         """Calculer le montant d'un élément"""
@@ -355,6 +363,62 @@ class MoteurCalculPaie:
                     'montant': montant_hs,
                     'ordre': rubrique_hs.ordre_affichage
                 })
+    
+    def _verifier_plafond_indemnites_forfaitaires(self):
+        """
+        Vérifie le plafond de 25% pour les indemnités forfaitaires exonérées.
+        
+        Selon la législation guinéenne, les indemnités forfaitaires (logement, transport, panier)
+        sont exonérées de RTS dans la limite de 25% du salaire brut.
+        Au-delà, l'excédent est réintégré dans la base imposable.
+        
+        Rubriques concernées:
+        - PRIME_TRANSPORT, ALLOC_TRANSPORT
+        - ALLOC_LOGEMENT
+        - IND_REPAS, IND_REPAS_JOUR (panier)
+        """
+        # Codes des rubriques d'indemnités forfaitaires exonérées
+        CODES_INDEMNITES_FORFAITAIRES = [
+            'PRIME_TRANSPORT', 'ALLOC_TRANSPORT',
+            'ALLOC_LOGEMENT', 'IND_LOGEMENT',
+            'IND_REPAS', 'IND_REPAS_JOUR', 'PRIME_PANIER',
+        ]
+        
+        # Taux plafond (25% du brut)
+        TAUX_PLAFOND = self.constantes.get('PLAFOND_INDEMNITES_PCT', Decimal('25'))
+        
+        # Calculer le total des indemnités forfaitaires
+        total_indemnites = Decimal('0')
+        for ligne in self.lignes:
+            code = ligne['rubrique'].code_rubrique
+            if code in CODES_INDEMNITES_FORFAITAIRES:
+                total_indemnites += ligne['montant']
+        
+        self.montants['indemnites_forfaitaires'] = total_indemnites
+        
+        # Calculer le plafond (25% du brut)
+        # Le brut ici = total_gains (avant application du plafond)
+        plafond = self._arrondir(self.montants['total_gains'] * TAUX_PLAFOND / Decimal('100'))
+        self.montants['plafond_indemnites'] = plafond
+        
+        # Vérifier le dépassement
+        if total_indemnites > plafond:
+            depassement = total_indemnites - plafond
+            self.montants['depassement_plafond_indemnites'] = depassement
+            
+            # Réintégrer l'excédent dans la base imposable
+            self.montants['reintegration_base_imposable'] = depassement
+            self.montants['imposable'] += depassement
+            
+            # Ajouter une alerte dans les montants
+            self.montants['alerte_plafond_indemnites'] = (
+                f"⚠️ Indemnités forfaitaires ({total_indemnites:,.0f} GNF) dépassent le plafond 25% "
+                f"({plafond:,.0f} GNF). Excédent de {depassement:,.0f} GNF réintégré dans la base imposable."
+            )
+        else:
+            self.montants['depassement_plafond_indemnites'] = Decimal('0')
+            self.montants['reintegration_base_imposable'] = Decimal('0')
+            self.montants['alerte_plafond_indemnites'] = ''
     
     def _calculer_cotisations_sociales(self):
         """Calculer les cotisations sociales (CNSS, etc.)
