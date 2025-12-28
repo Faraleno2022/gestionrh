@@ -786,3 +786,7 @@ class ArchiveBulletin(models.Model):
     
     def __str__(self):
         return f"{self.employe_matricule} - {self.periode_mois:02d}/{self.periode_annee}"
+
+
+# Import des modèles de frais
+from .models_frais import CategoriesFrais, NoteFrais, LigneFrais, BaremeFrais

@@ -1,5 +1,9 @@
 from django.urls import path
 from . import views
+from . import views_evaluation
+from . import views_mission
+from . import views_reclamation
+from . import views_medical
 
 app_name = 'employes'
 
@@ -32,4 +36,55 @@ urlpatterns = [
     path('<int:employe_id>/sanctions/create/', views.sanction_create, name='sanction_create'),
     path('sanctions/<int:pk>/', views.sanction_detail, name='sanction_detail'),
     path('sanctions/<int:pk>/delete/', views.sanction_delete, name='sanction_delete'),
+    
+    # Campagnes d'évaluation de performance
+    path('campagnes/', views_evaluation.liste_campagnes, name='liste_campagnes'),
+    path('campagnes/creer/', views_evaluation.creer_campagne, name='creer_campagne'),
+    path('campagnes/<int:pk>/', views_evaluation.detail_campagne, name='detail_campagne'),
+    path('campagnes/<int:pk>/lancer/', views_evaluation.lancer_campagne, name='lancer_campagne'),
+    path('campagnes/synthese/', views_evaluation.synthese_evaluations, name='synthese_evaluations'),
+    
+    # Évaluations de performance (nouveau système)
+    path('performance/<int:pk>/', views_evaluation.detail_evaluation, name='detail_evaluation_perf'),
+    path('performance/<int:pk>/modifier/', views_evaluation.modifier_evaluation, name='modifier_evaluation'),
+    path('performance/<int:evaluation_id>/objectif/', views_evaluation.ajouter_objectif, name='ajouter_objectif'),
+    path('performance/objectif/<int:pk>/evaluer/', views_evaluation.evaluer_objectif, name='evaluer_objectif'),
+    path('performance/<int:evaluation_id>/competence/', views_evaluation.ajouter_competence, name='ajouter_competence'),
+    
+    # Missions et déplacements
+    path('missions/', views_mission.liste_missions, name='liste_missions'),
+    path('missions/creer/', views_mission.creer_mission, name='creer_mission'),
+    path('missions/<int:pk>/', views_mission.detail_mission, name='detail_mission'),
+    path('missions/<int:pk>/modifier/', views_mission.modifier_mission, name='modifier_mission'),
+    path('missions/<int:pk>/demarrer/', views_mission.demarrer_mission, name='demarrer_mission'),
+    path('missions/<int:pk>/terminer/', views_mission.terminer_mission, name='terminer_mission'),
+    path('missions/<int:pk>/annuler/', views_mission.annuler_mission, name='annuler_mission'),
+    path('missions/<int:pk>/frais/', views_mission.ajouter_frais_mission, name='ajouter_frais_mission'),
+    path('missions/<int:pk>/frais/<int:frais_pk>/supprimer/', views_mission.supprimer_frais_mission, name='supprimer_frais_mission'),
+    path('missions/<int:pk>/avance/', views_mission.accorder_avance, name='accorder_avance'),
+    path('missions/recap/', views_mission.recap_missions, name='recap_missions'),
+    path('missions/baremes/', views_mission.gestion_baremes_indemnites, name='gestion_baremes_indemnites'),
+    
+    # Réclamations
+    path('reclamations/', views_reclamation.liste_reclamations, name='liste_reclamations'),
+    path('reclamations/creer/', views_reclamation.creer_reclamation, name='creer_reclamation'),
+    path('reclamations/<int:pk>/', views_reclamation.detail_reclamation, name='detail_reclamation'),
+    path('reclamations/<int:pk>/prendre-en-charge/', views_reclamation.prendre_en_charge, name='prendre_en_charge'),
+    path('reclamations/<int:pk>/assigner/', views_reclamation.assigner_reclamation, name='assigner_reclamation'),
+    path('reclamations/<int:pk>/commentaire/', views_reclamation.ajouter_commentaire, name='ajouter_commentaire'),
+    path('reclamations/<int:pk>/resoudre/', views_reclamation.resoudre_reclamation, name='resoudre_reclamation'),
+    path('reclamations/<int:pk>/rejeter/', views_reclamation.rejeter_reclamation, name='rejeter_reclamation'),
+    path('reclamations/<int:pk>/fermer/', views_reclamation.fermer_reclamation, name='fermer_reclamation'),
+    path('reclamations/<int:pk>/satisfaction/', views_reclamation.noter_satisfaction, name='noter_satisfaction'),
+    path('reclamations/recap/', views_reclamation.recap_reclamations, name='recap_reclamations'),
+    path('reclamations/categories/', views_reclamation.gestion_categories_reclamations, name='gestion_categories_reclamations'),
+    
+    # Visites médicales
+    path('medical/', views_medical.liste_visites_medicales, name='liste_visites_medicales'),
+    path('medical/planifier/', views_medical.planifier_visite, name='planifier_visite'),
+    path('medical/<int:pk>/', views_medical.detail_visite, name='detail_visite'),
+    path('medical/<int:pk>/resultat/', views_medical.enregistrer_resultat, name='enregistrer_resultat'),
+    path('medical/<int:pk>/supprimer/', views_medical.supprimer_visite, name='supprimer_visite'),
+    path('medical/tableau-bord/', views_medical.tableau_bord_medical, name='tableau_bord_medical'),
+    path('medical/employe/<int:employe_id>/', views_medical.suivi_medical_employe, name='suivi_medical_employe'),
 ]

@@ -4,6 +4,7 @@ from .views_irpp import bareme_irpp
 from . import views_envoi
 from . import views_export
 from . import views_pret
+from . import views_frais
 
 app_name = 'paie'
 
@@ -90,4 +91,17 @@ urlpatterns = [
     path('prets/<int:pk>/rejeter/', views_pret.rejeter_pret, name='rejeter_pret'),
     path('prets/<int:pk>/rembourser/', views_pret.enregistrer_remboursement, name='enregistrer_remboursement'),
     path('prets/a-prelever/', views_pret.prets_a_prelever, name='prets_a_prelever'),
+    
+    # Notes de frais
+    path('frais/', views_frais.liste_notes_frais, name='liste_notes_frais'),
+    path('frais/creer/', views_frais.creer_note_frais, name='creer_note_frais'),
+    path('frais/<int:pk>/', views_frais.detail_note_frais, name='detail_note_frais'),
+    path('frais/<int:pk>/ajouter-ligne/', views_frais.ajouter_ligne_frais, name='ajouter_ligne_frais'),
+    path('frais/<int:pk>/supprimer-ligne/<int:ligne_pk>/', views_frais.supprimer_ligne_frais, name='supprimer_ligne_frais'),
+    path('frais/<int:pk>/soumettre/', views_frais.soumettre_note_frais, name='soumettre_note_frais'),
+    path('frais/<int:pk>/valider/', views_frais.valider_note_frais, name='valider_note_frais'),
+    path('frais/<int:pk>/rembourser/', views_frais.rembourser_note_frais, name='rembourser_note_frais'),
+    path('frais/<int:pk>/supprimer/', views_frais.supprimer_note_frais, name='supprimer_note_frais'),
+    path('frais/recap/', views_frais.recap_frais, name='recap_frais'),
+    path('frais/categories/', views_frais.gestion_categories_frais, name='gestion_categories_frais'),
 ]

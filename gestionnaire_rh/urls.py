@@ -16,6 +16,7 @@ urlpatterns = [
     path('recrutement/', include('recrutement.urls')),
     path('formation/', include('formation.urls')),
     path('payments/', include('payments.urls')),
+    path('portail/', include('portail.urls')),
     # path('api/', include('api.urls')),  # TODO: Create api app
 ]
 

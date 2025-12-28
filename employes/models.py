@@ -735,3 +735,14 @@ class EquipementProtection(models.Model):
     
     def __str__(self):
         return f"{self.employe.nom_complet} - {self.get_type_epi_display()}"
+
+
+# Import des modèles d'évaluation
+from .models_evaluation import CampagneEvaluation, Evaluation, ObjectifEvaluation, CompetenceEvaluation
+
+# Import des modèles de mission
+from .models_mission import Mission, FraisMission, BaremeIndemnite
+
+# Import des modèles de réclamation
+from .models_reclamation import CategorieReclamation, Reclamation, CommentaireReclamation
+
