@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import views_hs
 from . import views_absence
+from . import views_portail_conge
 
 app_name = 'temps_travail'
 
@@ -52,4 +53,11 @@ urlpatterns = [
     path('gestion-absences/<int:pk>/supprimer/', views_absence.supprimer_absence, name='supprimer_absence'),
     path('gestion-absences/recap/', views_absence.recap_absences, name='recap_absences'),
     path('gestion-absences/calendrier/', views_absence.calendrier_absences, name='calendrier_absences'),
+    
+    # Portail employé - Congés
+    path('mes-conges/', views_portail_conge.mes_conges, name='mes_conges'),
+    path('mes-conges/demander/', views_portail_conge.demander_conge, name='demander_conge'),
+    path('mes-conges/<int:pk>/', views_portail_conge.detail_ma_demande, name='detail_ma_demande'),
+    path('mes-conges/<int:pk>/annuler/', views_portail_conge.annuler_ma_demande, name='annuler_ma_demande'),
+    path('mes-conges/solde/', views_portail_conge.mon_solde_conges, name='mon_solde_conges'),
 ]
