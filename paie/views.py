@@ -1103,7 +1103,7 @@ def declarations_sociales(request):
     
     # Récupérer les constantes CNSS (plancher et plafond)
     from .models import Constante
-    plancher_cnss = Constante.objects.filter(code='SMIG', actif=True).first()
+    plancher_cnss = Constante.objects.filter(code='PLANCHER_CNSS', actif=True).first()
     plafond_cnss = Constante.objects.filter(code='PLAFOND_CNSS', actif=True).first()
     taux_cnss_employe = Constante.objects.filter(code='TAUX_CNSS_EMPLOYE', actif=True).first()
     taux_cnss_employeur = Constante.objects.filter(code='TAUX_CNSS_EMPLOYEUR', actif=True).first()
