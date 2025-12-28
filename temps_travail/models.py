@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from decimal import Decimal
 from employes.models import Employe
 from core.models import Entreprise
 
@@ -304,6 +305,83 @@ class ReglementationTemps(models.Model):
     
     def __str__(self):
         return f"Réglementation {self.annee}"
+
+
+class HeureSupplementaire(models.Model):
+    """
+    Heures supplémentaires selon le Code du Travail guinéen.
+    
+    Taux de majoration:
+    - Jour (1-8h après 40h/semaine): 15% (ancien) ou 25% (nouveau)
+    - Jour (>8h): 50%
+    - Nuit (21h-5h): 50%
+    - Dimanche/Férié jour: 75%
+    - Dimanche/Férié nuit: 100%
+    """
+    TYPES_HS = (
+        ('jour_15', 'Jour +15% (1-8h)'),
+        ('jour_25', 'Jour +25% (1-8h)'),
+        ('jour_50', 'Jour +50% (>8h)'),
+        ('nuit_50', 'Nuit +50%'),
+        ('dimanche_75', 'Dimanche/Férié +75%'),
+        ('dimanche_nuit_100', 'Dimanche/Férié nuit +100%'),
+    )
+    
+    STATUTS = (
+        ('en_attente', 'En attente'),
+        ('valide', 'Validé'),
+        ('rejete', 'Rejeté'),
+        ('paye', 'Payé'),
+    )
+    
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='heures_supplementaires')
+    date_hs = models.DateField(help_text="Date des heures supplémentaires")
+    type_hs = models.CharField(max_length=20, choices=TYPES_HS, default='jour_25')
+    nombre_heures = models.DecimalField(max_digits=5, decimal_places=2, help_text="Nombre d'heures")
+    taux_majoration = models.DecimalField(max_digits=5, decimal_places=2, help_text="Taux de majoration en %")
+    taux_horaire_base = models.DecimalField(max_digits=15, decimal_places=2, help_text="Taux horaire de base")
+    montant_hs = models.DecimalField(max_digits=15, decimal_places=2, help_text="Montant calculé")
+    
+    motif = models.TextField(blank=True, help_text="Motif des heures supplémentaires")
+    statut = models.CharField(max_length=20, choices=STATUTS, default='en_attente')
+    
+    # Validation
+    valideur = models.ForeignKey(Employe, on_delete=models.SET_NULL, null=True, blank=True, related_name='hs_validees')
+    date_validation = models.DateTimeField(null=True, blank=True)
+    
+    # Paiement
+    bulletin = models.ForeignKey('paie.BulletinPaie', on_delete=models.SET_NULL, null=True, blank=True, related_name='heures_sup')
+    
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'heures_supplementaires'
+        verbose_name = 'Heure supplémentaire'
+        verbose_name_plural = 'Heures supplémentaires'
+        ordering = ['-date_hs', 'employe']
+    
+    def __str__(self):
+        return f"{self.employe.matricule} - {self.date_hs} - {self.nombre_heures}h ({self.get_type_hs_display()})"
+    
+    def calculer_montant(self):
+        """Calcule le montant des heures supplémentaires"""
+        majoration = 1 + (self.taux_majoration / 100)
+        self.montant_hs = (self.taux_horaire_base * self.nombre_heures * majoration).quantize(Decimal('1'))
+        return self.montant_hs
+    
+    @classmethod
+    def get_taux_majoration(cls, type_hs):
+        """Retourne le taux de majoration selon le type"""
+        taux = {
+            'jour_15': Decimal('15'),
+            'jour_25': Decimal('25'),
+            'jour_50': Decimal('50'),
+            'nuit_50': Decimal('50'),
+            'dimanche_75': Decimal('75'),
+            'dimanche_nuit_100': Decimal('100'),
+        }
+        return taux.get(type_hs, Decimal('25'))
 
 
 class DroitConge(models.Model):

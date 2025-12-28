@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import views_hs
 
 app_name = 'temps_travail'
 
@@ -31,4 +32,12 @@ urlpatterns = [
     # Rapports
     path('rapports/presence/', views.rapport_presence, name='rapport_presence'),
     path('rapports/heures-supplementaires/', views.rapport_heures_supplementaires, name='rapport_heures_supplementaires'),
+    
+    # Heures supplémentaires (gestion)
+    path('heures-sup/', views_hs.liste_heures_supplementaires, name='liste_heures_supplementaires'),
+    path('heures-sup/ajouter/', views_hs.ajouter_heure_supplementaire, name='ajouter_heure_supplementaire'),
+    path('heures-sup/<int:pk>/valider/', views_hs.valider_heure_supplementaire, name='valider_heure_supplementaire'),
+    path('heures-sup/<int:pk>/rejeter/', views_hs.rejeter_heure_supplementaire, name='rejeter_heure_supplementaire'),
+    path('heures-sup/<int:pk>/supprimer/', views_hs.supprimer_heure_supplementaire, name='supprimer_heure_supplementaire'),
+    path('heures-sup/recap/', views_hs.recap_heures_supplementaires, name='recap_heures_supplementaires'),
 ]
