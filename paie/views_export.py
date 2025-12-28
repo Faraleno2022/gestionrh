@@ -40,16 +40,25 @@ except ImportError:
 
 def get_declarations_data(entreprise, annee, mois=None):
     """Récupère les données pour les déclarations sociales"""
-    # Filtrer les bulletins
-    bulletins_filter = {
-        'periode__annee': annee,
-        'statut_bulletin__in': ['valide', 'paye'],
-        'employe__entreprise': entreprise,
-    }
-    if mois:
-        bulletins_filter['periode__mois'] = mois
+    from django.db.models import Q
     
-    bulletins = BulletinPaie.objects.filter(**bulletins_filter).select_related('employe', 'periode')
+    # Filtrer les périodes de l'entreprise
+    periodes = PeriodePaie.objects.filter(entreprise=entreprise, annee=annee)
+    if mois:
+        periodes = periodes.filter(mois=mois)
+    
+    # Filtrer les bulletins (inclure calcule, valide et paye)
+    # Accepter les bulletins liés à une période OU directement par annee_paie/mois_paie
+    bulletins_filter = Q(periode__in=periodes) | Q(annee_paie=annee)
+    if mois:
+        bulletins_filter = Q(periode__in=periodes) | Q(annee_paie=annee, mois_paie=mois)
+    
+    bulletins = BulletinPaie.objects.filter(
+        bulletins_filter,
+        statut_bulletin__in=['calcule', 'valide', 'paye'],
+    ).filter(
+        Q(employe__entreprise=entreprise) | Q(employe__entreprise__isnull=True)
+    ).select_related('employe', 'periode')
     
     # Récupérer les constantes
     def get_constante(code, default):
