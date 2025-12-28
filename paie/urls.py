@@ -3,6 +3,7 @@ from . import views
 from .views_irpp import bareme_irpp
 from . import views_envoi
 from . import views_export
+from . import views_pret
 
 app_name = 'paie'
 
@@ -80,4 +81,13 @@ urlpatterns = [
     
     # Simulation de paie
     path('simulation/', views.simulation_paie, name='simulation_paie'),
+    
+    # Gestion des prêts
+    path('prets/', views_pret.liste_prets, name='liste_prets'),
+    path('prets/creer/', views_pret.creer_pret, name='creer_pret'),
+    path('prets/<int:pk>/', views_pret.detail_pret, name='detail_pret'),
+    path('prets/<int:pk>/approuver/', views_pret.approuver_pret, name='approuver_pret'),
+    path('prets/<int:pk>/rejeter/', views_pret.rejeter_pret, name='rejeter_pret'),
+    path('prets/<int:pk>/rembourser/', views_pret.enregistrer_remboursement, name='enregistrer_remboursement'),
+    path('prets/a-prelever/', views_pret.prets_a_prelever, name='prets_a_prelever'),
 ]
