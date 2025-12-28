@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import views_evaluation
 
 app_name = 'employes'
 
@@ -32,4 +33,18 @@ urlpatterns = [
     path('<int:employe_id>/sanctions/create/', views.sanction_create, name='sanction_create'),
     path('sanctions/<int:pk>/', views.sanction_detail, name='sanction_detail'),
     path('sanctions/<int:pk>/delete/', views.sanction_delete, name='sanction_delete'),
+    
+    # Campagnes d'évaluation de performance
+    path('campagnes/', views_evaluation.liste_campagnes, name='liste_campagnes'),
+    path('campagnes/creer/', views_evaluation.creer_campagne, name='creer_campagne'),
+    path('campagnes/<int:pk>/', views_evaluation.detail_campagne, name='detail_campagne'),
+    path('campagnes/<int:pk>/lancer/', views_evaluation.lancer_campagne, name='lancer_campagne'),
+    path('campagnes/synthese/', views_evaluation.synthese_evaluations, name='synthese_evaluations'),
+    
+    # Évaluations de performance (nouveau système)
+    path('performance/<int:pk>/', views_evaluation.detail_evaluation, name='detail_evaluation_perf'),
+    path('performance/<int:pk>/modifier/', views_evaluation.modifier_evaluation, name='modifier_evaluation'),
+    path('performance/<int:evaluation_id>/objectif/', views_evaluation.ajouter_objectif, name='ajouter_objectif'),
+    path('performance/objectif/<int:pk>/evaluer/', views_evaluation.evaluer_objectif, name='evaluer_objectif'),
+    path('performance/<int:evaluation_id>/competence/', views_evaluation.ajouter_competence, name='ajouter_competence'),
 ]
