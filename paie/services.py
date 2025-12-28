@@ -424,7 +424,7 @@ class MoteurCalculPaie:
         """Calculer les cotisations sociales (CNSS, etc.)
         
         Règles CNSS Guinée:
-        - Plancher: SMIG (440 000 GNF) - on cotise au minimum sur ce montant
+        - Plancher: SMIG (550 000 GNF) - on cotise au minimum sur ce montant
         - Plafond: 2 500 000 GNF - on cotise au maximum sur ce montant
         - Taux employé: 5% (retraite 2.5% + assurance maladie 2.5%)
         - Taux employeur: 18% (prestations familiales 6% + AT/MP 4% + retraite 4% + maladie 4%)

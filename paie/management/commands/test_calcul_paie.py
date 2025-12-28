@@ -117,7 +117,7 @@ class Command(BaseCommand):
         
         # 1. Calcul CNSS employé (5% avec plancher SMIG et plafond 2,500,000)
         # Règles CNSS Guinée:
-        # - Plancher: SMIG (440 000 GNF) - on cotise au minimum sur ce montant
+        # - Plancher: SMIG (550 000 GNF) - on cotise au minimum sur ce montant
         # - Plafond: 2 500 000 GNF - on cotise au maximum sur ce montant
         plancher_cnss = Decimal('550000')  # Plancher CNSS
         plafond_cnss = Decimal('2500000')

@@ -2,7 +2,7 @@
 Commande pour mettre à jour les constantes CNSS selon la réglementation guinéenne.
 
 Règles CNSS Guinée:
-- Plancher: SMIG (440 000 GNF) - assiette minimale de cotisation
+- Plancher: SMIG (550 000 GNF) - assiette minimale de cotisation
 - Plafond: 2 500 000 GNF - assiette maximale de cotisation
 - Taux employé: 5% (retraite 2.5% + assurance maladie 2.5%)
 - Taux employeur: 18% (prestations familiales 6% + AT/MP 4% + retraite 4% + maladie 4%)

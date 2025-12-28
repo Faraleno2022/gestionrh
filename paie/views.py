@@ -1115,7 +1115,7 @@ def declarations_sociales(request):
         'cotisation_employe': bulletins.aggregate(Sum('cnss_employe'))['cnss_employe__sum'] or 0,
         'cotisation_employeur': bulletins.aggregate(Sum('cnss_employeur'))['cnss_employeur__sum'] or 0,
         # Informations sur plancher et plafond
-        'plancher': plancher_cnss.valeur if plancher_cnss else Decimal('440000'),
+        'plancher': plancher_cnss.valeur if plancher_cnss else Decimal('550000'),
         'plafond': plafond_cnss.valeur if plafond_cnss else Decimal('2500000'),
         'taux_employe': taux_cnss_employe.valeur if taux_cnss_employe else Decimal('5.00'),
         'taux_employeur': taux_cnss_employeur.valeur if taux_cnss_employeur else Decimal('18.00'),
