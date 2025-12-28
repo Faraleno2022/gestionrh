@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import views_evaluation
+from . import views_mission
 
 app_name = 'employes'
 
@@ -47,4 +48,18 @@ urlpatterns = [
     path('performance/<int:evaluation_id>/objectif/', views_evaluation.ajouter_objectif, name='ajouter_objectif'),
     path('performance/objectif/<int:pk>/evaluer/', views_evaluation.evaluer_objectif, name='evaluer_objectif'),
     path('performance/<int:evaluation_id>/competence/', views_evaluation.ajouter_competence, name='ajouter_competence'),
+    
+    # Missions et déplacements
+    path('missions/', views_mission.liste_missions, name='liste_missions'),
+    path('missions/creer/', views_mission.creer_mission, name='creer_mission'),
+    path('missions/<int:pk>/', views_mission.detail_mission, name='detail_mission'),
+    path('missions/<int:pk>/modifier/', views_mission.modifier_mission, name='modifier_mission'),
+    path('missions/<int:pk>/demarrer/', views_mission.demarrer_mission, name='demarrer_mission'),
+    path('missions/<int:pk>/terminer/', views_mission.terminer_mission, name='terminer_mission'),
+    path('missions/<int:pk>/annuler/', views_mission.annuler_mission, name='annuler_mission'),
+    path('missions/<int:pk>/frais/', views_mission.ajouter_frais_mission, name='ajouter_frais_mission'),
+    path('missions/<int:pk>/frais/<int:frais_pk>/supprimer/', views_mission.supprimer_frais_mission, name='supprimer_frais_mission'),
+    path('missions/<int:pk>/avance/', views_mission.accorder_avance, name='accorder_avance'),
+    path('missions/recap/', views_mission.recap_missions, name='recap_missions'),
+    path('missions/baremes/', views_mission.gestion_baremes_indemnites, name='gestion_baremes_indemnites'),
 ]

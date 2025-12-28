@@ -739,3 +739,6 @@ class EquipementProtection(models.Model):
 
 # Import des modèles d'évaluation
 from .models_evaluation import CampagneEvaluation, Evaluation, ObjectifEvaluation, CompetenceEvaluation
+
+# Import des modèles de mission
+from .models_mission import Mission, FraisMission, BaremeIndemnite
