@@ -3,6 +3,7 @@ from . import views
 from . import views_evaluation
 from . import views_mission
 from . import views_reclamation
+from . import views_medical
 
 app_name = 'employes'
 
@@ -77,4 +78,13 @@ urlpatterns = [
     path('reclamations/<int:pk>/satisfaction/', views_reclamation.noter_satisfaction, name='noter_satisfaction'),
     path('reclamations/recap/', views_reclamation.recap_reclamations, name='recap_reclamations'),
     path('reclamations/categories/', views_reclamation.gestion_categories_reclamations, name='gestion_categories_reclamations'),
+    
+    # Visites médicales
+    path('medical/', views_medical.liste_visites_medicales, name='liste_visites_medicales'),
+    path('medical/planifier/', views_medical.planifier_visite, name='planifier_visite'),
+    path('medical/<int:pk>/', views_medical.detail_visite, name='detail_visite'),
+    path('medical/<int:pk>/resultat/', views_medical.enregistrer_resultat, name='enregistrer_resultat'),
+    path('medical/<int:pk>/supprimer/', views_medical.supprimer_visite, name='supprimer_visite'),
+    path('medical/tableau-bord/', views_medical.tableau_bord_medical, name='tableau_bord_medical'),
+    path('medical/employe/<int:employe_id>/', views_medical.suivi_medical_employe, name='suivi_medical_employe'),
 ]
