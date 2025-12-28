@@ -5,6 +5,9 @@ from decimal import Decimal
 from employes.models import Employe
 from core.models import Utilisateur, Devise, Entreprise
 
+# Import des modèles de prêts
+from .models_pret import Pret, EcheancePret
+
 
 class PeriodePaie(models.Model):
     """Périodes de paie"""
