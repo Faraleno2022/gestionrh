@@ -400,51 +400,92 @@ class MoteurCalculPaie:
         
         Selon la législation guinéenne, les indemnités forfaitaires (logement, transport, panier)
         sont exonérées de RTS dans la limite de 25% du salaire brut.
-        Au-delà, l'excédent est réintégré dans la base imposable.
+        Au-delà, l'excédent est réintégré dans la base imposable RTS.
+        
+        FORMULE CORRECTE:
+        -----------------
+        Salaire brut = Salaire de base + Primes/Indemnités
+        Plafond exonéré = 25% × Salaire brut
+        Si Primes > Plafond → Excédent réintégré dans base RTS
+        
+        VÉRIFICATION MATHÉMATIQUE:
+        Pour que les primes soient exactement au plafond:
+        Primes = 25% × (Salaire de base + Primes)
+        Primes = 0.25 × Salaire de base + 0.25 × Primes
+        0.75 × Primes = 0.25 × Salaire de base
+        Primes = 33.33% × Salaire de base
+        → Pour respecter le plafond 25% du brut, les primes ne doivent pas dépasser ~33% du salaire de base.
         
         Rubriques concernées:
         - PRIME_TRANSPORT, ALLOC_TRANSPORT
-        - ALLOC_LOGEMENT
-        - IND_REPAS, IND_REPAS_JOUR (panier)
+        - ALLOC_LOGEMENT, IND_LOGEMENT
+        - IND_REPAS, IND_REPAS_JOUR, PRIME_PANIER
         """
         # Codes des rubriques d'indemnités forfaitaires exonérées
         CODES_INDEMNITES_FORFAITAIRES = [
-            'PRIME_TRANSPORT', 'ALLOC_TRANSPORT',
-            'ALLOC_LOGEMENT', 'IND_LOGEMENT',
-            'IND_REPAS', 'IND_REPAS_JOUR', 'PRIME_PANIER',
+            'PRIME_TRANSPORT', 'ALLOC_TRANSPORT', 'TRANSPORT',
+            'ALLOC_LOGEMENT', 'IND_LOGEMENT', 'LOGEMENT',
+            'IND_REPAS', 'IND_REPAS_JOUR', 'PRIME_PANIER', 'PANIER', 'REPAS',
         ]
         
         # Taux plafond (25% du brut)
         TAUX_PLAFOND = self.constantes.get('PLAFOND_INDEMNITES_PCT', Decimal('25'))
         
-        # Calculer le total des indemnités forfaitaires
+        # Calculer le salaire de base (éléments non forfaitaires)
+        salaire_base = Decimal('0')
         total_indemnites = Decimal('0')
+        
         for ligne in self.lignes:
-            code = ligne['rubrique'].code_rubrique
-            if code in CODES_INDEMNITES_FORFAITAIRES:
+            code = ligne['rubrique'].code_rubrique.upper() if ligne['rubrique'].code_rubrique else ''
+            # Vérifier si c'est une indemnité forfaitaire
+            est_indemnite_forfaitaire = any(ind in code for ind in CODES_INDEMNITES_FORFAITAIRES)
+            
+            if est_indemnite_forfaitaire:
                 total_indemnites += ligne['montant']
+            else:
+                # C'est un élément de salaire de base ou autre prime non forfaitaire
+                if ligne['rubrique'].type_rubrique == 'gain':
+                    salaire_base += ligne['montant']
         
         self.montants['indemnites_forfaitaires'] = total_indemnites
+        self.montants['salaire_base_hors_indemnites'] = salaire_base
         
-        # Calculer le plafond (25% du brut)
-        # Le brut ici = total_gains (avant application du plafond)
-        plafond = self._arrondir(self.montants['total_gains'] * TAUX_PLAFOND / Decimal('100'))
+        # Salaire brut = Salaire de base + Indemnités forfaitaires
+        salaire_brut = salaire_base + total_indemnites
+        
+        # Plafond exonéré = 25% × Salaire brut
+        plafond = self._arrondir(salaire_brut * TAUX_PLAFOND / Decimal('100'))
         self.montants['plafond_indemnites'] = plafond
+        
+        # Calcul du ratio pour information
+        # Pour info: primes max = 33.33% du salaire de base pour respecter le plafond
+        ratio_max_base = Decimal('33.33')  # 25% / 75% = 33.33%
+        primes_max_theorique = self._arrondir(salaire_base * ratio_max_base / Decimal('100'))
+        self.montants['primes_max_theorique'] = primes_max_theorique
         
         # Vérifier le dépassement
         if total_indemnites > plafond:
             depassement = total_indemnites - plafond
             self.montants['depassement_plafond_indemnites'] = depassement
             
-            # Réintégrer l'excédent dans la base imposable
+            # Réintégrer l'excédent dans la base imposable RTS
             self.montants['reintegration_base_imposable'] = depassement
             self.montants['imposable'] += depassement
             
             # Ajouter une alerte dans les montants
             self.montants['alerte_plafond_indemnites'] = (
                 f"⚠️ Indemnités forfaitaires ({total_indemnites:,.0f} GNF) dépassent le plafond 25% "
-                f"({plafond:,.0f} GNF). Excédent de {depassement:,.0f} GNF réintégré dans la base imposable."
+                f"du brut ({plafond:,.0f} GNF). Excédent de {depassement:,.0f} GNF réintégré dans la base imposable RTS."
             )
+            
+            # Ajouter à la liste des alertes du bulletin
+            if 'alertes' not in self.montants:
+                self.montants['alertes'] = []
+            self.montants['alertes'].append({
+                'type': 'avertissement',
+                'message': f"Plafond 25% indemnités forfaitaires dépassé: {total_indemnites:,.0f} GNF > {plafond:,.0f} GNF. "
+                           f"Excédent {depassement:,.0f} GNF réintégré dans base RTS."
+            })
         else:
             self.montants['depassement_plafond_indemnites'] = Decimal('0')
             self.montants['reintegration_base_imposable'] = Decimal('0')

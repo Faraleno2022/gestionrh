@@ -1811,12 +1811,37 @@ def simulation_paie(request):
             cnss_employe = (assiette_cnss * taux_cnss_employe / Decimal('100')).quantize(Decimal('1'))
             cnss_employeur = (assiette_cnss * taux_cnss_employeur / Decimal('100')).quantize(Decimal('1'))
         
-        # Vérifier plafond 25% indemnités
-        total_indemnites = prime_transport + prime_logement + prime_panier
-        plafond_indemnites = salaire_brut * Decimal('0.25')
-        exces_indemnites = max(Decimal('0'), total_indemnites - plafond_indemnites)
+        # Vérifier plafond 25% indemnités forfaitaires
+        # FORMULE CORRECTE:
+        # Salaire brut = Salaire de base + Primes/Indemnités
+        # Plafond exonéré = 25% × Salaire brut
+        # Si Primes > Plafond → Excédent réintégré dans base RTS
+        #
+        # VÉRIFICATION MATHÉMATIQUE:
+        # Pour que les primes soient exactement au plafond:
+        # Primes = 25% × (Salaire de base + Primes)
+        # Primes = 0.25 × Salaire de base + 0.25 × Primes
+        # 0.75 × Primes = 0.25 × Salaire de base
+        # Primes = 33.33% × Salaire de base
+        # → Pour respecter le plafond 25% du brut, les primes ne doivent pas dépasser ~33% du salaire de base.
         
-        # Base imposable RTS
+        total_indemnites_forfaitaires = prime_transport + prime_logement + prime_panier
+        # Plafond = 25% du salaire brut (salaire de base + indemnités)
+        plafond_indemnites = (salaire_brut * Decimal('0.25')).quantize(Decimal('1'))
+        exces_indemnites = max(Decimal('0'), total_indemnites_forfaitaires - plafond_indemnites)
+        
+        # Calcul du seuil théorique: primes max = 33.33% du salaire de base
+        primes_max_theorique = (salaire_base * Decimal('0.3333')).quantize(Decimal('1'))
+        
+        # Alerte si dépassement du plafond
+        if exces_indemnites > 0:
+            alertes.append({
+                'type': 'avertissement',
+                'message': f"Plafond 25% indemnités forfaitaires dépassé: {total_indemnites_forfaitaires:,.0f} GNF > {plafond_indemnites:,.0f} GNF. "
+                           f"Excédent {exces_indemnites:,.0f} GNF réintégré dans base RTS."
+            })
+        
+        # Base imposable RTS = Brut - CNSS + Excédent indemnités
         base_imposable = salaire_brut - cnss_employe + exces_indemnites
         
         # Calcul RTS par tranches
@@ -1891,9 +1916,11 @@ def simulation_paie(request):
             'assiette_cnss': assiette_cnss,
             'cnss_employe': cnss_employe,
             'cnss_employeur': cnss_employeur,
-            'total_indemnites': total_indemnites,
+            # Plafond 25% indemnités forfaitaires
+            'total_indemnites_forfaitaires': total_indemnites_forfaitaires,
             'plafond_indemnites': plafond_indemnites,
             'exces_indemnites': exces_indemnites,
+            'primes_max_theorique': primes_max_theorique,  # 33.33% du salaire de base
             'base_imposable': base_imposable,
             'rts': rts,
             'detail_rts': detail_rts,

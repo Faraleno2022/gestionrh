@@ -1,5 +1,5 @@
 # MANUEL D'UTILISATION - GESTIONNAIRE RH GUINÉE
-## Module Paie - Version 2.0
+## Module Paie & RH Légal - Version 3.0
 ### Conforme à la législation guinéenne 2025
 
 ---
@@ -12,10 +12,17 @@
 4. [Retenue sur Traitements et Salaires (RTS)](#4-retenue-sur-traitements-et-salaires-rts)
 5. [Charges Patronales](#5-charges-patronales)
 6. [Exonérations et Cas Particuliers](#6-exonérations-et-cas-particuliers)
-7. [Exemples de Calcul Complets](#7-exemples-de-calcul-complets)
-8. [Déclarations Sociales](#8-déclarations-sociales)
-9. [Alertes et Échéances](#9-alertes-et-échéances)
-10. [Commandes de Gestion](#10-commandes-de-gestion)
+7. [Plafond 25% des Indemnités Forfaitaires](#7-plafond-25-des-indemnités-forfaitaires)
+8. [Indemnités de Licenciement](#8-indemnités-de-licenciement)
+9. [Préavis et Indemnités Compensatrices](#9-préavis-et-indemnités-compensatrices)
+10. [Congé Maternité](#10-congé-maternité)
+11. [Allocations Familiales CNSS](#11-allocations-familiales-cnss)
+12. [Accidents du Travail](#12-accidents-du-travail)
+13. [Jours Fériés Légaux](#13-jours-fériés-légaux)
+14. [Exemples de Calcul Complets](#14-exemples-de-calcul-complets)
+15. [Déclarations Sociales](#15-déclarations-sociales)
+16. [Alertes et Échéances](#16-alertes-et-échéances)
+17. [Commandes de Gestion](#17-commandes-de-gestion)
 
 ---
 
@@ -320,56 +327,369 @@ Calcul :
   Net à payer       : 900 000 - 27 500 = 872 500 GNF
 ```
 
-## 6.2 Plafond 25% des Indemnités Forfaitaires
+---
 
-### Principe
+# 7. PLAFOND 25% DES INDEMNITÉS FORFAITAIRES
 
-Les indemnités forfaitaires (logement, transport, panier) sont exonérées de RTS dans la limite de **25% du salaire brut**. L'excédent est réintégré dans la base imposable.
+## 7.1 Principe Fondamental
 
-### Indemnités Concernées
+Les indemnités forfaitaires (logement, transport, panier) sont **exonérées de RTS** dans la limite de **25% du salaire brut**. L'excédent au-delà de ce plafond est **réintégré dans la base imposable RTS**.
 
-- Prime de transport / Allocation transport
-- Allocation logement / Indemnité de logement
-- Indemnité de repas / Prime de panier
+> **IMPORTANT** : Cette règle est cruciale pour éviter les redressements fiscaux lors des contrôles de la DNI.
 
-### Formule
+## 7.2 Indemnités Concernées
 
-```
-Plafond_Indemnités = Salaire_Brut × 25%
+| Type d'indemnité | Codes rubriques | Exonération |
+|------------------|-----------------|-------------|
+| Transport | PRIME_TRANSPORT, ALLOC_TRANSPORT | ≤ 25% du brut |
+| Logement | ALLOC_LOGEMENT, IND_LOGEMENT | ≤ 25% du brut |
+| Repas/Panier | IND_REPAS, PRIME_PANIER | ≤ 25% du brut |
 
-SI Total_Indemnités > Plafond_Indemnités ALORS
-   Excédent = Total_Indemnités - Plafond_Indemnités
-   Base_Imposable += Excédent  (réintégration)
-```
+## 7.3 Formule de Calcul Détaillée
 
-### Exemple : Dépassement du plafond 25%
+### Définitions
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│ VÉRIFICATION PLAFOND 25% INDEMNITÉS                                 │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│ Salaire de base        : 2 000 000 GNF                              │
-│ Prime de transport     : 400 000 GNF                                │
-│ Allocation logement    : 300 000 GNF                                │
-│ ─────────────────────────────────                                   │
-│ Salaire brut           : 2 700 000 GNF                              │
-│ Total indemnités       : 700 000 GNF                                │
-│                                                                      │
-│ Plafond 25%            : 2 700 000 × 25% = 675 000 GNF              │
-│                                                                      │
-│ Dépassement            : 700 000 - 675 000 = 25 000 GNF             │
-│                                                                      │
-│ → 25 000 GNF réintégrés dans la base imposable RTS                  │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
+Salaire brut = Salaire de base + Primes/Indemnités
+Plafond exonéré = 25% × Salaire brut
+```
+
+### Vérification Mathématique
+
+Pour que les primes soient exactement au plafond de 25% du brut :
+
+```
+Primes = 25% × (Salaire de base + Primes)
+Primes = 0.25 × Salaire de base + 0.25 × Primes
+0.75 × Primes = 0.25 × Salaire de base
+Primes = (0.25 / 0.75) × Salaire de base
+Primes = 33.33% × Salaire de base
+```
+
+> **RÈGLE PRATIQUE** : Pour respecter le plafond de 25% du brut, les indemnités forfaitaires ne doivent pas dépasser **~33% du salaire de base**.
+
+### Algorithme de Calcul
+
+```
+1. Calculer le salaire brut = Salaire de base + Indemnités forfaitaires
+2. Calculer le plafond = Salaire brut × 25%
+3. Comparer les indemnités au plafond :
+   - Si Indemnités ≤ Plafond → Tout est exonéré
+   - Si Indemnités > Plafond → Excédent réintégré dans base RTS
+4. Excédent = Indemnités - Plafond
+5. Base imposable RTS = Brut - CNSS + Excédent
+```
+
+## 7.4 Exemples Concrets
+
+### Exemple 1 : Conforme (pas de dépassement)
+
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║                    EXEMPLE 1 : CONFORME                                ║
+╠═══════════════════════════════════════════════════════════════════════╣
+║                                                                        ║
+║ Salaire de base           : 3 000 000 GNF                             ║
+║ Indemnités forfaitaires   : 1 000 000 GNF                             ║
+║   - Transport             : 400 000 GNF                               ║
+║   - Logement              : 400 000 GNF                               ║
+║   - Panier                : 200 000 GNF                               ║
+║ ─────────────────────────────────────────                             ║
+║ Salaire brut              : 4 000 000 GNF                             ║
+║                                                                        ║
+╠═══════════════════════════════════════════════════════════════════════╣
+║                                                                        ║
+║ VÉRIFICATION PLAFOND 25%                                              ║
+║ ────────────────────────                                              ║
+║ Plafond = 4 000 000 × 25% = 1 000 000 GNF                             ║
+║ Indemnités = 1 000 000 GNF                                            ║
+║                                                                        ║
+║ Ratio indemnités/brut = 1 000 000 / 4 000 000 = 25% ✓                 ║
+║ Ratio indemnités/base = 1 000 000 / 3 000 000 = 33.33% ✓              ║
+║                                                                        ║
+║ → CONFORME : Indemnités = Plafond                                     ║
+║ → Dépassement = 0 GNF                                                 ║
+║ → Aucune réintégration nécessaire                                     ║
+║                                                                        ║
+╚═══════════════════════════════════════════════════════════════════════╝
+```
+
+### Exemple 2 : Avec dépassement (réintégration nécessaire)
+
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║                    EXEMPLE 2 : DÉPASSEMENT                             ║
+╠═══════════════════════════════════════════════════════════════════════╣
+║                                                                        ║
+║ Salaire de base           : 3 000 000 GNF                             ║
+║ Indemnités forfaitaires   : 1 500 000 GNF                             ║
+║   - Transport             : 600 000 GNF                               ║
+║   - Logement              : 600 000 GNF                               ║
+║   - Panier                : 300 000 GNF                               ║
+║ ─────────────────────────────────────────                             ║
+║ Salaire brut              : 4 500 000 GNF                             ║
+║                                                                        ║
+╠═══════════════════════════════════════════════════════════════════════╣
+║                                                                        ║
+║ VÉRIFICATION PLAFOND 25%                                              ║
+║ ────────────────────────                                              ║
+║ Plafond = 4 500 000 × 25% = 1 125 000 GNF                             ║
+║ Indemnités = 1 500 000 GNF                                            ║
+║                                                                        ║
+║ Ratio indemnités/brut = 1 500 000 / 4 500 000 = 33.33% ⚠️             ║
+║ Ratio indemnités/base = 1 500 000 / 3 000 000 = 50% ⚠️                ║
+║                                                                        ║
+║ → DÉPASSEMENT : Indemnités > Plafond                                  ║
+║ → Excédent = 1 500 000 - 1 125 000 = 375 000 GNF                      ║
+║ → 375 000 GNF réintégrés dans la base imposable RTS                   ║
+║                                                                        ║
+╠═══════════════════════════════════════════════════════════════════════╣
+║                                                                        ║
+║ IMPACT SUR LE CALCUL RTS                                              ║
+║ ────────────────────────                                              ║
+║ CNSS Employé = 2 500 000 × 5% = 125 000 GNF (plafond CNSS)            ║
+║                                                                        ║
+║ Base imposable SANS réintégration :                                   ║
+║   = 4 500 000 - 125 000 = 4 375 000 GNF                               ║
+║                                                                        ║
+║ Base imposable AVEC réintégration :                                   ║
+║   = 4 500 000 - 125 000 + 375 000 = 4 750 000 GNF                     ║
+║                                                                        ║
+║ Différence de RTS (environ) : +30 000 GNF                             ║
+║                                                                        ║
+╚═══════════════════════════════════════════════════════════════════════╝
+```
+
+### Exemple 3 : Calcul du seuil optimal
+
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║                    CALCUL DU SEUIL OPTIMAL                             ║
+╠═══════════════════════════════════════════════════════════════════════╣
+║                                                                        ║
+║ Question : Pour un salaire de base de 3 000 000 GNF, quel est le      ║
+║            montant maximum d'indemnités forfaitaires exonérées ?      ║
+║                                                                        ║
+║ Formule : Primes_max = 33.33% × Salaire de base                       ║
+║                                                                        ║
+║ Calcul :                                                              ║
+║   Primes_max = 3 000 000 × 33.33% = 999 900 GNF ≈ 1 000 000 GNF       ║
+║                                                                        ║
+║ Vérification :                                                        ║
+║   Brut = 3 000 000 + 1 000 000 = 4 000 000 GNF                        ║
+║   Plafond 25% = 4 000 000 × 25% = 1 000 000 GNF                       ║
+║   Indemnités = 1 000 000 GNF = Plafond ✓                              ║
+║                                                                        ║
+║ → Pour un salaire de base de 3 000 000 GNF, les indemnités            ║
+║   forfaitaires ne doivent pas dépasser 1 000 000 GNF                  ║
+║                                                                        ║
+╚═══════════════════════════════════════════════════════════════════════╝
+```
+
+## 7.5 Tableau de Référence Rapide
+
+| Salaire de base | Primes max (33.33%) | Brut résultant | Plafond 25% |
+|-----------------|---------------------|----------------|-------------|
+| 1 000 000 GNF | 333 300 GNF | 1 333 300 GNF | 333 325 GNF |
+| 2 000 000 GNF | 666 600 GNF | 2 666 600 GNF | 666 650 GNF |
+| 3 000 000 GNF | 999 900 GNF | 3 999 900 GNF | 999 975 GNF |
+| 4 000 000 GNF | 1 333 200 GNF | 5 333 200 GNF | 1 333 300 GNF |
+| 5 000 000 GNF | 1 666 500 GNF | 6 666 500 GNF | 1 666 625 GNF |
+
+---
+
+# 8. INDEMNITÉS DE LICENCIEMENT
+
+## 8.1 Cadre Légal
+
+Selon le Code du Travail guinéen, tout salarié licencié (hors faute lourde) a droit à une indemnité de licenciement calculée en fonction de son ancienneté.
+
+## 8.2 Barème Légal
+
+| Ancienneté | Taux par année |
+|------------|----------------|
+| 1 à 5 ans | 25% du salaire mensuel moyen |
+| 6 à 10 ans | 30% du salaire mensuel moyen |
+| Au-delà de 10 ans | 40% du salaire mensuel moyen |
+
+## 8.3 Formule de Calcul
+
+```
+Indemnité = Σ (Années dans tranche × Taux × Salaire mensuel moyen)
+
+Salaire mensuel moyen = Moyenne des 12 derniers mois (ou durée du contrat si < 12 mois)
+```
+
+## 8.4 Exemple de Calcul
+
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║                    INDEMNITÉ DE LICENCIEMENT                           ║
+╠═══════════════════════════════════════════════════════════════════════╣
+║                                                                        ║
+║ Employé : M. Diallo                                                   ║
+║ Ancienneté : 12 ans et 6 mois                                         ║
+║ Salaire mensuel moyen : 2 500 000 GNF                                 ║
+║                                                                        ║
+╠═══════════════════════════════════════════════════════════════════════╣
+║                                                                        ║
+║ CALCUL PAR TRANCHES                                                   ║
+║ ───────────────────                                                   ║
+║                                                                        ║
+║ Tranche 1 (1-5 ans) : 5 ans × 25% × 2 500 000                         ║
+║   = 5 × 0.25 × 2 500 000 = 3 125 000 GNF                              ║
+║                                                                        ║
+║ Tranche 2 (6-10 ans) : 5 ans × 30% × 2 500 000                        ║
+║   = 5 × 0.30 × 2 500 000 = 3 750 000 GNF                              ║
+║                                                                        ║
+║ Tranche 3 (11-12.5 ans) : 2.5 ans × 40% × 2 500 000                   ║
+║   = 2.5 × 0.40 × 2 500 000 = 2 500 000 GNF                            ║
+║                                                                        ║
+╠═══════════════════════════════════════════════════════════════════════╣
+║                                                                        ║
+║ TOTAL INDEMNITÉ = 3 125 000 + 3 750 000 + 2 500 000                   ║
+║                 = 9 375 000 GNF                                       ║
+║                                                                        ║
+╚═══════════════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-# 7. EXEMPLES DE CALCUL COMPLETS
+# 9. PRÉAVIS ET INDEMNITÉS COMPENSATRICES
 
-## 7.1 Exemple 1 : Cadre Supérieur (8 000 000 GNF)
+## 9.1 Durée du Préavis
+
+| Catégorie | Ancienneté < 1 an | Ancienneté ≥ 1 an |
+|-----------|-------------------|-------------------|
+| Ouvriers/Employés | 15 jours | 1 mois |
+| Agents de maîtrise | 1 mois | 2 mois |
+| Cadres | 1 mois | 3 mois |
+
+## 9.2 Indemnité Compensatrice de Préavis
+
+Si l'employeur dispense le salarié d'effectuer son préavis, il doit lui verser une indemnité compensatrice.
+
+```
+Indemnité compensatrice = Salaire mensuel × Nombre de mois de préavis
+```
+
+## 9.3 Exemple
+
+```
+Cadre avec 5 ans d'ancienneté, salaire 4 000 000 GNF
+Préavis dû : 3 mois
+Indemnité compensatrice = 4 000 000 × 3 = 12 000 000 GNF
+```
+
+---
+
+# 10. CONGÉ MATERNITÉ
+
+## 10.1 Durée Légale
+
+| Période | Durée |
+|---------|-------|
+| Congé prénatal | 6 semaines avant accouchement |
+| Congé postnatal | 8 semaines après accouchement |
+| **Total** | **14 semaines** |
+
+## 10.2 Indemnités Journalières CNSS
+
+Pendant le congé maternité, la salariée perçoit des indemnités journalières versées par la CNSS.
+
+```
+Indemnité journalière = Salaire journalier moyen des 3 derniers mois
+Durée = 98 jours (14 semaines)
+```
+
+## 10.3 Conditions d'Éligibilité
+
+- Être immatriculée à la CNSS
+- Avoir cotisé au moins 6 mois dans les 12 mois précédant l'accouchement
+- Cesser toute activité salariée pendant le congé
+
+---
+
+# 11. ALLOCATIONS FAMILIALES CNSS
+
+## 11.1 Conditions d'Attribution
+
+| Critère | Condition |
+|---------|-----------|
+| Enfants à charge | Âge < 18 ans (ou 21 ans si étudiant) |
+| Cotisations | Minimum 6 mois de cotisation |
+| Limite | Maximum 6 enfants |
+
+## 11.2 Montant des Allocations
+
+```
+Allocation mensuelle par enfant = Montant fixé par décret CNSS
+(Généralement entre 5 000 et 10 000 GNF par enfant)
+```
+
+## 11.3 Procédure de Demande
+
+1. Fournir les actes de naissance des enfants
+2. Certificat de scolarité pour les enfants > 18 ans
+3. Déclaration sur l'honneur de prise en charge
+
+---
+
+# 12. ACCIDENTS DU TRAVAIL
+
+## 12.1 Définition
+
+Est considéré comme accident du travail :
+- Accident survenu par le fait ou à l'occasion du travail
+- Accident de trajet (domicile-travail)
+
+## 12.2 Indemnités
+
+| Type | Calcul |
+|------|--------|
+| Incapacité temporaire | 100% du salaire pendant l'arrêt |
+| Incapacité permanente partielle | Rente selon taux d'incapacité |
+| Incapacité permanente totale | Rente = 85% du salaire |
+| Décès | Rente aux ayants droit |
+
+## 12.3 Déclaration Obligatoire
+
+L'employeur doit déclarer tout accident du travail à la CNSS dans les **48 heures**.
+
+---
+
+# 13. JOURS FÉRIÉS LÉGAUX
+
+## 13.1 Liste des Jours Fériés en Guinée
+
+| Date | Jour férié | Type |
+|------|------------|------|
+| 1er janvier | Jour de l'An | Fixe |
+| 2 octobre | Fête de l'Indépendance | Fixe |
+| 1er mai | Fête du Travail | Fixe |
+| 25 décembre | Noël | Fixe |
+| Variable | Lundi de Pâques | Mobile |
+| Variable | Ascension | Mobile |
+| Variable | Aïd el-Fitr (Korité) | Mobile |
+| Variable | Aïd el-Adha (Tabaski) | Mobile |
+| Variable | Mawlid (Maouloud) | Mobile |
+
+## 13.2 Rémunération des Jours Fériés
+
+- **Jour férié non travaillé** : Maintien du salaire
+- **Jour férié travaillé** : Majoration de 100% (double salaire)
+
+## 13.3 Commande de Génération
+
+```bash
+python manage.py generer_feries_guinee --annee 2025
+```
+
+---
+
+# 14. EXEMPLES DE CALCUL COMPLETS
+
+## 14.1 Exemple 1 : Cadre Supérieur (8 000 000 GNF)
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════╗
@@ -561,9 +881,9 @@ SI Total_Indemnités > Plafond_Indemnités ALORS
 
 ---
 
-# 8. DÉCLARATIONS SOCIALES
+# 15. DÉCLARATIONS SOCIALES
 
-## 8.1 Types de Déclarations
+## 15.1 Types de Déclarations
 
 | Déclaration | Organisme | Contenu | Échéance |
 |-------------|-----------|---------|----------|
@@ -572,7 +892,7 @@ SI Total_Indemnités > Plafond_Indemnités ALORS
 | VF | Direction Nationale des Impôts | Versement Forfaitaire 6% | 15 du mois suivant |
 | DMU | Direction Nationale des Impôts | Déclaration Mensuelle Unique | 15 du mois suivant |
 
-## 8.2 Calcul des Montants à Déclarer
+## 15.2 Calcul des Montants à Déclarer
 
 ### Déclaration CNSS
 
@@ -600,9 +920,9 @@ Total VF à verser = Masse salariale brute × 6%
 
 ---
 
-# 9. ALERTES ET ÉCHÉANCES
+# 16. ALERTES ET ÉCHÉANCES
 
-## 9.1 Système d'Alertes
+## 16.1 Système d'Alertes
 
 L'application génère automatiquement des alertes pour les échéances de déclarations :
 
@@ -614,14 +934,14 @@ L'application génère automatiquement des alertes pour les échéances de décl
 | ≤ 1 jour | 🚨 Danger | Urgent |
 | Dépassé | 🚨 Danger | En retard |
 
-## 9.2 Pénalités de Retard
+## 16.2 Pénalités de Retard
 
 | Déclaration | Pénalité |
 |-------------|----------|
 | CNSS | 5% par mois de retard |
 | RTS/VF | 100% du montant dû |
 
-## 9.3 Commande de Génération des Alertes
+## 16.3 Commande de Génération des Alertes
 
 ```bash
 # Générer les alertes pour le mois en cours
@@ -636,9 +956,9 @@ python manage.py generer_alertes_echeances --actualiser
 
 ---
 
-# 10. COMMANDES DE GESTION
+# 17. COMMANDES DE GESTION
 
-## 10.1 Commandes Disponibles
+## 17.1 Commandes Disponibles
 
 | Commande | Description |
 |----------|-------------|
@@ -648,8 +968,9 @@ python manage.py generer_alertes_echeances --actualiser
 | `python manage.py recalculer_bulletins` | Recalcule les bulletins de paie |
 | `python manage.py test_calculs_paie` | Teste l'exactitude des calculs |
 | `python manage.py generer_alertes_echeances` | Génère les alertes d'échéances |
+| `python manage.py generer_feries_guinee` | Génère les jours fériés légaux de Guinée |
 
-## 10.2 Exemples d'Utilisation
+## 17.2 Exemples d'Utilisation
 
 ### Recalculer les bulletins d'une période
 
@@ -717,9 +1038,10 @@ TESTS DE VÉRIFICATION DES CALCULS DE PAIE - GUINÉE
 | 1.0 | Nov 2025 | Version initiale |
 | 1.1 | Déc 2025 | Correction barème RTS, ajout VF/TA |
 | 2.0 | Déc 2025 | Exonérations stagiaires, plafond 25%, alertes |
+| 3.0 | Déc 2025 | Formule correcte plafond 25% (33% base), indemnités licenciement, préavis, congé maternité, allocations familiales, accidents travail, jours fériés |
 
 ---
 
 **Document généré par Gestionnaire RH Guinée**
-**Version 2.0 - Décembre 2025**
+**Version 3.0 - Décembre 2025**
 **www.guineerh.space**
