@@ -611,3 +611,137 @@ class LigneDeclaration(models.Model):
     
     def __str__(self):
         return f"{self.declaration.reference} - {self.employe.matricule}"
+
+
+class AlerteEcheance(models.Model):
+    """Alertes pour les échéances de déclarations sociales et fiscales"""
+    TYPES_ECHEANCE = (
+        ('cnss', 'Déclaration CNSS'),
+        ('rts', 'Déclaration RTS'),
+        ('vf', 'Versement Forfaitaire'),
+        ('ta', 'Taxe d\'Apprentissage'),
+        ('dmu', 'Déclaration Mensuelle Unique'),
+    )
+    
+    STATUTS = (
+        ('a_venir', 'À venir'),
+        ('urgent', 'Urgent'),
+        ('en_retard', 'En retard'),
+        ('traite', 'Traité'),
+    )
+    
+    NIVEAUX_ALERTE = (
+        ('info', 'Information'),
+        ('warning', 'Avertissement'),
+        ('danger', 'Urgent'),
+    )
+    
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='alertes_echeances')
+    type_echeance = models.CharField(max_length=20, choices=TYPES_ECHEANCE)
+    annee = models.IntegerField()
+    mois = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
+    
+    date_echeance = models.DateField(help_text='Date limite de déclaration (15 du mois suivant)')
+    date_alerte = models.DateField(help_text='Date à laquelle l\'alerte a été créée')
+    
+    statut = models.CharField(max_length=20, choices=STATUTS, default='a_venir')
+    niveau_alerte = models.CharField(max_length=20, choices=NIVEAUX_ALERTE, default='info')
+    
+    jours_restants = models.IntegerField(default=0, help_text='Jours restants avant l\'échéance')
+    
+    montant_estime = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True,
+                                         help_text='Montant estimé de la déclaration')
+    
+    message = models.TextField(blank=True, null=True)
+    lu = models.BooleanField(default=False)
+    date_lecture = models.DateTimeField(null=True, blank=True)
+    
+    declaration = models.ForeignKey(DeclarationSociale, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='alertes')
+    
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'alertes_echeances'
+        verbose_name = 'Alerte échéance'
+        verbose_name_plural = 'Alertes échéances'
+        ordering = ['date_echeance', '-niveau_alerte']
+        unique_together = ['entreprise', 'type_echeance', 'annee', 'mois']
+    
+    def __str__(self):
+        return f"{self.get_type_echeance_display()} - {self.mois}/{self.annee} - {self.get_statut_display()}"
+    
+    def actualiser_statut(self):
+        """Actualise le statut et le niveau d'alerte en fonction de la date"""
+        from datetime import date
+        aujourd_hui = date.today()
+        
+        self.jours_restants = (self.date_echeance - aujourd_hui).days
+        
+        if self.statut == 'traite':
+            return  # Ne pas modifier si déjà traité
+        
+        if self.jours_restants < 0:
+            self.statut = 'en_retard'
+            self.niveau_alerte = 'danger'
+            self.message = f"⚠️ RETARD: Échéance dépassée de {abs(self.jours_restants)} jour(s). Risque de pénalités!"
+        elif self.jours_restants <= 1:
+            self.statut = 'urgent'
+            self.niveau_alerte = 'danger'
+            self.message = f"🚨 URGENT: Échéance demain! Déclarez immédiatement."
+        elif self.jours_restants <= 3:
+            self.statut = 'urgent'
+            self.niveau_alerte = 'warning'
+            self.message = f"⏰ Attention: {self.jours_restants} jour(s) restant(s) avant l'échéance."
+        elif self.jours_restants <= 5:
+            self.statut = 'a_venir'
+            self.niveau_alerte = 'warning'
+            self.message = f"📅 Rappel: {self.jours_restants} jour(s) avant l'échéance du {self.date_echeance.strftime('%d/%m/%Y')}."
+        else:
+            self.statut = 'a_venir'
+            self.niveau_alerte = 'info'
+            self.message = f"ℹ️ Échéance prévue le {self.date_echeance.strftime('%d/%m/%Y')} ({self.jours_restants} jours)."
+        
+        self.save()
+    
+    @classmethod
+    def generer_alertes_mois(cls, entreprise, annee, mois):
+        """Génère les alertes pour un mois donné"""
+        from datetime import date
+        from calendar import monthrange
+        
+        # L'échéance est le 15 du mois suivant
+        if mois == 12:
+            mois_echeance = 1
+            annee_echeance = annee + 1
+        else:
+            mois_echeance = mois + 1
+            annee_echeance = annee
+        
+        date_echeance = date(annee_echeance, mois_echeance, 15)
+        aujourd_hui = date.today()
+        
+        types_declarations = [
+            ('cnss', 'Déclaration CNSS'),
+            ('rts', 'Déclaration RTS'),
+            ('vf', 'Versement Forfaitaire'),
+        ]
+        
+        alertes_creees = []
+        
+        for type_code, type_libelle in types_declarations:
+            alerte, created = cls.objects.update_or_create(
+                entreprise=entreprise,
+                type_echeance=type_code,
+                annee=annee,
+                mois=mois,
+                defaults={
+                    'date_echeance': date_echeance,
+                    'date_alerte': aujourd_hui,
+                }
+            )
+            alerte.actualiser_statut()
+            alertes_creees.append(alerte)
+        
+        return alertes_creees

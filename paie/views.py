@@ -12,7 +12,7 @@ import json
 from .models import (
     PeriodePaie, BulletinPaie, LigneBulletin, RubriquePaie,
     ElementSalaire, CumulPaie, HistoriquePaie, Constante, TrancheIRG,
-    ParametrePaie
+    ParametrePaie, AlerteEcheance
 )
 from employes.models import Employe
 from .services import MoteurCalculPaie
@@ -1453,3 +1453,121 @@ def detail_rubrique(request, pk):
         'nb_employes': nb_employes,
         'elements': elements
     })
+
+
+@login_required
+@entreprise_active_required
+def tableau_bord_echeances(request):
+    """Tableau de bord des échéances de déclarations sociales"""
+    aujourd_hui = date.today()
+    entreprise = request.user.entreprise
+    
+    # Générer/actualiser les alertes pour le mois en cours
+    mois_courant = aujourd_hui.month
+    annee_courante = aujourd_hui.year
+    
+    # Mois précédent (pour les déclarations en cours)
+    if mois_courant == 1:
+        mois_declaration = 12
+        annee_declaration = annee_courante - 1
+    else:
+        mois_declaration = mois_courant - 1
+        annee_declaration = annee_courante
+    
+    # Générer les alertes si elles n'existent pas
+    AlerteEcheance.generer_alertes_mois(entreprise, annee_declaration, mois_declaration)
+    
+    # Actualiser toutes les alertes
+    alertes = AlerteEcheance.objects.filter(
+        entreprise=entreprise,
+        statut__in=['a_venir', 'urgent', 'en_retard']
+    )
+    for alerte in alertes:
+        alerte.actualiser_statut()
+    
+    # Récupérer les alertes triées
+    alertes_urgentes = AlerteEcheance.objects.filter(
+        entreprise=entreprise,
+        statut__in=['urgent', 'en_retard']
+    ).order_by('date_echeance')
+    
+    alertes_a_venir = AlerteEcheance.objects.filter(
+        entreprise=entreprise,
+        statut='a_venir'
+    ).order_by('date_echeance')[:10]
+    
+    alertes_traitees = AlerteEcheance.objects.filter(
+        entreprise=entreprise,
+        statut='traite'
+    ).order_by('-date_echeance')[:5]
+    
+    # Statistiques
+    stats = {
+        'total_urgentes': alertes_urgentes.count(),
+        'total_a_venir': alertes_a_venir.count(),
+        'total_en_retard': AlerteEcheance.objects.filter(
+            entreprise=entreprise,
+            statut='en_retard'
+        ).count(),
+    }
+    
+    # Prochaine échéance
+    prochaine_echeance = AlerteEcheance.objects.filter(
+        entreprise=entreprise,
+        statut__in=['a_venir', 'urgent']
+    ).order_by('date_echeance').first()
+    
+    return render(request, 'paie/echeances/tableau_bord.html', {
+        'alertes_urgentes': alertes_urgentes,
+        'alertes_a_venir': alertes_a_venir,
+        'alertes_traitees': alertes_traitees,
+        'stats': stats,
+        'prochaine_echeance': prochaine_echeance,
+        'aujourd_hui': aujourd_hui,
+    })
+
+
+@login_required
+@entreprise_active_required
+def marquer_alerte_traitee(request, pk):
+    """Marque une alerte comme traitée"""
+    alerte = get_object_or_404(AlerteEcheance, pk=pk, entreprise=request.user.entreprise)
+    
+    alerte.statut = 'traite'
+    alerte.lu = True
+    alerte.date_lecture = timezone.now()
+    alerte.save()
+    
+    messages.success(request, f'Alerte "{alerte.get_type_echeance_display()}" marquée comme traitée.')
+    return redirect('paie:tableau_bord_echeances')
+
+
+@login_required
+@entreprise_active_required
+def api_alertes_echeances(request):
+    """API pour récupérer les alertes (pour le header/notifications)"""
+    entreprise = request.user.entreprise
+    
+    # Actualiser et récupérer les alertes urgentes
+    alertes = AlerteEcheance.objects.filter(
+        entreprise=entreprise,
+        statut__in=['urgent', 'en_retard'],
+        lu=False
+    ).order_by('date_echeance')[:5]
+    
+    data = {
+        'count': alertes.count(),
+        'alertes': [
+            {
+                'id': a.id,
+                'type': a.get_type_echeance_display(),
+                'message': a.message,
+                'niveau': a.niveau_alerte,
+                'jours_restants': a.jours_restants,
+                'date_echeance': a.date_echeance.strftime('%d/%m/%Y'),
+            }
+            for a in alertes
+        ]
+    }
+    
+    return JsonResponse(data)

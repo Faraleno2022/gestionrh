@@ -58,4 +58,9 @@ urlpatterns = [
     path('bareme-irpp/dupliquer/', bareme_irpp.bareme_irpp_dupliquer, name='bareme_irpp_dupliquer'),
     path('simulateur-irpp/', bareme_irpp.simulateur_irpp, name='simulateur_irpp'),
     path('api/calculer-irpp/', bareme_irpp.api_calculer_irpp, name='api_calculer_irpp'),
+    
+    # Alertes échéances
+    path('echeances/', views.tableau_bord_echeances, name='tableau_bord_echeances'),
+    path('echeances/<int:pk>/traiter/', views.marquer_alerte_traitee, name='marquer_alerte_traitee'),
+    path('api/alertes-echeances/', views.api_alertes_echeances, name='api_alertes_echeances'),
 ]
