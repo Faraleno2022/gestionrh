@@ -56,6 +56,43 @@
                             </button>
                         </div>
                     </form>
+                    
+                    <!-- Boutons d'export -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="btn-group" role="group">
+                                <div class="dropdown me-2">
+                                    <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-file-excel me-1"></i> Export CNSS
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="{% url 'paie:export_cnss_excel' %}?annee={{ annee }}{% if mois %}&mois={{ mois }}{% endif %}">
+                                            <i class="fas fa-file-excel me-2 text-success"></i>Excel
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="{% url 'paie:export_cnss_pdf' %}?annee={{ annee }}{% if mois %}&mois={{ mois }}{% endif %}">
+                                            <i class="fas fa-file-pdf me-2 text-danger"></i>PDF
+                                        </a></li>
+                                    </ul>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown" {% if not mois %}disabled title="Sélectionnez un mois"{% endif %}>
+                                        <i class="fas fa-file-alt me-1"></i> Export DMU
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="{% url 'paie:export_dmu_excel' %}?annee={{ annee }}&mois={{ mois }}">
+                                            <i class="fas fa-file-excel me-2 text-success"></i>Excel
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="{% url 'paie:export_dmu_pdf' %}?annee={{ annee }}&mois={{ mois }}">
+                                            <i class="fas fa-file-pdf me-2 text-danger"></i>PDF
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            {% if not mois %}
+                            <small class="text-muted ms-2">Sélectionnez un mois pour exporter la DMU</small>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
