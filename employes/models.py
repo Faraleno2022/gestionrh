@@ -34,6 +34,7 @@ class Employe(models.Model):
         ('CDI', 'Contrat à Durée Indéterminée'),
         ('CDD', 'Contrat à Durée Déterminée'),
         ('stage', 'Stage'),
+        ('apprentissage', 'Contrat d\'Apprentissage'),
         ('temporaire', 'Temporaire'),
     )
     
@@ -158,6 +159,51 @@ class Employe(models.Model):
             today = timezone.now().date()
             return today.year - self.date_embauche.year
         return None
+    
+    @property
+    def est_stagiaire_ou_apprenti(self):
+        """Vérifie si l'employé est stagiaire ou apprenti"""
+        return self.type_contrat in ('stage', 'apprentissage')
+    
+    def est_eligible_exoneration_rts(self, date_calcul=None):
+        """
+        Vérifie si l'employé est éligible à l'exonération RTS pour stagiaires/apprentis.
+        
+        Conditions (législation guinéenne):
+        - Type de contrat: Stage ou Apprentissage
+        - Durée: Maximum 12 mois depuis le début du contrat
+        - Indemnité: ≤ 1 200 000 GNF/mois (vérifié dans le calcul de paie)
+        
+        Args:
+            date_calcul: Date de référence pour le calcul (par défaut: aujourd'hui)
+            
+        Returns:
+            tuple: (eligible: bool, raison: str)
+        """
+        from datetime import date
+        from dateutil.relativedelta import relativedelta
+        
+        if date_calcul is None:
+            date_calcul = timezone.now().date()
+        
+        # Vérifier le type de contrat
+        if not self.est_stagiaire_ou_apprenti:
+            return False, "Type de contrat non éligible (CDI/CDD/Temporaire)"
+        
+        # Vérifier la date de début du contrat
+        date_debut = self.date_debut_contrat or self.date_embauche
+        if not date_debut:
+            return False, "Date de début de contrat non renseignée"
+        
+        # Calculer la durée depuis le début du contrat
+        duree = relativedelta(date_calcul, date_debut)
+        mois_ecoules = duree.years * 12 + duree.months
+        
+        if mois_ecoules > 12:
+            return False, f"Durée dépassée ({mois_ecoules} mois > 12 mois max)"
+        
+        type_contrat_label = dict(self.TYPES_CONTRATS).get(self.type_contrat, self.type_contrat)
+        return True, f"{type_contrat_label} - {mois_ecoules} mois (≤ 12 mois)"
 
 
 class ContratEmploye(models.Model):
