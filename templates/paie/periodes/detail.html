@@ -22,15 +22,15 @@
         <div class="col-md-3">
             <div class="card shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Statut</h6>
+                    <small class="text-muted d-block mb-1">Statut</small>
                     {% if periode.statut_periode == 'ouverte' %}
-                        <h3><span class="badge bg-info">Ouverte</span></h3>
+                        <span class="badge bg-info">Ouverte</span>
                     {% elif periode.statut_periode == 'calculee' %}
-                        <h3><span class="badge bg-primary">Calculée</span></h3>
+                        <span class="badge bg-primary">Calculée</span>
                     {% elif periode.statut_periode == 'validee' %}
-                        <h3><span class="badge bg-success">Validée</span></h3>
+                        <span class="badge bg-success">Validée</span>
                     {% elif periode.statut_periode == 'cloturee' %}
-                        <h3><span class="badge bg-secondary">Clôturée</span></h3>
+                        <span class="badge bg-secondary">Clôturée</span>
                     {% endif %}
                 </div>
             </div>
@@ -38,24 +38,24 @@
         <div class="col-md-3">
             <div class="card shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Bulletins</h6>
-                    <h3>{{ bulletins.count }}</h3>
+                    <small class="text-muted d-block mb-1">Bulletins</small>
+                    <strong>{{ bulletins.count }}</strong>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Masse Salariale Brute</h6>
-                    <h3>{{ stats.total_brut|floatformat:0|intcomma }} GNF</h3>
+                    <small class="text-muted d-block mb-1">Masse Salariale Brute</small>
+                    <strong>{{ stats.total_brut|floatformat:0|intcomma }} GNF</strong>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Net à Payer</h6>
-                    <h3 class="text-success">{{ stats.total_net|floatformat:0|intcomma }} GNF</h3>
+                    <small class="text-muted d-block mb-1">Net à Payer</small>
+                    <strong class="text-success">{{ stats.total_net|floatformat:0|intcomma }} GNF</strong>
                 </div>
             </div>
         </div>
@@ -96,24 +96,24 @@
         <div class="col-md-4">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h6 class="text-muted">CNSS Employé</h6>
-                    <h4>{{ stats.total_cnss_employe|floatformat:0|intcomma }} GNF</h4>
+                    <small class="text-muted d-block mb-1">CNSS Employé</small>
+                    <strong>{{ stats.total_cnss_employe|floatformat:0|intcomma }} GNF</strong>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h6 class="text-muted">CNSS Employeur</h6>
-                    <h4>{{ stats.total_cnss_employeur|floatformat:0|intcomma }} GNF</h4>
+                    <small class="text-muted d-block mb-1">CNSS Employeur</small>
+                    <strong>{{ stats.total_cnss_employeur|floatformat:0|intcomma }} GNF</strong>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h6 class="text-muted">IRG Total</h6>
-                    <h4>{{ stats.total_irg|floatformat:0|intcomma }} GNF</h4>
+                    <small class="text-muted d-block mb-1">RTS Total</small>
+                    <strong>{{ stats.total_irg|floatformat:0|intcomma }} GNF</strong>
                 </div>
             </div>
         </div>
@@ -135,7 +135,7 @@
                                     <th>Employé</th>
                                     <th>Salaire Brut</th>
                                     <th>CNSS</th>
-                                    <th>IRG</th>
+                                    <th>RTS</th>
                                     <th>Net à Payer</th>
                                     <th>Statut</th>
                                     <th>Actions</th>
