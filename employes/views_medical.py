@@ -1,4 +1,4 @@
-﻿"""
+"""
 Vues pour la gestion des visites medicales.
 """
 from django.shortcuts import render, redirect, get_object_or_404
@@ -14,7 +14,7 @@ from .models import Employe, VisiteMedicale
 def liste_visites_medicales(request):
     visites = VisiteMedicale.objects.filter(
         employe__entreprise=request.user.entreprise
-    ).select_related('employe', 'employe__departement')
+    ).select_related('employe', 'employe__service')
     
     employe_id = request.GET.get('employe')
     aptitude = request.GET.get('aptitude')
