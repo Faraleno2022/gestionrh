@@ -726,6 +726,121 @@
         .glow-red { filter: drop-shadow(0 0 20px rgba(206, 17, 38, 0.3)); }
         .glow-yellow { filter: drop-shadow(0 0 20px rgba(252, 209, 22, 0.3)); }
         .glow-green { filter: drop-shadow(0 0 20px rgba(0, 154, 73, 0.3)); }
+        
+        /* Jobs Section */
+        .jobs {
+            padding: 120px 0;
+            background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 50%, #ffffff 100%);
+        }
+        
+        .job-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 20px;
+            padding: 25px;
+            height: 100%;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .job-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to right, var(--guinea-red), var(--guinea-yellow), var(--guinea-green));
+        }
+        
+        .job-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            border-color: rgba(206, 17, 38, 0.2);
+        }
+        
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .job-company {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .job-company i {
+            color: var(--guinea-green);
+        }
+        
+        .job-badge {
+            background: linear-gradient(135deg, rgba(206,17,38,0.1), rgba(252,209,22,0.1));
+            color: var(--guinea-red);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .job-title {
+            font-weight: 700;
+            font-size: 1.15rem;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+        
+        .job-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .job-detail {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .job-detail i {
+            color: var(--guinea-yellow);
+            font-size: 0.9rem;
+        }
+        
+        .job-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .job-footer {
+            padding-top: 15px;
+            border-top: 1px solid var(--dark-border);
+        }
+        
+        .job-date {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .job-date i {
+            color: var(--guinea-green);
+        }
     </style>
 </head>
 <body>
@@ -742,7 +857,7 @@
                 <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item"><a class="nav-link" href="#features">Fonctionnalités</a></li>
                     <li class="nav-item"><a class="nav-link" href="#modules">Modules</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#stats">Statistiques</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#jobs">Offres d'Emploi</a></li>
                     <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
                     <li class="nav-item ms-lg-3">
                         <a class="btn btn-login" href="{% url 'core:login' %}">
@@ -1051,6 +1166,67 @@
             </div>
         </div>
     </section>
+
+    <!-- Offres d'Emploi Section -->
+    {% if offres_emploi %}
+    <section class="jobs" id="jobs">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <div class="section-badge">Recrutement</div>
+                <h2>Offres d'Emploi</h2>
+                <p>Découvrez les opportunités de carrière disponibles auprès de nos entreprises partenaires</p>
+            </div>
+            <div class="row g-4">
+                {% for offre in offres_emploi %}
+                <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                    <div class="job-card">
+                        <div class="job-header">
+                            <div class="job-company">
+                                <i class="bi bi-building"></i>
+                                <span>{{ offre.entreprise.nom_entreprise|default:"Entreprise" }}</span>
+                            </div>
+                            <span class="job-badge">{{ offre.get_type_contrat_display|default:offre.type_contrat|default:"CDI" }}</span>
+                        </div>
+                        <h4 class="job-title">{{ offre.intitule_poste }}</h4>
+                        <div class="job-details">
+                            {% if offre.service %}
+                            <div class="job-detail">
+                                <i class="bi bi-diagram-3"></i>
+                                <span>{{ offre.service.nom_service }}</span>
+                            </div>
+                            {% endif %}
+                            <div class="job-detail">
+                                <i class="bi bi-people"></i>
+                                <span>{{ offre.nombre_postes }} poste{{ offre.nombre_postes|pluralize }}</span>
+                            </div>
+                            {% if offre.date_limite_candidature %}
+                            <div class="job-detail">
+                                <i class="bi bi-calendar-event"></i>
+                                <span>Limite: {{ offre.date_limite_candidature|date:"d/m/Y" }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if offre.description_poste %}
+                        <p class="job-description">{{ offre.description_poste|truncatewords:25 }}</p>
+                        {% endif %}
+                        <div class="job-footer">
+                            <span class="job-date">
+                                <i class="bi bi-clock"></i> Publié le {{ offre.date_publication|date:"d/m/Y" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="text-center mt-5" data-aos="fade-up">
+                <p class="text-muted mb-3">Vous êtes une entreprise et souhaitez publier vos offres ?</p>
+                <a href="{% url 'core:login' %}" class="btn btn-outline-glass">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Connectez-vous pour gérer vos recrutements
+                </a>
+            </div>
+        </div>
+    </section>
+    {% endif %}
 
     <!-- CTA Section -->
     <section class="cta" id="contact">
