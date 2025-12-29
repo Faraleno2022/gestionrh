@@ -8,13 +8,13 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2"><i class="bi bi-megaphone"></i> {{ offre.intitule_poste }}</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="{% url 'recrutement:liste_offres' %}" class="btn btn-secondary me-2">
+        <a href="{% url 'recrutement:offres' %}" class="btn btn-secondary me-2">
             <i class="bi bi-arrow-left"></i> Retour
         </a>
         <a href="{% url 'recrutement:modifier_offre' offre.pk %}" class="btn btn-warning me-2">
             <i class="bi bi-pencil"></i> Modifier
         </a>
-        <a href="{% url 'recrutement:nouvelle_candidature' offre.pk %}" class="btn btn-primary">
+        <a href="{% url 'recrutement:creer_candidature' %}" class="btn btn-primary">
             <i class="bi bi-person-plus"></i> Nouvelle Candidature
         </a>
     </div>
@@ -221,7 +221,7 @@
                             <a href="{% url 'recrutement:detail_candidature' candidature.pk %}" class="btn btn-sm btn-info" title="Détails">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            <a href="{% url 'recrutement:modifier_candidature' candidature.pk %}" class="btn btn-sm btn-warning" title="Modifier">
+                            <a href="{% url 'recrutement:evaluer_candidature' candidature.pk %}" class="btn btn-sm btn-warning" title="Évaluer">
                                 <i class="bi bi-pencil"></i>
                             </a>
                         </td>
@@ -234,7 +234,7 @@
         <div class="text-center text-muted py-4">
             <i class="bi bi-inbox fs-1"></i>
             <p class="mt-2">Aucune candidature pour cette offre</p>
-            <a href="{% url 'recrutement:nouvelle_candidature' offre.pk %}" class="btn btn-primary">
+            <a href="{% url 'recrutement:creer_candidature' %}" class="btn btn-primary">
                 <i class="bi bi-person-plus"></i> Ajouter une candidature
             </a>
         </div>
