@@ -857,7 +857,7 @@
                 <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item"><a class="nav-link" href="#features">Fonctionnalités</a></li>
                     <li class="nav-item"><a class="nav-link" href="#modules">Modules</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#jobs">Offres d'Emploi</a></li>
+                    {% if offres_emploi %}<li class="nav-item"><a class="nav-link" href="#jobs">Offres d'Emploi</a></li>{% endif %}
                     <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
                     <li class="nav-item ms-lg-3">
                         <a class="btn btn-login" href="{% url 'core:login' %}">
@@ -1209,10 +1209,13 @@
                         {% if offre.description_poste %}
                         <p class="job-description">{{ offre.description_poste|truncatewords:25 }}</p>
                         {% endif %}
-                        <div class="job-footer">
+                        <div class="job-footer d-flex justify-content-between align-items-center">
                             <span class="job-date">
-                                <i class="bi bi-clock"></i> Publié le {{ offre.date_publication|date:"d/m/Y" }}
+                                <i class="bi bi-clock"></i> {{ offre.date_publication|date:"d/m/Y" }}
                             </span>
+                            <a href="{% url 'recrutement:postuler' offre.pk %}" class="btn btn-sm btn-success">
+                                <i class="bi bi-send me-1"></i>Postuler
+                            </a>
                         </div>
                     </div>
                 </div>
