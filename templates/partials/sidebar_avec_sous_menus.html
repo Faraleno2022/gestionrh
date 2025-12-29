@@ -56,6 +56,15 @@
                 <li><a class="nav-link nav-link-submenu" href="{% url 'employes:export_excel' %}">
                     <i class="bi bi-file-earmark-excel"></i> Export Excel
                 </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'employes:liste_missions' %}">
+                    <i class="bi bi-airplane"></i> Missions
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'employes:liste_reclamations' %}">
+                    <i class="bi bi-chat-left-text"></i> Réclamations
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'employes:liste_visites_medicales' %}">
+                    <i class="bi bi-heart-pulse"></i> Visites médicales
+                </a></li>
             </ul>
         </li>
         
@@ -178,6 +187,30 @@
                 <li><a class="nav-link nav-link-submenu" href="{% url 'paie:liste_rubriques' %}">
                     <i class="bi bi-list-check"></i> Rubriques de paie
                 </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'paie:bareme_irpp_liste' %}">
+                    <i class="bi bi-percent"></i> Barème RTS
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'paie:simulateur_irpp' %}">
+                    <i class="bi bi-calculator"></i> Simulateur RTS
+                </a></li>
+            </ul>
+        </li>
+        
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('prets-frais-menu')">
+                <i class="bi bi-wallet2"></i> Prêts & Frais
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="prets-frais-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'paie:liste_prets' %}">
+                    <i class="bi bi-cash"></i> Gestion des prêts
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'paie:liste_notes_frais' %}">
+                    <i class="bi bi-receipt"></i> Notes de frais
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'paie:tableau_bord_echeances' %}">
+                    <i class="bi bi-bell"></i> Alertes échéances
+                </a></li>
             </ul>
         </li>
         
@@ -233,6 +266,81 @@
             </ul>
         </li>
         
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('evaluations-menu')">
+                <i class="bi bi-clipboard-check"></i> Évaluations
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="evaluations-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'employes:liste_campagnes' %}">
+                    <i class="bi bi-calendar-range"></i> Campagnes
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'employes:creer_campagne' %}">
+                    <i class="bi bi-plus-circle"></i> Nouvelle campagne
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'employes:synthese_evaluations' %}">
+                    <i class="bi bi-graph-up-arrow"></i> Synthèse
+                </a></li>
+            </ul>
+        </li>
+        
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('cnss-menu')">
+                <i class="bi bi-building"></i> CNSS
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="cnss-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'core:cnss_dashboard' %}">
+                    <i class="bi bi-speedometer2"></i> Tableau de bord
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'core:cnss_generer' %}">
+                    <i class="bi bi-file-earmark-plus"></i> Générer déclaration
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'core:cnss_historique' %}">
+                    <i class="bi bi-clock-history"></i> Historique
+                </a></li>
+            </ul>
+        </li>
+        
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('expatries-menu')">
+                <i class="bi bi-globe"></i> Expatriés
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="expatries-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'core:expatries_liste' %}">
+                    <i class="bi bi-list-ul"></i> Liste des expatriés
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'core:expatrie_ajouter' %}">
+                    <i class="bi bi-person-plus"></i> Ajouter expatrié
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'core:alertes_expatries' %}">
+                    <i class="bi bi-bell"></i> Alertes permis
+                </a></li>
+            </ul>
+        </li>
+        
+        <li class="nav-item">
+            <div class="nav-link menu-toggle" onclick="toggleSubmenu('inspection-menu')">
+                <i class="bi bi-shield-check"></i> Inspection
+                <i class="bi bi-chevron-down float-end"></i>
+            </div>
+            <ul class="submenu" id="inspection-menu">
+                <li><a class="nav-link nav-link-submenu" href="{% url 'core:inspection_dashboard' %}">
+                    <i class="bi bi-speedometer2"></i> Tableau de bord
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'core:registres_liste' %}">
+                    <i class="bi bi-journal-text"></i> Registres
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'core:visites_liste' %}">
+                    <i class="bi bi-calendar-check"></i> Visites
+                </a></li>
+                <li><a class="nav-link nav-link-submenu" href="{% url 'core:checklist_conformite' %}">
+                    <i class="bi bi-list-check"></i> Checklist conformité
+                </a></li>
+            </ul>
+        </li>
+        
         <!-- RAPPORTS -->
         <li class="nav-item">
             <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
@@ -275,6 +383,12 @@
         <li class="nav-item">
             <a class="nav-link" href="{% url 'core:users' %}">
                 <i class="bi bi-person-badge"></i> Utilisateurs
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:gestion_structure' %}">
+                <i class="bi bi-diagram-3"></i> Structure entreprise
             </a>
         </li>
         
