@@ -19,7 +19,7 @@ def liste_notes_frais(request):
     """Liste des notes de frais"""
     notes = NoteFrais.objects.filter(
         employe__entreprise=request.user.entreprise
-    ).select_related('employe', 'employe__departement', 'valideur')
+    ).select_related('employe', 'employe__service', 'valideur')
     
     # Filtres
     employe_id = request.GET.get('employe')
