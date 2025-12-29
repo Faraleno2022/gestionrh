@@ -725,3 +725,34 @@ class DeductionFiscale(models.Model):
     
     def __str__(self):
         return f"{self.get_type_deduction_display()} - {self.montant_deduction:,.0f} GNF ({self.annee})"
+
+
+class ParametreConformite(models.Model):
+    """Paramètres de conformité pour validation manuelle"""
+    CODES_CONFORMITE = (
+        ('affichage_horaires', 'Horaires de travail affichés'),
+        ('affichage_reglement', 'Règlement intérieur affiché'),
+        ('affichage_securite', 'Consignes de sécurité affichées'),
+        ('affichage_inspection', 'Coordonnées inspection du travail'),
+        ('affichage_medecine', 'Coordonnées médecine du travail'),
+        ('securite_extincteurs', 'Extincteurs vérifiés'),
+        ('securite_trousse', 'Trousse de premiers secours'),
+        ('securite_equipements', 'Équipements de protection fournis'),
+    )
+    
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='parametres_conformite')
+    code = models.CharField(max_length=50, choices=CODES_CONFORMITE)
+    valide = models.BooleanField(default=False)
+    date_validation = models.DateField(null=True, blank=True)
+    validateur = models.CharField(max_length=100, blank=True)
+    observations = models.TextField(blank=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'parametres_conformite'
+        verbose_name = 'Paramètre de conformité'
+        verbose_name_plural = 'Paramètres de conformité'
+        unique_together = ['entreprise', 'code']
+    
+    def __str__(self):
+        return f"{self.get_code_display()} - {'✓' if self.valide else '✗'}"
