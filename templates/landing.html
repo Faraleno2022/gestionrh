@@ -857,7 +857,7 @@
                 <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item"><a class="nav-link" href="#features">Fonctionnalités</a></li>
                     <li class="nav-item"><a class="nav-link" href="#modules">Modules</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#jobs">Offres d'Emploi</a></li>
+                    {% if offres_emploi %}<li class="nav-item"><a class="nav-link" href="#jobs">Offres d'Emploi</a></li>{% endif %}
                     <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
                     <li class="nav-item ms-lg-3">
                         <a class="btn btn-login" href="{% url 'core:login' %}">
