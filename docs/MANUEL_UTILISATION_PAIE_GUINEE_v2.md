@@ -76,6 +76,83 @@ Le Gestionnaire RH Guinée est une application complète de gestion des ressourc
 | Heures légales/mois | 173,33 heures | 40h × 52 semaines / 12 mois |
 | Jours ouvrables/mois | 22 jours | Moyenne mensuelle |
 
+## 2.3 Heures Supplémentaires (Code du Travail, Art. 142)
+
+### Barème des Majorations
+
+| Type d'heures | Tranche | Majoration |
+|---------------|---------|------------|
+| Heures de jour | 41e à 48e heure/semaine | **15%** |
+| Heures de jour | Au-delà de 48e heure | **25%** |
+| Heures de nuit (21h-6h) | Toutes | **50%** |
+| Dimanche et jours fériés | Toutes | **100%** |
+
+### Formule de Calcul
+
+```
+Taux horaire = Salaire mensuel / 173,33
+
+Heures sup. 15% = Nb heures (41-48) × Taux horaire × 1,15
+Heures sup. 25% = Nb heures (>48) × Taux horaire × 1,25
+Heures sup. 50% = Nb heures nuit × Taux horaire × 1,50
+Heures sup. 100% = Nb heures férié × Taux horaire × 2,00
+```
+
+### Exemple
+
+```
+Salaire mensuel : 2 000 000 GNF
+Taux horaire : 2 000 000 / 173,33 = 11 539 GNF
+
+Semaine avec 50 heures travaillées :
+- 40 heures normales : incluses dans le salaire
+- 8 heures (41e-48e) à 15% : 8 × 11 539 × 1,15 = 106 159 GNF
+- 2 heures (49e-50e) à 25% : 2 × 11 539 × 1,25 = 28 848 GNF
+
+Total heures sup. semaine = 135 007 GNF
+```
+
+## 2.4 Congés Payés (Code du Travail, Art. 153)
+
+### Droit de Base
+
+| Élément | Valeur |
+|---------|--------|
+| Acquisition | 2,5 jours ouvrables par mois |
+| Durée annuelle | 30 jours ouvrables (6 semaines) |
+| Période de référence | 1er janvier au 31 décembre |
+
+### Majorations pour Ancienneté
+
+| Ancienneté | Majoration annuelle |
+|------------|---------------------|
+| 5 à 10 ans | **+1 jour** par an |
+| 10 à 15 ans | **+2 jours** par an |
+| 15 à 20 ans | **+3 jours** par an |
+| Plus de 20 ans | **+4 jours** par an |
+
+### Exemple de Calcul
+
+```
+Employé avec 12 ans d'ancienneté :
+
+Congés de base : 30 jours
+Majoration ancienneté (10-15 ans) : +2 jours
+
+Total congés annuels = 32 jours ouvrables
+```
+
+### Indemnité de Congés Payés
+
+```
+Indemnité = (Salaire mensuel × 12) / 12 × (Jours de congé / 30)
+
+Ou méthode du 1/10e :
+Indemnité = 10% de la rémunération totale de la période de référence
+```
+
+> **Note** : L'indemnité ne peut être inférieure au salaire qu'aurait perçu le salarié s'il avait travaillé.
+
 ---
 
 # 3. COTISATIONS CNSS
@@ -593,20 +670,38 @@ Indemnité compensatrice = 4 000 000 × 3 = 12 000 000 GNF
 | Congé postnatal | 8 semaines après accouchement |
 | **Total** | **14 semaines** |
 
-## 10.2 Indemnités Journalières CNSS
+## 10.2 Prolongation pour Maladie
+
+Selon l'Article 153 du Code du Travail :
+
+| Situation | Prolongation |
+|-----------|-------------|
+| Maladie liée à la grossesse ou l'accouchement | **+21 jours** (3 semaines) |
+| Congé non payé optionnel | Jusqu'à **9 mois** supplémentaires |
+
+> **Note** : La prolongation de 21 jours nécessite un certificat médical justifiant la maladie.
+
+## 10.3 Indemnités Journalières CNSS
 
 Pendant le congé maternité, la salariée perçoit des indemnités journalières versées par la CNSS.
 
 ```
 Indemnité journalière = Salaire journalier moyen des 3 derniers mois
-Durée = 98 jours (14 semaines)
+Durée normale = 98 jours (14 semaines)
+Durée avec prolongation = 119 jours (14 semaines + 21 jours)
 ```
 
-## 10.3 Conditions d'Éligibilité
+## 10.4 Conditions d'Éligibilité
 
 - Être immatriculée à la CNSS
 - Avoir cotisé au moins 6 mois dans les 12 mois précédant l'accouchement
 - Cesser toute activité salariée pendant le congé
+
+## 10.5 Protection de l'Emploi
+
+- Interdiction de licenciement pendant le congé maternité
+- Garantie de retrouver son poste ou un poste équivalent
+- Maintien de l'ancienneté pendant le congé
 
 ---
 
@@ -1039,9 +1134,10 @@ TESTS DE VÉRIFICATION DES CALCULS DE PAIE - GUINÉE
 | 1.1 | Déc 2025 | Correction barème RTS, ajout VF/TA |
 | 2.0 | Déc 2025 | Exonérations stagiaires, plafond 25%, alertes |
 | 3.0 | Déc 2025 | Formule correcte plafond 25% (33% base), indemnités licenciement, préavis, congé maternité, allocations familiales, accidents travail, jours fériés |
+| 3.1 | Déc 2025 | Heures supplémentaires (taux 15% 41e-48e h), congés payés avec majorations ancienneté, prolongation maternité +21 jours |
 
 ---
 
 **Document généré par Gestionnaire RH Guinée**
-**Version 3.0 - Décembre 2025**
+**Version 3.1 - Décembre 2025**
 **www.guineerh.space**
