@@ -110,6 +110,18 @@
         </li>
         
         <li class="nav-item">
+            <a class="nav-link" href="{% url 'paie:liste_prets' %}">
+                <i class="bi bi-cash"></i> Prêts
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'paie:liste_notes_frais' %}">
+                <i class="bi bi-receipt"></i> Notes de frais
+            </a>
+        </li>
+        
+        <li class="nav-item">
             <a class="nav-link" href="{% url 'paie:livre_paie' %}">
                 <i class="bi bi-book"></i> Livre de paie
             </a>
@@ -136,6 +148,42 @@
         <li class="nav-item">
             <a class="nav-link" href="{% url 'employes:liste_campagnes' %}">
                 <i class="bi bi-clipboard-check"></i> Évaluations
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'employes:liste_missions' %}">
+                <i class="bi bi-airplane"></i> Missions
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'employes:liste_reclamations' %}">
+                <i class="bi bi-chat-left-text"></i> Réclamations
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'employes:liste_visites_medicales' %}">
+                <i class="bi bi-heart-pulse"></i> Médical
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:cnss_dashboard' %}">
+                <i class="bi bi-building"></i> CNSS
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:expatries_liste' %}">
+                <i class="bi bi-globe"></i> Expatriés
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:inspection_dashboard' %}">
+                <i class="bi bi-shield-check"></i> Inspection
             </a>
         </li>
         
