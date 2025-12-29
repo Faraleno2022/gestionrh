@@ -21,10 +21,11 @@ def get_employe_connecte(request):
     if hasattr(request.user, 'employe'):
         return request.user.employe
     
-    # Chercher par email
+    # Chercher par email professionnel ou personnel
     try:
+        from django.db.models import Q
         return Employe.objects.get(
-            email=request.user.email,
+            Q(email_professionnel=request.user.email) | Q(email_personnel=request.user.email),
             entreprise=request.user.entreprise,
             statut_employe='actif'
         )
