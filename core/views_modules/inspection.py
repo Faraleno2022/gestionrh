@@ -22,7 +22,7 @@ def inspection_dashboard(request):
         entreprise=entreprise
     )
     
-    registres_a_jour = registres.filter(conforme=True).count()
+    registres_a_jour = registres.filter(vise_inspection=True).count()
     registres_total = registres.count()
     
     # Dernières visites

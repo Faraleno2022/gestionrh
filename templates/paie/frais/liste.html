@@ -131,7 +131,7 @@
                             <td><strong>{{ note.reference }}</strong></td>
                             <td>
                                 {{ note.employe.nom }} {{ note.employe.prenoms }}<br>
-                                <small class="text-muted">{{ note.employe.departement.nom|default:"-" }}</small>
+                                <small class="text-muted">{{ note.employe.service.nom|default:"-" }}</small>
                             </td>
                             <td>{{ note.titre|truncatechars:30 }}</td>
                             <td>{{ note.date_debut|date:"d/m/Y" }} - {{ note.date_fin|date:"d/m/Y" }}</td>
