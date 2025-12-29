@@ -177,6 +177,44 @@ class Command(BaseCommand):
                 'description': 'Plafond des indemnités forfaitaires exonérées (logement, transport, panier) = 25% du salaire brut'
             },
             
+            # Heures supplémentaires (Art. 142 Code du Travail)
+            {
+                'code': 'TAUX_HS_JOUR_15',
+                'libelle': 'Taux HS 41e-48e heure',
+                'valeur': Decimal('115'),
+                'type_valeur': 'pourcentage',
+                'categorie': 'temps',
+                'unite': '%',
+                'description': 'Majoration heures supplémentaires 41e à 48e heure/semaine: +15% (Art. 142)'
+            },
+            {
+                'code': 'TAUX_HS_JOUR_25',
+                'libelle': 'Taux HS au-delà 48e heure',
+                'valeur': Decimal('125'),
+                'type_valeur': 'pourcentage',
+                'categorie': 'temps',
+                'unite': '%',
+                'description': 'Majoration heures supplémentaires au-delà de 48e heure/semaine: +25% (Art. 142)'
+            },
+            {
+                'code': 'TAUX_HS_NUIT',
+                'libelle': 'Taux HS heures de nuit',
+                'valeur': Decimal('150'),
+                'type_valeur': 'pourcentage',
+                'categorie': 'temps',
+                'unite': '%',
+                'description': 'Majoration heures supplémentaires de nuit (21h-6h): +50% (Art. 142)'
+            },
+            {
+                'code': 'TAUX_HS_FERIE',
+                'libelle': 'Taux HS dimanche/férié',
+                'valeur': Decimal('200'),
+                'type_valeur': 'pourcentage',
+                'categorie': 'temps',
+                'unite': '%',
+                'description': 'Majoration heures supplémentaires dimanche et jours fériés: +100% (Art. 142)'
+            },
+            
             # Temps de travail
             {
                 'code': 'JOURS_MOIS',
