@@ -24,18 +24,19 @@ def cnss_dashboard(request):
     except ConfigurationCNSS.DoesNotExist:
         config = None
     
-    # Dernières transmissions
-    transmissions = TransmissionCNSS.objects.filter(
-        entreprise=entreprise
-    ).order_by('-periode_annee', '-periode_mois')[:12]
+    # Toutes les transmissions pour stats
+    all_transmissions = TransmissionCNSS.objects.filter(entreprise=entreprise)
     
-    # Statistiques
+    # Statistiques (avant le slice)
     stats = {
-        'total_transmissions': transmissions.count(),
-        'transmis': transmissions.filter(statut='transmis').count(),
-        'accepte': transmissions.filter(statut='accepte').count(),
-        'en_attente': transmissions.filter(statut__in=['brouillon', 'genere']).count(),
+        'total_transmissions': all_transmissions.count(),
+        'transmis': all_transmissions.filter(statut='transmis').count(),
+        'accepte': all_transmissions.filter(statut='accepte').count(),
+        'en_attente': all_transmissions.filter(statut__in=['brouillon', 'genere']).count(),
     }
+    
+    # Dernières transmissions (slice après les stats)
+    transmissions = all_transmissions.order_by('-periode_annee', '-periode_mois')[:12]
     
     return render(request, 'core/cnss/dashboard.html', {
         'config': config,
