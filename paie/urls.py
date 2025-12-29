@@ -104,4 +104,9 @@ urlpatterns = [
     path('frais/<int:pk>/supprimer/', views_frais.supprimer_note_frais, name='supprimer_note_frais'),
     path('frais/recap/', views_frais.recap_frais, name='recap_frais'),
     path('frais/categories/', views_frais.gestion_categories_frais, name='gestion_categories_frais'),
+    
+    # Archives bulletins - Traçabilité
+    path('archives/', views.liste_archives, name='liste_archives'),
+    path('archives/<int:pk>/telecharger/', views.telecharger_archive, name='telecharger_archive'),
+    path('archives/<int:pk>/verifier/', views.verifier_integrite_archive, name='verifier_integrite_archive'),
 ]

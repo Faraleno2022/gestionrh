@@ -234,6 +234,15 @@ def valider_periode(request, pk):
             periode.statut_periode = 'validee'
             periode.save()
             
+            # Archiver les bulletins pour traçabilité
+            try:
+                from .services_archive import ArchivageService
+                stats = ArchivageService.archiver_periode(periode)
+                if stats['archivés'] > 0:
+                    messages.info(request, f"{stats['archivés']} bulletin(s) archivé(s) pour traçabilité.")
+            except Exception as e:
+                messages.warning(request, f"Archivage partiel: {e}")
+            
             messages.success(request, 'Période validée avec succès.')
         
         return redirect('paie:detail_periode', pk=pk)
@@ -1944,3 +1953,89 @@ def simulation_paie(request):
         'resultat': resultat,
         'employe_selectionne': employe_selectionne,
     })
+
+
+# ============================================
+# VUES ARCHIVES BULLETINS - TRAÇABILITÉ
+# ============================================
+
+@login_required
+@entreprise_active_required
+def liste_archives(request):
+    """Liste des bulletins archivés avec statistiques"""
+    from .services_archive import ArchivageService
+    
+    entreprise = request.user.entreprise
+    
+    archives = ArchiveBulletin.objects.filter(
+        bulletin__employe__entreprise=entreprise
+    ).select_related('bulletin', 'bulletin__employe').order_by(
+        '-periode_annee', '-periode_mois', 'employe_nom'
+    )
+    
+    # Filtres
+    annee = request.GET.get('annee')
+    if annee:
+        archives = archives.filter(periode_annee=int(annee))
+    
+    mois = request.GET.get('mois')
+    if mois:
+        archives = archives.filter(periode_mois=int(mois))
+    
+    # Stats
+    stats = ArchivageService.stats_archives(entreprise)
+    
+    # Années disponibles
+    annees = ArchiveBulletin.objects.filter(
+        bulletin__employe__entreprise=entreprise
+    ).values_list('periode_annee', flat=True).distinct().order_by('-periode_annee')
+    
+    return render(request, 'paie/archives/liste.html', {
+        'archives': archives[:100],
+        'stats': stats,
+        'annees': annees,
+        'annee_filtre': annee,
+        'mois_filtre': mois,
+    })
+
+
+@login_required
+@entreprise_active_required
+def telecharger_archive(request, pk):
+    """Télécharger un bulletin archivé"""
+    from .services_archive import ArchivageService
+    
+    archive = get_object_or_404(
+        ArchiveBulletin,
+        pk=pk,
+        bulletin__employe__entreprise=request.user.entreprise
+    )
+    
+    contenu = ArchivageService.telecharger_archive(archive)
+    if not contenu:
+        messages.error(request, "Archive non disponible")
+        return redirect('paie:liste_archives')
+    
+    response = HttpResponse(contenu, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="archive_{archive.employe_matricule}_{archive.periode_annee}{archive.periode_mois:02d}.pdf"'
+    return response
+
+
+@login_required
+@entreprise_active_required
+def verifier_integrite_archive(request, pk):
+    """Vérifier l'intégrité d'une archive"""
+    from .services_archive import ArchivageService
+    
+    archive = get_object_or_404(
+        ArchiveBulletin,
+        pk=pk,
+        bulletin__employe__entreprise=request.user.entreprise
+    )
+    
+    if ArchivageService.verifier_integrite(archive):
+        messages.success(request, f"✓ Intégrité vérifiée pour {archive.employe_nom}")
+    else:
+        messages.error(request, f"✗ ALERTE: Intégrité compromise pour {archive.employe_nom}")
+    
+    return redirect('paie:liste_archives')
