@@ -33,7 +33,9 @@ class Employe(models.Model):
     TYPES_CONTRATS = (
         ('CDI', 'Contrat à Durée Indéterminée'),
         ('CDD', 'Contrat à Durée Déterminée'),
+        ('CDImp', 'Contrat à Durée Imprécise'),
         ('stage', 'Stage'),
+        ('apprentissage', 'Contrat d\'Apprentissage'),
         ('temporaire', 'Temporaire'),
     )
     

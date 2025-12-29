@@ -121,7 +121,16 @@ def index_view(request):
     """Page d'accueil - redirige vers le dashboard si connecté, sinon affiche landing page"""
     if request.user.is_authenticated:
         return redirect('dashboard:index')
-    return render(request, 'landing.html')
+    
+    # Récupérer les offres d'emploi ouvertes pour affichage public
+    from recrutement.models import OffreEmploi
+    offres_emploi = OffreEmploi.objects.filter(
+        statut_offre='ouverte'
+    ).select_related('entreprise', 'service').order_by('-date_publication')[:6]
+    
+    return render(request, 'landing.html', {
+        'offres_emploi': offres_emploi
+    })
 
 
 def csrf_failure(request, reason=""):
