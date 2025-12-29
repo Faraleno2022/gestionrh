@@ -1,11 +1,17 @@
 from django.urls import path
 from . import views
+from . import views_public
 
 app_name = 'recrutement'
 
 urlpatterns = [
     # Accueil
     path('', views.recrutement_home, name='home'),
+    
+    # Vues publiques (sans authentification)
+    path('offre/<int:pk>/', views_public.offre_detail_public, name='offre_public'),
+    path('offre/<int:pk>/postuler/', views_public.postuler, name='postuler'),
+    path('candidature/confirmation/<str:numero>/', views_public.candidature_confirmee, name='candidature_confirmee'),
     
     # Offres d'emploi
     path('offres/', views.liste_offres, name='offres'),
