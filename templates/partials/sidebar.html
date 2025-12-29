@@ -68,6 +68,12 @@
         </li>
         
         <li class="nav-item">
+            <a class="nav-link" href="{% url 'temps_travail:liste_heures_supplementaires' %}">
+                <i class="bi bi-hourglass-split"></i> Heures Supp.
+            </a>
+        </li>
+        
+        <li class="nav-item">
             <a class="nav-link" href="{% url 'temps_travail:liste_jours_feries' %}">
                 <i class="bi bi-calendar-event"></i> Jours Fériés
             </a>
@@ -184,6 +190,12 @@
         <li class="nav-item">
             <a class="nav-link" href="{% url 'core:inspection_dashboard' %}">
                 <i class="bi bi-shield-check"></i> Inspection
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'portail:accueil' %}">
+                <i class="bi bi-person-workspace"></i> Portail Employé
             </a>
         </li>
         
