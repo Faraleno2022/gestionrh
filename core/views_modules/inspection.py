@@ -166,88 +166,57 @@ def visite_detail(request, pk):
 @login_required
 def checklist_conformite(request):
     """Checklist de conformité inspection du travail"""
+    from core.services.conformite import ConformiteService
+    
     entreprise = request.user.entreprise
+    service = ConformiteService(entreprise)
     
-    # Liste des éléments à vérifier
-    checklist = [
-        {
-            'categorie': 'Registres obligatoires',
-            'items': [
-                {'code': 'REG_PERSONNEL', 'libelle': 'Registre du personnel à jour', 'obligatoire': True},
-                {'code': 'REG_PAIE', 'libelle': 'Registre de paie mensuel', 'obligatoire': True},
-                {'code': 'REG_CONGES', 'libelle': 'Registre des congés payés', 'obligatoire': True},
-                {'code': 'REG_ACCIDENTS', 'libelle': 'Registre des accidents du travail', 'obligatoire': True},
-                {'code': 'REG_DELEGUES', 'libelle': 'Registre des délégués du personnel', 'obligatoire': False},
-            ]
-        },
-        {
-            'categorie': 'Affichages obligatoires',
-            'items': [
-                {'code': 'AFF_HORAIRES', 'libelle': 'Horaires de travail affichés', 'obligatoire': True},
-                {'code': 'AFF_REGLEMENT', 'libelle': 'Règlement intérieur affiché', 'obligatoire': True},
-                {'code': 'AFF_SECURITE', 'libelle': 'Consignes de sécurité affichées', 'obligatoire': True},
-                {'code': 'AFF_INSPECTION', 'libelle': 'Coordonnées inspection du travail', 'obligatoire': True},
-                {'code': 'AFF_MEDECINE', 'libelle': 'Coordonnées médecine du travail', 'obligatoire': True},
-            ]
-        },
-        {
-            'categorie': 'Documents contrats',
-            'items': [
-                {'code': 'DOC_CONTRATS', 'libelle': 'Contrats de travail signés', 'obligatoire': True},
-                {'code': 'DOC_BULLETINS', 'libelle': 'Bulletins de paie remis', 'obligatoire': True},
-                {'code': 'DOC_ATTESTATIONS', 'libelle': 'Attestations CNSS à jour', 'obligatoire': True},
-            ]
-        },
-        {
-            'categorie': 'Hygiène et sécurité',
-            'items': [
-                {'code': 'SEC_EXTINCTEURS', 'libelle': 'Extincteurs vérifiés', 'obligatoire': True},
-                {'code': 'SEC_TROUSSE', 'libelle': 'Trousse de premiers secours', 'obligatoire': True},
-                {'code': 'SEC_EQUIPEMENTS', 'libelle': 'Équipements de protection fournis', 'obligatoire': False},
-                {'code': 'SEC_FORMATION', 'libelle': 'Formation sécurité dispensée', 'obligatoire': False},
-            ]
-        },
-    ]
-    
-    # Vérifier l'état actuel
-    registres = {r.type_registre: r.conforme for r in RegistreObligatoire.objects.filter(entreprise=entreprise)}
-    
-    total_items = 0
-    items_conformes = 0
-    
-    for cat in checklist:
-        for item in cat['items']:
-            total_items += 1
-            # Vérifier si conforme (logique simplifiée)
-            if item['code'].startswith('REG_'):
-                reg_type = item['code'].replace('REG_', '').lower()
-                item['conforme'] = registres.get(reg_type, False)
-            else:
-                item['conforme'] = False  # À implémenter selon les besoins
+    # Traitement des validations manuelles
+    if request.method == 'POST':
+        from core.models import ParametreConformite
+        code = request.POST.get('code')
+        valide = request.POST.get('valide') == 'true'
+        
+        if code:
+            param, created = ParametreConformite.objects.get_or_create(
+                entreprise=entreprise,
+                code=code,
+                defaults={'valide': valide}
+            )
+            if not created:
+                param.valide = valide
+                if valide:
+                    param.date_validation = date.today()
+                    param.validateur = request.user.get_full_name() or request.user.username
+                param.save()
             
-            if item['conforme']:
-                items_conformes += 1
+            messages.success(request, f"{'✓ Validé' if valide else '✗ Non conforme'}: {param.get_code_display()}")
+            return redirect('core:checklist_conformite')
     
-    score = int((items_conformes / total_items) * 100) if total_items > 0 else 0
+    # Obtenir la checklist avec évaluation automatique
+    data = service.get_checklist_complete()
     
     return render(request, 'core/inspection/checklist.html', {
-        'checklist': checklist,
-        'score': score,
-        'items_conformes': items_conformes,
-        'total_items': total_items,
+        'checklist': data['checklist'],
+        'score': data['score'],
+        'score_obligatoire': data['score_obligatoire'],
+        'items_conformes': data['items_conformes'],
+        'total_items': data['total_items'],
+        'obligatoires_conformes': data['obligatoires_conformes'],
+        'items_obligatoires': data['items_obligatoires'],
     })
 
 
 @login_required
 def generer_rapport_conformite(request):
     """Générer un rapport de conformité (affichage simplifié)"""
-    entreprise = request.user.entreprise
+    from core.services.conformite import ConformiteService
     
-    # Calculer le score
-    registres = RegistreObligatoire.objects.filter(entreprise=entreprise)
-    registres_conformes = registres.filter(conforme=True).count()
-    total = registres.count()
-    score = int((registres_conformes / total) * 100) if total > 0 else 0
+    entreprise = request.user.entreprise
+    service = ConformiteService(entreprise)
+    data = service.get_checklist_complete()
+    
+    score = data['score']
     
     if request.method == 'POST':
         log_activity(request, f"Génération rapport conformité - Score {score}%", 'core')
@@ -256,6 +225,7 @@ def generer_rapport_conformite(request):
     
     return render(request, 'core/inspection/generer_rapport.html', {
         'score': score,
-        'registres_conformes': registres_conformes,
-        'registres_total': total,
+        'items_conformes': data['items_conformes'],
+        'total_items': data['total_items'],
+        'checklist': data['checklist'],
     })
