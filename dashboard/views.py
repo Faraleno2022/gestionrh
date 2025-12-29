@@ -326,7 +326,7 @@ def telecharger_manuel(request):
     p.drawCentredString(width/2, height - 14.6*cm, "Code du Travail - CNSS - Direction Générale des Impôts")
     
     p.setFont("Helvetica-Oblique", 10)
-    p.drawCentredString(width/2, height - 17*cm, f"Version 1.0 - {timezone.now().strftime('%B %Y')}")
+    p.drawCentredString(width/2, height - 17*cm, f"Version 3.1 - {timezone.now().strftime('%B %Y')}")
     p.drawCentredString(width/2, height - 17.6*cm, "www.guineerh.space")
     
     y = nouvelle_page()
@@ -341,7 +341,7 @@ def telecharger_manuel(request):
         "4. Gestion de la Paie",
         "   4.1 Éléments du bulletin de paie",
         "   4.2 Formules de calcul",
-        "   4.3 Barème IRG",
+        "   4.3 Barème RTS (6 tranches)",
         "   4.4 Exemple de calcul complet",
         "5. Gestion du Temps de Travail",
         "6. Gestion des Congés",
@@ -370,7 +370,7 @@ def telecharger_manuel(request):
     
     y -= 0.3*cm
     y = draw_subtitle(y, "Conformité légale")
-    y = draw_text(y, "L'application respecte intégralement le Code du Travail guinéen, les règlements de la Caisse Nationale de Sécurité Sociale (CNSS) et les dispositions fiscales de la Direction Générale des Impôts concernant l'Impôt sur le Revenu Guinéen (IRG).")
+    y = draw_text(y, "L'application respecte intégralement le Code du Travail guinéen, les règlements de la Caisse Nationale de Sécurité Sociale (CNSS) et les dispositions fiscales du Code Général des Impôts (CGI 2022+) concernant la Retenue sur Traitements et Salaires (RTS).")
     
     y -= 0.5*cm
     
@@ -405,7 +405,7 @@ def telecharger_manuel(request):
     y = draw_definition(y, "CNSS", "Caisse Nationale de Sécurité Sociale - organisme de protection sociale")
     y = draw_definition(y, "Cotisation salariale", "Part des cotisations payée par l'employé (5% CNSS)")
     y = draw_definition(y, "Cotisation patronale", "Part des cotisations payée par l'employeur (18% CNSS)")
-    y = draw_definition(y, "IRG", "Impôt sur le Revenu Guinéen - impôt sur les salaires")
+    y = draw_definition(y, "RTS", "Retenue sur Traitements et Salaires - impôt progressif sur les salaires")
     y = draw_definition(y, "Assiette", "Base de calcul des cotisations ou impôts")
     y = draw_definition(y, "Plafond", "Limite maximale de l'assiette de cotisation")
     
@@ -481,8 +481,8 @@ def telecharger_manuel(request):
     p.setFont("Helvetica-Bold", 9)
     p.drawString(2.2*cm, y, "B) Les RETENUES (ce qui est prélevé)")
     y -= 0.4*cm
-    y = draw_bullet(y, "CNSS employé: 5% du salaire brut - cotisation retraite et maladie")
-    y = draw_bullet(y, "IRG: impôt progressif sur le revenu selon barème")
+    y = draw_bullet(y, "CNSS employé: 5% de l'assiette CNSS (plancher 550K, plafond 2,5M GNF)")
+    y = draw_bullet(y, "RTS: impôt progressif sur le revenu selon barème à 6 tranches")
     y = draw_bullet(y, "Avances sur salaire: remboursement des avances consenties")
     y = draw_bullet(y, "Autres retenues: prêts, saisies sur salaire")
     
@@ -500,11 +500,14 @@ def telecharger_manuel(request):
     formules_data = [
         ['Élément', 'Formule', 'Explication'],
         ['Salaire Brut', 'Base + Primes + HS - Absences', 'Somme de tous les gains'],
-        ['CNSS Employé', 'Brut × 5%', 'Cotisation sociale obligatoire'],
-        ['CNSS Employeur', 'Brut × 18%', 'Charge patronale (non visible sur bulletin)'],
-        ['Base imposable IRG', 'Brut - CNSS Employé', 'Assiette de l\'impôt'],
-        ['IRG', 'Selon barème progressif', 'Voir tableau ci-dessous'],
-        ['Total Retenues', 'CNSS + IRG + Autres', 'Somme des prélèvements'],
+        ['Assiette CNSS', 'MIN(MAX(Brut, 550K), 2,5M)', 'Plancher 550K, Plafond 2,5M GNF'],
+        ['CNSS Employé', 'Assiette CNSS × 5%', 'Cotisation sociale obligatoire'],
+        ['CNSS Employeur', 'Assiette CNSS × 18%', 'Charge patronale'],
+        ['VF (Versement Forfaitaire)', 'Brut × 6%', 'Charge patronale'],
+        ['TA (Taxe Apprentissage)', 'Brut × 1,5%', 'Charge patronale'],
+        ['Base imposable RTS', 'Brut - CNSS Employé', 'Assiette de l\'impôt'],
+        ['RTS', 'Selon barème 6 tranches', 'Voir tableau ci-dessous'],
+        ['Total Retenues', 'CNSS + RTS + Autres', 'Somme des prélèvements'],
         ['Net à Payer', 'Brut - Total Retenues', 'Montant viré au salarié'],
     ]
     
@@ -526,14 +529,15 @@ def telecharger_manuel(request):
     table.drawOn(p, 2*cm, y - th)
     y = y - th - 0.5*cm
     
-    y = draw_subtitle(y, "4.3 Barème IRG (Impôt sur le Revenu Guinéen)")
-    y = draw_text(y, "L'IRG est un impôt progressif par tranches. Chaque tranche de revenu est imposée à son propre taux:")
+    y = draw_subtitle(y, "4.3 Barème RTS (Retenue sur Traitements et Salaires) - CGI 2022+")
+    y = draw_text(y, "La RTS est un impôt progressif par tranches. Le barème 2022 comporte 6 tranches:")
     y -= 0.2*cm
     
     irg_data = [
-        ['Tranche de revenu mensuel', 'Taux', 'Impôt maximum de la tranche'],
+        ['Tranche de revenu mensuel', 'Taux', 'Impôt max de la tranche'],
         ['0 - 1 000 000 GNF', '0%', '0 GNF'],
-        ['1 000 001 - 5 000 000 GNF', '5%', '200 000 GNF'],
+        ['1 000 001 - 3 000 000 GNF', '5%', '100 000 GNF'],
+        ['3 000 001 - 5 000 000 GNF', '8%', '160 000 GNF'],
         ['5 000 001 - 10 000 000 GNF', '10%', '500 000 GNF'],
         ['10 000 001 - 20 000 000 GNF', '15%', '1 500 000 GNF'],
         ['Au-delà de 20 000 000 GNF', '20%', 'Variable'],
@@ -553,7 +557,7 @@ def telecharger_manuel(request):
     table_irg.drawOn(p, 2*cm, y - th)
     y = y - th - 0.4*cm
     
-    y = draw_note(y, "Important: L'IRG est calculé par tranches successives. Un salaire de 6 000 000 GNF paiera 0% sur le 1er million, 5% sur les 4 millions suivants, et 10% sur le dernier million.")
+    y = draw_note(y, "Important: La RTS est calculée par tranches successives. La tranche 8% (3M-5M GNF) a été ajoutée par le CGI 2022.")
     
     y -= 0.3*cm
     y = draw_subtitle(y, "4.4 Exemple de calcul complet")
@@ -563,14 +567,16 @@ def telecharger_manuel(request):
     exemple_data = [
         ['Étape', 'Calcul', 'Montant'],
         ['1. Salaire Brut', 'Donné', '8 000 000 GNF'],
-        ['2. CNSS Employé', '8 000 000 × 5%', '400 000 GNF'],
-        ['3. Base IRG', '8 000 000 - 400 000', '7 600 000 GNF'],
-        ['4. IRG Tranche 1', '1 000 000 × 0%', '0 GNF'],
-        ['5. IRG Tranche 2', '4 000 000 × 5%', '200 000 GNF'],
-        ['6. IRG Tranche 3', '2 600 000 × 10%', '260 000 GNF'],
-        ['7. Total IRG', '0 + 200 000 + 260 000', '460 000 GNF'],
-        ['8. Total Retenues', '400 000 + 460 000', '860 000 GNF'],
-        ['9. Net à Payer', '8 000 000 - 860 000', '7 140 000 GNF'],
+        ['2. Assiette CNSS', 'MIN(8M, 2,5M) = Plafond', '2 500 000 GNF'],
+        ['3. CNSS Employé', '2 500 000 × 5%', '125 000 GNF'],
+        ['4. Base RTS', '8 000 000 - 125 000', '7 875 000 GNF'],
+        ['5. RTS Tr.1 (0%)', '1 000 000 × 0%', '0 GNF'],
+        ['6. RTS Tr.2 (5%)', '2 000 000 × 5%', '100 000 GNF'],
+        ['7. RTS Tr.3 (8%)', '2 000 000 × 8%', '160 000 GNF'],
+        ['8. RTS Tr.4 (10%)', '2 875 000 × 10%', '287 500 GNF'],
+        ['9. Total RTS', '0+100K+160K+287,5K', '547 500 GNF'],
+        ['10. Total Retenues', '125 000 + 547 500', '672 500 GNF'],
+        ['11. Net à Payer', '8 000 000 - 672 500', '7 327 500 GNF'],
     ]
     
     table_ex = Table(exemple_data, colWidths=[4*cm, 5.5*cm, 4*cm])
@@ -591,7 +597,7 @@ def telecharger_manuel(request):
     table_ex.drawOn(p, 2*cm, y - th)
     y = y - th - 0.5*cm
     
-    y = draw_note(y, "Note: L'employeur paie en plus 18% de CNSS patronale (1 440 000 GNF), non visible sur le bulletin mais déclaré à la CNSS.")
+    y = draw_note(y, "Note: Charges patronales: CNSS 18% (450K sur plafond 2,5M) + VF 6% (480K) + TA 1,5% (120K) = 1 050 000 GNF.")
     
     y = nouvelle_page()
     
@@ -617,9 +623,10 @@ def telecharger_manuel(request):
     y = draw_definition(y, "Maladie", "Absence pour raison de santé (avec justificatif)")
     
     y -= 0.2*cm
-    y = draw_subtitle(y, "Heures supplémentaires")
+    y = draw_subtitle(y, "Heures supplémentaires (Code du Travail, Art. 142)")
     y = draw_text(y, "Selon le Code du Travail guinéen, les heures au-delà de la durée légale (40h/semaine) sont majorées:")
-    y = draw_bullet(y, "Heures de jour (6h-21h): majoration de 25%")
+    y = draw_bullet(y, "41e à 48e heure/semaine: majoration de 15%")
+    y = draw_bullet(y, "Au-delà de 48e heure: majoration de 25%")
     y = draw_bullet(y, "Heures de nuit (21h-6h): majoration de 50%")
     y = draw_bullet(y, "Dimanches et jours fériés: majoration de 100%")
     
@@ -633,7 +640,7 @@ def telecharger_manuel(request):
     y = draw_subtitle(y, "Types de congés")
     conges_data = [
         ['Type', 'Durée', 'Rémunération', 'Conditions'],
-        ['Annuel', '30 jours/an', '100%', '2.5 jours acquis par mois'],
+        ['Annuel', '30 jours/an + ancienneté', '100%', '2.5 j/mois + majorations'],
         ['Maladie', 'Variable', '50-100%', 'Certificat médical requis'],
         ['Maternité', '14 semaines', '100%', 'Femmes enceintes'],
         ['Paternité', '3 jours', '100%', 'Naissance d\'un enfant'],
@@ -656,10 +663,11 @@ def telecharger_manuel(request):
     table_conges.drawOn(p, 2*cm, y - th)
     y = y - th - 0.4*cm
     
-    y = draw_subtitle(y, "Calcul du solde de congés")
+    y = draw_subtitle(y, "Calcul du solde de congés (Code du Travail, Art. 153)")
     y = draw_text(y, "Chaque employé acquiert 2.5 jours ouvrables de congé par mois de travail effectif. Le solde est calculé automatiquement:")
-    y = draw_bullet(y, "Solde = Jours acquis - Jours pris")
-    y = draw_bullet(y, "Les congés non pris peuvent être reportés selon la politique de l'entreprise")
+    y = draw_bullet(y, "Base: 30 jours ouvrables par an (2.5 jours/mois)")
+    y = draw_bullet(y, "Majoration ancienneté: +1j (5-10 ans), +2j (10-15 ans), +3j (15-20 ans), +4j (>20 ans)")
+    y = draw_bullet(y, "Solde = Jours acquis + Majorations - Jours pris")
     y = draw_bullet(y, "En cas de départ, les congés non pris sont indemnisés")
     
     y = nouvelle_page()
@@ -697,11 +705,17 @@ def telecharger_manuel(request):
     table_cnss.drawOn(p, 2*cm, y - th)
     y = y - th - 0.4*cm
     
-    y = draw_subtitle(y, "7.2 Déclaration IRG")
-    y = draw_text(y, "L'Impôt sur le Revenu Guinéen est retenu à la source par l'employeur et reversé au Trésor Public:")
-    y = draw_bullet(y, "Calcul: selon le barème progressif (voir section 4.3)")
-    y = draw_bullet(y, "Échéance: avant le 10 du mois suivant")
+    y = draw_subtitle(y, "7.2 Déclaration RTS")
+    y = draw_text(y, "La Retenue sur Traitements et Salaires est retenue à la source par l'employeur et reversée au Trésor Public:")
+    y = draw_bullet(y, "Calcul: selon le barème progressif à 6 tranches (voir section 4.3)")
+    y = draw_bullet(y, "Échéance: avant le 15 du mois suivant")
     y = draw_bullet(y, "Déclaration annuelle récapitulative obligatoire")
+    
+    y -= 0.2*cm
+    y = draw_subtitle(y, "7.3 Versement Forfaitaire (VF) et Taxe d'Apprentissage (TA)")
+    y = draw_text(y, "Charges patronales calculées sur le salaire brut total (non plafonné):")
+    y = draw_bullet(y, "VF: 6% du salaire brut - Échéance: 15 du mois suivant")
+    y = draw_bullet(y, "TA: 1,5% du salaire brut - Échéance: 15 du mois suivant")
     
     y -= 0.2*cm
     y = draw_note(y, "Pénalités: Le non-respect des échéances entraîne des majorations de retard (10% + intérêts).")
