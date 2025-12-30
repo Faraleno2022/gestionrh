@@ -1,7 +1,7 @@
-<nav class="navbar navbar-expand-lg navbar-dark fixed-top" style="background: linear-gradient(90deg, #212121 0%, #3a3a3a 100%); border-bottom: 3px solid #EF7707;">
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top" style="background: linear-gradient(90deg, #EF7707 0%, #FF8C00 100%); border-bottom: 3px solid #CC6600;">
     <div class="container-fluid">
         <!-- Bouton toggle sidebar pour mobile/tablette -->
-        <button class="btn btn-link d-md-none me-2 sidebar-toggle" type="button" id="sidebarToggle" style="color: #EF7707;">
+        <button class="btn btn-link d-md-none me-2 sidebar-toggle" type="button" id="sidebarToggle" style="color: #FFFFFF;">
             <i class="fas fa-bars fa-lg"></i>
         </button>
         
@@ -9,10 +9,10 @@
             {% if entreprise_logo %}
                 <img src="{{ entreprise_logo.url }}" alt="{{ entreprise_nom }}" style="height: 40px; margin-right: 10px;" class="d-inline-block">
             {% else %}
-                <i class="fas fa-users-cog me-2" style="color: #EF7707;"></i>
+                <i class="fas fa-users-cog me-2" style="color: #FFFFFF;"></i>
             {% endif %}
-            <span class="d-none d-sm-inline" style="color: #EF7707;">{{ entreprise_nom|default:"RH Guinée" }}</span>
-            <span class="d-sm-none" style="color: #EF7707;">RH</span>
+            <span class="d-none d-sm-inline" style="color: #FFFFFF;">{{ entreprise_nom|default:"RH Guinée" }}</span>
+            <span class="d-sm-none" style="color: #FFFFFF;">RH</span>
         </a>
         
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
