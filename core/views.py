@@ -133,6 +133,11 @@ def index_view(request):
     })
 
 
+def landing_page(request):
+    """Landing page publique pour le schéma public (multi-tenant)"""
+    return render(request, 'landing.html')
+
+
 def csrf_failure(request, reason=""):
     """Vue personnalisée pour les erreurs CSRF"""
     return render(request, 'core/csrf_failure.html', {
