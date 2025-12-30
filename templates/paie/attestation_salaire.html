@@ -53,7 +53,7 @@
                             <p><strong>N° CNSS :</strong> {{ employe.num_cnss_individuel|default:"N/A" }}</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Fonction :</strong> {{ employe.poste|default:"N/A" }}</p>
+                            <p><strong>Fonction :</strong> {{ employe.poste.intitule|default:"N/A" }}</p>
                             <p><strong>Date d'embauche :</strong> {{ employe.date_embauche|date:"d/m/Y"|default:"N/A" }}</p>
                             <p><strong>Type de contrat :</strong> {{ employe.get_type_contrat_display|default:"N/A" }}</p>
                         </div>
