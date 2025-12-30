@@ -79,7 +79,17 @@
                         <td>
                             <span class="badge bg-info">{{ offre.nb_candidatures }}</span>
                         </td>
-                        <td>{{ offre.date_limite_candidature|date:"d/m/Y"|default:"-" }}</td>
+                        <td>
+                            {% if offre.date_limite_candidature %}
+                                {{ offre.date_limite_candidature|date:"d/m/Y" }}
+                                {% now "Y-m-d" as today %}
+                                {% if offre.date_limite_candidature|date:"Y-m-d" < today %}
+                                    <span class="badge bg-danger ms-1">Expirée</span>
+                                {% endif %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
                         <td>
                             {% if offre.statut_offre == 'ouverte' %}
                                 <span class="badge bg-success">Ouverte</span>
@@ -97,6 +107,9 @@
                             </a>
                             <a href="{% url 'recrutement:modifier_offre' offre.pk %}" class="btn btn-sm btn-warning" title="Modifier">
                                 <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'recrutement:supprimer_offre' offre.pk %}" class="btn btn-sm btn-danger" title="Supprimer" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette offre ?');">
+                                <i class="bi bi-trash"></i>
                             </a>
                         </td>
                     </tr>

@@ -122,10 +122,16 @@ def index_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard:index')
     
-    # Récupérer les offres d'emploi ouvertes pour affichage public
+    # Récupérer les offres d'emploi ouvertes et non expirées pour affichage public
     from recrutement.models import OffreEmploi
+    from datetime import date
+    from django.db.models import Q
+    
     offres_emploi = OffreEmploi.objects.filter(
         statut_offre='ouverte'
+    ).filter(
+        # Inclure les offres sans date limite OU avec date limite >= aujourd'hui
+        Q(date_limite_candidature__isnull=True) | Q(date_limite_candidature__gte=date.today())
     ).select_related('entreprise', 'service').order_by('-date_publication')[:6]
     
     return render(request, 'landing.html', {

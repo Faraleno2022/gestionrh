@@ -18,6 +18,7 @@ urlpatterns = [
     path('offres/creer/', views.creer_offre, name='creer_offre'),
     path('offres/<int:pk>/', views.detail_offre, name='detail_offre'),
     path('offres/<int:pk>/modifier/', views.modifier_offre, name='modifier_offre'),
+    path('offres/<int:pk>/supprimer/', views.supprimer_offre, name='supprimer_offre'),
     
     # Candidatures
     path('candidatures/', views.liste_candidatures, name='candidatures'),

@@ -14,6 +14,11 @@ def offre_detail_public(request, pk):
     """Détail d'une offre d'emploi - vue publique"""
     offre = get_object_or_404(OffreEmploi, pk=pk, statut_offre='ouverte')
     
+    # Vérifier si l'offre n'est pas expirée
+    if offre.date_limite_candidature and offre.date_limite_candidature < date.today():
+        messages.error(request, "Cette offre d'emploi a expiré.")
+        return redirect('/')
+    
     return render(request, 'recrutement/public/offre_detail.html', {
         'offre': offre,
     })
