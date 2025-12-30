@@ -59,6 +59,8 @@ def postuler(request, pk):
             candidature.cv_fichier = request.FILES['cv_fichier']
         if 'lettre_motivation' in request.FILES:
             candidature.lettre_motivation = request.FILES['lettre_motivation']
+        if 'autres_documents' in request.FILES:
+            candidature.autres_documents = request.FILES['autres_documents']
         
         candidature.save()
         
