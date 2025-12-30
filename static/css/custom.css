@@ -1,16 +1,16 @@
 /* Gestionnaire RH Guinée - Styles personnalisés */
-/* Couleurs du drapeau guinéen: Rouge, Jaune, Vert */
+/* Thème Orange / Gris Anthracite */
 
 :root {
-    --primary-color: #ce1126;      /* Rouge Guinée */
-    --secondary-color: #009460;    /* Vert Guinée */
-    --success-color: #009460;      /* Vert Guinée */
-    --danger-color: #ce1126;       /* Rouge Guinée */
-    --warning-color: #fcd116;      /* Jaune Guinée */
-    --info-color: #009460;         /* Vert Guinée */
-    --guinea-red: #ce1126;
-    --guinea-yellow: #fcd116;
-    --guinea-green: #009460;
+    --primary-color: #EF7707;      /* Orange */
+    --secondary-color: #212121;    /* Gris Anthracite */
+    --success-color: #28a745;      /* Vert */
+    --danger-color: #dc3545;       /* Rouge */
+    --warning-color: #EF7707;      /* Orange */
+    --info-color: #17a2b8;         /* Bleu info */
+    --orange-main: #EF7707;
+    --gray-light: #939393;
+    --gray-dark: #212121;
 }
 
 /* Body avec navbar fixe */
@@ -73,11 +73,11 @@ main {
 
 .card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(206, 17, 38, 0.15);
+    box-shadow: 0 10px 20px rgba(239, 119, 7, 0.15);
 }
 
 .card-header {
-    background: linear-gradient(135deg, rgba(206, 17, 38, 0.05) 0%, rgba(0, 148, 96, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(239, 119, 7, 0.08) 0%, rgba(33, 33, 33, 0.05) 100%);
     border-bottom: 2px solid var(--primary-color);
     font-weight: 600;
 }
@@ -116,21 +116,21 @@ main {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--guinea-red) 0%, #d91c3a 100%);
+    background: linear-gradient(135deg, var(--orange-main) 0%, #d96a06 100%);
     border: none;
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #b30f21 0%, var(--guinea-red) 100%);
+    background: linear-gradient(135deg, #c56506 0%, var(--orange-main) 100%);
 }
 
 .btn-success {
-    background: linear-gradient(135deg, var(--guinea-green) 0%, #00a86b 100%);
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
     border: none;
 }
 
 .btn-success:hover {
-    background: linear-gradient(135deg, #007d50 0%, var(--guinea-green) 100%);
+    background: linear-gradient(135deg, #1e7e34 0%, #28a745 100%);
 }
 
 /* Badges */
@@ -142,7 +142,7 @@ main {
 /* Forms */
 .form-control:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(206, 17, 38, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(239, 119, 7, 0.25);
 }
 
 /* Alerts */
@@ -169,8 +169,8 @@ main {
 
 /* Navbar */
 .navbar {
-    background: linear-gradient(90deg, var(--guinea-red) 0%, var(--guinea-green) 100%) !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background: linear-gradient(90deg, var(--gray-dark) 0%, #3a3a3a 100%) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .navbar-brand {
@@ -241,7 +241,7 @@ main {
 
 .sidebar-toggle:hover,
 .sidebar-toggle:focus {
-    color: var(--guinea-yellow) !important;
+    color: var(--orange-main) !important;
     text-decoration: none;
 }
 
@@ -308,7 +308,7 @@ main {
     }
     
     .sidebar-close:hover {
-        color: var(--guinea-red);
+        color: var(--orange-main);
     }
 }
 
@@ -374,10 +374,10 @@ main {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, var(--guinea-red) 0%, var(--guinea-green) 100%);
+    background: linear-gradient(180deg, var(--orange-main) 0%, var(--gray-dark) 100%);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, var(--guinea-green) 0%, var(--guinea-red) 100%);
+    background: linear-gradient(180deg, var(--gray-dark) 0%, var(--orange-main) 100%);
 }
