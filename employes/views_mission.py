@@ -18,7 +18,7 @@ def liste_missions(request):
     """Liste des missions"""
     missions = Mission.objects.filter(
         employe__entreprise=request.user.entreprise
-    ).select_related('employe', 'employe__departement', 'validee_par')
+    ).select_related('employe', 'employe__service', 'validee_par')
     
     # Filtres
     employe_id = request.GET.get('employe')

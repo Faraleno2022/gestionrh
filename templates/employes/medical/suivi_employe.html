@@ -21,7 +21,7 @@
                 <div class="col-md-8">
                     <h4>{{ employe.nom }} {{ employe.prenoms }}</h4>
                     <p class="mb-0 text-muted">
-                        {{ employe.matricule }} | {{ employe.departement.nom|default:"-" }} | {{ employe.poste|default:"-" }}
+                        {{ employe.matricule }} | {{ employe.service.nom_service|default:"-" }} | {{ employe.poste.intitule|default:"-" }}
                     </p>
                 </div>
                 <div class="col-md-4 text-end">

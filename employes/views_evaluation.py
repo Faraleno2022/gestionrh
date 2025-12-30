@@ -290,12 +290,12 @@ def synthese_evaluations(request):
         return redirect('employes:liste_campagnes')
     
     evaluations = campagne.evaluations.filter(statut='validee').select_related(
-        'employe', 'employe__departement'
+        'employe', 'employe__service'
     )
     
-    # Statistiques par département
+    # Statistiques par service
     stats_dept = evaluations.values(
-        'employe__departement__nom'
+        'employe__service__nom_service'
     ).annotate(
         nb=Count('id'),
         note_moy=Avg('note_globale')

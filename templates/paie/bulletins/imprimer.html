@@ -343,7 +343,7 @@
             <td>Poste:</td>
             <td>{{ bulletin.employe.poste|default:"Non renseigné" }}</td>
             <td>Service:</td>
-            <td>{{ bulletin.employe.service|default:"Non renseigné" }}</td>
+            <td>{{ bulletin.employe.service.nom_service|default:"Non renseigné" }}</td>
         </tr>
         <tr>
             <td>Date d'embauche:</td>

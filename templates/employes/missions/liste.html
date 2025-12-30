@@ -129,7 +129,7 @@
                             <td><strong>{{ mission.reference }}</strong></td>
                             <td>
                                 {{ mission.employe.nom }} {{ mission.employe.prenoms }}<br>
-                                <small class="text-muted">{{ mission.employe.departement.nom|default:"-" }}</small>
+                                <small class="text-muted">{{ mission.employe.service.nom_service|default:"-" }}</small>
                             </td>
                             <td>
                                 <i class="fas fa-map-marker-alt text-danger me-1"></i>{{ mission.destination }}<br>

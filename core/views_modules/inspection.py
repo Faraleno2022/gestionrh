@@ -68,12 +68,13 @@ def registre_ajouter(request):
         registre = RegistreObligatoire.objects.create(
             entreprise=request.user.entreprise,
             type_registre=request.POST.get('type_registre', 'personnel'),
-            reference=request.POST.get('reference', ''),
-            date_ouverture=request.POST.get('date_ouverture') or None,
-            derniere_mise_a_jour=request.POST.get('derniere_mise_a_jour') or None,
-            responsable=request.POST.get('responsable', ''),
-            emplacement=request.POST.get('emplacement', ''),
-            conforme=request.POST.get('conforme') == 'on',
+            annee=request.POST.get('annee') or date.today().year,
+            numero_registre=request.POST.get('numero_registre', ''),
+            date_ouverture=request.POST.get('date_ouverture') or date.today(),
+            date_cloture=request.POST.get('date_cloture') or None,
+            vise_inspection=request.POST.get('vise_inspection') == 'on',
+            date_visa=request.POST.get('date_visa') or None,
+            numero_visa=request.POST.get('numero_visa', ''),
             observations=request.POST.get('observations', ''),
         )
         
@@ -95,16 +96,17 @@ def registre_modifier(request, pk):
     
     if request.method == 'POST':
         registre.type_registre = request.POST.get('type_registre', 'personnel')
-        registre.reference = request.POST.get('reference', '')
-        registre.date_ouverture = request.POST.get('date_ouverture') or None
-        registre.derniere_mise_a_jour = request.POST.get('derniere_mise_a_jour') or None
-        registre.responsable = request.POST.get('responsable', '')
-        registre.emplacement = request.POST.get('emplacement', '')
-        registre.conforme = request.POST.get('conforme') == 'on'
+        registre.annee = request.POST.get('annee') or registre.annee
+        registre.numero_registre = request.POST.get('numero_registre', '')
+        registre.date_ouverture = request.POST.get('date_ouverture') or registre.date_ouverture
+        registre.date_cloture = request.POST.get('date_cloture') or None
+        registre.vise_inspection = request.POST.get('vise_inspection') == 'on'
+        registre.date_visa = request.POST.get('date_visa') or None
+        registre.numero_visa = request.POST.get('numero_visa', '')
         registre.observations = request.POST.get('observations', '')
         registre.save()
         
-        log_activity(request, f"Modification registre {registre.reference}", 'core')
+        log_activity(request, f"Modification registre {registre.numero_registre}", 'core')
         messages.success(request, 'Registre modifié')
         return redirect('core:registres_liste')
     
