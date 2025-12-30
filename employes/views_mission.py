@@ -257,6 +257,24 @@ def annuler_mission(request, pk):
 
 
 @login_required
+def supprimer_mission(request, pk):
+    """Supprimer une mission"""
+    mission = get_object_or_404(
+        Mission,
+        pk=pk,
+        employe__entreprise=request.user.entreprise
+    )
+    
+    if request.method == 'POST':
+        reference = mission.reference
+        mission.delete()
+        messages.success(request, f"Mission {reference} supprimée avec succès.")
+        return redirect('employes:liste_missions')
+    
+    return redirect('employes:detail_mission', pk=pk)
+
+
+@login_required
 def ajouter_frais_mission(request, pk):
     """Ajouter des frais à une mission"""
     mission = get_object_or_404(

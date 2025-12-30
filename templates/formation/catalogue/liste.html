@@ -114,10 +114,20 @@
                             </small>
                         </div>
                         
-                        <div class="d-grid gap-2">
-                            <a href="{% url 'formation:detail_formation' formation.pk %}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> Voir détails
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'formation:detail_formation' formation.pk %}" class="btn btn-sm btn-outline-primary flex-grow-1">
+                                <i class="bi bi-eye"></i> Détails
                             </a>
+                            <a href="{% url 'formation:modifier_formation' formation.pk %}" class="btn btn-sm btn-outline-warning" title="Modifier">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form action="{% url 'formation:supprimer_formation' formation.pk %}" method="post" style="display: inline;"
+                                  onsubmit="return confirm('Supprimer la formation {{ formation.intitule }} ?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
