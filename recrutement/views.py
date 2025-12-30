@@ -224,6 +224,35 @@ def modifier_offre(request, pk):
     })
 
 
+@login_required
+@entreprise_active_required
+def supprimer_offre(request, pk):
+    """Supprimer une offre d'emploi"""
+    offre = get_object_or_404(OffreEmploi, pk=pk, entreprise=request.user.entreprise)
+    
+    if request.method == 'POST':
+        reference = offre.reference_offre
+        intitule = offre.intitule_poste
+        
+        # Vérifier s'il y a des candidatures liées
+        nb_candidatures = offre.candidatures.count()
+        if nb_candidatures > 0:
+            messages.warning(
+                request, 
+                f"L'offre {reference} a été supprimée avec {nb_candidatures} candidature(s) associée(s)."
+            )
+        else:
+            messages.success(request, f"L'offre {reference} - {intitule} a été supprimée avec succès.")
+        
+        offre.delete()
+        return redirect('recrutement:offres')
+    
+    # GET request - afficher une confirmation
+    return render(request, 'recrutement/offres/confirmer_suppression.html', {
+        'offre': offre
+    })
+
+
 # ============= CANDIDATURES =============
 
 @login_required
