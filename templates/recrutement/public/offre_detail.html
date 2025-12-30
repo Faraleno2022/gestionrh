@@ -97,6 +97,12 @@
 
     <div class="container pb-5">
         <div class="offer-card p-4">
+            {% if offre.image %}
+            <div class="mb-4" style="margin: -1rem -1rem 1.5rem -1rem;">
+                <img src="{{ offre.image.url }}" alt="{{ offre.intitule_poste }}" 
+                     style="width: 100%; max-height: 300px; object-fit: cover; border-radius: 1rem 1rem 0 0;">
+            </div>
+            {% endif %}
             <div class="row">
                 <div class="col-lg-8">
                     {% if offre.description_poste %}

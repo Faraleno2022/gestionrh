@@ -30,6 +30,7 @@ class OffreEmploi(models.Model):
     salaire_propose_min = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     salaire_propose_max = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     avantages = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to='offres_emploi/', blank=True, null=True, help_text="Image de présentation de l'offre")
     statut_offre = models.CharField(max_length=20, choices=STATUTS, default='ouverte')
     responsable_recrutement = models.ForeignKey(Employe, on_delete=models.SET_NULL, null=True, blank=True)
     

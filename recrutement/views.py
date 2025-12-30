@@ -132,6 +132,7 @@ def creer_offre(request):
                 salaire_propose_min=request.POST.get('salaire_min') if request.POST.get('salaire_min') else None,
                 salaire_propose_max=request.POST.get('salaire_max') if request.POST.get('salaire_max') else None,
                 avantages=request.POST.get('avantages'),
+                image=request.FILES.get('image') if 'image' in request.FILES else None,
                 responsable_recrutement_id=request.POST.get('responsable') if request.POST.get('responsable') else None,
                 statut_offre='ouverte'
             )
@@ -206,6 +207,8 @@ def modifier_offre(request, pk):
             offre.salaire_propose_max = request.POST.get('salaire_max') if request.POST.get('salaire_max') else None
             offre.avantages = request.POST.get('avantages')
             offre.statut_offre = request.POST.get('statut')
+            if 'image' in request.FILES:
+                offre.image = request.FILES['image']
             offre.save()
             
             messages.success(request, 'Offre modifiée avec succès.')

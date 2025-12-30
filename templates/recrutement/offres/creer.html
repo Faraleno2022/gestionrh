@@ -15,7 +15,7 @@
 
 <div class="card shadow">
     <div class="card-body">
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             
             <!-- Informations générales -->
@@ -119,6 +119,16 @@
             <div class="mb-3">
                 <label for="avantages" class="form-label">Avantages</label>
                 <textarea class="form-control" id="avantages" name="avantages" rows="3" placeholder="Listez les avantages offerts (assurance, transport, logement, etc.)"></textarea>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Image -->
+            <h5 class="mb-3"><i class="bi bi-image"></i> Image de l'Offre</h5>
+            <div class="mb-3">
+                <label for="image" class="form-label">Image de présentation</label>
+                <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                <small class="text-muted">Formats acceptés : JPG, PNG, GIF. Taille max : 5 Mo</small>
             </div>
 
             <hr class="my-4">
