@@ -18,7 +18,7 @@ def liste_absences(request):
     """Liste des absences avec filtres"""
     absences = Absence.objects.filter(
         employe__entreprise=request.user.entreprise
-    ).select_related('employe', 'employe__departement')
+    ).select_related('employe', 'employe__service')
     
     # Filtres
     employe_id = request.GET.get('employe')

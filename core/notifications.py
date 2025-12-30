@@ -224,7 +224,7 @@ class NotificationContrat:
             statut_employe='actif',
             date_fin_contrat__lte=date_limite,
             date_fin_contrat__gte=date.today()
-        ).select_related('entreprise', 'departement')
+        ).select_related('entreprise', 'service')
         
         if not contrats.exists():
             return {'total': 0}

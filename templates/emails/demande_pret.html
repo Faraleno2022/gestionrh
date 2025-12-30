@@ -12,7 +12,7 @@
 <div class="info-box">
     <strong>Employé:</strong> {{ employe.nom }} {{ employe.prenoms }}<br>
     <strong>Matricule:</strong> {{ employe.matricule }}<br>
-    <strong>Département:</strong> {{ employe.departement.nom|default:"-" }}
+    <strong>Département:</strong> {{ employe.service.nom_service|default:"-" }}
 </div>
 
 <table>

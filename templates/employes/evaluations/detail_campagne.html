@@ -116,7 +116,7 @@
                                 <strong>{{ eval.employe.nom }} {{ eval.employe.prenoms }}</strong><br>
                                 <small class="text-muted">{{ eval.employe.matricule }}</small>
                             </td>
-                            <td>{{ eval.employe.departement.nom|default:"-" }}</td>
+                            <td>{{ eval.employe.service.nom_service|default:"-" }}</td>
                             <td>{{ eval.evaluateur.nom|default:"-" }} {{ eval.evaluateur.prenoms|default:"" }}</td>
                             <td class="text-center">
                                 {% if eval.note_globale %}

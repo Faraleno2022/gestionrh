@@ -71,7 +71,7 @@
                             <tbody>
                                 {% for dept in stats_dept %}
                                 <tr>
-                                    <td>{{ dept.employe__departement__nom|default:"Non défini" }}</td>
+                                    <td>{{ dept.employe__service__nom_service|default:"Non défini" }}</td>
                                     <td class="text-center">{{ dept.nb }}</td>
                                     <td class="text-center">
                                         <span class="badge 
@@ -122,7 +122,7 @@
                                         {% else %}{{ forloop.counter }}{% endif %}
                                     </td>
                                     <td>{{ eval.employe.nom }} {{ eval.employe.prenoms }}</td>
-                                    <td>{{ eval.employe.departement.nom|default:"-" }}</td>
+                                    <td>{{ eval.employe.service.nom_service|default:"-" }}</td>
                                     <td class="text-center">
                                         <span class="badge bg-success fs-6">{{ eval.note_globale|floatformat:1 }}/5</span>
                                     </td>
