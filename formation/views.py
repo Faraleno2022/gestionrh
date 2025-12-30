@@ -173,6 +173,31 @@ def modifier_formation(request, pk):
     })
 
 
+@login_required
+@entreprise_active_required
+def supprimer_formation(request, pk):
+    """Supprimer une formation du catalogue"""
+    formation = get_object_or_404(CatalogueFormation, pk=pk, entreprise=request.user.entreprise)
+    
+    if request.method == 'POST':
+        code = formation.code_formation
+        intitule = formation.intitule
+        nb_sessions = formation.sessions.count()
+        
+        if nb_sessions > 0:
+            messages.warning(
+                request,
+                f"La formation {code} a été supprimée avec {nb_sessions} session(s) associée(s)."
+            )
+        else:
+            messages.success(request, f"La formation {code} - {intitule} a été supprimée avec succès.")
+        
+        formation.delete()
+        return redirect('formation:catalogue')
+    
+    return redirect('formation:detail_formation', pk=pk)
+
+
 # ============= SESSIONS =============
 
 @login_required

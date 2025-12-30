@@ -162,6 +162,13 @@
                                     <i class="fas fa-check"></i>
                                 </a>
                                 {% endif %}
+                                <form action="{% url 'temps_travail:supprimer_absence' absence.pk %}" method="post" style="display: inline;"
+                                      onsubmit="return confirm('Supprimer cette absence ?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                         {% empty %}

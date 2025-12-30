@@ -59,6 +59,7 @@ urlpatterns = [
     path('missions/<int:pk>/demarrer/', views_mission.demarrer_mission, name='demarrer_mission'),
     path('missions/<int:pk>/terminer/', views_mission.terminer_mission, name='terminer_mission'),
     path('missions/<int:pk>/annuler/', views_mission.annuler_mission, name='annuler_mission'),
+    path('missions/<int:pk>/supprimer/', views_mission.supprimer_mission, name='supprimer_mission'),
     path('missions/<int:pk>/frais/', views_mission.ajouter_frais_mission, name='ajouter_frais_mission'),
     path('missions/<int:pk>/frais/<int:frais_pk>/supprimer/', views_mission.supprimer_frais_mission, name='supprimer_frais_mission'),
     path('missions/<int:pk>/avance/', views_mission.accorder_avance, name='accorder_avance'),

@@ -16,6 +16,7 @@ urlpatterns = [
     path('catalogue/creer/', views.creer_formation, name='creer_formation'),
     path('catalogue/<int:pk>/', views.detail_formation, name='detail_formation'),
     path('catalogue/<int:pk>/modifier/', views.modifier_formation, name='modifier_formation'),
+    path('catalogue/<int:pk>/supprimer/', views.supprimer_formation, name='supprimer_formation'),
     
     # Sessions
     path('sessions/', views.liste_sessions, name='sessions'),
