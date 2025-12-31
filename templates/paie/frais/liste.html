@@ -28,7 +28,7 @@
     <!-- Statistiques -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-warning text-dark">
+            <div class="card" style="background: #e8e8e8;">
                 <div class="card-body text-center">
                     <h4>{{ stats.nb_en_attente|default:"0" }}</h4>
                     <small>En attente de validation</small>
@@ -36,7 +36,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-info text-white">
+            <div class="card" style="background: #e8e8e8;">
                 <div class="card-body text-center">
                     <h4>{{ stats.total_soumis|floatformat:0|intcomma|default:"0" }} GNF</h4>
                     <small>Montant soumis</small>
@@ -44,7 +44,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card" style="background: #e8e8e8;">
                 <div class="card-body text-center">
                     <h4>{{ stats.total_valide|floatformat:0|intcomma|default:"0" }} GNF</h4>
                     <small>Montant validé</small>
@@ -52,7 +52,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-primary text-white">
+            <div class="card" style="background: #e8e8e8;">
                 <div class="card-body text-center">
                     <h4>{{ stats.total_rembourse|floatformat:0|intcomma|default:"0" }} GNF</h4>
                     <small>Montant remboursé</small>
@@ -114,7 +114,7 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                    <thead class="table-dark">
+                    <thead style="background: #e8e8e8;">
                         <tr>
                             <th>Référence</th>
                             <th>Employé</th>
