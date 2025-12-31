@@ -54,6 +54,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.middleware.gzip.GZipMiddleware',  # Compression GZip pour rapidité
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -78,7 +79,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
+        'APP_DIRS': DEBUG,  # Utiliser APP_DIRS seulement en dev
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -87,6 +88,12 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.company_info',
             ],
+            **({'loaders': [
+                ('django.template.loaders.cached.Loader', [
+                    'django.template.loaders.filesystem.Loader',
+                    'django.template.loaders.app_directories.Loader',
+                ]),
+            ]} if not DEBUG else {}),
         },
     },
 ]
@@ -340,12 +347,14 @@ FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 # Allowed file extensions
 ALLOWED_UPLOAD_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx']
 
-# Database Security
+# Database Performance & Security
 if not DEBUG:
-    DATABASES['default']['CONN_MAX_AGE'] = 0
+    DATABASES['default']['CONN_MAX_AGE'] = 600  # Connexions persistantes 10 min
     DATABASES['default']['OPTIONS'] = {
         'connect_timeout': 10,
     }
+else:
+    DATABASES['default']['CONN_MAX_AGE'] = 0  # Pas de persistence en dev
 
 # Logging Configuration
 LOGGING = {
@@ -438,13 +447,30 @@ ADMINS = [
 ]
 MANAGERS = ADMINS
 
-# Override Redis config (Redis not available on PythonAnywhere free tier)
+# ============================================================================
+# PERFORMANCE OPTIMIZATIONS
+# ============================================================================
+
+# Cache Configuration - Optimisé pour rapidité
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+        'TIMEOUT': 300,  # 5 minutes
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    },
+    'template_fragments': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'template-fragments',
+        'TIMEOUT': 3600,  # 1 heure
     }
 }
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+# Session optimisée avec cache
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+SESSION_CACHE_ALIAS = 'default'
 
 # Disable Redis-dependent features (not available on PythonAnywhere free tier)
 DEFENDER_DISABLE_IP_LOCKOUT = True

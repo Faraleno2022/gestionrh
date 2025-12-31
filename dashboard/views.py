@@ -1,8 +1,10 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Sum, Avg
+from django.db.models import Count, Sum, Avg, Q
 from django.utils import timezone
 from django.http import HttpResponse
+from django.views.decorators.cache import cache_page
+from django.core.cache import cache
 from datetime import timedelta
 
 from employes.models import Employe
@@ -12,22 +14,37 @@ from temps_travail.models import Conge, Pointage
 
 @login_required
 def index(request):
-    """Tableau de bord principal"""
+    """Tableau de bord principal - Optimisé pour rapidité"""
+    entreprise_id = request.user.entreprise_id
+    cache_key = f'dashboard_stats_{entreprise_id}'
+    
+    # Essayer de récupérer du cache
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return render(request, 'dashboard/index.html', cached_data)
+    
     context = {}
+    aujourd_hui = timezone.now().date()
     
-    # Statistiques employés
-    employes_actifs = Employe.objects.filter(
-        entreprise=request.user.entreprise,
+    # Statistiques employés - Une seule requête avec agrégation
+    employes_stats = Employe.objects.filter(
+        entreprise_id=entreprise_id,
         statut_employe='actif'
+    ).aggregate(
+        total=Count('id'),
+        hommes=Count('id', filter=Q(sexe='M')),
+        femmes=Count('id', filter=Q(sexe='F')),
+        cdi=Count('id', filter=Q(type_contrat='CDI')),
+        cdd=Count('id', filter=Q(type_contrat='CDD')),
+        stage=Count('id', filter=Q(type_contrat='Stage')),
     )
-    context['total_employes'] = employes_actifs.count()
-    context['employes_hommes'] = employes_actifs.filter(sexe='M').count()
-    context['employes_femmes'] = employes_actifs.filter(sexe='F').count()
     
-    # Répartition par type de contrat
-    context['employes_cdi'] = employes_actifs.filter(type_contrat='CDI').count()
-    context['employes_cdd'] = employes_actifs.filter(type_contrat='CDD').count()
-    context['employes_stage'] = employes_actifs.filter(type_contrat='Stage').count()
+    context['total_employes'] = employes_stats['total']
+    context['employes_hommes'] = employes_stats['hommes']
+    context['employes_femmes'] = employes_stats['femmes']
+    context['employes_cdi'] = employes_stats['cdi']
+    context['employes_cdd'] = employes_stats['cdd']
+    context['employes_stage'] = employes_stats['stage']
     
     # Congés en cours
     aujourd_hui = timezone.now().date()
@@ -103,6 +120,9 @@ def index(request):
             'icon': 'bi-calendar-check',
             'message': f'{context["conges_en_attente"]} demande(s) de congé en attente'
         })
+    
+    # Mettre en cache pour 2 minutes
+    cache.set(cache_key, context, 120)
     
     return render(request, 'dashboard/index.html', context)
 
