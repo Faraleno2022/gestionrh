@@ -33,6 +33,7 @@ urlpatterns = [
     
     # Rapports
     path('rapports/presence/', views.rapport_presence, name='rapport_presence'),
+    path('rapports/presence/pdf/', views.rapport_presence_pdf, name='rapport_presence_pdf'),
     path('rapports/heures-supplementaires/', views.rapport_heures_supplementaires, name='rapport_heures_supplementaires'),
     
     # Heures supplémentaires (gestion)

@@ -774,3 +774,101 @@ def rapport_heures_supplementaires(request):
         'mois_liste': mois_liste,
         'annees': annees
     })
+
+
+@login_required
+def rapport_presence_pdf(request):
+    """Générer le rapport de présence en PDF"""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from io import BytesIO
+    
+    mois = int(request.GET.get('mois', date.today().month))
+    annee = int(request.GET.get('annee', date.today().year))
+    
+    mois_noms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+    
+    # Données
+    premier_jour = date(annee, mois, 1)
+    dernier_jour = date(annee, mois, calendar.monthrange(annee, mois)[1])
+    
+    entreprise = request.user.entreprise
+    if not entreprise:
+        return HttpResponse("Aucune entreprise associée à votre compte.", status=400)
+    
+    pointages = Pointage.objects.filter(
+        date_pointage__gte=premier_jour,
+        date_pointage__lte=dernier_jour,
+        employe__entreprise=entreprise,
+    ).select_related('employe')
+    
+    employes = Employe.objects.filter(
+        entreprise=entreprise,
+        statut_employe='actif'
+    )
+    
+    # Créer le PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), topMargin=1*cm, bottomMargin=1*cm)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Titre
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, alignment=1)
+    elements.append(Paragraph(f"Rapport de Présence - {mois_noms[mois]} {annee}", title_style))
+    elements.append(Spacer(1, 0.5*cm))
+    elements.append(Paragraph(f"Entreprise: {entreprise.nom_entreprise}", styles['Normal']))
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Tableau
+    data = [['Employé', 'Jours Pointés', 'Présents', 'Absents', 'Retards', 'Heures Trav.', 'Heures Sup.', 'Taux']]
+    
+    for employe in employes:
+        pointages_employe = pointages.filter(employe=employe)
+        total_jours = pointages_employe.count()
+        presents = pointages_employe.filter(statut_pointage='present').count()
+        absents = pointages_employe.filter(statut_pointage='absent').count()
+        retards = pointages_employe.filter(statut_pointage='retard').count()
+        heures_trav = pointages_employe.aggregate(total=Sum('heures_travaillees'))['total'] or 0
+        heures_sup = pointages_employe.aggregate(total=Sum('heures_supplementaires'))['total'] or 0
+        
+        jours_mois = calendar.monthrange(annee, mois)[1]
+        taux = round((presents / jours_mois) * 100, 1) if jours_mois > 0 else 0
+        
+        data.append([
+            f"{employe.nom} {employe.prenoms}",
+            str(total_jours),
+            str(presents),
+            str(absents),
+            str(retards),
+            f"{heures_trav:.1f}h",
+            f"{heures_sup:.1f}h",
+            f"{taux}%"
+        ])
+    
+    table = Table(data, colWidths=[6*cm, 2.5*cm, 2*cm, 2*cm, 2*cm, 2.5*cm, 2.5*cm, 2*cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EF7707')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f5f5')]),
+    ]))
+    elements.append(table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="rapport_presence_{mois_noms[mois]}_{annee}.pdf"'
+    return response
