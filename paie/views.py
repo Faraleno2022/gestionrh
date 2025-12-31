@@ -1187,6 +1187,116 @@ def declarations_sociales(request):
 
 
 @login_required
+def declarations_sociales_pdf(request):
+    """Générer le PDF des déclarations sociales"""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from io import BytesIO
+    
+    annee = request.GET.get('annee', timezone.now().year)
+    mois = request.GET.get('mois')
+    
+    entreprise = request.user.entreprise
+    if not entreprise:
+        return HttpResponse("Aucune entreprise associée.", status=400)
+    
+    periodes = PeriodePaie.objects.filter(
+        entreprise=entreprise,
+        annee=annee,
+        statut_periode__in=['validee', 'cloturee']
+    )
+    if mois:
+        periodes = periodes.filter(mois=mois)
+    
+    bulletins = BulletinPaie.objects.filter(
+        periode__in=periodes,
+        statut_bulletin__in=['valide', 'paye'],
+        employe__entreprise=entreprise,
+    ).select_related('employe', 'periode')
+    
+    # Calculs
+    declaration_cnss = {
+        'total_salaries': bulletins.values('employe').distinct().count(),
+        'masse_salariale': bulletins.aggregate(Sum('salaire_brut'))['salaire_brut__sum'] or 0,
+        'cotisation_employe': bulletins.aggregate(Sum('cnss_employe'))['cnss_employe__sum'] or 0,
+        'cotisation_employeur': bulletins.aggregate(Sum('cnss_employeur'))['cnss_employeur__sum'] or 0,
+    }
+    declaration_cnss['total_cotisation'] = declaration_cnss['cotisation_employe'] + declaration_cnss['cotisation_employeur']
+    
+    declaration_irg = {
+        'total_salaries': bulletins.values('employe').distinct().count(),
+        'total_irg': bulletins.aggregate(Sum('irg'))['irg__sum'] or 0,
+    }
+    
+    # Créer le PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=1*cm, bottomMargin=1*cm)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, alignment=1)
+    periode_str = f"Mois {mois}/{annee}" if mois else f"Année {annee}"
+    elements.append(Paragraph(f"Déclarations Sociales - {periode_str}", title_style))
+    elements.append(Spacer(1, 0.3*cm))
+    elements.append(Paragraph(f"Entreprise: {entreprise.nom_entreprise}", styles['Normal']))
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # CNSS
+    elements.append(Paragraph("CNSS - Caisse Nationale de Sécurité Sociale", styles['Heading2']))
+    cnss_data = [
+        ['Libellé', 'Montant (GNF)'],
+        ['Nombre de salariés', str(declaration_cnss['total_salaries'])],
+        ['Masse salariale', f"{declaration_cnss['masse_salariale']:,.0f}"],
+        ['Cotisation employé (5%)', f"{declaration_cnss['cotisation_employe']:,.0f}"],
+        ['Cotisation employeur (18%)', f"{declaration_cnss['cotisation_employeur']:,.0f}"],
+        ['Total cotisations', f"{declaration_cnss['total_cotisation']:,.0f}"],
+    ]
+    cnss_table = Table(cnss_data, colWidths=[10*cm, 6*cm])
+    cnss_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EF7707')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f5f5f5')),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+    ]))
+    elements.append(cnss_table)
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # IRG/RTS
+    elements.append(Paragraph("IRG/RTS - Retenue sur Traitements et Salaires", styles['Heading2']))
+    irg_data = [
+        ['Libellé', 'Montant (GNF)'],
+        ['Nombre de salariés', str(declaration_irg['total_salaries'])],
+        ['Total RTS retenu', f"{declaration_irg['total_irg']:,.0f}"],
+    ]
+    irg_table = Table(irg_data, colWidths=[10*cm, 6*cm])
+    irg_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EF7707')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(irg_table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    filename = f"declarations_sociales_{annee}"
+    if mois:
+        filename += f"_{mois}"
+    
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
+    return response
+
+
+@login_required
 def liste_elements_salaire(request):
     """Liste tous les éléments de salaire"""
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
