@@ -796,14 +796,18 @@ def rapport_presence_pdf(request):
     premier_jour = date(annee, mois, 1)
     dernier_jour = date(annee, mois, calendar.monthrange(annee, mois)[1])
     
+    entreprise = request.user.entreprise
+    if not entreprise:
+        return HttpResponse("Aucune entreprise associée à votre compte.", status=400)
+    
     pointages = Pointage.objects.filter(
         date_pointage__gte=premier_jour,
         date_pointage__lte=dernier_jour,
-        employe__entreprise=request.user.entreprise,
+        employe__entreprise=entreprise,
     ).select_related('employe')
     
     employes = Employe.objects.filter(
-        entreprise=request.user.entreprise,
+        entreprise=entreprise,
         statut_employe='actif'
     )
     
@@ -817,7 +821,7 @@ def rapport_presence_pdf(request):
     title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, alignment=1)
     elements.append(Paragraph(f"Rapport de Présence - {mois_noms[mois]} {annee}", title_style))
     elements.append(Spacer(1, 0.5*cm))
-    elements.append(Paragraph(f"Entreprise: {request.user.entreprise.nom_entreprise}", styles['Normal']))
+    elements.append(Paragraph(f"Entreprise: {entreprise.nom_entreprise}", styles['Normal']))
     elements.append(Spacer(1, 0.5*cm))
     
     # Tableau
