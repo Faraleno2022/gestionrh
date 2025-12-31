@@ -40,6 +40,7 @@ urlpatterns = [
     
     # Déclarations sociales
     path('declarations/', views.declarations_sociales, name='declarations_sociales'),
+    path('declarations/pdf/', views.declarations_sociales_pdf, name='declarations_sociales_pdf'),
     
     # Éléments de salaire
     path('elements-salaire/', views.liste_elements_salaire, name='liste_elements_salaire'),
