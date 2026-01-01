@@ -36,11 +36,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'axes',
-<<<<<<< Updated upstream
-    # 'defender',
-=======
-#     'defender',
->>>>>>> Stashed changes
     'csp',
     
     # Local apps
@@ -68,10 +63,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Security middlewares
     'axes.middleware.AxesMiddleware',
-<<<<<<< Updated upstream
-=======
-#     'defender.middleware.FailedLoginMiddleware',
->>>>>>> Stashed changes
     # 'csp.middleware.CSPMiddleware',  # Désactivé temporairement
     'core.middleware.SecurityHeadersMiddleware',
     'core.middleware.SQLInjectionProtectionMiddleware',
@@ -455,40 +446,6 @@ ADMINS = [
 ]
 MANAGERS = ADMINS
 
-<<<<<<< Updated upstream
-# ============================================================================
-# PERFORMANCE OPTIMIZATIONS
-# ============================================================================
-
-# Cache Configuration - Optimisé pour rapidité
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
-        'TIMEOUT': 300,  # 5 minutes
-        'OPTIONS': {
-            'MAX_ENTRIES': 1000,
-        }
-    },
-    'template_fragments': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'template-fragments',
-        'TIMEOUT': 3600,  # 1 heure
-    }
-}
-
-# Session optimisée avec cache
-SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
-SESSION_CACHE_ALIAS = 'default'
-=======
-# Override Redis config (Redis not available on PythonAnywhere free tier)
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-    }
-}
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'
->>>>>>> Stashed changes
 
 # Disable Redis-dependent features (not available on PythonAnywhere free tier)
 DEFENDER_DISABLE_IP_LOCKOUT = True
@@ -501,33 +458,3 @@ CSRF_TRUSTED_ORIGINS = [
     'https://guineerh.space',
 ]
 
-<<<<<<< Updated upstream
-# ============================================================================
-# CINETPAY CONFIGURATION
-# ============================================================================
-CINETPAY_API_KEY = config('CINETPAY_API_KEY', default='')
-CINETPAY_SITE_ID = config('CINETPAY_SITE_ID', default='')
-CINETPAY_SECRET_KEY = config('CINETPAY_SECRET_KEY', default='')
-CINETPAY_MODE = config('CINETPAY_MODE', default='test')  # 'test' ou 'live'
-
-# Site URL pour les callbacks CinetPay
-SITE_URL = config('SITE_URL', default='https://www.guineerh.space')
-
-# ============================================================================
-# EMAIL CONFIGURATION
-# ============================================================================
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@guineerh.space')
-EMAIL_RH = config('EMAIL_RH', default='')  # Email du service RH pour les notifications
-=======
-# CSRF Trusted Origins
-CSRF_TRUSTED_ORIGINS = [
-    'https://www.guineerh.space',
-    'https://guineerh.space',
-]
->>>>>>> Stashed changes
