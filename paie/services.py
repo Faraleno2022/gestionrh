@@ -353,8 +353,8 @@ class MoteurCalculPaie:
         Barème des majorations:
         - 41e à 48e heure/semaine (jour): 15%
         - Au-delà de 48e heure (jour): 25%
-        - Heures de nuit (21h-6h): 50%
-        - Dimanche et jours fériés: 100%
+        - Heures de nuit (20h-6h): 120%
+        - Dimanche et jours fériés: 160% (jour) et 200% (nuit)
         
         Note: Les pointages doivent distinguer les types d'heures supplémentaires.
         Pour simplifier, on utilise les champs du modèle Pointage si disponibles,
@@ -388,8 +388,8 @@ class MoteurCalculPaie:
         # Taux des heures supplémentaires selon le Code du Travail guinéen (Art. 142)
         TAUX_HS_15 = self.constantes.get('TAUX_HS_JOUR_15', Decimal('115'))   # 41e-48e heure: +15%
         TAUX_HS_25 = self.constantes.get('TAUX_HS_JOUR_25', Decimal('125'))   # >48e heure: +25%
-        TAUX_HS_50 = self.constantes.get('TAUX_HS_NUIT', Decimal('150'))      # Nuit: +50%
-        TAUX_HS_100 = self.constantes.get('TAUX_HS_FERIE', Decimal('200'))    # Dimanche/férié: +100%
+        TAUX_HS_50 = self.constantes.get('TAUX_HS_NUIT', Decimal('220'))      # Nuit: +50%
+        TAUX_HS_100 = self.constantes.get('TAUX_HS_FERIE', Decimal('260'))    # Dimanche/férié: +100%
         
         # Calculer le montant pour chaque type d'heures supplémentaires
         montant_hs_15 = self._arrondir(salaire_horaire * heures_sup_15 * TAUX_HS_15 / Decimal('100'))
@@ -603,8 +603,8 @@ class MoteurCalculPaie:
             self.montants['brut'] * taux_vf / Decimal('100')
         )
         
-        # Taxe d'Apprentissage - 1.5% de la masse salariale (charge patronale)
-        taux_ta = self.constantes.get('TAUX_TA', Decimal('1.50'))
+        # Taxe d'Apprentissage - 2% de la masse salariale (charge patronale)
+        taux_ta = self.constantes.get('TAUX_TA', Decimal('2.00'))
         self.montants['taxe_apprentissage'] = self._arrondir(
             self.montants['brut'] * taux_ta / Decimal('100')
         )
