@@ -217,7 +217,7 @@ class Constante(models.Model):
         ('temps', 'Temps de travail'),
     )
     
-    code = models.CharField(max_length=20, unique=True, help_text="Code mémo de la constante")
+    code = models.CharField(max_length=50, unique=True, help_text="Code mémo de la constante")
     libelle = models.CharField(max_length=200)
     valeur = models.DecimalField(max_digits=15, decimal_places=4)
     type_valeur = models.CharField(max_length=20, choices=TYPES_VALEUR)
@@ -278,7 +278,7 @@ class Variable(models.Model):
         ('periode', 'Par période'),
     )
     
-    code = models.CharField(max_length=20, unique=True, help_text="Code mémo de la variable")
+    code = models.CharField(max_length=50, unique=True, help_text="Code mémo de la variable")
     libelle = models.CharField(max_length=100)
     type_variable = models.CharField(max_length=20, choices=TYPES_VARIABLE)
     portee = models.CharField(max_length=20, choices=PORTEES)
