@@ -25,7 +25,7 @@
     <!-- Statistiques -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-warning text-dark">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h3>{{ stats.total_jours|floatformat:0|default:"0" }}</h3>
                     <p class="mb-0">Jours d'absence</p>
@@ -33,7 +33,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-info text-white">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h3>{{ stats.nb_absences|default:"0" }}</h3>
                     <p class="mb-0">Absences</p>
@@ -41,7 +41,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h3>{{ stats.nb_justifiees|default:"0" }}</h3>
                     <p class="mb-0">Justifiées</p>
@@ -49,7 +49,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-danger text-white">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h3>{{ stats.nb_non_justifiees|default:"0" }}</h3>
                     <p class="mb-0">Non justifiées</p>
