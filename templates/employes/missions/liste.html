@@ -28,7 +28,7 @@
     <!-- Statistiques -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-info text-white">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h4>{{ stats.nb_planifiees|default:"0" }}</h4>
                     <small>Planifiées</small>
@@ -36,7 +36,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-warning text-dark">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h4>{{ stats.nb_en_cours|default:"0" }}</h4>
                     <small>En cours</small>
@@ -44,7 +44,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h4>{{ stats.nb_terminees|default:"0" }}</h4>
                     <small>Terminées</small>
@@ -52,7 +52,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-primary text-white">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h4>{{ stats.total_depenses|floatformat:0|intcomma|default:"0" }} GNF</h4>
                     <small>Dépenses totales</small>

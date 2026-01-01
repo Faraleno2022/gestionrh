@@ -41,7 +41,7 @@
         <div class="col-lg-8">
             <!-- Informations -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-dark text-white">
+                <div class="card-header bg-light">
                     <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations de la mission</h6>
                 </div>
                 <div class="card-body">
@@ -97,7 +97,7 @@
 
             <!-- Frais de mission -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header text-white" style="background: linear-gradient(135deg, #EF7707 0%, #FF8C00 100%); d-flex justify-content-between align-items-center">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <h6 class="mb-0"><i class="fas fa-receipt me-2"></i>Frais de Mission</h6>
                     {% if mission.statut in 'planifiee,en_cours' %}
                     <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#ajouterFraisModal">
@@ -163,7 +163,7 @@
             <!-- Rapport (si terminée) -->
             {% if mission.statut == 'terminee' and mission.rapport_mission %}
             <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
+                <div class="card-header bg-light">
                     <h6 class="mb-0"><i class="fas fa-file-alt me-2"></i>Rapport de Mission</h6>
                 </div>
                 <div class="card-body">
@@ -202,7 +202,7 @@
 
             <!-- Budget -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white">
+                <div class="card-header bg-light">
                     <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>Budget</h6>
                 </div>
                 <div class="card-body">
