@@ -36,7 +36,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'axes',
+<<<<<<< Updated upstream
     # 'defender',
+=======
+#     'defender',
+>>>>>>> Stashed changes
     'csp',
     
     # Local apps
@@ -64,6 +68,10 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Security middlewares
     'axes.middleware.AxesMiddleware',
+<<<<<<< Updated upstream
+=======
+#     'defender.middleware.FailedLoginMiddleware',
+>>>>>>> Stashed changes
     # 'csp.middleware.CSPMiddleware',  # Désactivé temporairement
     'core.middleware.SecurityHeadersMiddleware',
     'core.middleware.SQLInjectionProtectionMiddleware',
@@ -447,6 +455,7 @@ ADMINS = [
 ]
 MANAGERS = ADMINS
 
+<<<<<<< Updated upstream
 # ============================================================================
 # PERFORMANCE OPTIMIZATIONS
 # ============================================================================
@@ -471,6 +480,15 @@ CACHES = {
 # Session optimisée avec cache
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 SESSION_CACHE_ALIAS = 'default'
+=======
+# Override Redis config (Redis not available on PythonAnywhere free tier)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+>>>>>>> Stashed changes
 
 # Disable Redis-dependent features (not available on PythonAnywhere free tier)
 DEFENDER_DISABLE_IP_LOCKOUT = True
@@ -483,6 +501,7 @@ CSRF_TRUSTED_ORIGINS = [
     'https://guineerh.space',
 ]
 
+<<<<<<< Updated upstream
 # ============================================================================
 # CINETPAY CONFIGURATION
 # ============================================================================
@@ -505,3 +524,10 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@guineerh.space')
 EMAIL_RH = config('EMAIL_RH', default='')  # Email du service RH pour les notifications
+=======
+# CSRF Trusted Origins
+CSRF_TRUSTED_ORIGINS = [
+    'https://www.guineerh.space',
+    'https://guineerh.space',
+]
+>>>>>>> Stashed changes
