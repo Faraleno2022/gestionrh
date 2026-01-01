@@ -25,7 +25,7 @@
     <!-- Statistiques -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ stats.total_prets }}</h3>
                     <small>Total prêts</small>
@@ -33,7 +33,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ stats.montant_total|floatformat:0|intcomma }}</h3>
                     <small>Montant total (GNF)</small>
@@ -41,7 +41,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-warning text-dark">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ stats.en_cours }}</h3>
                     <small>En cours</small>
@@ -49,7 +49,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-danger text-white">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ stats.solde_restant|floatformat:0|intcomma }}</h3>
                     <small>Solde restant (GNF)</small>

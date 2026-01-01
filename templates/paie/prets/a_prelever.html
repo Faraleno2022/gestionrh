@@ -19,7 +19,7 @@
     <!-- Totaux -->
     <div class="row mb-4">
         <div class="col-md-6">
-            <div class="card bg-warning text-dark">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h2 class="mb-0">{{ totaux.nb_echeances }}</h2>
                     <p class="mb-0">Échéances à prélever</p>
@@ -27,7 +27,7 @@
             </div>
         </div>
         <div class="col-md-6">
-            <div class="card bg-danger text-white">
+            <div class="card bg-light">
                 <div class="card-body text-center">
                     <h2 class="mb-0">{{ totaux.total_montant|floatformat:0|intcomma|default:"0" }} GNF</h2>
                     <p class="mb-0">Montant total à prélever</p>
@@ -38,7 +38,7 @@
 
     <!-- Liste des échéances -->
     <div class="card shadow-sm">
-        <div class="card-header bg-dark text-white">
+        <div class="card-header bg-light">
             <h5 class="mb-0"><i class="fas fa-list me-2"></i>Échéances du mois</h5>
         </div>
         <div class="card-body p-0">
