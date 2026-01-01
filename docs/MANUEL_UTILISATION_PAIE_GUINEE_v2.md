@@ -170,17 +170,17 @@ Indemnité = 10% de la rémunération totale de la période de référence
 ### Principe
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    ASSIETTE CNSS                                     │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│   Si Salaire < 550 000 GNF    →  Assiette = 550 000 GNF (plancher)  │
-│                                                                      │
-│   Si 550 000 ≤ Salaire ≤ 2 500 000 GNF  →  Assiette = Salaire réel  │
-│                                                                      │
-│   Si Salaire > 2 500 000 GNF  →  Assiette = 2 500 000 GNF (plafond) │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
+-----------------------------------------------------------------------
+-                    ASSIETTE CNSS                                     -
+-----------------------------------------------------------------------
+-                                                                      -
+-   Si Salaire < 550 000 GNF    →  Assiette = 550 000 GNF (plancher)  -
+-                                                                      -
+-   Si 550 000 <= Salaire <= 2 500 000 GNF  →  Assiette = Salaire réel  -
+-                                                                      -
+-   Si Salaire > 2 500 000 GNF  →  Assiette = 2 500 000 GNF (plafond) -
+-                                                                      -
+-----------------------------------------------------------------------
 ```
 
 ### Formule de Calcul
@@ -280,25 +280,25 @@ Pour chaque tranche (de la plus basse à la plus haute) :
 ### Exemple Détaillé : Base imposable de 7 875 000 GNF
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│ CALCUL RTS DÉTAILLÉ - Base imposable : 7 875 000 GNF                   │
-├────────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│ Tranche 1 (0% sur 0 - 1 000 000 GNF)                                  │
-│   Montant : 1 000 000 GNF × 0% = 0 GNF                                │
-│                                                                        │
-│ Tranche 2 (5% sur 1 000 001 - 3 000 000 GNF)                          │
-│   Montant : 2 000 000 GNF × 5% = 100 000 GNF                          │
-│                                                                        │
-│ Tranche 3 (8% sur 3 000 001 - 5 000 000 GNF)                          │
-│   Montant : 2 000 000 GNF × 8% = 160 000 GNF                          │
-│                                                                        │
-│ Tranche 4 (10% sur 5 000 001 - 7 875 000 GNF)                         │
-│   Montant : 2 875 000 GNF × 10% = 287 500 GNF                         │
-│                                                                        │
-├────────────────────────────────────────────────────────────────────────┤
-│ TOTAL RTS = 0 + 100 000 + 160 000 + 287 500 = 547 500 GNF             │
-└────────────────────────────────────────────────────────────────────────┘
+--------------------------------------------------------------------------
+- CALCUL RTS DÉTAILLÉ - Base imposable : 7 875 000 GNF                   -
+--------------------------------------------------------------------------
+-                                                                        -
+- Tranche 1 (0% sur 0 - 1 000 000 GNF)                                  -
+-   Montant : 1 000 000 GNF × 0% = 0 GNF                                -
+-                                                                        -
+- Tranche 2 (5% sur 1 000 001 - 3 000 000 GNF)                          -
+-   Montant : 2 000 000 GNF × 5% = 100 000 GNF                          -
+-                                                                        -
+- Tranche 3 (8% sur 3 000 001 - 5 000 000 GNF)                          -
+-   Montant : 2 000 000 GNF × 8% = 160 000 GNF                          -
+-                                                                        -
+- Tranche 4 (10% sur 5 000 001 - 7 875 000 GNF)                         -
+-   Montant : 2 875 000 GNF × 10% = 287 500 GNF                         -
+-                                                                        -
+--------------------------------------------------------------------------
+- TOTAL RTS = 0 + 100 000 + 160 000 + 287 500 = 547 500 GNF             -
+--------------------------------------------------------------------------
 ```
 
 ---
@@ -317,20 +317,20 @@ Pour chaque tranche (de la plus basse à la plus haute) :
 ## 5.2 Différence entre Assiettes
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    ASSIETTES DE CALCUL                               │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  CNSS Employeur (18%)                                               │
-│  └── Assiette = MIN(MAX(Brut, 550K), 2,5M)  ← Plafonnée             │
-│                                                                      │
-│  Versement Forfaitaire (6%)                                         │
-│  └── Assiette = Salaire Brut Total  ← Non plafonnée                 │
-│                                                                      │
-│  Taxe d'Apprentissage (1,5%)                                        │
-│  └── Assiette = Salaire Brut Total  ← Non plafonnée                 │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
+-----------------------------------------------------------------------
+-                    ASSIETTES DE CALCUL                               -
+-----------------------------------------------------------------------
+-                                                                      -
+-  CNSS Employeur (18%)                                               -
+-  --- Assiette = MIN(MAX(Brut, 550K), 2,5M)  ← Plafonnée             -
+-                                                                      -
+-  Versement Forfaitaire (6%)                                         -
+-  --- Assiette = Salaire Brut Total  ← Non plafonnée                 -
+-                                                                      -
+-  Taxe d'Apprentissage (1,5%)                                        -
+-  --- Assiette = Salaire Brut Total  ← Non plafonnée                 -
+-                                                                      -
+-----------------------------------------------------------------------
 ```
 
 ## 5.3 Exemple de Calcul des Charges Patronales
@@ -338,28 +338,28 @@ Pour chaque tranche (de la plus basse à la plus haute) :
 ### Salaire brut : 8 000 000 GNF
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│ CHARGES PATRONALES - Salaire brut : 8 000 000 GNF                   │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│ 1. CNSS Employeur (18%)                                             │
-│    Assiette CNSS = 2 500 000 GNF (plafond)                          │
-│    CNSS Employeur = 2 500 000 × 18% = 450 000 GNF                   │
-│                                                                      │
-│ 2. Versement Forfaitaire (6%)                                       │
-│    Assiette VF = 8 000 000 GNF (brut total)                         │
-│    VF = 8 000 000 × 6% = 480 000 GNF                                │
-│                                                                      │
-│ 3. Taxe d'Apprentissage (1,5%)                                      │
-│    Assiette TA = 8 000 000 GNF (brut total)                         │
-│    TA = 8 000 000 × 1,5% = 120 000 GNF                              │
-│                                                                      │
-├─────────────────────────────────────────────────────────────────────┤
-│ TOTAL CHARGES PATRONALES = 450 000 + 480 000 + 120 000              │
-│                          = 1 050 000 GNF                            │
-│                                                                      │
-│ COÛT TOTAL EMPLOYEUR = 8 000 000 + 1 050 000 = 9 050 000 GNF        │
-└─────────────────────────────────────────────────────────────────────┘
+-----------------------------------------------------------------------
+- CHARGES PATRONALES - Salaire brut : 8 000 000 GNF                   -
+-----------------------------------------------------------------------
+-                                                                      -
+- 1. CNSS Employeur (18%)                                             -
+-    Assiette CNSS = 2 500 000 GNF (plafond)                          -
+-    CNSS Employeur = 2 500 000 × 18% = 450 000 GNF                   -
+-                                                                      -
+- 2. Versement Forfaitaire (6%)                                       -
+-    Assiette VF = 8 000 000 GNF (brut total)                         -
+-    VF = 8 000 000 × 6% = 480 000 GNF                                -
+-                                                                      -
+- 3. Taxe d'Apprentissage (1,5%)                                      -
+-    Assiette TA = 8 000 000 GNF (brut total)                         -
+-    TA = 8 000 000 × 1,5% = 120 000 GNF                              -
+-                                                                      -
+-----------------------------------------------------------------------
+- TOTAL CHARGES PATRONALES = 450 000 + 480 000 + 120 000              -
+-                          = 1 050 000 GNF                            -
+-                                                                      -
+- COÛT TOTAL EMPLOYEUR = 8 000 000 + 1 050 000 = 9 050 000 GNF        -
+-----------------------------------------------------------------------
 ```
 
 ---
@@ -374,14 +374,14 @@ Pour chaque tranche (de la plus basse à la plus haute) :
 |---------|-----------|
 | Type de contrat | Stage ou Apprentissage |
 | Durée maximale | 12 mois depuis le début du contrat |
-| Indemnité maximale | ≤ 1 200 000 GNF/mois |
+| Indemnité maximale | <= 1 200 000 GNF/mois |
 
 ### Règle de Calcul
 
 ```
 SI (type_contrat IN ['stage', 'apprentissage'])
-   ET (durée_contrat ≤ 12 mois)
-   ET (indemnité ≤ 1 200 000 GNF)
+   ET (durée_contrat <= 12 mois)
+   ET (indemnité <= 1 200 000 GNF)
 ALORS
    RTS = 0 GNF (exonéré)
 SINON
@@ -392,8 +392,8 @@ SINON
 
 ```
 Type de contrat     : Stage
-Durée               : 6 mois (≤ 12 mois ✓)
-Indemnité           : 900 000 GNF (≤ 1 200 000 GNF ✓)
+Durée               : 6 mois (<= 12 mois [v])
+Indemnité           : 900 000 GNF (<= 1 200 000 GNF [v])
 
 → EXONÉRÉ de RTS
 
@@ -418,9 +418,9 @@ Les indemnités forfaitaires (logement, transport, panier) sont **exonérées de
 
 | Type d'indemnité | Codes rubriques | Exonération |
 |------------------|-----------------|-------------|
-| Transport | PRIME_TRANSPORT, ALLOC_TRANSPORT | ≤ 25% du brut |
-| Logement | ALLOC_LOGEMENT, IND_LOGEMENT | ≤ 25% du brut |
-| Repas/Panier | IND_REPAS, PRIME_PANIER | ≤ 25% du brut |
+| Transport | PRIME_TRANSPORT, ALLOC_TRANSPORT | <= 25% du brut |
+| Logement | ALLOC_LOGEMENT, IND_LOGEMENT | <= 25% du brut |
+| Repas/Panier | IND_REPAS, PRIME_PANIER | <= 25% du brut |
 
 ## 7.3 Formule de Calcul Détaillée
 
@@ -451,7 +451,7 @@ Primes = 33.33% × Salaire de base
 1. Calculer le salaire brut = Salaire de base + Indemnités forfaitaires
 2. Calculer le plafond = Salaire brut × 25%
 3. Comparer les indemnités au plafond :
-   - Si Indemnités ≤ Plafond → Tout est exonéré
+   - Si Indemnités <= Plafond → Tout est exonéré
    - Si Indemnités > Plafond → Excédent réintégré dans base RTS
 4. Excédent = Indemnités - Plafond
 5. Base imposable RTS = Brut - CNSS + Excédent
@@ -462,105 +462,105 @@ Primes = 33.33% × Salaire de base
 ### Exemple 1 : Conforme (pas de dépassement)
 
 ```
-╔═══════════════════════════════════════════════════════════════════════╗
-║                    EXEMPLE 1 : CONFORME                                ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ Salaire de base           : 3 000 000 GNF                             ║
-║ Indemnités forfaitaires   : 1 000 000 GNF                             ║
-║   - Transport             : 400 000 GNF                               ║
-║   - Logement              : 400 000 GNF                               ║
-║   - Panier                : 200 000 GNF                               ║
-║ ─────────────────────────────────────────                             ║
-║ Salaire brut              : 4 000 000 GNF                             ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ VÉRIFICATION PLAFOND 25%                                              ║
-║ ────────────────────────                                              ║
-║ Plafond = 4 000 000 × 25% = 1 000 000 GNF                             ║
-║ Indemnités = 1 000 000 GNF                                            ║
-║                                                                        ║
-║ Ratio indemnités/brut = 1 000 000 / 4 000 000 = 25% ✓                 ║
-║ Ratio indemnités/base = 1 000 000 / 3 000 000 = 33.33% ✓              ║
-║                                                                        ║
-║ → CONFORME : Indemnités = Plafond                                     ║
-║ → Dépassement = 0 GNF                                                 ║
-║ → Aucune réintégration nécessaire                                     ║
-║                                                                        ║
-╚═══════════════════════════════════════════════════════════════════════╝
+-------------------------------------------------------------------------
+-                    EXEMPLE 1 : CONFORME                                -
+-------------------------------------------------------------------------
+-                                                                        -
+- Salaire de base           : 3 000 000 GNF                             -
+- Indemnités forfaitaires   : 1 000 000 GNF                             -
+-   - Transport             : 400 000 GNF                               -
+-   - Logement              : 400 000 GNF                               -
+-   - Panier                : 200 000 GNF                               -
+- -----------------------------------------                             -
+- Salaire brut              : 4 000 000 GNF                             -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- VÉRIFICATION PLAFOND 25%                                              -
+- ------------------------                                              -
+- Plafond = 4 000 000 × 25% = 1 000 000 GNF                             -
+- Indemnités = 1 000 000 GNF                                            -
+-                                                                        -
+- Ratio indemnités/brut = 1 000 000 / 4 000 000 = 25% [v]                 -
+- Ratio indemnités/base = 1 000 000 / 3 000 000 = 33.33% [v]              -
+-                                                                        -
+- → CONFORME : Indemnités = Plafond                                     -
+- → Dépassement = 0 GNF                                                 -
+- → Aucune réintégration nécessaire                                     -
+-                                                                        -
+-------------------------------------------------------------------------
 ```
 
 ### Exemple 2 : Avec dépassement (réintégration nécessaire)
 
 ```
-╔═══════════════════════════════════════════════════════════════════════╗
-║                    EXEMPLE 2 : DÉPASSEMENT                             ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ Salaire de base           : 3 000 000 GNF                             ║
-║ Indemnités forfaitaires   : 1 500 000 GNF                             ║
-║   - Transport             : 600 000 GNF                               ║
-║   - Logement              : 600 000 GNF                               ║
-║   - Panier                : 300 000 GNF                               ║
-║ ─────────────────────────────────────────                             ║
-║ Salaire brut              : 4 500 000 GNF                             ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ VÉRIFICATION PLAFOND 25%                                              ║
-║ ────────────────────────                                              ║
-║ Plafond = 4 500 000 × 25% = 1 125 000 GNF                             ║
-║ Indemnités = 1 500 000 GNF                                            ║
-║                                                                        ║
-║ Ratio indemnités/brut = 1 500 000 / 4 500 000 = 33.33% ⚠️             ║
-║ Ratio indemnités/base = 1 500 000 / 3 000 000 = 50% ⚠️                ║
-║                                                                        ║
-║ → DÉPASSEMENT : Indemnités > Plafond                                  ║
-║ → Excédent = 1 500 000 - 1 125 000 = 375 000 GNF                      ║
-║ → 375 000 GNF réintégrés dans la base imposable RTS                   ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ IMPACT SUR LE CALCUL RTS                                              ║
-║ ────────────────────────                                              ║
-║ CNSS Employé = 2 500 000 × 5% = 125 000 GNF (plafond CNSS)            ║
-║                                                                        ║
-║ Base imposable SANS réintégration :                                   ║
-║   = 4 500 000 - 125 000 = 4 375 000 GNF                               ║
-║                                                                        ║
-║ Base imposable AVEC réintégration :                                   ║
-║   = 4 500 000 - 125 000 + 375 000 = 4 750 000 GNF                     ║
-║                                                                        ║
-║ Différence de RTS (environ) : +30 000 GNF                             ║
-║                                                                        ║
-╚═══════════════════════════════════════════════════════════════════════╝
+-------------------------------------------------------------------------
+-                    EXEMPLE 2 : DÉPASSEMENT                             -
+-------------------------------------------------------------------------
+-                                                                        -
+- Salaire de base           : 3 000 000 GNF                             -
+- Indemnités forfaitaires   : 1 500 000 GNF                             -
+-   - Transport             : 600 000 GNF                               -
+-   - Logement              : 600 000 GNF                               -
+-   - Panier                : 300 000 GNF                               -
+- -----------------------------------------                             -
+- Salaire brut              : 4 500 000 GNF                             -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- VÉRIFICATION PLAFOND 25%                                              -
+- ------------------------                                              -
+- Plafond = 4 500 000 × 25% = 1 125 000 GNF                             -
+- Indemnités = 1 500 000 GNF                                            -
+-                                                                        -
+- Ratio indemnités/brut = 1 500 000 / 4 500 000 = 33.33% [!]             -
+- Ratio indemnités/base = 1 500 000 / 3 000 000 = 50% [!]                -
+-                                                                        -
+- → DÉPASSEMENT : Indemnités > Plafond                                  -
+- → Excédent = 1 500 000 - 1 125 000 = 375 000 GNF                      -
+- → 375 000 GNF réintégrés dans la base imposable RTS                   -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- IMPACT SUR LE CALCUL RTS                                              -
+- ------------------------                                              -
+- CNSS Employé = 2 500 000 × 5% = 125 000 GNF (plafond CNSS)            -
+-                                                                        -
+- Base imposable SANS réintégration :                                   -
+-   = 4 500 000 - 125 000 = 4 375 000 GNF                               -
+-                                                                        -
+- Base imposable AVEC réintégration :                                   -
+-   = 4 500 000 - 125 000 + 375 000 = 4 750 000 GNF                     -
+-                                                                        -
+- Différence de RTS (environ) : +30 000 GNF                             -
+-                                                                        -
+-------------------------------------------------------------------------
 ```
 
 ### Exemple 3 : Calcul du seuil optimal
 
 ```
-╔═══════════════════════════════════════════════════════════════════════╗
-║                    CALCUL DU SEUIL OPTIMAL                             ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ Question : Pour un salaire de base de 3 000 000 GNF, quel est le      ║
-║            montant maximum d'indemnités forfaitaires exonérées ?      ║
-║                                                                        ║
-║ Formule : Primes_max = 33.33% × Salaire de base                       ║
-║                                                                        ║
-║ Calcul :                                                              ║
-║   Primes_max = 3 000 000 × 33.33% = 999 900 GNF ≈ 1 000 000 GNF       ║
-║                                                                        ║
-║ Vérification :                                                        ║
-║   Brut = 3 000 000 + 1 000 000 = 4 000 000 GNF                        ║
-║   Plafond 25% = 4 000 000 × 25% = 1 000 000 GNF                       ║
-║   Indemnités = 1 000 000 GNF = Plafond ✓                              ║
-║                                                                        ║
-║ → Pour un salaire de base de 3 000 000 GNF, les indemnités            ║
-║   forfaitaires ne doivent pas dépasser 1 000 000 GNF                  ║
-║                                                                        ║
-╚═══════════════════════════════════════════════════════════════════════╝
+-------------------------------------------------------------------------
+-                    CALCUL DU SEUIL OPTIMAL                             -
+-------------------------------------------------------------------------
+-                                                                        -
+- Question : Pour un salaire de base de 3 000 000 GNF, quel est le      -
+-            montant maximum d'indemnités forfaitaires exonérées ?      -
+-                                                                        -
+- Formule : Primes_max = 33.33% × Salaire de base                       -
+-                                                                        -
+- Calcul :                                                              -
+-   Primes_max = 3 000 000 × 33.33% = 999 900 GNF ~ 1 000 000 GNF       -
+-                                                                        -
+- Vérification :                                                        -
+-   Brut = 3 000 000 + 1 000 000 = 4 000 000 GNF                        -
+-   Plafond 25% = 4 000 000 × 25% = 1 000 000 GNF                       -
+-   Indemnités = 1 000 000 GNF = Plafond [v]                              -
+-                                                                        -
+- → Pour un salaire de base de 3 000 000 GNF, les indemnités            -
+-   forfaitaires ne doivent pas dépasser 1 000 000 GNF                  -
+-                                                                        -
+-------------------------------------------------------------------------
 ```
 
 ## 7.5 Tableau de Référence Rapide
@@ -600,34 +600,34 @@ Salaire mensuel moyen = Moyenne des 12 derniers mois (ou durée du contrat si < 
 ## 8.4 Exemple de Calcul
 
 ```
-╔═══════════════════════════════════════════════════════════════════════╗
-║                    INDEMNITÉ DE LICENCIEMENT                           ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ Employé : M. Diallo                                                   ║
-║ Ancienneté : 12 ans et 6 mois                                         ║
-║ Salaire mensuel moyen : 2 500 000 GNF                                 ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ CALCUL PAR TRANCHES                                                   ║
-║ ───────────────────                                                   ║
-║                                                                        ║
-║ Tranche 1 (1-5 ans) : 5 ans × 25% × 2 500 000                         ║
-║   = 5 × 0.25 × 2 500 000 = 3 125 000 GNF                              ║
-║                                                                        ║
-║ Tranche 2 (6-10 ans) : 5 ans × 30% × 2 500 000                        ║
-║   = 5 × 0.30 × 2 500 000 = 3 750 000 GNF                              ║
-║                                                                        ║
-║ Tranche 3 (11-12.5 ans) : 2.5 ans × 40% × 2 500 000                   ║
-║   = 2.5 × 0.40 × 2 500 000 = 2 500 000 GNF                            ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ TOTAL INDEMNITÉ = 3 125 000 + 3 750 000 + 2 500 000                   ║
-║                 = 9 375 000 GNF                                       ║
-║                                                                        ║
-╚═══════════════════════════════════════════════════════════════════════╝
+-------------------------------------------------------------------------
+-                    INDEMNITÉ DE LICENCIEMENT                           -
+-------------------------------------------------------------------------
+-                                                                        -
+- Employé : M. Diallo                                                   -
+- Ancienneté : 12 ans et 6 mois                                         -
+- Salaire mensuel moyen : 2 500 000 GNF                                 -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- CALCUL PAR TRANCHES                                                   -
+- -------------------                                                   -
+-                                                                        -
+- Tranche 1 (1-5 ans) : 5 ans × 25% × 2 500 000                         -
+-   = 5 × 0.25 × 2 500 000 = 3 125 000 GNF                              -
+-                                                                        -
+- Tranche 2 (6-10 ans) : 5 ans × 30% × 2 500 000                        -
+-   = 5 × 0.30 × 2 500 000 = 3 750 000 GNF                              -
+-                                                                        -
+- Tranche 3 (11-12.5 ans) : 2.5 ans × 40% × 2 500 000                   -
+-   = 2.5 × 0.40 × 2 500 000 = 2 500 000 GNF                            -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- TOTAL INDEMNITÉ = 3 125 000 + 3 750 000 + 2 500 000                   -
+-                 = 9 375 000 GNF                                       -
+-                                                                        -
+-------------------------------------------------------------------------
 ```
 
 ---
@@ -636,7 +636,7 @@ Salaire mensuel moyen = Moyenne des 12 derniers mois (ou durée du contrat si < 
 
 ## 9.1 Durée du Préavis
 
-| Catégorie | Ancienneté < 1 an | Ancienneté ≥ 1 an |
+| Catégorie | Ancienneté < 1 an | Ancienneté >= 1 an |
 |-----------|-------------------|-------------------|
 | Ouvriers/Employés | 15 jours | 1 mois |
 | Agents de maîtrise | 1 mois | 2 mois |
@@ -787,191 +787,191 @@ python manage.py generer_feries_guinee --annee 2025
 ## 14.1 Exemple 1 : Cadre Supérieur (8 000 000 GNF)
 
 ```
-╔═══════════════════════════════════════════════════════════════════════╗
-║                    BULLETIN DE PAIE - EXEMPLE 1                        ║
-║                    Cadre Supérieur                                     ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ DONNÉES D'ENTRÉE                                                       ║
-║ ────────────────                                                       ║
-║ Salaire de base           : 7 500 000 GNF                             ║
-║ Prime de responsabilité   : 500 000 GNF                               ║
-║ ─────────────────────────────────────────                             ║
-║ SALAIRE BRUT              : 8 000 000 GNF                             ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ ÉTAPE 1 : CALCUL CNSS                                                 ║
-║ ─────────────────────                                                 ║
-║ Assiette CNSS = MIN(8 000 000, 2 500 000) = 2 500 000 GNF (plafond)   ║
-║ CNSS Employé = 2 500 000 × 5% = 125 000 GNF                           ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ ÉTAPE 2 : CALCUL BASE IMPOSABLE RTS                                   ║
-║ ───────────────────────────────────                                   ║
-║ Base imposable = Brut - CNSS Employé                                  ║
-║                = 8 000 000 - 125 000 = 7 875 000 GNF                  ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ ÉTAPE 3 : CALCUL RTS (BARÈME PROGRESSIF)                              ║
-║ ────────────────────────────────────────                              ║
-║                                                                        ║
-║ Tranche 1 : 0 - 1 000 000 GNF × 0%                                    ║
-║           = 1 000 000 × 0% = 0 GNF                                    ║
-║                                                                        ║
-║ Tranche 2 : 1 000 001 - 3 000 000 GNF × 5%                            ║
-║           = 2 000 000 × 5% = 100 000 GNF                              ║
-║                                                                        ║
-║ Tranche 3 : 3 000 001 - 5 000 000 GNF × 8%                            ║
-║           = 2 000 000 × 8% = 160 000 GNF                              ║
-║                                                                        ║
-║ Tranche 4 : 5 000 001 - 7 875 000 GNF × 10%                           ║
-║           = 2 875 000 × 10% = 287 500 GNF                             ║
-║                                                                        ║
-║ TOTAL RTS = 0 + 100 000 + 160 000 + 287 500 = 547 500 GNF             ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ ÉTAPE 4 : CALCUL NET À PAYER                                          ║
-║ ────────────────────────────                                          ║
-║ Total retenues = CNSS + RTS = 125 000 + 547 500 = 672 500 GNF         ║
-║ NET À PAYER = 8 000 000 - 672 500 = 7 327 500 GNF                     ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ CHARGES PATRONALES (non visibles sur le bulletin)                     ║
-║ ─────────────────────────────────────────────────                     ║
-║ CNSS Employeur    : 2 500 000 × 18% = 450 000 GNF                     ║
-║ Versement Forfait.: 8 000 000 × 6%  = 480 000 GNF                     ║
-║ Taxe Apprentissage: 8 000 000 × 1,5%= 120 000 GNF                     ║
-║ ─────────────────────────────────────────────────                     ║
-║ TOTAL CHARGES     : 1 050 000 GNF                                     ║
-║                                                                        ║
-║ COÛT TOTAL EMPLOYEUR : 8 000 000 + 1 050 000 = 9 050 000 GNF          ║
-║                                                                        ║
-╚═══════════════════════════════════════════════════════════════════════╝
+-------------------------------------------------------------------------
+-                    BULLETIN DE PAIE - EXEMPLE 1                        -
+-                    Cadre Supérieur                                     -
+-------------------------------------------------------------------------
+-                                                                        -
+- DONNÉES D'ENTRÉE                                                       -
+- ----------------                                                       -
+- Salaire de base           : 7 500 000 GNF                             -
+- Prime de responsabilité   : 500 000 GNF                               -
+- -----------------------------------------                             -
+- SALAIRE BRUT              : 8 000 000 GNF                             -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- ÉTAPE 1 : CALCUL CNSS                                                 -
+- ---------------------                                                 -
+- Assiette CNSS = MIN(8 000 000, 2 500 000) = 2 500 000 GNF (plafond)   -
+- CNSS Employé = 2 500 000 × 5% = 125 000 GNF                           -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- ÉTAPE 2 : CALCUL BASE IMPOSABLE RTS                                   -
+- -----------------------------------                                   -
+- Base imposable = Brut - CNSS Employé                                  -
+-                = 8 000 000 - 125 000 = 7 875 000 GNF                  -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- ÉTAPE 3 : CALCUL RTS (BARÈME PROGRESSIF)                              -
+- ----------------------------------------                              -
+-                                                                        -
+- Tranche 1 : 0 - 1 000 000 GNF × 0%                                    -
+-           = 1 000 000 × 0% = 0 GNF                                    -
+-                                                                        -
+- Tranche 2 : 1 000 001 - 3 000 000 GNF × 5%                            -
+-           = 2 000 000 × 5% = 100 000 GNF                              -
+-                                                                        -
+- Tranche 3 : 3 000 001 - 5 000 000 GNF × 8%                            -
+-           = 2 000 000 × 8% = 160 000 GNF                              -
+-                                                                        -
+- Tranche 4 : 5 000 001 - 7 875 000 GNF × 10%                           -
+-           = 2 875 000 × 10% = 287 500 GNF                             -
+-                                                                        -
+- TOTAL RTS = 0 + 100 000 + 160 000 + 287 500 = 547 500 GNF             -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- ÉTAPE 4 : CALCUL NET À PAYER                                          -
+- ----------------------------                                          -
+- Total retenues = CNSS + RTS = 125 000 + 547 500 = 672 500 GNF         -
+- NET À PAYER = 8 000 000 - 672 500 = 7 327 500 GNF                     -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- CHARGES PATRONALES (non visibles sur le bulletin)                     -
+- -------------------------------------------------                     -
+- CNSS Employeur    : 2 500 000 × 18% = 450 000 GNF                     -
+- Versement Forfait.: 8 000 000 × 6%  = 480 000 GNF                     -
+- Taxe Apprentissage: 8 000 000 × 1,5%= 120 000 GNF                     -
+- -------------------------------------------------                     -
+- TOTAL CHARGES     : 1 050 000 GNF                                     -
+-                                                                        -
+- COÛT TOTAL EMPLOYEUR : 8 000 000 + 1 050 000 = 9 050 000 GNF          -
+-                                                                        -
+-------------------------------------------------------------------------
 ```
 
 ## 7.2 Exemple 2 : Employé Standard (1 500 000 GNF)
 
 ```
-╔═══════════════════════════════════════════════════════════════════════╗
-║                    BULLETIN DE PAIE - EXEMPLE 2                        ║
-║                    Employé Standard                                    ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ DONNÉES D'ENTRÉE                                                       ║
-║ Salaire de base           : 1 200 000 GNF                             ║
-║ Prime de transport        : 200 000 GNF                               ║
-║ Prime d'ancienneté        : 100 000 GNF                               ║
-║ ─────────────────────────────────────────                             ║
-║ SALAIRE BRUT              : 1 500 000 GNF                             ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ CALCUL CNSS                                                           ║
-║ Assiette CNSS = 1 500 000 GNF (entre plancher et plafond)             ║
-║ CNSS Employé = 1 500 000 × 5% = 75 000 GNF                            ║
-║                                                                        ║
-║ CALCUL RTS                                                            ║
-║ Base imposable = 1 500 000 - 75 000 = 1 425 000 GNF                   ║
-║                                                                        ║
-║ Tranche 1 : 1 000 000 × 0% = 0 GNF                                    ║
-║ Tranche 2 : 425 000 × 5% = 21 250 GNF                                 ║
-║ TOTAL RTS = 21 250 GNF                                                ║
-║                                                                        ║
-║ NET À PAYER = 1 500 000 - 75 000 - 21 250 = 1 403 750 GNF             ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ CHARGES PATRONALES                                                    ║
-║ CNSS Employeur    : 1 500 000 × 18% = 270 000 GNF                     ║
-║ Versement Forfait.: 1 500 000 × 6%  = 90 000 GNF                      ║
-║ Taxe Apprentissage: 1 500 000 × 1,5%= 22 500 GNF                      ║
-║ TOTAL CHARGES     : 382 500 GNF                                       ║
-║                                                                        ║
-║ COÛT TOTAL EMPLOYEUR : 1 882 500 GNF                                  ║
-║                                                                        ║
-╚═══════════════════════════════════════════════════════════════════════╝
+-------------------------------------------------------------------------
+-                    BULLETIN DE PAIE - EXEMPLE 2                        -
+-                    Employé Standard                                    -
+-------------------------------------------------------------------------
+-                                                                        -
+- DONNÉES D'ENTRÉE                                                       -
+- Salaire de base           : 1 200 000 GNF                             -
+- Prime de transport        : 200 000 GNF                               -
+- Prime d'ancienneté        : 100 000 GNF                               -
+- -----------------------------------------                             -
+- SALAIRE BRUT              : 1 500 000 GNF                             -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- CALCUL CNSS                                                           -
+- Assiette CNSS = 1 500 000 GNF (entre plancher et plafond)             -
+- CNSS Employé = 1 500 000 × 5% = 75 000 GNF                            -
+-                                                                        -
+- CALCUL RTS                                                            -
+- Base imposable = 1 500 000 - 75 000 = 1 425 000 GNF                   -
+-                                                                        -
+- Tranche 1 : 1 000 000 × 0% = 0 GNF                                    -
+- Tranche 2 : 425 000 × 5% = 21 250 GNF                                 -
+- TOTAL RTS = 21 250 GNF                                                -
+-                                                                        -
+- NET À PAYER = 1 500 000 - 75 000 - 21 250 = 1 403 750 GNF             -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- CHARGES PATRONALES                                                    -
+- CNSS Employeur    : 1 500 000 × 18% = 270 000 GNF                     -
+- Versement Forfait.: 1 500 000 × 6%  = 90 000 GNF                      -
+- Taxe Apprentissage: 1 500 000 × 1,5%= 22 500 GNF                      -
+- TOTAL CHARGES     : 382 500 GNF                                       -
+-                                                                        -
+- COÛT TOTAL EMPLOYEUR : 1 882 500 GNF                                  -
+-                                                                        -
+-------------------------------------------------------------------------
 ```
 
 ## 7.3 Exemple 3 : Stagiaire Exonéré (800 000 GNF)
 
 ```
-╔═══════════════════════════════════════════════════════════════════════╗
-║                    BULLETIN DE PAIE - EXEMPLE 3                        ║
-║                    Stagiaire (Exonéré RTS)                            ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ DONNÉES D'ENTRÉE                                                       ║
-║ Type de contrat           : Stage                                     ║
-║ Durée du stage            : 6 mois (≤ 12 mois ✓)                      ║
-║ Indemnité de stage        : 800 000 GNF (≤ 1 200 000 GNF ✓)           ║
-║                                                                        ║
-║ → ÉLIGIBLE À L'EXONÉRATION RTS                                        ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ CALCUL CNSS                                                           ║
-║ Assiette CNSS = 550 000 GNF (plancher appliqué car 800K < 550K ✗)     ║
-║ Correction : 800 000 > 550 000, donc Assiette = 800 000 GNF           ║
-║ CNSS Employé = 800 000 × 5% = 40 000 GNF                              ║
-║                                                                        ║
-║ CALCUL RTS                                                            ║
-║ RTS = 0 GNF (EXONÉRÉ - Stagiaire éligible)                            ║
-║                                                                        ║
-║ NET À PAYER = 800 000 - 40 000 = 760 000 GNF                          ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ CHARGES PATRONALES                                                    ║
-║ CNSS Employeur    : 800 000 × 18% = 144 000 GNF                       ║
-║ Versement Forfait.: 800 000 × 6%  = 48 000 GNF                        ║
-║ Taxe Apprentissage: 800 000 × 1,5%= 12 000 GNF                        ║
-║ TOTAL CHARGES     : 204 000 GNF                                       ║
-║                                                                        ║
-║ COÛT TOTAL EMPLOYEUR : 1 004 000 GNF                                  ║
-║                                                                        ║
-╚═══════════════════════════════════════════════════════════════════════╝
+-------------------------------------------------------------------------
+-                    BULLETIN DE PAIE - EXEMPLE 3                        -
+-                    Stagiaire (Exonéré RTS)                            -
+-------------------------------------------------------------------------
+-                                                                        -
+- DONNÉES D'ENTRÉE                                                       -
+- Type de contrat           : Stage                                     -
+- Durée du stage            : 6 mois (<= 12 mois [v])                      -
+- Indemnité de stage        : 800 000 GNF (<= 1 200 000 GNF [v])           -
+-                                                                        -
+- → ÉLIGIBLE À L'EXONÉRATION RTS                                        -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- CALCUL CNSS                                                           -
+- Assiette CNSS = 550 000 GNF (plancher appliqué car 800K < 550K [x])     -
+- Correction : 800 000 > 550 000, donc Assiette = 800 000 GNF           -
+- CNSS Employé = 800 000 × 5% = 40 000 GNF                              -
+-                                                                        -
+- CALCUL RTS                                                            -
+- RTS = 0 GNF (EXONÉRÉ - Stagiaire éligible)                            -
+-                                                                        -
+- NET À PAYER = 800 000 - 40 000 = 760 000 GNF                          -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- CHARGES PATRONALES                                                    -
+- CNSS Employeur    : 800 000 × 18% = 144 000 GNF                       -
+- Versement Forfait.: 800 000 × 6%  = 48 000 GNF                        -
+- Taxe Apprentissage: 800 000 × 1,5%= 12 000 GNF                        -
+- TOTAL CHARGES     : 204 000 GNF                                       -
+-                                                                        -
+- COÛT TOTAL EMPLOYEUR : 1 004 000 GNF                                  -
+-                                                                        -
+-------------------------------------------------------------------------
 ```
 
 ## 7.4 Exemple 4 : Employé au SMIG (550 000 GNF)
 
 ```
-╔═══════════════════════════════════════════════════════════════════════╗
-║                    BULLETIN DE PAIE - EXEMPLE 4                        ║
-║                    Employé au SMIG                                     ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ DONNÉES D'ENTRÉE                                                       ║
-║ Salaire de base (SMIG)    : 550 000 GNF                               ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ CALCUL CNSS                                                           ║
-║ Assiette CNSS = 550 000 GNF (= plancher)                              ║
-║ CNSS Employé = 550 000 × 5% = 27 500 GNF                              ║
-║                                                                        ║
-║ CALCUL RTS                                                            ║
-║ Base imposable = 550 000 - 27 500 = 522 500 GNF                       ║
-║ Tranche 1 : 522 500 × 0% = 0 GNF (< 1 000 000 GNF)                    ║
-║ TOTAL RTS = 0 GNF                                                     ║
-║                                                                        ║
-║ NET À PAYER = 550 000 - 27 500 - 0 = 522 500 GNF                      ║
-║                                                                        ║
-╠═══════════════════════════════════════════════════════════════════════╣
-║                                                                        ║
-║ CHARGES PATRONALES                                                    ║
-║ CNSS Employeur    : 550 000 × 18% = 99 000 GNF                        ║
-║ Versement Forfait.: 550 000 × 6%  = 33 000 GNF                        ║
-║ Taxe Apprentissage: 550 000 × 1,5%= 8 250 GNF                         ║
-║ TOTAL CHARGES     : 140 250 GNF                                       ║
-║                                                                        ║
-║ COÛT TOTAL EMPLOYEUR : 690 250 GNF                                    ║
-║                                                                        ║
-╚═══════════════════════════════════════════════════════════════════════╝
+-------------------------------------------------------------------------
+-                    BULLETIN DE PAIE - EXEMPLE 4                        -
+-                    Employé au SMIG                                     -
+-------------------------------------------------------------------------
+-                                                                        -
+- DONNÉES D'ENTRÉE                                                       -
+- Salaire de base (SMIG)    : 550 000 GNF                               -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- CALCUL CNSS                                                           -
+- Assiette CNSS = 550 000 GNF (= plancher)                              -
+- CNSS Employé = 550 000 × 5% = 27 500 GNF                              -
+-                                                                        -
+- CALCUL RTS                                                            -
+- Base imposable = 550 000 - 27 500 = 522 500 GNF                       -
+- Tranche 1 : 522 500 × 0% = 0 GNF (< 1 000 000 GNF)                    -
+- TOTAL RTS = 0 GNF                                                     -
+-                                                                        -
+- NET À PAYER = 550 000 - 27 500 - 0 = 522 500 GNF                      -
+-                                                                        -
+-------------------------------------------------------------------------
+-                                                                        -
+- CHARGES PATRONALES                                                    -
+- CNSS Employeur    : 550 000 × 18% = 99 000 GNF                        -
+- Versement Forfait.: 550 000 × 6%  = 33 000 GNF                        -
+- Taxe Apprentissage: 550 000 × 1,5%= 8 250 GNF                         -
+- TOTAL CHARGES     : 140 250 GNF                                       -
+-                                                                        -
+- COÛT TOTAL EMPLOYEUR : 690 250 GNF                                    -
+-                                                                        -
+-------------------------------------------------------------------------
 ```
 
 ---
@@ -1023,11 +1023,11 @@ L'application génère automatiquement des alertes pour les échéances de décl
 
 | Jours avant échéance | Niveau | Statut |
 |---------------------|--------|--------|
-| > 5 jours | ℹ️ Information | À venir |
-| 3-5 jours | ⚠️ Avertissement | À venir |
-| 1-3 jours | ⚠️ Avertissement | Urgent |
-| ≤ 1 jour | 🚨 Danger | Urgent |
-| Dépassé | 🚨 Danger | En retard |
+| > 5 jours | [i] Information | À venir |
+| 3-5 jours | [!] Avertissement | À venir |
+| 1-3 jours | [!] Avertissement | Urgent |
+| <= 1 jour | [!!] Danger | Urgent |
+| Dépassé | [!!] Danger | En retard |
 
 ## 16.2 Pénalités de Retard
 
@@ -1088,14 +1088,14 @@ Résultat attendu :
 ======================================================================
 TESTS DE VÉRIFICATION DES CALCULS DE PAIE - GUINÉE
 ======================================================================
-📊 TEST 1: CALCUL CNSS (Plancher/Plafond) - 6/6 ✓
-📊 TEST 2: BARÈME RTS 2022+ (avec tranche 8%) - 10/10 ✓
-📊 TEST 3: CHARGES PATRONALES (CNSS 18% + VF 6% + TA 1.5%) - 3/3 ✓
-📊 TEST 4: EXEMPLE COMPLET DU MANUEL (8 000 000 GNF) - 8/8 ✓
-📊 TEST 5: EXONÉRATION RTS STAGIAIRES/APPRENTIS - 9/9 ✓
-📊 TEST 6: PLAFOND 25% INDEMNITÉS FORFAITAIRES - 6/6 ✓
+[#] TEST 1: CALCUL CNSS (Plancher/Plafond) - 6/6 [v]
+[#] TEST 2: BARÈME RTS 2022+ (avec tranche 8%) - 10/10 [v]
+[#] TEST 3: CHARGES PATRONALES (CNSS 18% + VF 6% + TA 1.5%) - 3/3 [v]
+[#] TEST 4: EXEMPLE COMPLET DU MANUEL (8 000 000 GNF) - 8/8 [v]
+[#] TEST 5: EXONÉRATION RTS STAGIAIRES/APPRENTIS - 9/9 [v]
+[#] TEST 6: PLAFOND 25% INDEMNITÉS FORFAITAIRES - 6/6 [v]
 ======================================================================
-✅ TOUS LES TESTS RÉUSSIS: 42/42
+[OK] TOUS LES TESTS RÉUSSIS: 42/42
 ======================================================================
 ```
 
