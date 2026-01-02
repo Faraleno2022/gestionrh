@@ -843,36 +843,94 @@ def supprimer_poste(request, pk):
 
 @login_required
 def telecharger_documentation(request):
-    """Télécharger tous les documents de conformité en ZIP"""
+    """Télécharger tous les documents de conformité en ZIP (PDF)"""
     import zipfile
     import io
     import os
     from django.http import HttpResponse
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm
+    from reportlab.pdfgen import canvas
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
     
-    # Liste des documents à inclure
+    def markdown_to_pdf(md_path, title):
+        """Convertir un fichier Markdown en PDF"""
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        story = []
+        
+        # Lire le contenu Markdown
+        with open(md_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Titre principal
+        story.append(Paragraph(f"<b>{title}</b>", styles['Title']))
+        story.append(Spacer(1, 0.5*cm))
+        story.append(Paragraph("GuineeRH.space - Conforme CGI 2022", styles['Heading2']))
+        story.append(Spacer(1, 1*cm))
+        
+        # Traiter le contenu ligne par ligne
+        for line in content.split('\n'):
+            line = line.strip()
+            if not line:
+                story.append(Spacer(1, 0.3*cm))
+            elif line.startswith('# '):
+                story.append(Paragraph(f"<b>{line[2:]}</b>", styles['Heading1']))
+            elif line.startswith('## '):
+                story.append(Paragraph(f"<b>{line[3:]}</b>", styles['Heading2']))
+            elif line.startswith('### '):
+                story.append(Paragraph(f"<b>{line[4:]}</b>", styles['Heading3']))
+            elif line.startswith('- ') or line.startswith('* '):
+                story.append(Paragraph(f"• {line[2:]}", styles['Normal']))
+            elif line.startswith('|'):
+                continue  # Skip table lines for now
+            elif line.startswith('```'):
+                continue  # Skip code blocks markers
+            elif line.startswith('---'):
+                story.append(Spacer(1, 0.5*cm))
+            else:
+                # Nettoyer le markdown basique
+                line = line.replace('**', '').replace('`', '').replace('✅', '[OK]').replace('📚', '')
+                if line:
+                    story.append(Paragraph(line, styles['Normal']))
+        
+        # Footer
+        story.append(Spacer(1, 2*cm))
+        story.append(Paragraph("Document généré par GuineeRH.space - Janvier 2026", styles['Normal']))
+        
+        doc.build(story)
+        buffer.seek(0)
+        return buffer.read()
+    
+    # Liste des documents à convertir
     docs_dir = os.path.join(settings.BASE_DIR, 'docs')
     documents = [
-        'EXERCICE_CALCUL_PAIE_CGI2022.md',
-        'MANUEL_UTILISATION_PAIE_GUINEE_v2.md',
-        'RAPPORT_AUDIT_CONFORMITE_CGI2022.md',
-        'PRESENTATION_GUINEEHR_INSTITUTIONNELLE.md',
-        'DOSSIER_SOUMISSION_OFFICIELLE.md',
+        ('EXERCICE_CALCUL_PAIE_CGI2022.md', 'Exercice Calcul Paie CGI 2022'),
+        ('MANUEL_UTILISATION_PAIE_GUINEE_v2.md', 'Manuel Utilisation Paie Guinée'),
+        ('RAPPORT_AUDIT_CONFORMITE_CGI2022.md', 'Rapport Audit Conformité CGI 2022'),
+        ('PRESENTATION_GUINEEHR_INSTITUTIONNELLE.md', 'Présentation Institutionnelle'),
+        ('DOSSIER_SOUMISSION_OFFICIELLE.md', 'Dossier Soumission Officielle'),
     ]
     
-    # Créer le ZIP en mémoire
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        for doc in documents:
-            doc_path = os.path.join(docs_dir, doc)
-            if os.path.exists(doc_path):
-                zip_file.write(doc_path, doc)
+    # Créer le ZIP avec les PDF
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for filename, title in documents:
+            md_path = os.path.join(docs_dir, filename)
+            if os.path.exists(md_path):
+                pdf_content = markdown_to_pdf(md_path, title)
+                pdf_filename = filename.replace('.md', '.pdf')
+                zip_file.writestr(pdf_filename, pdf_content)
     
-    buffer.seek(0)
+    zip_buffer.seek(0)
     
     # Retourner le ZIP
-    response = HttpResponse(buffer.read(), content_type='application/zip')
+    response = HttpResponse(zip_buffer.read(), content_type='application/zip')
     response['Content-Disposition'] = 'attachment; filename="GuineeRH_Documentation_CGI2022.zip"'
     
-    log_activity(request, 'Téléchargement documentation CGI 2022', 'core')
+    log_activity(request, 'Téléchargement documentation CGI 2022 (PDF)', 'core')
     
     return response
