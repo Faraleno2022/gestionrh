@@ -3,7 +3,7 @@ Tests de vérification des calculs de paie selon la législation guinéenne.
 
 Ce script vérifie l'exactitude des calculs :
 - CNSS avec plancher (550 000 GNF) et plafond (2 500 000 GNF)
-- RTS avec le barème CGI 2022 (5 tranches, max 20%)
+- RTS avec le barème CGI 2022 (6 tranches, max 20%)
 - Charges patronales (CNSS 18% + VF 6% + TA 1,5%)
 
 Usage:
@@ -92,11 +92,12 @@ class Command(BaseCommand):
         return assiette, cnss_employe, cnss_employeur
 
     def _calculer_rts(self, base_imposable):
-        """Calcule la RTS selon le barème CGI 2022 (5 tranches pour les salaires)"""
-        # Barème RTS CGI 2022 - La tranche 8% concerne les capitaux mobiliers, PAS les salaires
+        """Calcule la RTS selon le barème CGI 2022 (6 tranches)"""
+        # Barème RTS CGI 2022 officiel - 6 tranches
         tranches = [
             (Decimal('0'), Decimal('1000000'), Decimal('0')),
-            (Decimal('1000001'), Decimal('5000000'), Decimal('5')),
+            (Decimal('1000001'), Decimal('3000000'), Decimal('5')),
+            (Decimal('3000001'), Decimal('5000000'), Decimal('8')),
             (Decimal('5000001'), Decimal('10000000'), Decimal('10')),
             (Decimal('10000001'), Decimal('20000000'), Decimal('15')),
             (Decimal('20000001'), None, Decimal('20')),

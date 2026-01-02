@@ -176,10 +176,11 @@ class Command(BaseCommand):
         if base_imposable <= 0:
             return Decimal('0')
         
-        # Barème RTS CGI 2022 (5 tranches pour les salaires - sans tranche 8%)
+        # Barème RTS CGI 2022 officiel (6 tranches)
         tranches = [
             (Decimal('0'), Decimal('1000000'), Decimal('0')),
-            (Decimal('1000001'), Decimal('5000000'), Decimal('5')),
+            (Decimal('1000001'), Decimal('3000000'), Decimal('5')),
+            (Decimal('3000001'), Decimal('5000000'), Decimal('8')),
             (Decimal('5000001'), Decimal('10000000'), Decimal('10')),
             (Decimal('10000001'), Decimal('20000000'), Decimal('15')),
             (Decimal('20000001'), None, Decimal('20')),

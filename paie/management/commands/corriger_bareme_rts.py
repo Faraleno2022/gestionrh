@@ -1,12 +1,10 @@
 """
 Correction du barème RTS selon le CGI 2022.
 
-Le barème RTS pour les SALAIRES n'a que 5 tranches (pas de tranche 8%).
-La tranche 8% concerne les revenus de capitaux mobiliers, PAS les salaires.
-
-Barème correct:
+Barème officiel RTS CGI 2022 (6 tranches):
 - 0 - 1 000 000 GNF : 0%
-- 1 000 001 - 5 000 000 GNF : 5%
+- 1 000 001 - 3 000 000 GNF : 5%
+- 3 000 001 - 5 000 000 GNF : 8%
 - 5 000 001 - 10 000 000 GNF : 10%
 - 10 000 001 - 20 000 000 GNF : 15%
 - Au-delà de 20 000 000 GNF : 20%
@@ -22,18 +20,15 @@ from paie.models import TrancheIRG
 
 
 class Command(BaseCommand):
-    help = 'Corrige le barème RTS (5 tranches sans la tranche 8% qui est pour les capitaux mobiliers)'
+    help = 'Corrige le barème RTS selon le CGI 2022 (6 tranches)'
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.NOTICE('=' * 70))
         self.stdout.write(self.style.NOTICE('CORRECTION DU BARÈME RTS - CGI 2022'))
         self.stdout.write(self.style.NOTICE('=' * 70))
         self.stdout.write('')
-        self.stdout.write(self.style.WARNING('⚠️  NOTE: La tranche 8% concerne les revenus de capitaux'))
-        self.stdout.write(self.style.WARNING('    mobiliers (dividendes, intérêts), PAS les salaires.'))
-        self.stdout.write('')
         
-        # Barème RTS correct pour les salaires (5 tranches)
+        # Barème RTS officiel CGI 2022 (6 tranches)
         tranches = [
             {
                 'numero_tranche': 1,
@@ -44,23 +39,29 @@ class Command(BaseCommand):
             {
                 'numero_tranche': 2,
                 'borne_inferieure': Decimal('1000001'),
-                'borne_superieure': Decimal('5000000'),
+                'borne_superieure': Decimal('3000000'),
                 'taux_irg': Decimal('5.00'),
             },
             {
                 'numero_tranche': 3,
+                'borne_inferieure': Decimal('3000001'),
+                'borne_superieure': Decimal('5000000'),
+                'taux_irg': Decimal('8.00'),
+            },
+            {
+                'numero_tranche': 4,
                 'borne_inferieure': Decimal('5000001'),
                 'borne_superieure': Decimal('10000000'),
                 'taux_irg': Decimal('10.00'),
             },
             {
-                'numero_tranche': 4,
+                'numero_tranche': 5,
                 'borne_inferieure': Decimal('10000001'),
                 'borne_superieure': Decimal('20000000'),
                 'taux_irg': Decimal('15.00'),
             },
             {
-                'numero_tranche': 5,
+                'numero_tranche': 6,
                 'borne_inferieure': Decimal('20000001'),
                 'borne_superieure': None,  # Illimité
                 'taux_irg': Decimal('20.00'),
@@ -75,7 +76,7 @@ class Command(BaseCommand):
             if deleted_count:
                 self.stdout.write(f'🗑️  Supprimé {deleted_count} anciennes tranches pour {annee}')
             
-            self.stdout.write('\n📊 BARÈME RTS CORRECT (5 tranches):')
+            self.stdout.write('\n📊 BARÈME RTS CGI 2022 (6 tranches):')
             self.stdout.write('-' * 50)
             
             for tranche_data in tranches:

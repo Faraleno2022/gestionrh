@@ -1963,11 +1963,11 @@ def simulation_paie(request):
         # Base imposable RTS = Brut - CNSS + Excédent indemnités
         base_imposable = salaire_brut - cnss_employe + exces_indemnites
         
-        # Calcul RTS par tranches (CGI 2022 - 6 tranches pour les salaires)
-        # Note: La tranche 8% concerne les revenus de capitaux mobiliers, PAS les salaires
+        # Calcul RTS par tranches (CGI 2022 - 6 tranches)
         tranches_rts = [
             (Decimal('0'), Decimal('1000000'), Decimal('0')),
-            (Decimal('1000001'), Decimal('5000000'), Decimal('5')),
+            (Decimal('1000001'), Decimal('3000000'), Decimal('5')),
+            (Decimal('3000001'), Decimal('5000000'), Decimal('8')),
             (Decimal('5000001'), Decimal('10000000'), Decimal('10')),
             (Decimal('10000001'), Decimal('20000000'), Decimal('15')),
             (Decimal('20000001'), None, Decimal('20')),
