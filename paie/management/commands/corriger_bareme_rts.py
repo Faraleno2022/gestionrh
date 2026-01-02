@@ -102,14 +102,14 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('✅ BARÈME RTS CORRIGÉ AVEC SUCCÈS'))
         self.stdout.write(self.style.SUCCESS('=' * 70))
         
-        # Afficher un exemple de calcul
-        self.stdout.write('\n📋 EXEMPLE DE CALCUL (Base imposable: 7 875 000 GNF):')
+        # Afficher un exemple de calcul conforme CGI 2022
+        self.stdout.write('\n📋 EXEMPLE DE CALCUL RTS (Base imposable: 7 875 000 GNF):')
         self.stdout.write('-' * 50)
-        self.stdout.write('  Tranche 1: 1 000 000 × 0%  =         0 GNF')
-        self.stdout.write('  Tranche 2: 4 000 000 × 5%  =   200 000 GNF')
-        self.stdout.write('  Tranche 3: 2 875 000 × 10% =   287 500 GNF')
+        self.stdout.write('  Tranche 1:   0 - 1M        × 0%  =         0 GNF')
+        self.stdout.write('  Tranche 2:   1M - 3M       × 5%  =   100 000 GNF')
+        self.stdout.write('  Tranche 3:   3M - 5M       × 8%  =   160 000 GNF')
+        self.stdout.write('  Tranche 4:   5M - 7.875M   × 10% =   287 500 GNF')
         self.stdout.write('  ' + '-' * 40)
-        self.stdout.write('  TOTAL RTS                  =   487 500 GNF')
+        self.stdout.write('  TOTAL RTS                       =   547 500 GNF')
         self.stdout.write('')
-        self.stdout.write(self.style.WARNING('  (Ancien calcul avec tranche 8%: 547 500 GNF)'))
-        self.stdout.write(self.style.SUCCESS('  Économie pour l\'employé: 60 000 GNF/mois'))
+        self.stdout.write(self.style.SUCCESS('  ✅ Calcul conforme CGI 2022 (6 tranches)'))
