@@ -839,3 +839,40 @@ def supprimer_poste(request, pk):
     log_activity(request, f'Suppression poste {nom}', 'core')
     messages.success(request, f"Poste '{nom}' supprimé.")
     return redirect('core:gestion_structure')
+
+
+@login_required
+def telecharger_documentation(request):
+    """Télécharger tous les documents de conformité en ZIP"""
+    import zipfile
+    import io
+    import os
+    from django.http import HttpResponse
+    
+    # Liste des documents à inclure
+    docs_dir = os.path.join(settings.BASE_DIR, 'docs')
+    documents = [
+        'EXERCICE_CALCUL_PAIE_CGI2022.md',
+        'MANUEL_UTILISATION_PAIE_GUINEE_v2.md',
+        'RAPPORT_AUDIT_CONFORMITE_CGI2022.md',
+        'PRESENTATION_GUINEEHR_INSTITUTIONNELLE.md',
+        'DOSSIER_SOUMISSION_OFFICIELLE.md',
+    ]
+    
+    # Créer le ZIP en mémoire
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for doc in documents:
+            doc_path = os.path.join(docs_dir, doc)
+            if os.path.exists(doc_path):
+                zip_file.write(doc_path, doc)
+    
+    buffer.seek(0)
+    
+    # Retourner le ZIP
+    response = HttpResponse(buffer.read(), content_type='application/zip')
+    response['Content-Disposition'] = 'attachment; filename="GuineeRH_Documentation_CGI2022.zip"'
+    
+    log_activity(request, 'Téléchargement documentation CGI 2022', 'core')
+    
+    return response

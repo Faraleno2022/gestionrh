@@ -68,4 +68,7 @@ urlpatterns = [
     
     # Tableau de bord RH
     path('dashboard-rh/', views_dashboard.tableau_bord_rh, name='tableau_bord_rh'),
+    
+    # Documentation
+    path('documentation/telecharger/', views.telecharger_documentation, name='telecharger_documentation'),
 ]
