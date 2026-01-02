@@ -1,9 +1,15 @@
 """
 Commande pour mettre à jour le barème RTS (Retenue sur Traitements et Salaires) 
-selon la législation guinéenne 2022+.
+selon la législation guinéenne (CGI 2022).
 
-Le nouveau code a modifié le barème de la RTS par le rajout d'un nouveau taux 
-de 8% pour la tranche de revenus compris entre 3 000 001 GNF et 5 000 000 GNF.
+Barème RTS à 5 tranches pour les salaires :
+- 0 - 1 000 000 GNF : 0%
+- 1 000 001 - 5 000 000 GNF : 5%
+- 5 000 001 - 10 000 000 GNF : 10%
+- 10 000 001 - 20 000 000 GNF : 15%
+- Au-delà de 20 000 000 GNF : 20%
+
+NOTE: La tranche à 8% concerne les revenus de capitaux mobiliers, PAS les salaires.
 
 Usage:
     python manage.py update_bareme_rts
@@ -39,7 +45,8 @@ class Command(BaseCommand):
         self.stdout.write('\n📊 BARÈME RTS (depuis 2022):')
         self.stdout.write('-' * 50)
         
-        # Nouveau barème officiel depuis 2022
+        # Barème RTS officiel - CGI 2022 (5 tranches pour les salaires)
+        # NOTE: La tranche 8% est pour les revenus de capitaux mobiliers, PAS les salaires
         tranches = [
             {
                 'numero_tranche': 1,
@@ -50,29 +57,23 @@ class Command(BaseCommand):
             {
                 'numero_tranche': 2,
                 'borne_inferieure': Decimal('1000001'),
-                'borne_superieure': Decimal('3000000'),
+                'borne_superieure': Decimal('5000000'),
                 'taux_irg': Decimal('5.00'),
             },
             {
                 'numero_tranche': 3,
-                'borne_inferieure': Decimal('3000001'),
-                'borne_superieure': Decimal('5000000'),
-                'taux_irg': Decimal('8.00'),  # Nouvelle tranche depuis 2022
-            },
-            {
-                'numero_tranche': 4,
                 'borne_inferieure': Decimal('5000001'),
                 'borne_superieure': Decimal('10000000'),
                 'taux_irg': Decimal('10.00'),
             },
             {
-                'numero_tranche': 5,
+                'numero_tranche': 4,
                 'borne_inferieure': Decimal('10000001'),
                 'borne_superieure': Decimal('20000000'),
                 'taux_irg': Decimal('15.00'),
             },
             {
-                'numero_tranche': 6,
+                'numero_tranche': 5,
                 'borne_inferieure': Decimal('20000001'),
                 'borne_superieure': None,  # Illimité
                 'taux_irg': Decimal('20.00'),
@@ -124,11 +125,11 @@ class Command(BaseCommand):
             {
                 'code': 'TAUX_TA',
                 'libelle': 'Taxe d\'Apprentissage',
-                'valeur': Decimal('1.50'),
+                'valeur': Decimal('2.00'),
                 'type_valeur': 'pourcentage',
                 'categorie': 'general',
                 'unite': '%',
-                'description': 'Taxe d\'apprentissage à charge de l\'employeur (1.5% de la masse salariale)'
+                'description': 'Taxe d\'apprentissage à charge de l\'employeur (2% de la masse salariale - CGI 2022)'
             },
         ]
         
@@ -157,7 +158,8 @@ class Command(BaseCommand):
         self.stdout.write('  ├────────────────────────────────┼───────────┤')
         self.stdout.write('  │ CNSS Employeur                 │   18%     │')
         self.stdout.write('  │ Versement Forfaitaire (VF)     │    6%     │')
-        self.stdout.write('  │ Taxe d\'Apprentissage           │  1,5%     │')
+        self.stdout.write('  │ Taxe d\'Apprentissage (TA)      │    2%     │')
+        self.stdout.write('  │ Contribution ONFPP              │  1,5%     │')
         self.stdout.write('  ├────────────────────────────────┼───────────┤')
-        self.stdout.write('  │ TOTAL CHARGES PATRONALES       │ 25,5%     │')
+        self.stdout.write('  │ TOTAL CHARGES PATRONALES       │ 27,5%     │')
         self.stdout.write('  └────────────────────────────────┴───────────┘')

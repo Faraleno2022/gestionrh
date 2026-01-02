@@ -38,7 +38,7 @@ class MoteurCalculPaie:
             'total_retenues': Decimal('0'),
             # Charges patronales supplémentaires
             'versement_forfaitaire': Decimal('0'),  # VF 6%
-            'taxe_apprentissage': Decimal('0'),     # TA 1.5%
+            'taxe_apprentissage': Decimal('0'),     # TA 2% (CGI 2022)
             'total_charges_patronales': Decimal('0'),
             # Exonération RTS stagiaires/apprentis
             'exoneration_rts': False,
@@ -348,32 +348,51 @@ class MoteurCalculPaie:
     
     def _calculer_heures_supplementaires(self):
         """
-        Calculer la rémunération des heures supplémentaires selon le Code du Travail guinéen (Art. 142).
+        Calculer la rémunération des heures supplémentaires selon le Code du Travail guinéen (Art. 221).
         
-        Barème des majorations:
-        - 41e à 48e heure/semaine (jour): 15%
-        - Au-delà de 48e heure (jour): 25%
-        - Heures de nuit (20h-6h): 120%
-        - Dimanche et jours fériés: 160% (jour) et 200% (nuit)
+        Barème des majorations (Art. 221):
+        - 4 premières HS/semaine: +30% (130% du taux horaire)
+        - Au-delà 4 HS/semaine: +60% (160% du taux horaire)
+        - Heures de nuit (20h-6h): +20% (120% du taux horaire)
+        - Jour férié (jour): +60% (160% du taux horaire)
+        - Jour férié (nuit): +100% (200% du taux horaire)
         
         Note: Les pointages doivent distinguer les types d'heures supplémentaires.
         Pour simplifier, on utilise les champs du modèle Pointage si disponibles,
         sinon on applique un taux moyen pondéré.
         """
         # Récupérer les différents types d'heures supplémentaires
-        heures_sup_15 = self.montants.get('heures_sup_15', Decimal('0'))  # 41e-48e heure
-        heures_sup_25 = self.montants.get('heures_sup_25', Decimal('0'))  # >48e heure
-        heures_sup_50 = self.montants.get('heures_sup_nuit', Decimal('0'))  # Nuit
-        heures_sup_100 = self.montants.get('heures_sup_ferie', Decimal('0'))  # Dimanche/férié
+        heures_sup_30 = self.montants.get('heures_sup_30', Decimal('0'))  # 4 premières HS/semaine
+        heures_sup_60 = self.montants.get('heures_sup_60', Decimal('0'))  # Au-delà 4 HS/semaine
+        heures_sup_nuit = self.montants.get('heures_sup_nuit', Decimal('0'))  # Nuit (20h-6h)
+        heures_sup_ferie_jour = self.montants.get('heures_sup_ferie_jour', Decimal('0'))  # Jour férié (jour)
+        heures_sup_ferie_nuit = self.montants.get('heures_sup_ferie_nuit', Decimal('0'))  # Jour férié (nuit)
+        
+        # Compatibilité avec anciens champs
+        heures_sup_15 = self.montants.get('heures_sup_15', Decimal('0'))
+        heures_sup_25 = self.montants.get('heures_sup_25', Decimal('0'))
+        heures_sup_50 = self.montants.get('heures_sup_50', Decimal('0'))
+        heures_sup_100 = self.montants.get('heures_sup_ferie', Decimal('0'))
+        
+        # Mapper les anciens champs vers les nouveaux si non renseignés
+        if heures_sup_30 == 0 and heures_sup_15 > 0:
+            heures_sup_30 = heures_sup_15
+        if heures_sup_60 == 0 and heures_sup_25 > 0:
+            heures_sup_60 = heures_sup_25
+        if heures_sup_nuit == 0 and heures_sup_50 > 0:
+            heures_sup_nuit = heures_sup_50
+        if heures_sup_ferie_jour == 0 and heures_sup_100 > 0:
+            heures_sup_ferie_jour = heures_sup_100
         
         # Total des heures supplémentaires (ancien champ pour compatibilité)
         heures_sup_total = self.montants.get('heures_supplementaires', Decimal('0'))
         
-        # Si les heures détaillées ne sont pas disponibles, utiliser le total avec taux 25%
-        if heures_sup_15 == 0 and heures_sup_25 == 0 and heures_sup_50 == 0 and heures_sup_100 == 0:
-            heures_sup_25 = heures_sup_total  # Par défaut, appliquer le taux 25%
+        # Si les heures détaillées ne sont pas disponibles, utiliser le total avec taux +60%
+        if heures_sup_30 == 0 and heures_sup_60 == 0 and heures_sup_nuit == 0 and heures_sup_ferie_jour == 0 and heures_sup_ferie_nuit == 0:
+            heures_sup_60 = heures_sup_total  # Par défaut, appliquer le taux +60%
         
-        if heures_sup_15 + heures_sup_25 + heures_sup_50 + heures_sup_100 <= 0:
+        heures_total = heures_sup_30 + heures_sup_60 + heures_sup_nuit + heures_sup_ferie_jour + heures_sup_ferie_nuit
+        if heures_total <= 0:
             return
         
         # Obtenir le salaire horaire de base
@@ -385,27 +404,30 @@ class MoteurCalculPaie:
         
         salaire_horaire = salaire_base / heures_mensuelles
         
-        # Taux des heures supplémentaires selon le Code du Travail guinéen (Art. 142)
-        TAUX_HS_15 = self.constantes.get('TAUX_HS_JOUR_15', Decimal('115'))   # 41e-48e heure: +15%
-        TAUX_HS_25 = self.constantes.get('TAUX_HS_JOUR_25', Decimal('125'))   # >48e heure: +25%
-        TAUX_HS_50 = self.constantes.get('TAUX_HS_NUIT', Decimal('220'))      # Nuit: +50%
-        TAUX_HS_100 = self.constantes.get('TAUX_HS_FERIE', Decimal('260'))    # Dimanche/férié: +100%
+        # Taux des heures supplémentaires selon le Code du Travail guinéen (Art. 221)
+        TAUX_HS_30 = self.constantes.get('TAUX_HS_4PREM', Decimal('130'))      # 4 premières HS: +30% (130%)
+        TAUX_HS_60 = self.constantes.get('TAUX_HS_AUDELA', Decimal('160'))     # Au-delà 4 HS: +60% (160%)
+        TAUX_HS_NUIT = self.constantes.get('TAUX_HS_NUIT', Decimal('120'))     # Nuit (20h-6h): +20% (120%)
+        TAUX_HS_FERIE_J = self.constantes.get('TAUX_HS_FERIE_JOUR', Decimal('160'))  # Férié jour: +60% (160%)
+        TAUX_HS_FERIE_N = self.constantes.get('TAUX_HS_FERIE_NUIT', Decimal('200'))  # Férié nuit: +100% (200%)
         
         # Calculer le montant pour chaque type d'heures supplémentaires
-        montant_hs_15 = self._arrondir(salaire_horaire * heures_sup_15 * TAUX_HS_15 / Decimal('100'))
-        montant_hs_25 = self._arrondir(salaire_horaire * heures_sup_25 * TAUX_HS_25 / Decimal('100'))
-        montant_hs_50 = self._arrondir(salaire_horaire * heures_sup_50 * TAUX_HS_50 / Decimal('100'))
-        montant_hs_100 = self._arrondir(salaire_horaire * heures_sup_100 * TAUX_HS_100 / Decimal('100'))
+        montant_hs_30 = self._arrondir(salaire_horaire * heures_sup_30 * TAUX_HS_30 / Decimal('100'))
+        montant_hs_60 = self._arrondir(salaire_horaire * heures_sup_60 * TAUX_HS_60 / Decimal('100'))
+        montant_hs_nuit = self._arrondir(salaire_horaire * heures_sup_nuit * TAUX_HS_NUIT / Decimal('100'))
+        montant_hs_ferie_j = self._arrondir(salaire_horaire * heures_sup_ferie_jour * TAUX_HS_FERIE_J / Decimal('100'))
+        montant_hs_ferie_n = self._arrondir(salaire_horaire * heures_sup_ferie_nuit * TAUX_HS_FERIE_N / Decimal('100'))
         
-        montant_hs_total = montant_hs_15 + montant_hs_25 + montant_hs_50 + montant_hs_100
+        montant_hs_total = montant_hs_30 + montant_hs_60 + montant_hs_nuit + montant_hs_ferie_j + montant_hs_ferie_n
         
         if montant_hs_total > 0:
             self.montants['total_gains'] += montant_hs_total
             self.montants['montant_heures_sup'] = montant_hs_total
-            self.montants['montant_hs_15'] = montant_hs_15
-            self.montants['montant_hs_25'] = montant_hs_25
-            self.montants['montant_hs_50'] = montant_hs_50
-            self.montants['montant_hs_100'] = montant_hs_100
+            self.montants['montant_hs_30'] = montant_hs_30
+            self.montants['montant_hs_60'] = montant_hs_60
+            self.montants['montant_hs_nuit'] = montant_hs_nuit
+            self.montants['montant_hs_ferie_jour'] = montant_hs_ferie_j
+            self.montants['montant_hs_ferie_nuit'] = montant_hs_ferie_n
             
             # Ajouter à la base CNSS et imposable
             self.montants['cnss_base'] += montant_hs_total
@@ -420,7 +442,6 @@ class MoteurCalculPaie:
             
             if rubrique_hs:
                 # Ligne récapitulative des heures supplémentaires
-                heures_total = heures_sup_15 + heures_sup_25 + heures_sup_50 + heures_sup_100
                 taux_moyen = (montant_hs_total / (salaire_horaire * heures_total) * Decimal('100')) if heures_total > 0 else Decimal('0')
                 
                 self.lignes.append({
@@ -603,7 +624,7 @@ class MoteurCalculPaie:
             self.montants['brut'] * taux_vf / Decimal('100')
         )
         
-        # Taxe d'Apprentissage - 2% de la masse salariale (charge patronale)
+        # Taxe d'Apprentissage - 2% de la masse salariale (charge patronale) - CGI 2022
         taux_ta = self.constantes.get('TAUX_TA', Decimal('2.00'))
         self.montants['taxe_apprentissage'] = self._arrondir(
             self.montants['brut'] * taux_ta / Decimal('100')

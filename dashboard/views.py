@@ -660,7 +660,7 @@ def telecharger_manuel(request):
     y = draw_subtitle(y, "Types de congés")
     conges_data = [
         ['Type', 'Durée', 'Rémunération', 'Conditions'],
-        ['Annuel', '30 jours/an + ancienneté', '100%', '2.5 j/mois + majorations'],
+        ['Annuel', '18 jours/an + ancienneté', '100%', '1,5j ouvrable/mois + 2j/5ans ancienneté'],
         ['Maladie', 'Variable', '50-100%', 'Certificat médical requis'],
         ['Maternité', '14 semaines', '100%', 'Femmes enceintes'],
         ['Paternité', '3 jours', '100%', 'Naissance d\'un enfant'],

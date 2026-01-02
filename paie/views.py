@@ -1894,7 +1894,7 @@ def simulation_paie(request):
         taux_cnss_employe = Decimal('5')
         taux_cnss_employeur = Decimal('18')
         taux_vf = Decimal('6')
-        taux_ta = Decimal('1.5')
+        taux_ta = Decimal('2.0')
         
         try:
             const = Constante.objects.filter(code='PLANCHER_CNSS', actif=True).first()

@@ -4,7 +4,7 @@ Tests de vérification des calculs de paie selon la législation guinéenne.
 Ce script vérifie l'exactitude des calculs :
 - CNSS avec plancher (550 000 GNF) et plafond (2 500 000 GNF)
 - RTS avec le barème 2022+ (incluant la tranche 8%)
-- Charges patronales (CNSS 18% + VF 6% + TA 1.5%)
+- Charges patronales (CNSS 18% + VF 6% + TA 2% CGI 2022)
 
 Usage:
     python manage.py test_calculs_paie
@@ -129,7 +129,7 @@ class Command(BaseCommand):
         """Calcule les charges patronales complètes"""
         TAUX_CNSS_EMPLOYEUR = Decimal('18.00')
         TAUX_VF = Decimal('6.00')
-        TAUX_TA = Decimal('1.50')
+        TAUX_TA = Decimal('2.00')
         
         cnss_employeur = self._arrondir(assiette_cnss * TAUX_CNSS_EMPLOYEUR / Decimal('100'))
         vf = self._arrondir(salaire_brut * TAUX_VF / Decimal('100'))
@@ -214,14 +214,14 @@ class Command(BaseCommand):
 
     def test_charges_patronales(self):
         """Test des charges patronales"""
-        self.stdout.write('\n📊 TEST 3: CHARGES PATRONALES (CNSS 18% + VF 6% + TA 1.5%)')
+        self.stdout.write('\n📊 TEST 3: CHARGES PATRONALES (CNSS 18% + VF 6% + TA 2%)')
         self.stdout.write('-' * 50)
         
         tests = [
-            # (salaire_brut, assiette_cnss, cnss_pat_att, vf_att, ta_att)
-            (Decimal('8000000'), Decimal('2500000'), Decimal('450000'), Decimal('480000'), Decimal('120000')),
-            (Decimal('2000000'), Decimal('2000000'), Decimal('360000'), Decimal('120000'), Decimal('30000')),
-            (Decimal('500000'), Decimal('550000'), Decimal('99000'), Decimal('30000'), Decimal('7500')),
+            # (salaire_brut, assiette_cnss, cnss_pat_att, vf_att, ta_att) - TA = 2% CGI 2022
+            (Decimal('8000000'), Decimal('2500000'), Decimal('450000'), Decimal('480000'), Decimal('160000')),
+            (Decimal('2000000'), Decimal('2000000'), Decimal('360000'), Decimal('120000'), Decimal('40000')),
+            (Decimal('500000'), Decimal('550000'), Decimal('99000'), Decimal('30000'), Decimal('10000')),
         ]
         
         reussis = 0
@@ -261,11 +261,11 @@ class Command(BaseCommand):
         total_retenues_attendu = Decimal('672500')
         net_attendu = Decimal('7327500')
         
-        # Charges patronales attendues
+        # Charges patronales attendues (TA = 2% CGI 2022)
         cnss_employeur_attendu = Decimal('450000')
         vf_attendu = Decimal('480000')
-        ta_attendu = Decimal('120000')
-        total_charges_attendu = Decimal('1050000')
+        ta_attendu = Decimal('160000')
+        total_charges_attendu = Decimal('1090000')
         
         # Calculs
         assiette_cnss, cnss_employe, cnss_employeur = self._calculer_cnss(salaire_brut)
@@ -299,7 +299,7 @@ class Command(BaseCommand):
         self.stdout.write('  --- Charges patronales ---')
         check('CNSS Employeur (18%)', cnss_employeur, cnss_employeur_attendu)
         check('Versement Forfaitaire (6%)', vf, vf_attendu)
-        check('Taxe Apprentissage (1.5%)', ta, ta_attendu)
+        check('Taxe Apprentissage (2%)', ta, ta_attendu)
         
         # Résumé
         self.stdout.write('')
