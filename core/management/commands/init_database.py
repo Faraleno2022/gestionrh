@@ -104,13 +104,14 @@ class Command(BaseCommand):
             # Temps de travail
             ('HEURES_MOIS_STANDARD', 'Nombre d\'heures standard par mois', None, 173.33, 'Numérique', 'Général', 'Heures'),
             ('JOURS_MOIS_STANDARD', 'Nombre de jours standard par mois', None, 22, 'Numérique', 'Général', 'Jours'),
-            ('JOURS_CONGES_ANNUELS', 'Nombre de jours de congés annuels', None, 26, 'Numérique', 'Général', 'Jours'),
+            ('JOURS_CONGES_ANNUELS', 'Nombre de jours de congés annuels (1,5j/mois)', None, 18, 'Numérique', 'Général', 'Jours'),
             
-            # Heures supplémentaires
-            ('TAUX_HS_NORMALE', 'Majoration heures supplémentaires normales', None, 40.00, 'Numérique', 'Général', '%'),
-            ('TAUX_HS_NUIT', 'Majoration heures supplémentaires nuit', None, 60.00, 'Numérique', 'Général', '%'),
-            ('TAUX_HS_DIMANCHE', 'Majoration heures supplémentaires dimanche', None, 60.00, 'Numérique', 'Général', '%'),
-            ('TAUX_HS_FERIE', 'Majoration heures supplémentaires jour férié', None, 100.00, 'Numérique', 'Général', '%'),
+            # Heures supplémentaires (Code du Travail Art. 221)
+            ('TAUX_HS_4PREM', 'Majoration 4 premières HS/semaine', None, 30.00, 'Numérique', 'Général', '%'),
+            ('TAUX_HS_AUDELA', 'Majoration au-delà 4 HS/semaine', None, 60.00, 'Numérique', 'Général', '%'),
+            ('TAUX_HS_NUIT', 'Majoration heures de nuit (20h-6h)', None, 20.00, 'Numérique', 'Général', '%'),
+            ('TAUX_HS_FERIE_JOUR', 'Majoration jour férié (jour)', None, 60.00, 'Numérique', 'Général', '%'),
+            ('TAUX_HS_FERIE_NUIT', 'Majoration jour férié (nuit)', None, 100.00, 'Numérique', 'Général', '%'),
         ]
 
         sql = """

@@ -697,9 +697,9 @@
         }
         
         .guinea-flag div { flex: 1; }
-        .guinea-flag .red { background: var(--orange-main); }
-        .guinea-flag .yellow { background: #FFFFFF; }
-        .guinea-flag .green { background: var(--orange-main); }
+        .guinea-flag .red { background: #CE1126; }
+        .guinea-flag .yellow { background: #FCD116; }
+        .guinea-flag .green { background: #009460; }
         
         /* Responsive */
         @media (max-width: 768px) {
@@ -1226,11 +1226,24 @@
                                 <a href="{% url 'recrutement:offre_public' offre.pk %}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-eye me-1"></i>Détails
                                 </a>
+                                {% if offre.date_limite_candidature and offre.date_limite_candidature < today %}
+                                <span class="btn btn-sm btn-danger disabled" style="cursor: not-allowed;">
+                                    <i class="bi bi-x-circle me-1"></i>Expiré
+                                </span>
+                                {% else %}
                                 <a href="{% url 'recrutement:postuler' offre.pk %}" class="btn btn-sm btn-success">
                                     <i class="bi bi-send me-1"></i>Postuler
                                 </a>
+                                {% endif %}
                             </div>
                         </div>
+                        {% if offre.date_limite_candidature and offre.date_limite_candidature < today %}
+                        <div class="mt-2 text-center">
+                            <span class="badge bg-danger" style="font-size: 0.85rem;">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Offre expirée
+                            </span>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}

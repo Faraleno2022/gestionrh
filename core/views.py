@@ -127,15 +127,14 @@ def index_view(request):
     from datetime import date
     from django.db.models import Q
     
+    # Inclure toutes les offres ouvertes (même expirées) pour affichage public
     offres_emploi = OffreEmploi.objects.filter(
         statut_offre='ouverte'
-    ).filter(
-        # Inclure les offres sans date limite OU avec date limite >= aujourd'hui
-        Q(date_limite_candidature__isnull=True) | Q(date_limite_candidature__gte=date.today())
     ).select_related('entreprise', 'service').order_by('-date_publication')[:6]
     
     return render(request, 'landing.html', {
-        'offres_emploi': offres_emploi
+        'offres_emploi': offres_emploi,
+        'today': date.today(),
     })
 
 

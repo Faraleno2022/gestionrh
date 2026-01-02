@@ -178,9 +178,19 @@
                         {% endif %}
 
                         <hr>
+                        {% if est_expiree %}
+                        <div class="alert alert-danger text-center mb-3">
+                            <i class="bi bi-exclamation-triangle me-2"></i><strong>Offre expirée</strong>
+                            <p class="mb-0 small mt-1">La date limite de candidature est dépassée.</p>
+                        </div>
+                        <button class="btn btn-secondary w-100 btn-lg" disabled style="cursor: not-allowed;">
+                            <i class="bi bi-x-circle me-2"></i>Candidature fermée
+                        </button>
+                        {% else %}
                         <a href="{% url 'recrutement:postuler' offre.pk %}" class="btn btn-success btn-apply w-100 btn-lg">
                             <i class="bi bi-send me-2"></i>Postuler maintenant
                         </a>
+                        {% endif %}
                         
                         <!-- Section Partage -->
                         <div class="share-section">

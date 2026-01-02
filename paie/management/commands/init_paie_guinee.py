@@ -148,11 +148,11 @@ class Command(BaseCommand):
             {
                 'code': 'TAUX_TA',
                 'libelle': 'Taxe d\'Apprentissage',
-                'valeur': Decimal('1.50'),
+                'valeur': Decimal('2.00'),
                 'type_valeur': 'pourcentage',
                 'categorie': 'general',
                 'unite': '%',
-                'description': 'Taxe d\'apprentissage à charge de l\'employeur (1.5% de la masse salariale)'
+                'description': 'Taxe d\'apprentissage à charge de l\'employeur (2% de la masse salariale - CGI 2022)'
             },
             
             # Exonération RTS stagiaires/apprentis
@@ -177,42 +177,62 @@ class Command(BaseCommand):
                 'description': 'Plafond des indemnités forfaitaires exonérées (logement, transport, panier) = 25% du salaire brut'
             },
             
-            # Heures supplémentaires (Art. 142 Code du Travail)
+            # Heures supplémentaires (Art. 221 Code du Travail guinéen)
             {
-                'code': 'TAUX_HS_JOUR_15',
-                'libelle': 'Taux HS 41e-48e heure',
-                'valeur': Decimal('115'),
+                'code': 'TAUX_HS_4PREM',
+                'libelle': 'Taux 4 premières HS/semaine',
+                'valeur': Decimal('130'),
                 'type_valeur': 'pourcentage',
                 'categorie': 'temps',
                 'unite': '%',
-                'description': 'Majoration heures supplémentaires 41e à 48e heure/semaine: +15% (Art. 142)'
+                'description': 'Majoration 4 premières heures supplémentaires/semaine: +30% (Art. 221)'
             },
             {
-                'code': 'TAUX_HS_JOUR_25',
-                'libelle': 'Taux HS au-delà 48e heure',
-                'valeur': Decimal('125'),
+                'code': 'TAUX_HS_AUDELA',
+                'libelle': 'Taux au-delà 4 HS/semaine',
+                'valeur': Decimal('160'),
                 'type_valeur': 'pourcentage',
                 'categorie': 'temps',
                 'unite': '%',
-                'description': 'Majoration heures supplémentaires au-delà de 48e heure/semaine: +25% (Art. 142)'
+                'description': 'Majoration au-delà de 4 heures supplémentaires/semaine: +60% (Art. 221)'
             },
             {
                 'code': 'TAUX_HS_NUIT',
                 'libelle': 'Taux HS heures de nuit',
-                'valeur': Decimal('150'),
+                'valeur': Decimal('120'),
                 'type_valeur': 'pourcentage',
                 'categorie': 'temps',
                 'unite': '%',
-                'description': 'Majoration heures supplémentaires de nuit (21h-6h): +50% (Art. 142)'
+                'description': 'Majoration heures de nuit (20h-6h): +20% (Art. 221 Code du Travail)'
             },
             {
-                'code': 'TAUX_HS_FERIE',
-                'libelle': 'Taux HS dimanche/férié',
+                'code': 'TAUX_HS_FERIE_JOUR',
+                'libelle': 'Taux jour férié (jour)',
+                'valeur': Decimal('160'),
+                'type_valeur': 'pourcentage',
+                'categorie': 'temps',
+                'unite': '%',
+                'description': 'Majoration jour férié (journée): +60% (Art. 221)'
+            },
+            {
+                'code': 'TAUX_HS_FERIE_NUIT',
+                'libelle': 'Taux jour férié (nuit)',
                 'valeur': Decimal('200'),
                 'type_valeur': 'pourcentage',
                 'categorie': 'temps',
                 'unite': '%',
-                'description': 'Majoration heures supplémentaires dimanche et jours fériés: +100% (Art. 142)'
+                'description': 'Majoration jour férié (nuit): +100% (Art. 221)'
+            },
+            
+            # Contribution ONFPP (Code du Travail)
+            {
+                'code': 'TAUX_ONFPP',
+                'libelle': 'Contribution ONFPP',
+                'valeur': Decimal('1.50'),
+                'type_valeur': 'pourcentage',
+                'categorie': 'general',
+                'unite': '%',
+                'description': 'Contribution ONFPP: 1,5% (0,5% apprentissage + 1% perfectionnement)'
             },
             
             # Temps de travail
@@ -260,15 +280,16 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f'  ⚠ {const_data["code"]} déjà existant'))
 
     def creer_tranches_irg(self):
-        """Créer les tranches du barème RTS (Retenue sur Traitements et Salaires) 2022+
+        """Créer les tranches du barème RTS (Retenue sur Traitements et Salaires) - CGI 2022
         
-        Barème officiel depuis 2022 (Code Général des Impôts modifié):
+        Barème officiel RTS pour les SALAIRES (5 tranches):
         - 0 à 1 000 000 GNF : 0%
-        - 1 000 001 à 3 000 000 GNF : 5%
-        - 3 000 001 à 5 000 000 GNF : 8% (nouvelle tranche ajoutée en 2022)
+        - 1 000 001 à 5 000 000 GNF : 5%
         - 5 000 001 à 10 000 000 GNF : 10%
         - 10 000 001 à 20 000 000 GNF : 15%
         - Plus de 20 000 000 GNF : 20%
+        
+        NOTE: La tranche 8% concerne les revenus de capitaux mobiliers, PAS les salaires.
         """
         self.stdout.write('📊 Création des tranches RTS (IRG)...')
         
@@ -282,29 +303,23 @@ class Command(BaseCommand):
             {
                 'numero_tranche': 2,
                 'borne_inferieure': Decimal('1000001'),
-                'borne_superieure': Decimal('3000000'),
+                'borne_superieure': Decimal('5000000'),
                 'taux_irg': Decimal('5.00'),
             },
             {
                 'numero_tranche': 3,
-                'borne_inferieure': Decimal('3000001'),
-                'borne_superieure': Decimal('5000000'),
-                'taux_irg': Decimal('8.00'),  # Nouvelle tranche depuis 2022
-            },
-            {
-                'numero_tranche': 4,
                 'borne_inferieure': Decimal('5000001'),
                 'borne_superieure': Decimal('10000000'),
                 'taux_irg': Decimal('10.00'),
             },
             {
-                'numero_tranche': 5,
+                'numero_tranche': 4,
                 'borne_inferieure': Decimal('10000001'),
                 'borne_superieure': Decimal('20000000'),
                 'taux_irg': Decimal('15.00'),
             },
             {
-                'numero_tranche': 6,
+                'numero_tranche': 5,
                 'borne_inferieure': Decimal('20000001'),
                 'borne_superieure': None,  # Illimité
                 'taux_irg': Decimal('20.00'),

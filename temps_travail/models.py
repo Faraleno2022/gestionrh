@@ -90,9 +90,9 @@ class SoldeConge(models.Model):
     """Soldes de congés"""
     employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='soldes_conges')
     annee = models.IntegerField()
-    conges_acquis = models.DecimalField(max_digits=5, decimal_places=2, default=26.00)
+    conges_acquis = models.DecimalField(max_digits=5, decimal_places=2, default=18.00)
     conges_pris = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    conges_restants = models.DecimalField(max_digits=5, decimal_places=2, default=26.00)
+    conges_restants = models.DecimalField(max_digits=5, decimal_places=2, default=18.00)
     conges_reports = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     date_mise_a_jour = models.DateField(auto_now=True)
     
@@ -272,28 +272,30 @@ class ReglementationTemps(models.Model):
     duree_hebdo_legale = models.DecimalField(max_digits=4, decimal_places=2, default=40.00, help_text="Durée hebdomadaire légale (40h en Guinée)")
     duree_journaliere_max = models.DecimalField(max_digits=4, decimal_places=2, default=10.00, help_text="Durée journalière maximale")
     
-    # Heures supplémentaires
-    taux_hs_jour_25 = models.DecimalField(max_digits=5, decimal_places=2, default=125.00, help_text="Taux HS jour (1-8h): 125%")
-    taux_hs_jour_50 = models.DecimalField(max_digits=5, decimal_places=2, default=150.00, help_text="Taux HS jour (>8h): 150%")
-    taux_hs_nuit = models.DecimalField(max_digits=5, decimal_places=2, default=150.00, help_text="Taux HS nuit: 150%")
-    taux_hs_dimanche = models.DecimalField(max_digits=5, decimal_places=2, default=175.00, help_text="Taux HS dimanche/férié: 175%")
-    taux_hs_nuit_dimanche = models.DecimalField(max_digits=5, decimal_places=2, default=200.00, help_text="Taux HS nuit dimanche: 200%")
+    # Heures supplémentaires (Code du Travail guinéen Art. 221)
+    taux_hs_jour_25 = models.DecimalField(max_digits=5, decimal_places=2, default=130.00, help_text="Taux 4 premières HS/semaine: 130% (majoration 30%)")
+    taux_hs_jour_50 = models.DecimalField(max_digits=5, decimal_places=2, default=160.00, help_text="Taux au-delà 4 HS/semaine: 160% (majoration 60%)")
+    taux_hs_nuit = models.DecimalField(max_digits=5, decimal_places=2, default=120.00, help_text="Taux HS nuit (20h-6h): 120% (majoration 20%)")
+    taux_hs_dimanche = models.DecimalField(max_digits=5, decimal_places=2, default=160.00, help_text="Taux jour férié jour: 160% (majoration 60%)")
+    taux_hs_nuit_dimanche = models.DecimalField(max_digits=5, decimal_places=2, default=200.00, help_text="Taux jour férié nuit: 200% (majoration 100%)")
     
     # Travail de nuit
-    heure_debut_nuit = models.TimeField(default='21:00', help_text="Début période de nuit")
-    heure_fin_nuit = models.TimeField(default='05:00', help_text="Fin période de nuit")
-    majoration_nuit = models.DecimalField(max_digits=5, decimal_places=2, default=25.00, help_text="Majoration travail de nuit: 25%")
+    heure_debut_nuit = models.TimeField(default='20:00', help_text="Début période de nuit (20h - Code du Travail)")
+    heure_fin_nuit = models.TimeField(default='06:00', help_text="Fin période de nuit (6h - Code du Travail)")
+    majoration_nuit = models.DecimalField(max_digits=5, decimal_places=2, default=20.00, help_text="Majoration travail de nuit: 20% (Art. 221)")
     
     # Repos
     repos_hebdo_jour = models.CharField(max_length=20, default='dimanche', help_text="Jour de repos hebdomadaire")
     duree_repos_hebdo_min = models.IntegerField(default=24, help_text="Durée minimale repos hebdo (heures)")
     
-    # Congés
-    jours_conges_annuels = models.DecimalField(max_digits=4, decimal_places=2, default=26.00, help_text="Jours de congés annuels (2,5j/mois)")
-    jours_conges_anciennete_5ans = models.IntegerField(default=1, help_text="Jours supplémentaires après 5 ans")
-    jours_conges_anciennete_10ans = models.IntegerField(default=2, help_text="Jours supplémentaires après 10 ans")
-    jours_conges_anciennete_15ans = models.IntegerField(default=3, help_text="Jours supplémentaires après 15 ans")
-    jours_conges_anciennete_20ans = models.IntegerField(default=4, help_text="Jours supplémentaires après 20 ans")
+    # Congés (Code du Travail guinéen)
+    jours_conges_annuels = models.DecimalField(max_digits=4, decimal_places=2, default=18.00, help_text="Jours de congés annuels (1,5j ouvrable/mois)")
+    jours_conges_mineurs = models.DecimalField(max_digits=4, decimal_places=2, default=24.00, help_text="Jours congés moins de 18 ans (2j/mois)")
+    jours_conges_anciennete_5ans = models.IntegerField(default=2, help_text="Jours supplémentaires après 5 ans (+2j)")
+    jours_conges_anciennete_10ans = models.IntegerField(default=4, help_text="Jours supplémentaires après 10 ans (+2j par tranche de 5 ans)")
+    jours_conges_anciennete_15ans = models.IntegerField(default=6, help_text="Jours supplémentaires après 15 ans")
+    jours_conges_anciennete_20ans = models.IntegerField(default=8, help_text="Jours supplémentaires après 20 ans")
+    jours_conges_anciennete_25ans = models.IntegerField(default=10, help_text="Jours supplémentaires après 25 ans")
     
     actif = models.BooleanField(default=True)
     
@@ -309,14 +311,14 @@ class ReglementationTemps(models.Model):
 
 class HeureSupplementaire(models.Model):
     """
-    Heures supplémentaires selon le Code du Travail guinéen.
+    Heures supplémentaires selon le Code du Travail guinéen (Art. 221).
     
     Taux de majoration:
-    - Jour (1-8h après 40h/semaine): 15% (ancien) ou 25% (nouveau)
-    - Jour (>8h): 50%
-    - Nuit (21h-5h): 50%
-    - Dimanche/Férié jour: 75%
-    - Dimanche/Férié nuit: 100%
+    - 4 premières HS/semaine: +30% (130% du taux horaire)
+    - Au-delà 4 HS/semaine: +60% (160% du taux horaire)
+    - Heures de nuit (20h-6h): +20% (120% du taux horaire)
+    - Jour férié (jour): +60% (160% du taux horaire)
+    - Jour férié (nuit): +100% (200% du taux horaire)
     """
     TYPES_HS = (
         ('jour_15', 'Jour +15% (1-8h)'),
@@ -372,16 +374,15 @@ class HeureSupplementaire(models.Model):
     
     @classmethod
     def get_taux_majoration(cls, type_hs):
-        """Retourne le taux de majoration selon le type"""
+        """Retourne le taux de majoration selon le type (Code du Travail Art. 221)"""
         taux = {
-            'jour_15': Decimal('15'),
-            'jour_25': Decimal('25'),
-            'jour_50': Decimal('50'),
-            'nuit_50': Decimal('50'),
-            'dimanche_75': Decimal('75'),
-            'dimanche_nuit_100': Decimal('100'),
+            'jour_30': Decimal('30'),      # 4 premières HS/semaine
+            'jour_60': Decimal('60'),      # Au-delà 4 HS/semaine
+            'nuit_20': Decimal('20'),      # Heures de nuit (20h-6h)
+            'ferie_60': Decimal('60'),     # Jour férié (jour)
+            'ferie_nuit_100': Decimal('100'),  # Jour férié (nuit)
         }
-        return taux.get(type_hs, Decimal('25'))
+        return taux.get(type_hs, Decimal('30'))
 
 
 class DroitConge(models.Model):
@@ -392,7 +393,7 @@ class DroitConge(models.Model):
     periode_reference_fin = models.DateField()
     
     # Jours acquis
-    jours_acquis_base = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Jours acquis (base 2,5j/mois)")
+    jours_acquis_base = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Jours acquis (base 1,5j ouvrable/mois)")
     jours_acquis_anciennete = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Jours supplémentaires ancienneté")
     jours_reportes = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Jours reportés année précédente")
     jours_exceptionnels = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Jours exceptionnels accordés")
