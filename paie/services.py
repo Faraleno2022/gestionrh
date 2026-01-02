@@ -38,7 +38,7 @@ class MoteurCalculPaie:
             'total_retenues': Decimal('0'),
             # Charges patronales supplémentaires
             'versement_forfaitaire': Decimal('0'),  # VF 6%
-            'taxe_apprentissage': Decimal('0'),     # TA 2% (CGI 2022)
+            'taxe_apprentissage': Decimal('0'),     # TA 1,5%
             'total_charges_patronales': Decimal('0'),
             # Exonération RTS stagiaires/apprentis
             'exoneration_rts': False,
@@ -624,8 +624,8 @@ class MoteurCalculPaie:
             self.montants['brut'] * taux_vf / Decimal('100')
         )
         
-        # Taxe d'Apprentissage - 2% de la masse salariale (charge patronale) - CGI 2022
-        taux_ta = self.constantes.get('TAUX_TA', Decimal('2.00'))
+        # Taxe d'Apprentissage - 1,5% de la masse salariale (charge patronale)
+        taux_ta = self.constantes.get('TAUX_TA', Decimal('1.50'))
         self.montants['taxe_apprentissage'] = self._arrondir(
             self.montants['brut'] * taux_ta / Decimal('100')
         )

@@ -129,7 +129,7 @@ class Command(BaseCommand):
         """Calcule les charges patronales complètes"""
         TAUX_CNSS_EMPLOYEUR = Decimal('18.00')
         TAUX_VF = Decimal('6.00')
-        TAUX_TA = Decimal('2.00')
+        TAUX_TA = Decimal('1.50')
         
         cnss_employeur = self._arrondir(assiette_cnss * TAUX_CNSS_EMPLOYEUR / Decimal('100'))
         vf = self._arrondir(salaire_brut * TAUX_VF / Decimal('100'))
@@ -299,7 +299,7 @@ class Command(BaseCommand):
         self.stdout.write('  --- Charges patronales ---')
         check('CNSS Employeur (18%)', cnss_employeur, cnss_employeur_attendu)
         check('Versement Forfaitaire (6%)', vf, vf_attendu)
-        check('Taxe Apprentissage (2%)', ta, ta_attendu)
+        check('Taxe Apprentissage (1,5%)', ta, ta_attendu)
         
         # Résumé
         self.stdout.write('')
