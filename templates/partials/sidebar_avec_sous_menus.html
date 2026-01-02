@@ -448,12 +448,6 @@
                 <i class="bi bi-gear"></i> Paramètres
             </a>
         </li>
-        
-        <li class="nav-item">
-            <a class="nav-link text-success" href="{% url 'core:telecharger_documentation' %}">
-                <i class="bi bi-file-earmark-zip"></i> 📚 Documentation CGI 2022
-            </a>
-        </li>
         {% endif %}
         
         <!-- PORTAIL EMPLOYÉ -->
@@ -467,6 +461,13 @@
         <li class="nav-item">
             <a class="nav-link" href="{% url 'core:profile' %}">
                 <i class="bi bi-person-circle"></i> Mon Profil
+            </a>
+        </li>
+        
+        <!-- DOCUMENTATION CGI 2022 -->
+        <li class="nav-item mt-3 border-top pt-3">
+            <a class="nav-link btn btn-outline-success btn-sm mx-2" href="{% url 'core:telecharger_documentation' %}">
+                <i class="bi bi-file-earmark-zip-fill"></i> 📚 Documentation CGI 2022
             </a>
         </li>
     </ul>
