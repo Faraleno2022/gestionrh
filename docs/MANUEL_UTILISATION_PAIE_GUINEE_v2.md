@@ -84,7 +84,7 @@ Le Gestionnaire RH Guinée est une application complète de gestion des ressourc
 |---------------|---------|------------|
 | Heures de jour | 4 premières HS/semaine | **+30%** (130%) |
 | Heures de jour | Au-delà de 4 HS/semaine | **+60%** (160%) |
-| Heures de nuit (21h-5h) | Toutes | **+20%** (120%) |
+| Heures de nuit (20h-6h) | Toutes | **+20%** (120%) |
 | Jours fériés (jour) | Toutes | **+60%** (160%) |
 | Jours fériés (nuit) | Toutes | **+100%** (200%) |
 
@@ -242,17 +242,18 @@ CNSS Employeur (18%) : 2 500 000 × 18% = 450 000 GNF
 
 La RTS est un **impôt progressif par tranches**. Chaque tranche de revenu est imposée à son propre taux. Ce n'est pas le revenu total qui est imposé au taux de la tranche la plus élevée.
 
-## 4.2 Barème RTS - CGI 2022 (5 tranches pour les salaires)
+## 4.2 Barème RTS - CGI 2022 (6 tranches)
 
 | Tranche | Revenus mensuels | Taux | Impôt max de la tranche |
 |---------|------------------|------|------------------------|
 | 1 | 0 - 1 000 000 GNF | **0%** | 0 GNF |
-| 2 | 1 000 001 - 5 000 000 GNF | **5%** | 200 000 GNF |
-| 3 | 5 000 001 - 10 000 000 GNF | **10%** | 500 000 GNF |
-| 4 | 10 000 001 - 20 000 000 GNF | **15%** | 1 500 000 GNF |
-| 5 | Au-delà de 20 000 000 GNF | **20%** | Variable |
+| 2 | 1 000 001 - 3 000 000 GNF | **5%** | 100 000 GNF |
+| 3 | 3 000 001 - 5 000 000 GNF | **8%** | 160 000 GNF |
+| 4 | 5 000 001 - 10 000 000 GNF | **10%** | 500 000 GNF |
+| 5 | 10 000 001 - 20 000 000 GNF | **15%** | 1 500 000 GNF |
+| 6 | Au-delà de 20 000 000 GNF | **20%** | Variable |
 
-> **Note** : La tranche 8% concerne les revenus de capitaux mobiliers (dividendes, intérêts), PAS les salaires.
+> **IMPORTANT** : Ce barème à 6 tranches est le barème officiel du CGI 2022 pour les salaires.
 
 ## 4.3 Base Imposable RTS
 
@@ -285,19 +286,23 @@ Pour chaque tranche (de la plus basse à la plus haute) :
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │ CALCUL RTS DÉTAILLÉ - Base imposable : 7 875 000 GNF                   │
+│ Conforme CGI 2022 (6 tranches)                                        │
 ├────────────────────────────────────────────────────────────────────────┤
 │                                                                        │
 │ Tranche 1 (0% sur 0 - 1 000 000 GNF)                                  │
 │   Montant : 1 000 000 GNF × 0% = 0 GNF                                │
 │                                                                        │
-│ Tranche 2 (5% sur 1 000 001 - 5 000 000 GNF)                          │
-│   Montant : 4 000 000 GNF × 5% = 200 000 GNF                          │
+│ Tranche 2 (5% sur 1 000 001 - 3 000 000 GNF)                          │
+│   Montant : 2 000 000 GNF × 5% = 100 000 GNF                          │
 │                                                                        │
-│ Tranche 3 (10% sur 5 000 001 - 7 875 000 GNF)                         │
+│ Tranche 3 (8% sur 3 000 001 - 5 000 000 GNF)                          │
+│   Montant : 2 000 000 GNF × 8% = 160 000 GNF                          │
+│                                                                        │
+│ Tranche 4 (10% sur 5 000 001 - 7 875 000 GNF)                         │
 │   Montant : 2 875 000 GNF × 10% = 287 500 GNF                         │
 │                                                                        │
 ├────────────────────────────────────────────────────────────────────────┤
-│ TOTAL RTS = 0 + 200 000 + 287 500 = 487 500 GNF                       │
+│ TOTAL RTS = 0 + 100 000 + 160 000 + 287 500 = 547 500 GNF             │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -311,9 +316,9 @@ Pour chaque tranche (de la plus basse à la plus haute) :
 |--------|------|----------|-------------|
 | **CNSS Employeur** | **18%** | Assiette CNSS (550K - 2,5M) | Cotisation sociale |
 | **Versement Forfaitaire (VF)** | **6%** | Salaire brut total | Impôt sur la masse salariale |
-| **Taxe d'Apprentissage (TA)** | **2%** | Salaire brut total | Formation professionnelle (CGI 2022) |
+| **Taxe d'Apprentissage (TA)** | **1,5%** | Salaire brut total | Formation professionnelle |
 | **Contribution ONFPP** | **1,5%** | Salaire brut total | 0,5% apprentissage + 1% perfectionnement |
-| **TOTAL** | **27,5%** | Variable | - |
+| **TOTAL** | **27%** | Variable | - |
 
 ## 5.2 Différence entre Assiettes
 
@@ -328,7 +333,7 @@ Pour chaque tranche (de la plus basse à la plus haute) :
 │  Versement Forfaitaire (6%)                                         │
 │  └── Assiette = Salaire Brut Total  ← Non plafonnée                 │
 │                                                                      │
-│  Taxe d'Apprentissage (2% - CGI 2022)                               │
+│  Taxe d'Apprentissage (1,5%)                                        │
 │  └── Assiette = Salaire Brut Total  ← Non plafonnée                 │
 │                                                                      │
 │  Contribution ONFPP (1,5%)                                          │
@@ -354,18 +359,18 @@ Pour chaque tranche (de la plus basse à la plus haute) :
 │    Assiette VF = 8 000 000 GNF (brut total)                         │
 │    VF = 8 000 000 × 6% = 480 000 GNF                                │
 │                                                                      │
-│ 3. Taxe d'Apprentissage (2% - CGI 2022)                             │
+│ 3. Taxe d'Apprentissage (1,5%)                                      │
 │    Assiette TA = 8 000 000 GNF (brut total)                         │
-│    TA = 8 000 000 × 2% = 160 000 GNF                                │
+│    TA = 8 000 000 × 1,5% = 120 000 GNF                              │
 │                                                                      │
 │ 4. Contribution ONFPP (1,5%)                                        │
 │    ONFPP = 8 000 000 × 1,5% = 120 000 GNF                           │
 │                                                                      │
 ├─────────────────────────────────────────────────────────────────────┤
-│ TOTAL CHARGES PATRONALES = 450 000 + 480 000 + 160 000 + 120 000    │
-│                          = 1 210 000 GNF                            │
+│ TOTAL CHARGES PATRONALES = 450 000 + 480 000 + 120 000 + 120 000    │
+│                          = 1 170 000 GNF                            │
 │                                                                      │
-│ COÛT TOTAL EMPLOYEUR = 8 000 000 + 1 210 000 = 9 210 000 GNF        │
+│ COÛT TOTAL EMPLOYEUR = 8 000 000 + 1 170 000 = 9 170 000 GNF        │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
