@@ -757,3 +757,60 @@ class ParametreConformite(models.Model):
     
     def __str__(self):
         return f"{self.get_code_display()} - {'✓' if self.valide else '✗'}"
+
+
+class DemandePartenariat(models.Model):
+    """Demandes de partenariat soumises via le landing page"""
+    STATUTS = (
+        ('nouveau', 'Nouveau'),
+        ('en_cours', 'En cours de traitement'),
+        ('accepte', 'Accepté'),
+        ('refuse', 'Refusé'),
+    )
+    
+    TYPES_PARTENARIAT = (
+        ('revendeur', 'Revendeur'),
+        ('integrateur', 'Intégrateur'),
+        ('consultant', 'Consultant'),
+        ('formation', 'Centre de formation'),
+        ('autre', 'Autre'),
+    )
+    
+    # Informations entreprise
+    nom_entreprise = models.CharField(max_length=200, verbose_name='Nom de l\'entreprise')
+    secteur_activite = models.CharField(max_length=100, verbose_name='Secteur d\'activité')
+    nif = models.CharField(max_length=50, blank=True, null=True, verbose_name='NIF')
+    adresse = models.TextField(verbose_name='Adresse')
+    ville = models.CharField(max_length=100, verbose_name='Ville')
+    pays = models.CharField(max_length=50, default='Guinée', verbose_name='Pays')
+    
+    # Contact
+    nom_contact = models.CharField(max_length=100, verbose_name='Nom du contact')
+    fonction_contact = models.CharField(max_length=100, verbose_name='Fonction')
+    email = models.EmailField(verbose_name='Email')
+    telephone = models.CharField(max_length=20, verbose_name='Téléphone')
+    
+    # Partenariat
+    type_partenariat = models.CharField(max_length=20, choices=TYPES_PARTENARIAT, verbose_name='Type de partenariat')
+    description_activite = models.TextField(verbose_name='Description de l\'activité')
+    motivation = models.TextField(verbose_name='Motivation pour le partenariat')
+    
+    # Documents
+    document_cgi = models.FileField(upload_to='partenariats/documents/', blank=True, null=True, verbose_name='Document CGI')
+    autre_document = models.FileField(upload_to='partenariats/documents/', blank=True, null=True, verbose_name='Autre document')
+    
+    # Statut
+    statut = models.CharField(max_length=20, choices=STATUTS, default='nouveau')
+    date_soumission = models.DateTimeField(auto_now_add=True)
+    date_traitement = models.DateTimeField(null=True, blank=True)
+    traite_par = models.ForeignKey('Utilisateur', on_delete=models.SET_NULL, null=True, blank=True, related_name='demandes_traitees')
+    notes_admin = models.TextField(blank=True, null=True, verbose_name='Notes administrateur')
+    
+    class Meta:
+        db_table = 'demandes_partenariat'
+        verbose_name = 'Demande de partenariat'
+        verbose_name_plural = 'Demandes de partenariat'
+        ordering = ['-date_soumission']
+    
+    def __str__(self):
+        return f"{self.nom_entreprise} - {self.get_type_partenariat_display()} ({self.get_statut_display()})"

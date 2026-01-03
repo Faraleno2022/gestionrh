@@ -947,3 +947,151 @@ def telecharger_documentation(request):
     log_activity(request, 'Téléchargement documentation CGI 2022 (PDF)', 'core')
     
     return response
+
+
+def demande_partenariat(request):
+    """Vue publique pour soumettre une demande de partenariat"""
+    from .models import DemandePartenariat
+    
+    if request.method == 'POST':
+        try:
+            demande = DemandePartenariat.objects.create(
+                nom_entreprise=request.POST.get('nom_entreprise'),
+                secteur_activite=request.POST.get('secteur_activite'),
+                nif=request.POST.get('nif') or None,
+                adresse=request.POST.get('adresse'),
+                ville=request.POST.get('ville'),
+                pays=request.POST.get('pays', 'Guinée'),
+                nom_contact=request.POST.get('nom_contact'),
+                fonction_contact=request.POST.get('fonction_contact'),
+                email=request.POST.get('email'),
+                telephone=request.POST.get('telephone'),
+                type_partenariat=request.POST.get('type_partenariat'),
+                description_activite=request.POST.get('description_activite'),
+                motivation=request.POST.get('motivation'),
+            )
+            
+            # Gérer les fichiers uploadés
+            if request.FILES.get('document_cgi'):
+                demande.document_cgi = request.FILES['document_cgi']
+            if request.FILES.get('autre_document'):
+                demande.autre_document = request.FILES['autre_document']
+            demande.save()
+            
+            messages.success(request, 'Votre demande de partenariat a été soumise avec succès. Nous vous contacterons prochainement.')
+            return redirect('core:index')
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la soumission : {str(e)}')
+    
+    return render(request, 'core/demande_partenariat.html', {
+        'types_partenariat': DemandePartenariat.TYPES_PARTENARIAT,
+    })
+
+
+@login_required
+def superuser_demandes_partenariat(request):
+    """Vue superuser pour gérer les demandes de partenariat"""
+    if not request.user.is_superuser:
+        messages.error(request, "Accès réservé aux super administrateurs.")
+        return redirect('dashboard:index')
+    
+    from .models import DemandePartenariat
+    
+    statut_filter = request.GET.get('statut', '')
+    search = request.GET.get('search', '')
+    
+    demandes = DemandePartenariat.objects.all()
+    
+    if statut_filter:
+        demandes = demandes.filter(statut=statut_filter)
+    if search:
+        demandes = demandes.filter(
+            models.Q(nom_entreprise__icontains=search) |
+            models.Q(email__icontains=search) |
+            models.Q(nom_contact__icontains=search)
+        )
+    
+    stats = {
+        'total': DemandePartenariat.objects.count(),
+        'nouveau': DemandePartenariat.objects.filter(statut='nouveau').count(),
+        'en_cours': DemandePartenariat.objects.filter(statut='en_cours').count(),
+        'accepte': DemandePartenariat.objects.filter(statut='accepte').count(),
+        'refuse': DemandePartenariat.objects.filter(statut='refuse').count(),
+    }
+    
+    return render(request, 'core/superuser_demandes_partenariat.html', {
+        'demandes': demandes,
+        'stats': stats,
+        'statut_filter': statut_filter,
+        'search': search,
+    })
+
+
+@login_required
+def superuser_demande_detail(request, pk):
+    """Détail et traitement d'une demande de partenariat"""
+    if not request.user.is_superuser:
+        messages.error(request, "Accès réservé aux super administrateurs.")
+        return redirect('dashboard:index')
+    
+    from .models import DemandePartenariat
+    
+    demande = get_object_or_404(DemandePartenariat, pk=pk)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'accepter':
+            demande.statut = 'accepte'
+            demande.date_traitement = timezone.now()
+            demande.traite_par = request.user
+            demande.notes_admin = request.POST.get('notes_admin', '')
+            demande.save()
+            messages.success(request, 'Demande acceptée.')
+        elif action == 'refuser':
+            demande.statut = 'refuse'
+            demande.date_traitement = timezone.now()
+            demande.traite_par = request.user
+            demande.notes_admin = request.POST.get('notes_admin', '')
+            demande.save()
+            messages.success(request, 'Demande refusée.')
+        elif action == 'en_cours':
+            demande.statut = 'en_cours'
+            demande.notes_admin = request.POST.get('notes_admin', '')
+            demande.save()
+            messages.success(request, 'Demande mise en cours de traitement.')
+        
+        return redirect('core:superuser_demandes_partenariat')
+    
+    return render(request, 'core/superuser_demande_detail.html', {
+        'demande': demande,
+    })
+
+
+@login_required
+def telecharger_document_partenariat(request, pk, type_doc):
+    """Télécharger un document de demande de partenariat (superuser only)"""
+    if not request.user.is_superuser:
+        messages.error(request, "Accès réservé aux super administrateurs.")
+        return redirect('dashboard:index')
+    
+    from .models import DemandePartenariat
+    import mimetypes
+    
+    demande = get_object_or_404(DemandePartenariat, pk=pk)
+    
+    if type_doc == 'cgi' and demande.document_cgi:
+        file_field = demande.document_cgi
+    elif type_doc == 'autre' and demande.autre_document:
+        file_field = demande.autre_document
+    else:
+        messages.error(request, "Document non trouvé.")
+        return redirect('core:superuser_demande_detail', pk=pk)
+    
+    file_path = file_field.path
+    content_type, _ = mimetypes.guess_type(file_path)
+    
+    with open(file_path, 'rb') as f:
+        response = HttpResponse(f.read(), content_type=content_type or 'application/octet-stream')
+        response['Content-Disposition'] = f'attachment; filename="{file_field.name.split("/")[-1]}"'
+        return response

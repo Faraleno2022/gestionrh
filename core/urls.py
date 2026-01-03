@@ -71,4 +71,10 @@ urlpatterns = [
     
     # Documentation
     path('documentation/telecharger/', views.telecharger_documentation, name='telecharger_documentation'),
+    
+    # Partenariat
+    path('partenariat/', views.demande_partenariat, name='demande_partenariat'),
+    path('superuser/partenariats/', views.superuser_demandes_partenariat, name='superuser_demandes_partenariat'),
+    path('superuser/partenariats/<int:pk>/', views.superuser_demande_detail, name='superuser_demande_detail'),
+    path('superuser/partenariats/<int:pk>/document/<str:type_doc>/', views.telecharger_document_partenariat, name='telecharger_document_partenariat'),
 ]
