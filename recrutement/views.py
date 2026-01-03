@@ -234,7 +234,7 @@ def modifier_offre(request, pk):
     
     postes = Poste.objects.filter(actif=True)
     services = Service.objects.filter(actif=True)
-    employes = Employe.objects.filter(entreprise=request.user.entreprise, statut='actif')
+    employes = Employe.objects.filter(entreprise=request.user.entreprise, statut_employe='actif')
     
     return render(request, 'recrutement/offres/modifier.html', {
         'offre': offre,
