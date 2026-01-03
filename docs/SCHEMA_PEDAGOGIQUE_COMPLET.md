@@ -14,6 +14,50 @@
 
 ---
 
+## 📖 NIVEAU 0 – CONCEPTS DE BASE (Pour débutants)
+
+**👉 À lire avant de commencer**
+
+### Vocabulaire essentiel
+
+| Terme | Définition simple |
+|-------|-------------------|
+| **Salaire brut** | Tout ce que l'employé gagne avant les retenues |
+| **Salaire net** | Ce que l'employé reçoit réellement (brut - retenues) |
+| **Retenue salariale** | Ce qu'on déduit du salaire de l'employé (CNSS 5%, RTS) |
+| **Charge patronale** | Ce que l'employeur paie EN PLUS du salaire (CNSS 18%, VF, TA) |
+| **CNSS** | Caisse Nationale de Sécurité Sociale (retraite, maladie) |
+| **RTS** | Retenue à la Source - impôt sur le revenu (anciennement IRG) |
+| **DGI** | Direction Générale des Impôts (collecte le RTS) |
+
+### Qui paie quoi ?
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    EMPLOYEUR                            │
+│  Paie : Salaire brut + CNSS 18% + VF 6% + TA 1,5%      │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│                    EMPLOYÉ reçoit                       │
+│  Salaire brut - CNSS 5% - RTS = NET À PAYER            │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Organismes concernés
+
+| Organisme | Rôle | Ce qu'on lui verse |
+|-----------|------|--------------------|
+| **CNSS** | Sécurité sociale | Cotisations salarié + employeur |
+| **DGI / Trésor** | Impôts | RTS (retenue sur salaire) |
+| **ONFPP** | Formation professionnelle | Taxe d'apprentissage |
+
+#### 📌 Message clé
+> L'employeur ne garde rien : il collecte les retenues et les reverse aux organismes.
+
+---
+
 ## 🏢 NIVEAU 1 – PARAMÉTRAGE DE L'ENTREPRISE
 
 ### 📦 Module : `core/`
@@ -120,8 +164,10 @@
 |------|-----------------|------------|
 | 4 premières HS | +30% | +15% |
 | Au-delà | +60% | +25% |
-| Nuit (20h-6h) | +20% | +50% |
+| Nuit (21h-6h)* | +20% | +50% |
 | Dimanche/Férié | +60% | +100% |
+
+*_Plage horaire nuit : 21h-6h selon la plupart des références guinéennes (configurable par entreprise)_
 
 ### 📦 Module : `conges/` (App séparée)
 
@@ -165,9 +211,9 @@
 | Modèle | Description | Champs clés |
 |--------|-------------|-------------|
 | `PeriodePaie` | Mois de paie | `annee`, `mois`, `statut_periode` (ouverte → clôturée) |
-| `BulletinPaie` | Bulletins générés | `salaire_brut`, `cnss_employe`, `irg`, `net_a_payer` |
+| `BulletinPaie` | Bulletins générés | `salaire_brut`, `cnss_employe`, `rts`, `net_a_payer` |
 | `LigneBulletin` | Détail du bulletin | `rubrique`, `base`, `taux`, `montant` |
-| `RubriquePaie` | Éléments de paie | `code_rubrique`, `type` (gain, retenue), `soumis_cnss`, `soumis_irg` |
+| `RubriquePaie` | Éléments de paie | `code_rubrique`, `type` (gain, retenue), `soumis_cnss`, `soumis_rts` |
 | `ElementSalaire` | Éléments fixes | `employe`, `rubrique`, `montant` (primes permanentes) |
 
 #### Modèles de calcul
@@ -256,9 +302,11 @@
 | Déclaration | Échéance | Destinataire |
 |-------------|----------|--------------|
 | CNSS mensuelle | 15 du mois suivant | CNSS |
-| RTS mensuelle | 10 du mois suivant | Trésor Public |
+| RTS mensuelle | 10 ou 15 du mois suivant* | Trésor Public / DGI |
 | VF (6%) | Trimestriel | DGI |
 | TA (1,5%) | Annuel | ONFPP |
+
+*_Échéance RTS : varie selon les instructions fiscales en vigueur (généralement 10 ou 15 du mois suivant)_
 
 #### URLs principales
 ```
@@ -437,6 +485,32 @@ Offre → Candidatures → Présélection → Entretiens → Tests → Décision
 4. Saisir 10 HS normales
 5. Calculer les bulletins
 6. Comparer les résultats
+
+---
+
+## ⚠️ ERREURS FRÉQUENTES À ÉVITER
+
+### En formation et en production
+
+| Erreur | Conséquence | Solution |
+|--------|-------------|----------|
+| **Oublier de configurer l'entreprise avant la paie** | Calculs avec valeurs par défaut | Toujours commencer par `/paie/configuration/` |
+| **Confondre charge patronale et retenue salariale** | Mauvaise compréhension des coûts | CNSS 5% = salarié, CNSS 18% = employeur |
+| **Modifier un bulletin après validation** | Incohérence avec déclarations | Annuler et recalculer proprement |
+| **Créer un employé sans contrat** | Paie impossible | Toujours créer contrat avec date début |
+| **Oublier les HS dans la paie** | Sous-paiement de l'employé | Saisir les HS AVANT calcul période |
+| **Valider la période sans vérifier** | Erreurs figées | Toujours contrôler avant validation |
+| **Confondre brut imposable et brut total** | Erreur RTS | Brut imposable = Brut - éléments exonérés |
+
+### Checklist avant validation de paie
+
+- [ ] Configuration entreprise vérifiée (HS, congés, CNSS)
+- [ ] Tous les employés ont un contrat actif
+- [ ] Heures supplémentaires saisies
+- [ ] Absences déduites
+- [ ] Avances/prêts à jour
+- [ ] Contrôle visuel des bulletins
+- [ ] Comparaison avec mois précédent
 
 ---
 
