@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import date, datetime
 from decimal import Decimal
-from paie.models import ParametrePaie, Constante, TrancheIRG, Variable
+from paie.models import ParametrePaie, Constante, TrancheRTS, Variable
 
 
 class Command(BaseCommand):
@@ -20,7 +20,7 @@ class Command(BaseCommand):
         # 2. Créer les constantes
         self.creer_constantes()
         
-        # 3. Créer les tranches IRG
+        # 3. Créer les tranches RTS
         self.creer_tranches_irg()
         
         # 4. Créer les variables
@@ -290,7 +290,7 @@ class Command(BaseCommand):
         - 10 000 001 à 20 000 000 GNF : 15%
         - Plus de 20 000 000 GNF : 20%
         """
-        self.stdout.write('📊 Création des tranches RTS (IRG)...')
+        self.stdout.write('📊 Création des tranches RTS (RTS)...')
         
         tranches = [
             {
@@ -332,7 +332,7 @@ class Command(BaseCommand):
         ]
         
         for tranche_data in tranches:
-            tranche, created = TrancheIRG.objects.get_or_create(
+            tranche, created = TrancheRTS.objects.get_or_create(
                 annee_validite=2025,
                 numero_tranche=tranche_data['numero_tranche'],
                 defaults={

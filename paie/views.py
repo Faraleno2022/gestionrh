@@ -11,7 +11,7 @@ import json
 
 from .models import (
     PeriodePaie, BulletinPaie, LigneBulletin, RubriquePaie,
-    ElementSalaire, CumulPaie, HistoriquePaie, Constante, TrancheIRG,
+    ElementSalaire, CumulPaie, HistoriquePaie, Constante, TrancheRTS,
     ParametrePaie, AlerteEcheance, ArchiveBulletin
 )
 from employes.models import Employe
@@ -571,9 +571,9 @@ def telecharger_bulletin_pdf(request, pk):
             f"{r.montant:,.0f}".replace(",", " ")
         ])
     
-    # Ajouter CNSS et IRG
+    # Ajouter CNSS et RTS
     retenues_data.append(["CNSS Employé (5%)", f"{bulletin.salaire_brut:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
-    retenues_data.append(["IRG (Impôt sur le Revenu)", "", "", f"{bulletin.irg:,.0f}".replace(",", " ")])
+    retenues_data.append(["RTS (Impôt sur le Revenu)", "", "", f"{bulletin.irg:,.0f}".replace(",", " ")])
     
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
@@ -606,7 +606,7 @@ def telecharger_bulletin_pdf(request, pk):
     p.setFillColor(colors.HexColor("#dc3545"))
     p.drawString(2*cm, y - 1*cm, "Cotisation CNSS (5%):")
     p.drawRightString(width - 2*cm, y - 1*cm, f"- {bulletin.cnss_employe:,.0f} GNF".replace(",", " "))
-    p.drawString(2*cm, y - 1.4*cm, "IRG:")
+    p.drawString(2*cm, y - 1.4*cm, "RTS:")
     p.drawRightString(width - 2*cm, y - 1.4*cm, f"- {bulletin.irg:,.0f} GNF".replace(",", " "))
     
     p.setFillColor(colors.HexColor("#28a745"))
@@ -820,9 +820,9 @@ def telecharger_bulletin_public(request, token):
             f"{r.montant:,.0f}".replace(",", " ")
         ])
     
-    # Ajouter CNSS et IRG
+    # Ajouter CNSS et RTS
     retenues_data.append(["CNSS Employé (5%)", f"{bulletin.salaire_brut:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
-    retenues_data.append(["IRG (Impôt sur le Revenu)", "", "", f"{bulletin.irg:,.0f}".replace(",", " ")])
+    retenues_data.append(["RTS (Impôt sur le Revenu)", "", "", f"{bulletin.irg:,.0f}".replace(",", " ")])
     
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
@@ -855,7 +855,7 @@ def telecharger_bulletin_public(request, token):
     p.setFillColor(colors.HexColor("#dc3545"))
     p.drawString(2*cm, y - 1*cm, "Cotisation CNSS (5%):")
     p.drawRightString(width - 2*cm, y - 1*cm, f"- {bulletin.cnss_employe:,.0f} GNF".replace(",", " "))
-    p.drawString(2*cm, y - 1.4*cm, "IRG:")
+    p.drawString(2*cm, y - 1.4*cm, "RTS:")
     p.drawRightString(width - 2*cm, y - 1.4*cm, f"- {bulletin.irg:,.0f} GNF".replace(",", " "))
     
     p.setFillColor(colors.HexColor("#28a745"))
@@ -1010,7 +1010,7 @@ def telecharger_livre_paie_pdf(request):
         f"Brut: {fmt(totaux.get('total_brut'))} GNF   "
         f"CNSS Employé: {fmt(totaux.get('total_cnss_employe'))}   "
         f"CNSS Employeur: {fmt(totaux.get('total_cnss_employeur'))}   "
-        f"IRG: {fmt(totaux.get('total_irg'))}   "
+        f"RTS: {fmt(totaux.get('total_irg'))}   "
         f"Net: {fmt(totaux.get('total_net'))}"
     )
     p.drawString(1.2 * cm, y, tot_line)
@@ -1018,7 +1018,7 @@ def telecharger_livre_paie_pdf(request):
 
     data = [[
         'Période', 'Matr.', 'Nom et Prénoms', 'Fonction',
-        'Brut', 'CNSS', 'IRG', 'Retenues', 'Net'
+        'Brut', 'CNSS', 'RTS', 'Retenues', 'Net'
     ]]
 
     for b in bulletins:
@@ -1091,7 +1091,7 @@ def telecharger_livre_paie_pdf(request):
 
 @login_required
 def declarations_sociales(request):
-    """Déclarations sociales (CNSS, IRG, INAM)"""
+    """Déclarations sociales (CNSS, RTS, INAM)"""
     # Filtres
     annee = request.GET.get('annee', timezone.now().year)
     mois = request.GET.get('mois')
@@ -1133,7 +1133,7 @@ def declarations_sociales(request):
         declaration_cnss['cotisation_employe'] + declaration_cnss['cotisation_employeur']
     )
     
-    # Calculs pour IRG
+    # Calculs pour RTS
     declaration_irg = {
         'total_salaries': bulletins.values('employe').distinct().count(),
         'masse_imposable': bulletins.aggregate(Sum('salaire_brut'))['salaire_brut__sum'] or 0,
@@ -1267,8 +1267,8 @@ def declarations_sociales_pdf(request):
     elements.append(cnss_table)
     elements.append(Spacer(1, 0.5*cm))
     
-    # IRG/RTS
-    elements.append(Paragraph("IRG/RTS - Retenue sur Traitements et Salaires", styles['Heading2']))
+    # RTS/RTS
+    elements.append(Paragraph("RTS/RTS - Retenue sur Traitements et Salaires", styles['Heading2']))
     irg_data = [
         ['Libellé', 'Montant (GNF)'],
         ['Nombre de salariés', str(declaration_irg['total_salaries'])],

@@ -177,12 +177,12 @@
         </div>
     </div>
 
-    <!-- Déclaration IRG -->
+    <!-- Déclaration RTS -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-sm border-warning">
                 <div class="card-header bg-warning text-dark">
-                    <h4 class="mb-0"><i class="fas fa-percentage me-2"></i>Déclaration IRG (Impôt sur le Revenu)</h4>
+                    <h4 class="mb-0"><i class="fas fa-percentage me-2"></i>Déclaration RTS (Impôt sur le Revenu)</h4>
                 </div>
                 <div class="card-body">
                     <div class="row text-center mb-4">
@@ -200,7 +200,7 @@
                         </div>
                         <div class="col-md-4">
                             <div class="p-3 bg-light rounded montant-card">
-                                <h6 class="text-muted">IRG Retenu à la Source</h6>
+                                <h6 class="text-muted">RTS Retenu à la Source</h6>
                                 <h4>{{ declaration_irg.total_irg|floatformat:0|intcomma }} GNF</h4>
                             </div>
                         </div>
@@ -280,7 +280,7 @@
                                 <td class="text-end">{{ declaration_cnss.total_cotisation|floatformat:0 }} GNF</td>
                             </tr>
                             <tr>
-                                <td><strong>IRG (Trésor Public)</strong></td>
+                                <td><strong>RTS (Trésor Public)</strong></td>
                                 <td class="text-end">{{ declaration_irg.total_irg|floatformat:0 }} GNF</td>
                             </tr>
                             <tr>
@@ -316,7 +316,7 @@
                                     <th class="text-end">Brut</th>
                                     <th class="text-end">CNSS Employé</th>
                                     <th class="text-end">CNSS Employeur</th>
-                                    <th class="text-end">IRG</th>
+                                    <th class="text-end">RTS</th>
                                     <th class="text-end">Net</th>
                                 </tr>
                             </thead>
@@ -355,7 +355,7 @@
                     <h6><i class="fas fa-info-circle me-2"></i>Notes Importantes</h6>
                     <ul class="mb-0 small">
                         <li><strong>CNSS:</strong> Les cotisations doivent être versées avant le 15 du mois suivant</li>
-                        <li><strong>IRG:</strong> L'impôt retenu à la source doit être reversé au Trésor Public avant le 10 du mois suivant</li>
+                        <li><strong>RTS:</strong> L'impôt retenu à la source doit être reversé au Trésor Public avant le 10 du mois suivant</li>
                         <li><strong>INAM:</strong> La cotisation doit être versée mensuellement</li>
                         <li><strong>Conservation:</strong> Ces déclarations doivent être conservées pendant 10 ans minimum</li>
                     </ul>

@@ -8,7 +8,7 @@ from datetime import date
 from decimal import Decimal
 from paie.models import (
     PeriodePaie, BulletinPaie, RubriquePaie, ElementSalaire,
-    Constante, TrancheIRG
+    Constante, TrancheRTS
 )
 from employes.models import Employe
 from paie.services import MoteurCalculPaie
@@ -37,7 +37,7 @@ class Command(BaseCommand):
         # 1. Vérifier les constantes
         self.verifier_constantes()
         
-        # 2. Vérifier les tranches IRG
+        # 2. Vérifier les tranches RTS
         self.verifier_tranches_irg()
         
         # 3. Test de calcul manuel
@@ -85,14 +85,14 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('  ✅ Toutes les constantes sont présentes'))
 
     def verifier_tranches_irg(self):
-        """Vérifier les tranches IRG"""
-        self.stdout.write('\n📊 VÉRIFICATION DES TRANCHES IRG 2025')
+        """Vérifier les tranches RTS"""
+        self.stdout.write('\n📊 VÉRIFICATION DES TRANCHES RTS 2025')
         self.stdout.write('-' * 40)
         
-        tranches = TrancheIRG.objects.filter(annee_validite=2025, actif=True).order_by('numero_tranche')
+        tranches = TrancheRTS.objects.filter(annee_validite=2025, actif=True).order_by('numero_tranche')
         
         if not tranches.exists():
-            self.stdout.write(self.style.ERROR('  ✗ Aucune tranche IRG pour 2025'))
+            self.stdout.write(self.style.ERROR('  ✗ Aucune tranche RTS pour 2025'))
             return
         
         for t in tranches:
@@ -136,7 +136,7 @@ class Command(BaseCommand):
         cnss_employeur = base_cnss * taux_cnss_employeur / Decimal('100')
         self.stdout.write(f'  CNSS employeur (18%): {cnss_employeur:,.0f} GNF')
         
-        # 3. Calcul IRG
+        # 3. Calcul RTS
         # Base imposable = Brut - CNSS employé
         base_imposable = salaire_brut - cnss_employe
         self.stdout.write(f'  Base imposable avant déductions: {base_imposable:,.0f} GNF')
@@ -155,9 +155,9 @@ class Command(BaseCommand):
         self.stdout.write(f'  Abattement professionnel: {abattement:,.0f} GNF')
         self.stdout.write(f'  Base imposable finale: {base_imposable:,.0f} GNF')
         
-        # Calcul IRG progressif
+        # Calcul RTS progressif
         irg = self.calculer_irg_progressif(base_imposable)
-        self.stdout.write(f'  IRG calculé: {irg:,.0f} GNF')
+        self.stdout.write(f'  RTS calculé: {irg:,.0f} GNF')
         
         # 4. Net à payer
         net = salaire_brut - cnss_employe - irg
@@ -167,12 +167,12 @@ class Command(BaseCommand):
         self.stdout.write('\n  📝 RÉCAPITULATIF:')
         self.stdout.write(f'     Brut:           {salaire_brut:>12,.0f} GNF')
         self.stdout.write(f'     - CNSS (5%):    {cnss_employe:>12,.0f} GNF')
-        self.stdout.write(f'     - IRG:          {irg:>12,.0f} GNF')
+        self.stdout.write(f'     - RTS:          {irg:>12,.0f} GNF')
         self.stdout.write(f'     = Net:          {net:>12,.0f} GNF')
         self.stdout.write(f'     Coût employeur: {salaire_brut + cnss_employeur:>12,.0f} GNF')
 
     def calculer_irg_progressif(self, base_imposable):
-        """Calculer l'IRG selon le barème progressif"""
+        """Calculer l'RTS selon le barème progressif"""
         if base_imposable <= 0:
             return Decimal('0')
         
@@ -257,7 +257,7 @@ class Command(BaseCommand):
             self.stdout.write(f'     Base CNSS:      {montants["cnss_base"]:>12,.0f} GNF')
             self.stdout.write(f'     CNSS employé:   {montants["cnss_employe"]:>12,.0f} GNF')
             self.stdout.write(f'     CNSS employeur: {montants["cnss_employeur"]:>12,.0f} GNF')
-            self.stdout.write(f'     IRG:            {montants["irg"]:>12,.0f} GNF')
+            self.stdout.write(f'     RTS:            {montants["irg"]:>12,.0f} GNF')
             self.stdout.write(f'     Total retenues: {montants["total_retenues"]:>12,.0f} GNF')
             self.stdout.write(self.style.SUCCESS(f'     NET À PAYER:    {montants["net"]:>12,.0f} GNF'))
         else:

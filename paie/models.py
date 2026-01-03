@@ -156,8 +156,8 @@ class ParametrePaie(models.Model):
     
     # Paramètres de calcul
     regulation_active = models.BooleanField(default=True, help_text="Activer la régulation automatique")
-    plafond_abattement_irg = models.DecimalField(max_digits=15, decimal_places=2, default=300000, help_text="Plafond abattement IRG en GNF")
-    taux_abattement_irg = models.DecimalField(max_digits=5, decimal_places=2, default=20.00, help_text="Taux d'abattement IRG en %")
+    plafond_abattement_irg = models.DecimalField(max_digits=15, decimal_places=2, default=300000, help_text="Plafond abattement RTS en GNF")
+    taux_abattement_irg = models.DecimalField(max_digits=5, decimal_places=2, default=20.00, help_text="Taux d'abattement RTS en %")
     
     # Configuration
     type_bulletin_defaut = models.CharField(max_length=20, choices=TYPES_BULLETIN, default='standard')
@@ -211,7 +211,7 @@ class Constante(models.Model):
     
     CATEGORIES = (
         ('cnss', 'CNSS'),
-        ('irg', 'IRG'),
+        ('irg', 'RTS'),
         ('inam', 'INAM'),
         ('general', 'Général'),
         ('temps', 'Temps de travail'),
@@ -240,8 +240,8 @@ class Constante(models.Model):
         return f"{self.code} - {self.libelle} ({self.valeur} {self.unite})"
 
 
-class TrancheIRG(models.Model):
-    """Tranches du barème IRG"""
+class TrancheRTS(models.Model):
+    """Tranches du barème RTS"""
     numero_tranche = models.IntegerField()
     borne_inferieure = models.DecimalField(max_digits=15, decimal_places=2)
     borne_superieure = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, help_text="Null = illimité")
@@ -253,8 +253,8 @@ class TrancheIRG(models.Model):
     
     class Meta:
         db_table = 'tranches_irg'
-        verbose_name = 'Tranche IRG'
-        verbose_name_plural = 'Tranches IRG'
+        verbose_name = 'Tranche RTS'
+        verbose_name_plural = 'Tranches RTS'
         ordering = ['annee_validite', 'numero_tranche']
     
     def __str__(self):

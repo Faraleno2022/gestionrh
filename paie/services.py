@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from .models import (
     BulletinPaie, LigneBulletin, ElementSalaire, CumulPaie,
-    RubriquePaie, Constante, TrancheIRG, PeriodePaie, HistoriquePaie
+    RubriquePaie, Constante, TrancheRTS, PeriodePaie, HistoriquePaie
 )
 from employes.models import Employe
 from temps_travail.models import Pointage, Absence, Conge
@@ -73,8 +73,8 @@ class MoteurCalculPaie:
         return constantes
     
     def _charger_tranches_irg(self):
-        """Charger le barème IRG"""
-        return TrancheIRG.objects.filter(
+        """Charger le barème RTS"""
+        return TrancheRTS.objects.filter(
             annee_validite=self.periode.annee,
             actif=True
         ).order_by('numero_tranche')
@@ -140,7 +140,7 @@ class MoteurCalculPaie:
         # 4. Calculer les cotisations sociales
         self._calculer_cotisations_sociales()
         
-        # 5. Calculer l'IRG/IRSA
+        # 5. Calculer l'RTS/IRSA
         self._calculer_irg()
         
         # 6. Calculer les autres retenues
@@ -669,7 +669,7 @@ class MoteurCalculPaie:
             self.montants['total_retenues'] += montant
     
     def _calculer_irg(self):
-        """Calculer l'IRG/RTS selon le barème progressif"""
+        """Calculer l'RTS/RTS selon le barème progressif"""
         # Base imposable = imposable - CNSS - autres déductions
         base_imposable = self.montants['imposable'] - self.montants['cnss_employe']
         
@@ -709,7 +709,7 @@ class MoteurCalculPaie:
             self.montants['exoneration_rts'] = False
         self.montants['total_retenues'] += self.montants['irg']
         
-        # Ajouter ligne IRG
+        # Ajouter ligne RTS
         rubrique_irg = RubriquePaie.objects.filter(
             code_rubrique__icontains='IRS',
             type_rubrique='retenue',
@@ -798,7 +798,7 @@ class MoteurCalculPaie:
         return min(abattement, plafond)
     
     def _calculer_irg_progressif(self, base_imposable):
-        """Calculer l'IRG selon le barème progressif"""
+        """Calculer l'RTS selon le barème progressif"""
         if base_imposable <= 0:
             return Decimal('0')
         
@@ -818,7 +818,7 @@ class MoteurCalculPaie:
             else:
                 montant_tranche = reste
             
-            # IRG de la tranche
+            # RTS de la tranche
             irg_tranche = montant_tranche * tranche.taux_irg / Decimal('100')
             irg_total += irg_tranche
             

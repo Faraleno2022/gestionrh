@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 from decimal import Decimal, InvalidOperation
 from datetime import date
 
-from paie.models import TrancheIRG
+from paie.models import TrancheRTS
 from paie.services_irpp.irpp import IRPPService
 from core.views import log_activity
 
@@ -23,12 +23,12 @@ def bareme_irpp_liste(request):
     except ValueError:
         annee = date.today().year
     
-    tranches = TrancheIRG.objects.filter(
+    tranches = TrancheRTS.objects.filter(
         annee_validite=annee
     ).order_by('numero_tranche')
     
     # Liste des années disponibles
-    annees = TrancheIRG.objects.values_list(
+    annees = TrancheRTS.objects.values_list(
         'annee_validite', flat=True
     ).distinct().order_by('-annee_validite')
     
@@ -44,7 +44,7 @@ def bareme_irpp_ajouter(request):
     """Ajouter une nouvelle tranche IRPP"""
     if request.method == 'POST':
         try:
-            tranche = TrancheIRG.objects.create(
+            tranche = TrancheRTS.objects.create(
                 numero_tranche=int(request.POST['numero_tranche']),
                 borne_inferieure=Decimal(request.POST['borne_inferieure']),
                 borne_superieure=Decimal(request.POST['borne_superieure']) if request.POST.get('borne_superieure') else None,
@@ -79,7 +79,7 @@ def bareme_irpp_ajouter(request):
 @login_required
 def bareme_irpp_modifier(request, pk):
     """Modifier une tranche IRPP"""
-    tranche = get_object_or_404(TrancheIRG, pk=pk)
+    tranche = get_object_or_404(TrancheRTS, pk=pk)
     
     if request.method == 'POST':
         try:
@@ -116,7 +116,7 @@ def bareme_irpp_modifier(request, pk):
 @login_required
 def bareme_irpp_supprimer(request, pk):
     """Supprimer une tranche IRPP"""
-    tranche = get_object_or_404(TrancheIRG, pk=pk)
+    tranche = get_object_or_404(TrancheRTS, pk=pk)
     
     if request.method == 'POST':
         numero = tranche.numero_tranche
@@ -151,15 +151,15 @@ def bareme_irpp_dupliquer(request):
             return redirect('paie:bareme_irpp_liste')
         
         # Vérifier si des tranches existent déjà pour l'année cible
-        if TrancheIRG.objects.filter(annee_validite=annee_cible).exists():
+        if TrancheRTS.objects.filter(annee_validite=annee_cible).exists():
             messages.error(request, f'Des tranches existent déjà pour {annee_cible}')
             return redirect('paie:bareme_irpp_liste')
         
         # Dupliquer les tranches
-        tranches_source = TrancheIRG.objects.filter(annee_validite=annee_source)
+        tranches_source = TrancheRTS.objects.filter(annee_validite=annee_source)
         count = 0
         for t in tranches_source:
-            TrancheIRG.objects.create(
+            TrancheRTS.objects.create(
                 numero_tranche=t.numero_tranche,
                 borne_inferieure=t.borne_inferieure,
                 borne_superieure=t.borne_superieure,
@@ -179,7 +179,7 @@ def bareme_irpp_dupliquer(request):
         messages.success(request, f'{count} tranches dupliquées de {annee_source} vers {annee_cible}')
         return redirect('paie:bareme_irpp_liste')
     
-    annees = TrancheIRG.objects.values_list(
+    annees = TrancheRTS.objects.values_list(
         'annee_validite', flat=True
     ).distinct().order_by('-annee_validite')
     

@@ -34,8 +34,8 @@ class Command(BaseCommand):
             self.stdout.write('1. Création des paramètres de paie...')
             self.create_parametres_paie()
 
-            # 2. Tranches IRG Guinée
-            self.stdout.write('2. Création des tranches IRG...')
+            # 2. Tranches RTS Guinée
+            self.stdout.write('2. Création des tranches RTS...')
             self.create_tranches_irg()
 
             # 3. Jours fériés Guinée 2025
@@ -97,9 +97,9 @@ class Command(BaseCommand):
             ('TAUX_INAM', 'Taux de cotisation INAM', None, 2.50, 'Numérique', 'INAM', '%'),
             ('PLAFOND_INAM', 'Plafond de cotisation INAM', None, 3000000, 'Numérique', 'INAM', 'GNF'),
             
-            # IRG
-            ('ABATTEMENT_IRG', 'Abattement forfaitaire IRG', None, 20.00, 'Numérique', 'IRG', '%'),
-            ('PLAFOND_ABATTEMENT_IRG', 'Plafond abattement IRG', None, 300000, 'Numérique', 'IRG', 'GNF'),
+            # RTS
+            ('ABATTEMENT_RTS', 'Abattement forfaitaire RTS', None, 20.00, 'Numérique', 'RTS', '%'),
+            ('PLAFOND_ABATTEMENT_RTS', 'Plafond abattement RTS', None, 300000, 'Numérique', 'RTS', 'GNF'),
             
             # Temps de travail
             ('HEURES_MOIS_STANDARD', 'Nombre d\'heures standard par mois', None, 173.33, 'Numérique', 'Général', 'Heures'),
@@ -128,7 +128,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'  ✓ {len(parametres)} paramètres créés'))
 
     def create_tranches_irg(self):
-        """Crée les tranches IRG pour la Guinée (2025)"""
+        """Crée les tranches RTS pour la Guinée (2025)"""
         tranches = [
             (1, 0, 1000000, 0.00, 2025),
             (2, 1000001, 3000000, 5.00, 2025),
@@ -149,7 +149,7 @@ class Command(BaseCommand):
         for tranche in tranches:
             self.execute_sql(sql, tranche)
 
-        self.stdout.write(self.style.SUCCESS(f'  ✓ {len(tranches)} tranches IRG créées'))
+        self.stdout.write(self.style.SUCCESS(f'  ✓ {len(tranches)} tranches RTS créées'))
 
     def create_jours_feries(self):
         """Crée le calendrier des jours fériés de Guinée pour 2025"""
@@ -193,7 +193,7 @@ class Command(BaseCommand):
             # RETENUES SOCIALES
             ('CNSS_EMP', 'Cotisation CNSS Employé', 'Retenue', 'CNSS', None, 5.00, 200, False, False, False, 10),
             ('INAM_EMP', 'Cotisation INAM Employé', 'Retenue', 'INAM', None, 2.50, 210, False, False, False, 11),
-            ('IRG', 'Impôt sur Revenu (IRG)', 'Retenue', 'IRG', None, None, 220, False, False, False, 12),
+            ('RTS', 'Impôt sur Revenu (RTS)', 'Retenue', 'RTS', None, None, 220, False, False, False, 12),
             
             # COTISATIONS PATRONALES
             ('CNSS_PAT', 'Cotisation CNSS Employeur', 'Cotisation', 'CNSS', None, 18.00, 300, False, False, False, 13),

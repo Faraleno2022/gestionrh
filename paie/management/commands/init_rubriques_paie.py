@@ -51,7 +51,7 @@ class Command(BaseCommand):
             
             # ===== RETENUES - Cotisations sociales =====
             {'code_rubrique': 'CNSS_EMP', 'libelle_rubrique': 'CNSS part employé', 'type_rubrique': 'cotisation', 'soumis_cnss': False, 'soumis_irg': False, 'ordre_calcul': 100, 'taux_rubrique': Decimal('5.00')},
-            {'code_rubrique': 'IRG', 'libelle_rubrique': 'Impôt sur le Revenu Global', 'type_rubrique': 'retenue', 'soumis_cnss': False, 'soumis_irg': False, 'ordre_calcul': 110},
+            {'code_rubrique': 'RTS', 'libelle_rubrique': 'Impôt sur le Revenu Global', 'type_rubrique': 'retenue', 'soumis_cnss': False, 'soumis_irg': False, 'ordre_calcul': 110},
             
             # ===== RETENUES - Autres =====
             {'code_rubrique': 'AVANCE_SAL', 'libelle_rubrique': 'Avance sur salaire', 'type_rubrique': 'retenue', 'soumis_cnss': False, 'soumis_irg': False, 'ordre_calcul': 120},

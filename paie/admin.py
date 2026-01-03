@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    ParametrePaie, Constante, TrancheIRG, Variable,
+    ParametrePaie, Constante, TrancheRTS, Variable,
     PeriodePaie, RubriquePaie, BulletinPaie, ElementSalaire,
     LigneBulletin, CumulPaie, HistoriquePaie
 )
@@ -50,8 +50,8 @@ class ConstanteAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(TrancheIRG)
-class TrancheIRGAdmin(admin.ModelAdmin):
+@admin.register(TrancheRTS)
+class TrancheRTSAdmin(admin.ModelAdmin):
     list_display = ['numero_tranche', 'borne_inferieure', 'borne_superieure', 'taux_irg', 'annee_validite', 'actif']
     list_filter = ['annee_validite', 'actif']
     ordering = ['annee_validite', 'numero_tranche']

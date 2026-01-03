@@ -17,15 +17,15 @@ from decimal import Decimal
 from datetime import date
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from paie.models import TrancheIRG, Constante
+from paie.models import TrancheRTS, Constante
 
 
 class Command(BaseCommand):
-    help = 'Met à jour le barème RTS (IRG) selon la législation guinéenne 2022+'
+    help = 'Met à jour le barème RTS (RTS) selon la législation guinéenne 2022+'
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.NOTICE('=' * 60))
-        self.stdout.write(self.style.NOTICE('MISE À JOUR DU BARÈME RTS (IRG) - Guinée 2022+'))
+        self.stdout.write(self.style.NOTICE('MISE À JOUR DU BARÈME RTS (RTS) - Guinée 2022+'))
         self.stdout.write(self.style.NOTICE('=' * 60))
         
         # 1. Mettre à jour le barème RTS
@@ -88,10 +88,10 @@ class Command(BaseCommand):
         
         with transaction.atomic():
             # Désactiver les anciennes tranches
-            TrancheIRG.objects.filter(annee_validite=annee).update(actif=False)
+            TrancheRTS.objects.filter(annee_validite=annee).update(actif=False)
             
             for tranche_data in tranches:
-                tranche, created = TrancheIRG.objects.update_or_create(
+                tranche, created = TrancheRTS.objects.update_or_create(
                     annee_validite=annee,
                     numero_tranche=tranche_data['numero_tranche'],
                     defaults={

@@ -16,7 +16,7 @@ from decimal import Decimal
 from datetime import date
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from paie.models import TrancheIRG
+from paie.models import TrancheRTS
 
 
 class Command(BaseCommand):
@@ -72,7 +72,7 @@ class Command(BaseCommand):
         
         with transaction.atomic():
             # Supprimer toutes les anciennes tranches pour cette année
-            deleted_count, _ = TrancheIRG.objects.filter(annee_validite=annee).delete()
+            deleted_count, _ = TrancheRTS.objects.filter(annee_validite=annee).delete()
             if deleted_count:
                 self.stdout.write(f'🗑️  Supprimé {deleted_count} anciennes tranches pour {annee}')
             
@@ -80,7 +80,7 @@ class Command(BaseCommand):
             self.stdout.write('-' * 50)
             
             for tranche_data in tranches:
-                tranche = TrancheIRG.objects.create(
+                tranche = TrancheRTS.objects.create(
                     annee_validite=annee,
                     numero_tranche=tranche_data['numero_tranche'],
                     borne_inferieure=tranche_data['borne_inferieure'],

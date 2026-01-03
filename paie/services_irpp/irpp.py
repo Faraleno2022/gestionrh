@@ -5,7 +5,7 @@ Barème progressif avec déductions fiscales
 from decimal import Decimal
 from datetime import date
 from django.db.models import Q
-from paie.models import TrancheIRG
+from paie.models import TrancheRTS
 from core.models import BaremeIRPP, DeductionFiscale
 
 
@@ -20,8 +20,8 @@ class IRPPService:
     
     def _charger_tranches(self):
         """Charger les tranches IRPP pour l'année"""
-        # Essayer d'abord le modèle TrancheIRG (paie)
-        tranches = TrancheIRG.objects.filter(
+        # Essayer d'abord le modèle TrancheRTS (paie)
+        tranches = TrancheRTS.objects.filter(
             annee_validite=self.annee,
             actif=True
         ).order_by('numero_tranche')
@@ -127,7 +127,7 @@ class IRPPService:
                 break
             
             # Récupérer les bornes selon le type de modèle
-            if hasattr(tranche, 'borne_inferieure'):  # TrancheIRG
+            if hasattr(tranche, 'borne_inferieure'):  # TrancheRTS
                 borne_inf = tranche.borne_inferieure
                 borne_sup = tranche.borne_superieure
                 taux = tranche.taux_irg
@@ -198,7 +198,7 @@ class IRPPService:
         if annee is None:
             annee = date.today().year
         
-        tranches = TrancheIRG.objects.filter(
+        tranches = TrancheRTS.objects.filter(
             annee_validite=annee,
             actif=True
         ).order_by('numero_tranche')

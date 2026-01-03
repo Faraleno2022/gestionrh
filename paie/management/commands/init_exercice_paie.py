@@ -234,8 +234,8 @@ class Command(BaseCommand):
                 'ordre_affichage': 100,
             },
             {
-                'code_rubrique': 'IRG',
-                'libelle_rubrique': 'Impôt sur le revenu (IRG/IRSA)',
+                'code_rubrique': 'RTS',
+                'libelle_rubrique': 'Impôt sur le revenu (RTS/IRSA)',
                 'type_rubrique': 'retenue',
                 'soumis_cnss': False,
                 'soumis_irg': False,
@@ -319,9 +319,9 @@ class Command(BaseCommand):
         
         # Ajouter la constante pour la réduction enfants
         const, created = Constante.objects.get_or_create(
-            code='REDUC_ENFANT_IRG',
+            code='REDUC_ENFANT_RTS',
             defaults={
-                'libelle': 'Réduction IRG par enfant à charge',
+                'libelle': 'Réduction RTS par enfant à charge',
                 'valeur': Decimal('5.00'),
                 'type_valeur': 'pourcentage',
                 'categorie': 'irg',
@@ -333,7 +333,7 @@ class Command(BaseCommand):
         )
         
         if created:
-            self.stdout.write(self.style.SUCCESS('  ✓ Constante REDUC_ENFANT_IRG créée'))
+            self.stdout.write(self.style.SUCCESS('  ✓ Constante REDUC_ENFANT_RTS créée'))
         
         # Note sur le taux CNSS
         self.stdout.write(self.style.WARNING('  ⚠ NOTE: L\'exercice utilise CNSS 5.5% au lieu de 5%'))
