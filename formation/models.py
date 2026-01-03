@@ -26,8 +26,8 @@ class CatalogueFormation(models.Model):
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='catalogue_formations', null=True, blank=True)
     code_formation = models.CharField(max_length=20, unique=True)
     intitule = models.CharField(max_length=200)
-    type_formation = models.CharField(max_length=20, choices=TYPES)
-    domaine = models.CharField(max_length=50, choices=DOMAINES)
+    type_formation = models.CharField(max_length=50)  # Liste déroulante + saisie libre
+    domaine = models.CharField(max_length=100)  # Liste déroulante + saisie libre
     description = models.TextField(blank=True, null=True)
     objectifs = models.TextField(blank=True, null=True)
     contenu = models.TextField(blank=True, null=True)

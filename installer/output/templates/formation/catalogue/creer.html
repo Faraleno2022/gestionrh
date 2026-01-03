@@ -37,18 +37,19 @@
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="type_formation" class="form-label">Type de Formation <span class="text-danger">*</span></label>
-                    <select class="form-select" id="type_formation" name="type_formation" required>
-                        <option value="">-- Sélectionner --</option>
+                    <input type="text" class="form-control" id="type_formation" name="type_formation" list="types_formation_list" required placeholder="Sélectionner ou saisir...">
+                    <datalist id="types_formation_list">
                         <option value="interne">Interne</option>
                         <option value="externe">Externe</option>
                         <option value="en_ligne">En ligne</option>
                         <option value="certifiante">Certifiante</option>
-                    </select>
+                    </datalist>
+                    <small class="text-muted">Choisissez dans la liste ou saisissez un nouveau type</small>
                 </div>
                 <div class="col-md-6">
                     <label for="domaine" class="form-label">Domaine <span class="text-danger">*</span></label>
-                    <select class="form-select" id="domaine" name="domaine" required>
-                        <option value="">-- Sélectionner --</option>
+                    <input type="text" class="form-control" id="domaine" name="domaine" list="domaines_list" required placeholder="Sélectionner ou saisir...">
+                    <datalist id="domaines_list">
                         <option value="technique">Technique</option>
                         <option value="management">Management</option>
                         <option value="securite">Sécurité</option>
@@ -56,7 +57,8 @@
                         <option value="langues">Langues</option>
                         <option value="soft_skills">Soft Skills</option>
                         <option value="reglementaire">Réglementaire</option>
-                    </select>
+                    </datalist>
+                    <small class="text-muted">Choisissez dans la liste ou saisissez un nouveau domaine</small>
                 </div>
             </div>
 
