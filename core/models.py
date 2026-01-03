@@ -9,6 +9,7 @@ class Entreprise(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     nom_entreprise = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, max_length=100)
+    secteur_activite = models.CharField(max_length=100, blank=True, null=True, verbose_name='Secteur d\'activité')
     nif = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name='NIF')
     num_cnss = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name='N° CNSS')
     adresse = models.TextField(blank=True, null=True)

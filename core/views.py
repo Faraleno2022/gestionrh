@@ -519,9 +519,14 @@ def superuser_manage_users(request):
             models.Q(last_name__icontains=search)
         )
     
-    # Liste des entreprises pour le filtre
+    # Liste des entreprises pour le filtre avec effectif
     from .models import Entreprise
-    entreprises = Entreprise.objects.all().order_by('nom_entreprise')
+    from employes.models import Employe
+    from django.db.models import Count
+    
+    entreprises = Entreprise.objects.annotate(
+        effectif=Count('employes')
+    ).order_by('nom_entreprise')
     
     # Statistiques
     stats = {
