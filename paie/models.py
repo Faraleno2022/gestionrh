@@ -77,6 +77,15 @@ class RubriquePaie(models.Model):
     
     def __str__(self):
         return f"{self.code_rubrique} - {self.libelle_rubrique}"
+    
+    @property
+    def soumis_rts(self):
+        """Alias RTS pour soumis_irg"""
+        return self.soumis_irg
+    
+    @soumis_rts.setter
+    def soumis_rts(self, value):
+        self.soumis_irg = value
 
 
 class BulletinPaie(models.Model):
@@ -131,6 +140,16 @@ class BulletinPaie(models.Model):
             self.token_public = secrets.token_urlsafe(32)
             self.save(update_fields=['token_public'])
         return self.token_public
+    
+    @property
+    def rts(self):
+        """Alias RTS pour irg (Retenue à la Source = ancien IRG)"""
+        return self.irg
+    
+    @rts.setter
+    def rts(self, value):
+        """Setter pour l'alias RTS"""
+        self.irg = value
 
 
 class ParametrePaie(models.Model):
@@ -199,6 +218,16 @@ class ParametrePaie(models.Model):
     
     def __str__(self):
         return f"Paramètres Paie {self.mois_en_cours}/{self.annee_en_cours}"
+    
+    @property
+    def plafond_abattement_rts(self):
+        """Alias RTS pour plafond_abattement_irg"""
+        return self.plafond_abattement_irg
+    
+    @property
+    def taux_abattement_rts(self):
+        """Alias RTS pour taux_abattement_irg"""
+        return self.taux_abattement_irg
 
 
 class Constante(models.Model):
@@ -261,6 +290,15 @@ class TrancheRTS(models.Model):
         if self.borne_superieure:
             return f"Tranche {self.numero_tranche}: {self.borne_inferieure:,.0f} - {self.borne_superieure:,.0f} GNF ({self.taux_irg}%)"
         return f"Tranche {self.numero_tranche}: > {self.borne_inferieure:,.0f} GNF ({self.taux_irg}%)"
+    
+    @property
+    def taux_rts(self):
+        """Alias RTS pour taux_irg"""
+        return self.taux_irg
+    
+    @taux_rts.setter
+    def taux_rts(self, value):
+        self.taux_irg = value
 
 
 class Variable(models.Model):
@@ -392,6 +430,15 @@ class CumulPaie(models.Model):
     
     def __str__(self):
         return f"{self.employe.matricule} - {self.annee}: {self.cumul_net:,.0f} GNF"
+    
+    @property
+    def cumul_rts(self):
+        """Alias RTS pour cumul_irg"""
+        return self.cumul_irg
+    
+    @cumul_rts.setter
+    def cumul_rts(self, value):
+        self.cumul_irg = value
 
 
 class HistoriquePaie(models.Model):
