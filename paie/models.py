@@ -788,5 +788,160 @@ class ArchiveBulletin(models.Model):
         return f"{self.employe_matricule} - {self.periode_mois:02d}/{self.periode_annee}"
 
 
+class ConfigurationPaieEntreprise(models.Model):
+    """Configuration des paramètres de paie par entreprise
+    Permet d'adapter le système au Code du Travail OU aux conventions collectives
+    """
+    MODES_HS = (
+        ('code_travail', 'Code du Travail (+30%/+60%)'),
+        ('convention', 'Convention Collective (+15%/+25%/+50%/+100%)'),
+        ('personnalise', 'Personnalisé'),
+    )
+    
+    MODES_CONGES = (
+        ('code_travail', 'Code du Travail (1,5 j/mois)'),
+        ('convention', 'Convention Collective (2,5 j/mois)'),
+        ('personnalise', 'Personnalisé'),
+    )
+    
+    entreprise = models.OneToOneField(
+        Entreprise, 
+        on_delete=models.CASCADE, 
+        related_name='config_paie',
+        primary_key=True
+    )
+    
+    # === HEURES SUPPLÉMENTAIRES ===
+    mode_heures_sup = models.CharField(
+        max_length=20, 
+        choices=MODES_HS, 
+        default='code_travail',
+        verbose_name='Mode calcul HS'
+    )
+    # Code du Travail Art. 221
+    taux_hs_4_premieres = models.DecimalField(
+        max_digits=5, decimal_places=2, default=30.00,
+        verbose_name='Majoration 4 premières HS/semaine (%)',
+        help_text='Code du Travail: 30%, Convention: 15%'
+    )
+    taux_hs_au_dela = models.DecimalField(
+        max_digits=5, decimal_places=2, default=60.00,
+        verbose_name='Majoration HS au-delà (%)',
+        help_text='Code du Travail: 60%, Convention: 25%'
+    )
+    taux_hs_nuit = models.DecimalField(
+        max_digits=5, decimal_places=2, default=50.00,
+        verbose_name='Majoration heures de nuit (%)',
+        help_text='20h-6h. Code du Travail: 20%, Convention: 50%'
+    )
+    taux_hs_dimanche = models.DecimalField(
+        max_digits=5, decimal_places=2, default=100.00,
+        verbose_name='Majoration dimanche/férié jour (%)',
+        help_text='Convention: 100%'
+    )
+    taux_hs_ferie_nuit = models.DecimalField(
+        max_digits=5, decimal_places=2, default=100.00,
+        verbose_name='Majoration férié nuit (%)',
+        help_text='Convention: 100%'
+    )
+    
+    # === CONGÉS ===
+    mode_conges = models.CharField(
+        max_length=20, 
+        choices=MODES_CONGES, 
+        default='code_travail',
+        verbose_name='Mode calcul congés'
+    )
+    jours_conges_par_mois = models.DecimalField(
+        max_digits=4, decimal_places=2, default=1.50,
+        verbose_name='Jours de congé acquis par mois',
+        help_text='Code du Travail: 1,5 j/mois (18j/an), Convention: 2,5 j/mois (30j/an)'
+    )
+    jours_conges_anciennete = models.DecimalField(
+        max_digits=4, decimal_places=2, default=2.00,
+        verbose_name='Jours supplémentaires par tranche ancienneté',
+        help_text='Généralement +2 jours par 5 ans d\'ancienneté'
+    )
+    tranche_anciennete_annees = models.IntegerField(
+        default=5,
+        verbose_name='Tranche ancienneté (années)',
+        help_text='Nombre d\'années pour bonus congés'
+    )
+    
+    # === CNSS ===
+    taux_cnss_employe = models.DecimalField(
+        max_digits=5, decimal_places=2, default=5.00,
+        verbose_name='Taux CNSS employé (%)'
+    )
+    taux_cnss_employeur = models.DecimalField(
+        max_digits=5, decimal_places=2, default=18.00,
+        verbose_name='Taux CNSS employeur (%)'
+    )
+    plafond_cnss = models.DecimalField(
+        max_digits=15, decimal_places=2, default=2500000.00,
+        verbose_name='Plafond CNSS (GNF)'
+    )
+    plancher_cnss = models.DecimalField(
+        max_digits=15, decimal_places=2, default=550000.00,
+        verbose_name='Plancher CNSS / SMIG (GNF)'
+    )
+    
+    # === CHARGES PATRONALES ===
+    taux_versement_forfaitaire = models.DecimalField(
+        max_digits=5, decimal_places=2, default=6.00,
+        verbose_name='Versement Forfaitaire VF (%)'
+    )
+    taux_taxe_apprentissage = models.DecimalField(
+        max_digits=5, decimal_places=2, default=1.50,
+        verbose_name='Taxe d\'Apprentissage TA (%)'
+    )
+    
+    # Métadonnées
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    modifie_par = models.ForeignKey(
+        Utilisateur, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True
+    )
+    
+    class Meta:
+        db_table = 'config_paie_entreprise'
+        verbose_name = 'Configuration paie entreprise'
+        verbose_name_plural = 'Configurations paie entreprises'
+    
+    def __str__(self):
+        return f"Config Paie - {self.entreprise.nom_entreprise}"
+    
+    def appliquer_mode_code_travail(self):
+        """Applique les taux du Code du Travail guinéen"""
+        self.mode_heures_sup = 'code_travail'
+        self.taux_hs_4_premieres = Decimal('30.00')
+        self.taux_hs_au_dela = Decimal('60.00')
+        self.taux_hs_nuit = Decimal('20.00')
+        self.mode_conges = 'code_travail'
+        self.jours_conges_par_mois = Decimal('1.50')
+        self.save()
+    
+    def appliquer_mode_convention(self):
+        """Applique les taux des conventions collectives"""
+        self.mode_heures_sup = 'convention'
+        self.taux_hs_4_premieres = Decimal('15.00')
+        self.taux_hs_au_dela = Decimal('25.00')
+        self.taux_hs_nuit = Decimal('50.00')
+        self.taux_hs_dimanche = Decimal('100.00')
+        self.taux_hs_ferie_nuit = Decimal('100.00')
+        self.mode_conges = 'convention'
+        self.jours_conges_par_mois = Decimal('2.50')
+        self.save()
+    
+    @classmethod
+    def get_ou_creer(cls, entreprise):
+        """Récupère ou crée la configuration pour une entreprise"""
+        config, created = cls.objects.get_or_create(entreprise=entreprise)
+        return config
+
+
 # Import des modèles de frais
 from .models_frais import CategoriesFrais, NoteFrais, LigneFrais, BaremeFrais

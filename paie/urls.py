@@ -110,4 +110,7 @@ urlpatterns = [
     path('archives/', views.liste_archives, name='liste_archives'),
     path('archives/<int:pk>/telecharger/', views.telecharger_archive, name='telecharger_archive'),
     path('archives/<int:pk>/verifier/', views.verifier_integrite_archive, name='verifier_integrite_archive'),
+    
+    # Configuration paie entreprise
+    path('configuration/', views.config_paie_entreprise, name='config_entreprise'),
 ]

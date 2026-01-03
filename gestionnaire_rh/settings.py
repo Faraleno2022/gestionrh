@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'employes',
     'paie',
     'temps_travail',
+    'conges',
     'recrutement',
     'formation',
     'dashboard',
