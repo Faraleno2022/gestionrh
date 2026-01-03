@@ -17,7 +17,7 @@
 
 ## 🎯 Introduction
 
-Le **Gestionnaire RH Guinée** est un système complet de gestion des ressources humaines conçu spécifiquement pour les entreprises en Guinée. Il respecte le Code du Travail guinéen et les réglementations locales (CNSS, IRG, INAM).
+Le **Gestionnaire RH Guinée** est un système complet de gestion des ressources humaines conçu spécifiquement pour les entreprises en Guinée. Il respecte le Code du Travail guinéen et les réglementations locales (CNSS, RTS, INAM).
 
 ### Modules Principaux
 
@@ -26,7 +26,7 @@ Le **Gestionnaire RH Guinée** est un système complet de gestion des ressources
 - **Temps** : Pointages, congés, absences
 - **Recrutement** : Gestion des candidatures
 - **Formation** : Suivi des formations
-- **Déclarations** : CNSS, IRG, INAM
+- **Déclarations** : CNSS, RTS, INAM
 
 ---
 
@@ -229,9 +229,9 @@ Le système calcule automatiquement :
 - ✅ Base CNSS (plafonnée à 3 000 000 GNF)
 - ✅ CNSS employé (5%)
 - ✅ INAM (2,5%)
-- ✅ Base IRG (brut - CNSS - INAM)
-- ✅ Abattement IRG (20%, max 300 000 GNF)
-- ✅ IRG selon barème progressif
+- ✅ Base RTS (brut - CNSS - INAM)
+- ✅ Abattement RTS (20%, max 300 000 GNF)
+- ✅ RTS selon barème progressif
 - ✅ Retenues (acomptes, prêts, sanctions)
 - ✅ Net à payer
 - ✅ CNSS employeur (18%)
@@ -246,7 +246,7 @@ Le système calcule automatiquement :
 Le bulletin affiche :
 - **En-tête** : Société, employé, période
 - **Gains** : Détail des éléments de rémunération
-- **Retenues** : CNSS, INAM, IRG, autres
+- **Retenues** : CNSS, INAM, RTS, autres
 - **Net à payer** : Montant final
 - **Charges patronales** : CNSS employeur
 
@@ -621,14 +621,14 @@ Le tableau de bord affiche en temps réel :
 5. Générer le fichier XML/Excel
 6. Déposer à la CNSS
 
-#### IRG Mensuelle
+#### RTS Mensuelle
 
-1. **Menu** > **Déclarations** > **IRG** > **Nouvelle**
+1. **Menu** > **Déclarations** > **RTS** > **Nouvelle**
 2. Sélectionner la période
 3. Le système génère :
    - Bases imposables
-   - IRG par employé
-   - Total IRG à reverser
+   - RTS par employé
+   - Total RTS à reverser
 4. Générer le fichier de déclaration
 5. Déposer à la DGI
 
@@ -650,7 +650,7 @@ Le tableau de bord affiche en temps réel :
    - SMIG
    - Plafonds CNSS/INAM
    - Taux de cotisations
-   - Abattement IRG
+   - Abattement RTS
 3. Ces paramètres sont pré-configurés selon la législation guinéenne
 
 ### Rubriques de Paie
@@ -661,7 +661,7 @@ Le tableau de bord affiche en temps réel :
    - Code et libellé
    - Type (Gain, Retenue, Cotisation)
    - Formule de calcul
-   - Soumission CNSS/IRG/INAM
+   - Soumission CNSS/RTS/INAM
 
 ### Jours Fériés
 
@@ -721,7 +721,7 @@ Le tableau de bord affiche en temps réel :
 R : Cliquer sur "Mot de passe oublié" sur la page de connexion.
 
 **Q : Le calcul de paie est-il conforme à la législation guinéenne ?**
-R : Oui, le système respecte le Code du Travail et les taux CNSS/IRG/INAM en vigueur.
+R : Oui, le système respecte le Code du Travail et les taux CNSS/RTS/INAM en vigueur.
 
 **Q : Puis-je modifier un bulletin validé ?**
 R : Non, il faut d'abord le dé-valider (droits Admin/RH requis).

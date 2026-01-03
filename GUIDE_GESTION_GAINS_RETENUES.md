@@ -459,7 +459,7 @@ python gerer_elements_salaire.py
 | `RET_SYNDICAT` | Cotisation syndicale | Montant fixe |
 | `RET_DISCIPLINAIRE` | Retenue disciplinaire | Montant fixe |
 | `CNSS_SAL` | CNSS salarié | Taux % (auto) |
-| `IRS_A` | IRG/IRSA | Calculé (auto) |
+| `IRS_A` | RTS/IRSA | Calculé (auto) |
 
 ---
 
@@ -548,7 +548,7 @@ Les éléments sont calculés dans l'ordre défini par `ordre_calcul` de la rubr
 2. Primes et indemnités
 3. Heures supplémentaires
 4. Cotisations sociales (CNSS)
-5. IRG/IRSA
+5. RTS/IRSA
 6. Autres retenues
 
 ---

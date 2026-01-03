@@ -9,7 +9,7 @@
 
 Générer et soumettre les déclarations sociales mensuelles obligatoires :
 - **CNSS** (Caisse Nationale de Sécurité Sociale)
-- **IRG** (Impôt sur le Revenu)
+- **RTS** (Impôt sur le Revenu)
 - **INAM** (Institut National d'Assurance Maladie)
 
 ---
@@ -63,12 +63,12 @@ La page affiche automatiquement :
 └────────────────────────────────────┘
 ```
 
-#### **💰 IRG**
+#### **💰 RTS**
 ```
 ┌────────────────────────────────────┐
 │ Nombre de salariés : 45            │
 │ Masse imposable : 112,500,000 GNF  │
-│ IRG retenu : 8,437,500 GNF         │
+│ RTS retenu : 8,437,500 GNF         │
 │ TOTAL À VERSER : 8,437,500 GNF     │
 └────────────────────────────────────┘
 ```
@@ -116,12 +116,12 @@ La page affiche automatiquement :
 
 ---
 
-#### **💰 IRG (Trésor Public)**
+#### **💰 RTS (Trésor Public)**
 
 **Délai** : Avant le 10 du mois suivant
 
 **Documents à fournir** :
-- ✅ Déclaration IRG (PDF généré)
+- ✅ Déclaration RTS (PDF généré)
 - ✅ État récapitulatif par employé
 - ✅ Paiement : 8,437,500 GNF
 
@@ -171,11 +171,11 @@ TOTAL : 25,875,000 GNF
 
 ---
 
-### **2. DÉCLARATION IRG**
+### **2. DÉCLARATION RTS**
 
 #### **Calcul**
 
-L'IRG est calculé par **tranches progressives** :
+L'RTS est calculé par **tranches progressives** :
 
 ```
 Tranche 1 : 0 - 1,000,000 GNF → 0%
@@ -190,7 +190,7 @@ Tranche 5 : > 12,000,000 → 20%
 Tranche 1 : 1,000,000 × 0% = 0
 Tranche 2 : 2,000,000 × 5% = 100,000
 Tranche 3 : 2,000,000 × 10% = 200,000
-IRG Total = 300,000 GNF
+RTS Total = 300,000 GNF
 ```
 
 #### **Qui paie ?**
@@ -226,7 +226,7 @@ Cotisation INAM : 112,500,000 × 2.5% = 2,812,500 GNF
 |-----------|------|------|---------|-------|
 | **CNSS Employé** | 112,500,000 | 5% | 5,625,000 | 15/11 |
 | **CNSS Employeur** | 112,500,000 | 18% | 20,250,000 | 15/11 |
-| **IRG** | Variable | Variable | 8,437,500 | 10/11 |
+| **RTS** | Variable | Variable | 8,437,500 | 10/11 |
 | **INAM** | 112,500,000 | 2.5% | 2,812,500 | 15/11 |
 | **TOTAL** | - | - | **37,125,000** | - |
 
@@ -245,7 +245,7 @@ Cotisation INAM : 112,500,000 × 2.5% = 2,812,500 GNF
    ↓
 3. Vérifier les Montants
    ↓
-   Contrôler CNSS, IRG, INAM
+   Contrôler CNSS, RTS, INAM
    ↓
 4. Exporter les Documents
    ↓
@@ -257,7 +257,7 @@ Cotisation INAM : 112,500,000 × 2.5% = 2,812,500 GNF
    ↓
 6. Soumettre aux Organismes
    ↓
-   CNSS (15/11), IRG (10/11), INAM (15/11)
+   CNSS (15/11), RTS (10/11), INAM (15/11)
    ↓
 7. ✅ Déclarations Complètes
 ```
@@ -270,13 +270,13 @@ Cotisation INAM : 112,500,000 × 2.5% = 2,812,500 GNF
 
 | Déclaration | Délai | Organisme |
 |-------------|-------|-----------|
-| **IRG** | 10 du mois suivant | Trésor Public |
+| **RTS** | 10 du mois suivant | Trésor Public |
 | **CNSS** | 15 du mois suivant | CNSS |
 | **INAM** | 15 du mois suivant | INAM |
 
 ### **Exemple pour Octobre 2025**
 
-- ✅ **10 Novembre** : Verser IRG (8,437,500 GNF)
+- ✅ **10 Novembre** : Verser RTS (8,437,500 GNF)
 - ✅ **15 Novembre** : Verser CNSS (25,875,000 GNF)
 - ✅ **15 Novembre** : Verser INAM (2,812,500 GNF)
 
@@ -303,7 +303,7 @@ Cotisation INAM : 112,500,000 × 2.5% = 2,812,500 GNF
 - Retard de paiement : **Pénalité de 2% par mois**
 - Fausse déclaration : **Amende + redressement**
 
-### **IRG**
+### **RTS**
 - Retard de paiement : **Pénalité de 10%**
 - Non-déclaration : **Amende fiscale**
 
@@ -317,10 +317,10 @@ Cotisation INAM : 112,500,000 × 2.5% = 2,812,500 GNF
 ### **Avant le 10 du mois**
 
 - [ ] Calculer tous les bulletins du mois précédent
-- [ ] Vérifier les montants CNSS, IRG, INAM
+- [ ] Vérifier les montants CNSS, RTS, INAM
 - [ ] Exporter les déclarations en PDF
 - [ ] Préparer les virements
-- [ ] **Verser l'IRG au Trésor Public**
+- [ ] **Verser l'RTS au Trésor Public**
 
 ### **Avant le 15 du mois**
 
@@ -411,7 +411,7 @@ Cotisation INAM : 112,500,000 × 2.5% = 2,812,500 GNF
 8. ✅ Archiver les documents
 
 **Délais à respecter :**
-- 🔴 **10 du mois** : IRG
+- 🔴 **10 du mois** : RTS
 - 🟡 **15 du mois** : CNSS + INAM
 
 ---
