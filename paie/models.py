@@ -63,6 +63,7 @@ class RubriquePaie(models.Model):
     taux_rubrique = models.DecimalField(max_digits=8, decimal_places=4, blank=True, null=True)
     montant_fixe = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     soumis_cnss = models.BooleanField(default=False)
+    # Champ historique IRG – alias RTS utilisé côté métier (Option C)
     soumis_irg = models.BooleanField(default=False)
     ordre_calcul = models.IntegerField(default=100)
     ordre_affichage = models.IntegerField(default=100)
@@ -107,6 +108,7 @@ class BulletinPaie(models.Model):
     salaire_brut = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     cnss_employe = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     cnss_employeur = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    # Champ historique IRG – alias RTS utilisé côté métier (Option C)
     irg = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     net_a_payer = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     
@@ -274,6 +276,7 @@ class TrancheRTS(models.Model):
     numero_tranche = models.IntegerField()
     borne_inferieure = models.DecimalField(max_digits=15, decimal_places=2)
     borne_superieure = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, help_text="Null = illimité")
+    # Champ historique IRG – alias taux_rts utilisé côté métier (Option C)
     taux_irg = models.DecimalField(max_digits=5, decimal_places=2, help_text="Taux en %")
     annee_validite = models.IntegerField()
     date_debut_validite = models.DateField()
@@ -409,6 +412,7 @@ class CumulPaie(models.Model):
     # Cumuls cotisations
     cumul_cnss_employe = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     cumul_cnss_employeur = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    # Champ historique IRG – alias cumul_rts utilisé côté métier (Option C)
     cumul_irg = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     
     # Cumuls par rubrique (JSON pour flexibilité)
