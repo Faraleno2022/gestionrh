@@ -12,12 +12,35 @@ class OffreEmploi(models.Model):
         ('annulee', 'Annulée'),
     )
     
+    SECTEURS = (
+        ('Agriculture', 'Agriculture'),
+        ('Banque/Finance', 'Banque / Finance'),
+        ('BTP', 'BTP / Construction'),
+        ('Commerce', 'Commerce / Distribution'),
+        ('Education', 'Éducation / Formation'),
+        ('Energie', 'Énergie / Environnement'),
+        ('Industrie', 'Industrie / Production'),
+        ('Informatique', 'Informatique / Technologies'),
+        ('Mines', 'Mines / Ressources naturelles'),
+        ('Sante', 'Santé / Médical'),
+        ('Services', 'Services aux entreprises'),
+        ('Telecom', 'Télécommunications'),
+        ('Transport', 'Transport / Logistique'),
+        ('Tourisme', 'Tourisme / Hôtellerie'),
+        ('Autre', 'Autre'),
+    )
+    
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='offres_emploi', null=True, blank=True)
     reference_offre = models.CharField(max_length=50, unique=True)
+    reference_poste = models.CharField(max_length=50, blank=True, null=True, help_text="Référence interne du poste")
     intitule_poste = models.CharField(max_length=200)
+    secteur_activite = models.CharField(max_length=50, choices=SECTEURS, blank=True, null=True)
     poste = models.ForeignKey(Poste, on_delete=models.SET_NULL, null=True, blank=True)
+    poste_texte = models.CharField(max_length=200, blank=True, null=True, help_text="Poste saisi manuellement")
     service = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, blank=True)
-    type_contrat = models.CharField(max_length=20, blank=True, null=True)
+    service_texte = models.CharField(max_length=200, blank=True, null=True, help_text="Service saisi manuellement")
+    type_contrat = models.CharField(max_length=50, blank=True, null=True)
+    responsable_texte = models.CharField(max_length=200, blank=True, null=True, help_text="Responsable saisi manuellement")
     nombre_postes = models.IntegerField(default=1)
     date_publication = models.DateField(auto_now_add=True)
     date_limite_candidature = models.DateField(blank=True, null=True)
@@ -31,6 +54,7 @@ class OffreEmploi(models.Model):
     salaire_propose_max = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     avantages = models.TextField(blank=True, null=True)
     image = models.ImageField(upload_to='offres_emploi/', blank=True, null=True, help_text="Image de présentation de l'offre")
+    document_pdf = models.FileField(upload_to='offres_emploi/documents/', blank=True, null=True, help_text="Document PDF (fiche de poste, description...)")
     statut_offre = models.CharField(max_length=20, choices=STATUTS, default='ouverte')
     responsable_recrutement = models.ForeignKey(Employe, on_delete=models.SET_NULL, null=True, blank=True)
     

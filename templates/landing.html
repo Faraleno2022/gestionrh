@@ -858,6 +858,7 @@
                     <li class="nav-item"><a class="nav-link" href="#features">Fonctionnalités</a></li>
                     <li class="nav-item"><a class="nav-link" href="#modules">Modules</a></li>
                     {% if offres_emploi %}<li class="nav-item"><a class="nav-link" href="#jobs">Offres d'Emploi</a></li>{% endif %}
+                    {% if formations %}<li class="nav-item"><a class="nav-link" href="#formations">Formations</a></li>{% endif %}
                     <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
                     <li class="nav-item ms-lg-3">
                         <a class="btn btn-login" href="{% url 'core:login' %}">
@@ -1252,6 +1253,93 @@
                 <p class="text-muted mb-3">Vous êtes une entreprise et souhaitez publier vos offres ?</p>
                 <a href="{% url 'core:login' %}" class="btn btn-outline-glass">
                     <i class="bi bi-box-arrow-in-right me-2"></i>Connectez-vous pour gérer vos recrutements
+                </a>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Formations Section -->
+    {% if formations %}
+    <section class="jobs" id="formations" style="background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 50%, #f8f9fa 100%);">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <div class="section-badge">Formation</div>
+                <h2>Formations Disponibles</h2>
+                <p>Développez vos compétences avec nos formations professionnelles</p>
+            </div>
+            <div class="row g-4">
+                {% for formation in formations %}
+                <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                    <div class="job-card">
+                        {% if formation.image %}
+                        <div class="job-image" style="height: 160px; overflow: hidden; border-radius: 0.5rem 0.5rem 0 0; margin: -1rem -1rem 1rem -1rem;">
+                            <img src="{{ formation.image.url }}" alt="{{ formation.intitule }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        {% endif %}
+                        <div class="job-header">
+                            <div class="job-company">
+                                <i class="bi bi-building"></i>
+                                <span>{{ formation.entreprise.nom_entreprise|default:"Organisme" }}</span>
+                            </div>
+                            <span class="job-badge">{{ formation.get_type_formation_display }}</span>
+                        </div>
+                        <h4 class="job-title">{{ formation.intitule }}</h4>
+                        <div class="job-details">
+                            <div class="job-detail">
+                                <i class="bi bi-folder2"></i>
+                                <span>{{ formation.get_domaine_display }}</span>
+                            </div>
+                            <div class="job-detail">
+                                <i class="bi bi-clock"></i>
+                                <span>{{ formation.duree_jours }} jour{{ formation.duree_jours|pluralize }} ({{ formation.duree_heures }}h)</span>
+                            </div>
+                            {% if formation.organisme_formateur %}
+                            <div class="job-detail">
+                                <i class="bi bi-person-badge"></i>
+                                <span>{{ formation.organisme_formateur|truncatewords:3 }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if formation.description %}
+                        <p class="job-description">{{ formation.description|truncatewords:25 }}</p>
+                        {% endif %}
+                        {% if formation.objectifs %}
+                        <div class="mb-2">
+                            <small class="text-muted"><strong>Objectifs:</strong> {{ formation.objectifs|truncatewords:15 }}</small>
+                        </div>
+                        {% endif %}
+                        <div class="job-footer d-flex justify-content-between align-items-center">
+                            {% if formation.cout_unitaire %}
+                            <span class="job-date">
+                                <i class="bi bi-cash"></i> {{ formation.cout_unitaire|floatformat:0 }} GNF
+                            </span>
+                            {% else %}
+                            <span class="job-date text-success">
+                                <i class="bi bi-gift"></i> Gratuit
+                            </span>
+                            {% endif %}
+                            <div class="d-flex gap-1">
+                                <a href="https://wa.me/?text={{ formation.intitule|urlencode }}%20-%20Formation%20{{ formation.get_type_formation_display|urlencode }}" 
+                                   target="_blank" class="btn btn-sm btn-outline-success" title="Partager sur WhatsApp">
+                                    <i class="bi bi-whatsapp"></i>
+                                </a>
+                                <a href="{% url 'formation:formation_public' formation.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye me-1"></i>Détails
+                                </a>
+                                <a href="{% url 'formation:inscription_formation_public' formation.pk %}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-mortarboard me-1"></i>S'inscrire
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="text-center mt-5" data-aos="fade-up">
+                <p class="text-muted mb-3">Vous êtes une entreprise et souhaitez publier vos formations ?</p>
+                <a href="{% url 'core:login' %}" class="btn btn-outline-glass">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Connectez-vous pour gérer vos formations
                 </a>
             </div>
         </div>

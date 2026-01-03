@@ -7,7 +7,7 @@ from datetime import datetime, date
 import random
 import string
 
-from .models import CatalogueFormation, SessionFormation, InscriptionFormation, EvaluationFormation, PlanFormation
+from .models import CatalogueFormation, SessionFormation, InscriptionFormation, EvaluationFormation, PlanFormation, InscriptionFormationPublic
 from employes.models import Employe
 from core.decorators import entreprise_active_required
 
@@ -100,6 +100,9 @@ def creer_formation(request):
             # Générer un code unique
             code = f"FORM-{''.join(random.choices(string.digits, k=3))}"
             
+            # Vérifier si publiée
+            publiee = request.POST.get('publiee') == 'on'
+            
             formation = CatalogueFormation.objects.create(
                 entreprise=request.user.entreprise,
                 code_formation=code,
@@ -114,6 +117,9 @@ def creer_formation(request):
                 prerequis=request.POST.get('prerequis'),
                 organisme_formateur=request.POST.get('organisme'),
                 cout_unitaire=request.POST.get('cout') if request.POST.get('cout') else None,
+                image=request.FILES.get('image') if 'image' in request.FILES else None,
+                publiee=publiee,
+                date_publication=date.today() if publiee else None,
                 actif=True
             )
             
@@ -160,6 +166,22 @@ def modifier_formation(request, pk):
             formation.prerequis = request.POST.get('prerequis')
             formation.organisme_formateur = request.POST.get('organisme')
             formation.cout_unitaire = request.POST.get('cout') if request.POST.get('cout') else None
+            formation.actif = request.POST.get('actif') == 'on'
+            
+            # Gestion de la publication
+            publiee = request.POST.get('publiee') == 'on'
+            if publiee and not formation.publiee:
+                formation.date_publication = date.today()
+            elif not publiee:
+                formation.date_publication = None
+            formation.publiee = publiee
+            
+            # Gestion de l'image
+            if request.POST.get('supprimer_image') == 'on':
+                formation.image = None
+            elif 'image' in request.FILES:
+                formation.image = request.FILES['image']
+            
             formation.save()
             
             messages.success(request, 'Formation modifiée avec succès.')
@@ -477,4 +499,62 @@ def detail_plan(request, annee):
     return render(request, 'formation/plan/detail.html', {
         'plan': plan,
         'sessions': sessions
+    })
+
+
+# ============================================
+# VUES PUBLIQUES (sans authentification)
+# ============================================
+
+def formation_public(request, pk):
+    """Vue publique des détails d'une formation"""
+    formation = get_object_or_404(CatalogueFormation, pk=pk, publiee=True, actif=True)
+    
+    # Récupérer les prochaines sessions disponibles
+    sessions_disponibles = SessionFormation.objects.filter(
+        formation=formation,
+        statut='planifiee',
+        date_debut__gte=date.today()
+    ).order_by('date_debut')
+    
+    return render(request, 'formation/public/detail.html', {
+        'formation': formation,
+        'sessions': sessions_disponibles,
+    })
+
+
+def inscription_formation_public(request, pk):
+    """Inscription publique à une formation"""
+    formation = get_object_or_404(CatalogueFormation, pk=pk, publiee=True, actif=True)
+    
+    # Récupérer les sessions disponibles
+    sessions_disponibles = SessionFormation.objects.filter(
+        formation=formation,
+        statut='planifiee',
+        date_debut__gte=date.today()
+    ).order_by('date_debut')
+    
+    if request.method == 'POST':
+        try:
+            inscription = InscriptionFormationPublic.objects.create(
+                formation=formation,
+                session_id=request.POST.get('session') if request.POST.get('session') else None,
+                nom=request.POST.get('nom'),
+                prenom=request.POST.get('prenom'),
+                email=request.POST.get('email'),
+                telephone=request.POST.get('telephone'),
+                entreprise=request.POST.get('entreprise'),
+                fonction=request.POST.get('fonction'),
+                motivation=request.POST.get('motivation'),
+            )
+            
+            messages.success(request, f'Votre inscription à la formation "{formation.intitule}" a été enregistrée. Nous vous contacterons prochainement.')
+            return redirect('formation:formation_public', pk=formation.pk)
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de l\'inscription : {str(e)}')
+    
+    return render(request, 'formation/public/inscription.html', {
+        'formation': formation,
+        'sessions': sessions_disponibles,
     })

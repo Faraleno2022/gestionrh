@@ -36,6 +36,9 @@ class CatalogueFormation(models.Model):
     prerequis = models.TextField(blank=True, null=True)
     organisme_formateur = models.CharField(max_length=200, blank=True, null=True)
     cout_unitaire = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    image = models.ImageField(upload_to='formations/', blank=True, null=True, help_text="Image de présentation de la formation")
+    publiee = models.BooleanField(default=False, help_text="Publier sur la page d'accueil publique")
+    date_publication = models.DateField(blank=True, null=True)
     actif = models.BooleanField(default=True)
     
     class Meta:
@@ -46,6 +49,39 @@ class CatalogueFormation(models.Model):
     
     def __str__(self):
         return f"{self.code_formation} - {self.intitule}"
+
+
+class InscriptionFormationPublic(models.Model):
+    """Inscriptions publiques aux formations (visiteurs non connectés)"""
+    STATUTS = (
+        ('en_attente', 'En attente'),
+        ('contacte', 'Contacté'),
+        ('confirme', 'Confirmé'),
+        ('refuse', 'Refusé'),
+        ('annule', 'Annulé'),
+    )
+    
+    formation = models.ForeignKey(CatalogueFormation, on_delete=models.CASCADE, related_name='inscriptions_publiques')
+    session = models.ForeignKey('SessionFormation', on_delete=models.SET_NULL, null=True, blank=True, related_name='inscriptions_publiques')
+    nom = models.CharField(max_length=100)
+    prenom = models.CharField(max_length=100)
+    email = models.EmailField()
+    telephone = models.CharField(max_length=20)
+    entreprise = models.CharField(max_length=200, blank=True, null=True)
+    fonction = models.CharField(max_length=100, blank=True, null=True)
+    motivation = models.TextField(blank=True, null=True)
+    statut = models.CharField(max_length=20, choices=STATUTS, default='en_attente')
+    date_inscription = models.DateTimeField(auto_now_add=True)
+    notes_admin = models.TextField(blank=True, null=True, help_text="Notes internes")
+    
+    class Meta:
+        db_table = 'inscriptions_formation_public'
+        verbose_name = 'Inscription Formation (Public)'
+        verbose_name_plural = 'Inscriptions Formation (Public)'
+        ordering = ['-date_inscription']
+    
+    def __str__(self):
+        return f"{self.prenom} {self.nom} - {self.formation.intitule}"
 
 
 class SessionFormation(models.Model):

@@ -118,10 +118,15 @@ def creer_offre(request):
             offre = OffreEmploi.objects.create(
                 entreprise=request.user.entreprise,
                 reference_offre=reference,
+                reference_poste=request.POST.get('reference_poste') if request.POST.get('reference_poste') else None,
                 intitule_poste=request.POST.get('intitule_poste'),
+                secteur_activite=request.POST.get('secteur_activite') if request.POST.get('secteur_activite') else None,
                 poste_id=request.POST.get('poste') if request.POST.get('poste') else None,
+                poste_texte=request.POST.get('poste_texte') if request.POST.get('poste_texte') else None,
                 service_id=request.POST.get('service') if request.POST.get('service') else None,
+                service_texte=request.POST.get('service_texte') if request.POST.get('service_texte') else None,
                 type_contrat=request.POST.get('type_contrat'),
+                responsable_texte=request.POST.get('responsable_texte') if request.POST.get('responsable_texte') else None,
                 nombre_postes=request.POST.get('nombre_postes', 1),
                 date_limite_candidature=request.POST.get('date_limite') if request.POST.get('date_limite') else None,
                 description_poste=request.POST.get('description'),
@@ -133,6 +138,7 @@ def creer_offre(request):
                 salaire_propose_max=request.POST.get('salaire_max') if request.POST.get('salaire_max') else None,
                 avantages=request.POST.get('avantages'),
                 image=request.FILES.get('image') if 'image' in request.FILES else None,
+                document_pdf=request.FILES.get('document_pdf') if 'document_pdf' in request.FILES else None,
                 responsable_recrutement_id=request.POST.get('responsable') if request.POST.get('responsable') else None,
                 statut_offre='ouverte'
             )
@@ -192,9 +198,13 @@ def modifier_offre(request, pk):
     
     if request.method == 'POST':
         try:
+            offre.reference_poste = request.POST.get('reference_poste') if request.POST.get('reference_poste') else None
             offre.intitule_poste = request.POST.get('intitule_poste')
+            offre.secteur_activite = request.POST.get('secteur_activite') if request.POST.get('secteur_activite') else None
             offre.poste_id = request.POST.get('poste') if request.POST.get('poste') else None
+            offre.poste_texte = request.POST.get('poste_texte') if request.POST.get('poste_texte') else None
             offre.service_id = request.POST.get('service') if request.POST.get('service') else None
+            offre.service_texte = request.POST.get('service_texte') if request.POST.get('service_texte') else None
             offre.type_contrat = request.POST.get('type_contrat')
             offre.nombre_postes = request.POST.get('nombre_postes', 1)
             offre.date_limite_candidature = request.POST.get('date_limite') if request.POST.get('date_limite') else None
@@ -207,8 +217,13 @@ def modifier_offre(request, pk):
             offre.salaire_propose_max = request.POST.get('salaire_max') if request.POST.get('salaire_max') else None
             offre.avantages = request.POST.get('avantages')
             offre.statut_offre = request.POST.get('statut')
+            offre.responsable_recrutement_id = request.POST.get('responsable') if request.POST.get('responsable') else None
+            offre.responsable_texte = request.POST.get('responsable_texte') if request.POST.get('responsable_texte') else None
+            
             if 'image' in request.FILES:
                 offre.image = request.FILES['image']
+            if 'document_pdf' in request.FILES:
+                offre.document_pdf = request.FILES['document_pdf']
             offre.save()
             
             messages.success(request, 'Offre modifiée avec succès.')
@@ -219,11 +234,13 @@ def modifier_offre(request, pk):
     
     postes = Poste.objects.filter(actif=True)
     services = Service.objects.filter(actif=True)
+    employes = Employe.objects.filter(entreprise=request.user.entreprise, statut='actif')
     
     return render(request, 'recrutement/offres/modifier.html', {
         'offre': offre,
         'postes': postes,
-        'services': services
+        'services': services,
+        'employes': employes
     })
 
 

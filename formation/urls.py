@@ -36,4 +36,8 @@ urlpatterns = [
     path('plan/', views.liste_plans, name='plans'),
     path('plan/creer/', views.creer_plan, name='creer_plan'),
     path('plan/<int:annee>/', views.detail_plan, name='detail_plan'),
+    
+    # Vues publiques (sans authentification)
+    path('public/<int:pk>/', views.formation_public, name='formation_public'),
+    path('public/<int:pk>/inscription/', views.inscription_formation_public, name='inscription_formation_public'),
 ]

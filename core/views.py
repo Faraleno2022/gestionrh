@@ -124,6 +124,7 @@ def index_view(request):
     
     # Récupérer les offres d'emploi ouvertes et non expirées pour affichage public
     from recrutement.models import OffreEmploi
+    from formation.models import CatalogueFormation
     from datetime import date
     from django.db.models import Q
     
@@ -132,8 +133,15 @@ def index_view(request):
         statut_offre='ouverte'
     ).select_related('entreprise', 'service').order_by('-date_publication')[:6]
     
+    # Récupérer les formations publiées
+    formations = CatalogueFormation.objects.filter(
+        publiee=True,
+        actif=True
+    ).select_related('entreprise').order_by('-date_publication')[:6]
+    
     return render(request, 'landing.html', {
         'offres_emploi': offres_emploi,
+        'formations': formations,
         'today': date.today(),
     })
 
