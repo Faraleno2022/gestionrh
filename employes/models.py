@@ -34,6 +34,7 @@ class Employe(models.Model):
         ('CDI', 'Contrat à Durée Indéterminée'),
         ('CDD', 'Contrat à Durée Déterminée'),
         ('CDImp', 'Contrat à Durée Imprécise'),
+        ('CTI', 'Contrat de Travail Intermittent'),
         ('stage', 'Stage'),
         ('apprentissage', 'Contrat d\'Apprentissage'),
         ('temporaire', 'Temporaire'),
