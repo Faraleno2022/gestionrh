@@ -257,8 +257,10 @@ La RTS est un **impôt progressif par tranches**. Chaque tranche de revenu est i
 
 ## 4.3 Base Imposable RTS
 
+> **⚠️ ATTENTION** : Les indemnités forfaitaires exonérées (transport, logement, repas) doivent être **retirées du brut** avant le calcul de la base imposable RTS (voir section 7).
+
 ```
-Base Imposable RTS = Salaire Brut - CNSS Employé - Déductions
+Base Imposable RTS = Salaire Brut - Indemnités exonérées - CNSS Employé - Déductions
 ```
 
 ### Déductions Possibles
@@ -833,20 +835,23 @@ python manage.py generer_feries_guinee --annee 2025
 ║ Tranche 1 : 0 - 1 000 000 GNF × 0%                                    ║
 ║           = 1 000 000 × 0% = 0 GNF                                    ║
 ║                                                                        ║
-║ Tranche 2 : 1 000 001 - 5 000 000 GNF × 5%                            ║
-║           = 4 000 000 × 5% = 200 000 GNF                              ║
+║ Tranche 2 : 1 000 001 - 3 000 000 GNF × 5%                            ║
+║           = 2 000 000 × 5% = 100 000 GNF                              ║
 ║                                                                        ║
-║ Tranche 3 : 5 000 001 - 7 875 000 GNF × 10%                           ║
+║ Tranche 3 : 3 000 001 - 5 000 000 GNF × 8%                            ║
+║           = 2 000 000 × 8% = 160 000 GNF                              ║
+║                                                                        ║
+║ Tranche 4 : 5 000 001 - 7 875 000 GNF × 10%                           ║
 ║           = 2 875 000 × 10% = 287 500 GNF                             ║
 ║                                                                        ║
-║ TOTAL RTS = 0 + 200 000 + 287 500 = 487 500 GNF                       ║
+║ TOTAL RTS = 0 + 100 000 + 160 000 + 287 500 = 547 500 GNF                       ║
 ║                                                                        ║
 ╠═══════════════════════════════════════════════════════════════════════╣
 ║                                                                        ║
 ║ ÉTAPE 4 : CALCUL NET À PAYER                                          ║
 ║ ────────────────────────────                                          ║
-║ Total retenues = CNSS + RTS = 125 000 + 487 500 = 612 500 GNF         ║
-║ NET À PAYER = 8 000 000 - 612 500 = 7 387 500 GNF                     ║
+║ Total retenues = CNSS + RTS = 125 000 + 547 500 = 672 500 GNF         ║
+║ NET À PAYER = 8 000 000 - 672 500 = 7 327 500 GNF                     ║
 ║                                                                        ║
 ╠═══════════════════════════════════════════════════════════════════════╣
 ║                                                                        ║
@@ -854,12 +859,12 @@ python manage.py generer_feries_guinee --annee 2025
 ║ ─────────────────────────────────────────────────                     ║
 ║ CNSS Employeur    : 2 500 000 × 18% = 450 000 GNF                     ║
 ║ Versement Forfait.: 8 000 000 × 6%  = 480 000 GNF                     ║
-║ Taxe Apprentissage: 8 000 000 × 2%  = 160 000 GNF                     ║
+║ Taxe Apprentissage: 8 000 000 × 1,5%= 120 000 GNF                     ║
 ║ Contribution ONFPP: 8 000 000 × 1,5%= 120 000 GNF                     ║
 ║ ─────────────────────────────────────────────────                     ║
-║ TOTAL CHARGES     : 1 210 000 GNF                                     ║
+║ TOTAL CHARGES     : 1 170 000 GNF                                     ║
 ║                                                                        ║
-║ COÛT TOTAL EMPLOYEUR : 8 000 000 + 1 210 000 = 9 210 000 GNF          ║
+║ COÛT TOTAL EMPLOYEUR : 8 000 000 + 1 170 000 = 9 170 000 GNF          ║
 ║                                                                        ║
 ╚═══════════════════════════════════════════════════════════════════════╝
 ```
@@ -874,7 +879,7 @@ python manage.py generer_feries_guinee --annee 2025
 ║                                                                        ║
 ║ DONNÉES D'ENTRÉE                                                       ║
 ║ Salaire de base           : 1 200 000 GNF                             ║
-║ Prime de transport        : 200 000 GNF                               ║
+║ Prime de transport        : 200 000 GNF (exonérée RTS)                ║
 ║ Prime d'ancienneté        : 100 000 GNF                               ║
 ║ ─────────────────────────────────────────                             ║
 ║ SALAIRE BRUT              : 1 500 000 GNF                             ║
@@ -885,14 +890,18 @@ python manage.py generer_feries_guinee --annee 2025
 ║ Assiette CNSS = 1 500 000 GNF (entre plancher et plafond)             ║
 ║ CNSS Employé = 1 500 000 × 5% = 75 000 GNF                            ║
 ║                                                                        ║
-║ CALCUL RTS                                                            ║
-║ Base imposable = 1 500 000 - 75 000 = 1 425 000 GNF                   ║
+║ CALCUL RTS (avec exclusion indemnité transport)                       ║
+║ Plafond 25% = 1 500 000 × 25% = 375 000 GNF                           ║
+║ Transport (200 000) < Plafond (375 000) → Entièrement exonéré         ║
+║                                                                        ║
+║ Base imposable = Brut - Transport - CNSS                              ║
+║                = 1 500 000 - 200 000 - 75 000 = 1 225 000 GNF         ║
 ║                                                                        ║
 ║ Tranche 1 : 1 000 000 × 0% = 0 GNF                                    ║
-║ Tranche 2 : 425 000 × 5% = 21 250 GNF                                 ║
-║ TOTAL RTS = 21 250 GNF                                                ║
+║ Tranche 2 : 225 000 × 5% = 11 250 GNF                                 ║
+║ TOTAL RTS = 11 250 GNF                                                ║
 ║                                                                        ║
-║ NET À PAYER = 1 500 000 - 75 000 - 21 250 = 1 403 750 GNF             ║
+║ NET À PAYER = 1 500 000 - 75 000 - 11 250 = 1 413 750 GNF             ║
 ║                                                                        ║
 ╠═══════════════════════════════════════════════════════════════════════╣
 ║                                                                        ║
