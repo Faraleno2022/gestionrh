@@ -814,7 +814,17 @@ class MoteurCalculPaie:
         return min(abattement, plafond)
     
     def _calculer_irg_progressif(self, base_imposable):
-        """Calculer l'RTS selon le barème progressif"""
+        """
+        Calculer l'RTS selon le barème progressif CGI 2022.
+        
+        Barème RTS Guinée (6 tranches):
+        - 0 - 1 000 000 GNF: 0%
+        - 1 000 001 - 3 000 000 GNF: 5%
+        - 3 000 001 - 5 000 000 GNF: 8%
+        - 5 000 001 - 10 000 000 GNF: 10%
+        - 10 000 001 - 20 000 000 GNF: 15%
+        - Au-delà 20 000 000 GNF: 20%
+        """
         if base_imposable <= 0:
             return Decimal('0')
         
@@ -825,17 +835,25 @@ class MoteurCalculPaie:
             if reste <= 0:
                 break
             
+            # Support pour dict (cache) ou objet (QuerySet)
+            if isinstance(tranche, dict):
+                borne_inf = Decimal(str(tranche['borne_inferieure']))
+                borne_sup = tranche.get('borne_superieure')
+                taux = Decimal(str(tranche['taux_irg']))
+            else:
+                borne_inf = tranche.borne_inferieure
+                borne_sup = tranche.borne_superieure
+                taux = tranche.taux_irg
+            
             # Montant de la tranche
-            if tranche.borne_superieure:
-                montant_tranche = min(
-                    reste,
-                    tranche.borne_superieure - tranche.borne_inferieure
-                )
+            if borne_sup:
+                borne_sup = Decimal(str(borne_sup))
+                montant_tranche = min(reste, borne_sup - borne_inf)
             else:
                 montant_tranche = reste
             
             # RTS de la tranche
-            irg_tranche = montant_tranche * tranche.taux_irg / Decimal('100')
+            irg_tranche = montant_tranche * taux / Decimal('100')
             irg_total += irg_tranche
             
             reste -= montant_tranche
