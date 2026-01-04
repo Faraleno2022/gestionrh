@@ -147,6 +147,7 @@ class Employe(models.Model):
             models.Index(fields=['service'], name='idx_emp_service'),
             models.Index(fields=['type_contrat'], name='idx_emp_type_contrat'),
             models.Index(fields=['date_embauche'], name='idx_emp_date_embauche'),
+            models.Index(fields=['matricule'], name='idx_emp_matricule'),
         ]
     
     def __str__(self):
