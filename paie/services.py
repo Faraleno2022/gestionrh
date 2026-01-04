@@ -1,17 +1,24 @@
 """
 Services de calcul de paie
 Moteur de calcul automatique conforme à la législation guinéenne
+
+OPTIMISATIONS PERFORMANCE:
+- Cache des constantes, rubriques et tranches RTS
+- Bulk operations pour les insertions
+- Select_related/prefetch_related pour réduire les requêtes N+1
 """
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import date, timedelta
 from django.db import transaction
 from django.db import models
 from django.utils import timezone
+from functools import lru_cache
 
 from .models import (
     BulletinPaie, LigneBulletin, ElementSalaire, CumulPaie,
     RubriquePaie, Constante, TrancheRTS, PeriodePaie, HistoriquePaie
 )
+from .cache_service import PayrollCacheService
 from employes.models import Employe
 from temps_travail.models import Pointage, Absence, Conge
 from core.services.devises import DeviseService
@@ -66,18 +73,27 @@ class MoteurCalculPaie:
         self.date_conversion = date(self.periode.annee, self.periode.mois, 1)
     
     def _charger_constantes(self):
-        """Charger les constantes actives"""
-        constantes = {}
-        for const in Constante.objects.filter(actif=True):
-            constantes[const.code] = const.valeur
-        return constantes
+        """Charger les constantes actives (avec cache)"""
+        return PayrollCacheService.get_constantes()
     
     def _charger_tranches_irg(self):
-        """Charger le barème RTS"""
-        return TrancheRTS.objects.filter(
+        """Charger le barème RTS (avec cache)"""
+        # Récupérer depuis le cache
+        tranches_data = PayrollCacheService.get_tranches_rts(self.periode.annee)
+        
+        # Si le cache retourne des dicts, on peut les utiliser directement
+        # Sinon, fallback sur la requête DB
+        if tranches_data:
+            return tranches_data
+        
+        # Fallback: requête directe
+        return list(TrancheRTS.objects.filter(
             annee_validite=self.periode.annee,
             actif=True
-        ).order_by('numero_tranche')
+        ).order_by('numero_tranche').values(
+            'numero_tranche', 'borne_inferieure', 
+            'borne_superieure', 'taux_irg'
+        ))
     
     def _arrondir(self, montant):
         """Arrondir un montant à 2 décimales"""

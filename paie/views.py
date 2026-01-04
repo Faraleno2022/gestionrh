@@ -144,7 +144,7 @@ def detail_periode(request, pk):
 @entreprise_active_required
 @reauth_required
 def calculer_periode(request, pk):
-    """Calculer tous les bulletins d'une période"""
+    """Calculer tous les bulletins d'une période (OPTIMISÉ)"""
     periode = get_object_or_404(PeriodePaie, pk=pk, entreprise=request.user.entreprise)
     
     if periode.statut_periode not in ['ouverte', 'calculee']:
@@ -153,45 +153,28 @@ def calculer_periode(request, pk):
     
     if request.method == 'POST':
         try:
-            with transaction.atomic():
-                # Supprimer les bulletins existants
-                BulletinPaie.objects.filter(
-                    periode=periode,
-                    employe__entreprise=request.user.entreprise,
-                ).delete()
-                
-                # Récupérer tous les employés actifs
-                employes = Employe.objects.filter(
-                    entreprise=request.user.entreprise,
-                    statut_employe='actif'
+            # Utiliser le service bulk optimisé
+            from .services_bulk import BulkPayrollService
+            
+            bulk_service = BulkPayrollService(periode, request.user.entreprise)
+            result = bulk_service.calculer_tous_bulletins(utilisateur=request.user)
+            
+            # Mettre à jour le statut de la période
+            periode.statut_periode = 'calculee'
+            periode.save()
+            
+            if result['erreurs']:
+                messages.warning(
+                    request,
+                    f"{result['bulletins_crees']} bulletins créés en {result['temps_execution']}s. "
+                    f"Erreurs: {', '.join(result['erreurs'][:5])}"
+                    f"{'...' if len(result['erreurs']) > 5 else ''}"
                 )
-                
-                bulletins_crees = 0
-                erreurs = []
-                
-                for employe in employes:
-                    try:
-                        # Calculer le bulletin
-                        moteur = MoteurCalculPaie(employe, periode)
-                        bulletin = moteur.generer_bulletin(utilisateur=request.user)
-                        bulletins_crees += 1
-                    except Exception as e:
-                        erreurs.append(f"{employe.matricule}: {str(e)}")
-                
-                # Mettre à jour le statut de la période
-                periode.statut_periode = 'calculee'
-                periode.save()
-                
-                if erreurs:
-                    messages.warning(
-                        request,
-                        f'{bulletins_crees} bulletins créés. Erreurs: {", ".join(erreurs)}'
-                    )
-                else:
-                    messages.success(
-                        request,
-                        f'{bulletins_crees} bulletins calculés avec succès.'
-                    )
+            else:
+                messages.success(
+                    request,
+                    f"{result['bulletins_crees']} bulletins calculés en {result['temps_execution']}s."
+                )
                 
         except Exception as e:
             messages.error(request, f'Erreur lors du calcul : {str(e)}')

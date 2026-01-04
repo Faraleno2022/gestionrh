@@ -140,6 +140,14 @@ class Employe(models.Model):
         verbose_name = 'Employé'
         verbose_name_plural = 'Employés'
         ordering = ['matricule']
+        indexes = [
+            models.Index(fields=['entreprise', 'statut_employe'], name='idx_emp_entreprise_statut'),
+            models.Index(fields=['entreprise', 'nom'], name='idx_emp_entreprise_nom'),
+            models.Index(fields=['statut_employe'], name='idx_emp_statut'),
+            models.Index(fields=['service'], name='idx_emp_service'),
+            models.Index(fields=['type_contrat'], name='idx_emp_type_contrat'),
+            models.Index(fields=['date_embauche'], name='idx_emp_date_embauche'),
+        ]
     
     def __str__(self):
         return f"{self.matricule} - {self.nom} {self.prenoms}"

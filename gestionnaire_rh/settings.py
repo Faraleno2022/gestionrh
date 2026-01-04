@@ -459,3 +459,45 @@ CSRF_TRUSTED_ORIGINS = [
     'https://guineerh.space',
 ]
 
+# ============================================================================
+# PERFORMANCE OPTIMIZATIONS
+# ============================================================================
+
+# Cache Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'gestionnaire-rh-cache',
+        'TIMEOUT': 3600,  # 1 heure par défaut
+        'OPTIONS': {
+            'MAX_ENTRIES': 5000,
+            'CULL_FREQUENCY': 3,  # 1/3 des entrées supprimées quand MAX atteint
+        }
+    }
+}
+
+# Pour production avec Redis (décommenter si Redis disponible)
+# if not DEBUG:
+#     CACHES = {
+#         'default': {
+#             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+#             'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
+#             'TIMEOUT': 3600,
+#             'OPTIONS': {
+#                 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#                 'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+#             }
+#         }
+#     }
+
+# Cache des sessions pour performance
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+
+# Optimisation des requêtes DB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000  # Pour les gros formulaires
+
+# Template caching (activé automatiquement en production via loaders ci-dessus)
+
+# Prefetch/Select related batch size
+PREFETCH_BATCH_SIZE = 1000
+

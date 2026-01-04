@@ -8,6 +8,11 @@ from core.models import Utilisateur, Devise, Entreprise
 # Import des modèles de prêts
 from .models_pret import Pret, EcheancePret
 
+# Import des managers optimisés
+from .managers import (
+    BulletinPaieManager, ElementSalaireManager, PeriodePaieManager
+)
+
 
 class PeriodePaie(models.Model):
     """Périodes de paie"""
@@ -32,6 +37,9 @@ class PeriodePaie(models.Model):
     date_cloture = models.DateTimeField(blank=True, null=True)
     utilisateur_cloture = models.ForeignKey(Utilisateur, on_delete=models.SET_NULL, null=True, related_name='periodes_cloturees')
     observations = models.TextField(blank=True, null=True)
+    
+    # Manager optimisé
+    objects = PeriodePaieManager()
     
     class Meta:
         db_table = 'periodes_paie'
@@ -125,12 +133,21 @@ class BulletinPaie(models.Model):
     token_public = models.CharField(max_length=64, blank=True, null=True, unique=True,
                                    help_text='Token pour téléchargement public du PDF')
     
+    # Manager optimisé
+    objects = BulletinPaieManager()
+    
     class Meta:
         db_table = 'bulletins_paie'
         verbose_name = 'Bulletin de paie'
         verbose_name_plural = 'Bulletins de paie'
         unique_together = ['employe', 'periode']
         ordering = ['-annee_paie', '-mois_paie']
+        indexes = [
+            models.Index(fields=['periode', 'statut_bulletin'], name='idx_bulletin_periode_statut'),
+            models.Index(fields=['employe', 'annee_paie', 'mois_paie'], name='idx_bulletin_emp_periode'),
+            models.Index(fields=['statut_bulletin'], name='idx_bulletin_statut'),
+            models.Index(fields=['annee_paie', 'mois_paie'], name='idx_bulletin_annee_mois'),
+        ]
     
     def __str__(self):
         return f"{self.numero_bulletin} - {self.employe.nom} {self.employe.prenoms}"
@@ -362,6 +379,11 @@ class ElementSalaire(models.Model):
         verbose_name = 'Élément de salaire'
         verbose_name_plural = 'Éléments de salaire'
         ordering = ['employe', 'rubrique__ordre_calcul']
+        indexes = [
+            models.Index(fields=['employe', 'actif'], name='idx_elem_employe_actif'),
+            models.Index(fields=['employe', 'date_debut', 'date_fin'], name='idx_elem_employe_dates'),
+            models.Index(fields=['rubrique'], name='idx_elem_rubrique'),
+        ]
     
     def __str__(self):
         if self.montant:
@@ -394,6 +416,10 @@ class LigneBulletin(models.Model):
         verbose_name = 'Ligne de bulletin'
         verbose_name_plural = 'Lignes de bulletin'
         ordering = ['bulletin', 'ordre']
+        indexes = [
+            models.Index(fields=['bulletin'], name='idx_ligne_bulletin'),
+            models.Index(fields=['rubrique'], name='idx_ligne_rubrique'),
+        ]
     
     def __str__(self):
         return f"{self.bulletin.numero_bulletin} - {self.rubrique.code_rubrique}: {self.montant:,.0f}"
