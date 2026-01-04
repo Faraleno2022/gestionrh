@@ -1109,7 +1109,7 @@ TESTS DE VÉRIFICATION DES CALCULS DE PAIE - GUINÉE
 ======================================================================
 📊 TEST 1: CALCUL CNSS (Plancher/Plafond) - 6/6 ✓
 📊 TEST 2: BARÈME RTS CGI 2022 (5 tranches) - 10/10 ✓
-📊 TEST 3: CHARGES PATRONALES (CNSS 18% + VF 6% + TA 2%) - 3/3 ✓
+📊 TEST 3: CHARGES PATRONALES (CNSS 18% + VF 6% + TA 1,5%) - 3/3 ✓
 📊 TEST 4: EXEMPLE COMPLET DU MANUEL (8 000 000 GNF) - 8/8 ✓
 📊 TEST 5: EXONÉRATION RTS STAGIAIRES/APPRENTIS - 9/9 ✓
 📊 TEST 6: PLAFOND 25% INDEMNITÉS FORFAITAIRES - 6/6 ✓
@@ -1129,7 +1129,7 @@ TESTS DE VÉRIFICATION DES CALCULS DE PAIE - GUINÉE
 | CNSS Employé | 5% | Plafonnée (550K - 2,5M) |
 | CNSS Employeur | 18% | Plafonnée (550K - 2,5M) |
 | Versement Forfaitaire | 6% | Brut total |
-| Taxe d'Apprentissage | 2% | Brut total (CGI 2022) |
+| Taxe d'Apprentissage | 1,5% | Brut total (CGI 2022) |
 | Contribution ONFPP | 1,5% | Brut total |
 | RTS Tranche 1 | 0% | 0 - 1M |
 | RTS Tranche 2 | 5% | 1M - 5M |
@@ -1154,7 +1154,7 @@ TESTS DE VÉRIFICATION DES CALCULS DE PAIE - GUINÉE
 | 2.0 | Déc 2025 | Exonérations stagiaires, plafond 25%, alertes |
 | 3.0 | Déc 2025 | Formule correcte plafond 25% (33% base), indemnités licenciement, préavis, congé maternité, allocations familiales, accidents travail, jours fériés |
 | 3.1 | Déc 2025 | Heures supplémentaires, congés payés avec majorations ancienneté, prolongation maternité +21 jours |
-| 3.2 | Jan 2026 | Correction barème RTS (5 tranches sans 8%), TA 2% (CGI 2022), ajout ONFPP 1,5% |
+| 3.2 | Jan 2026 | Correction barème RTS (5 tranches sans 8%), TA 1,5% (CGI 2022), ajout ONFPP 1,5% |
 
 ---
 
