@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -110,13 +111,10 @@
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="guinea-flag">
-                            <div class="red"></div>
-                            <div class="yellow"></div>
-                            <div class="green"></div>
-                        </div>
                         <div>
                             <strong style="color: var(--orange-main);">International Consulting</strong> <span style="color: #fff;">Guinea</span>
+                            <br>
+                            <img src="{% static 'img/logo_icg.png' %}" alt="International Consulting Guinea" style="height: 50px; margin-top: 8px;">
                             <br><small>Solution RH pour la Guinée</small>
                         </div>
                     </div>
