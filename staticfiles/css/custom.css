@@ -18,11 +18,6 @@ body {
     padding-top: 56px; /* Hauteur de la navbar */
 }
 
-/* Body avec navbar fixe */
-body {
-    padding-top: 56px; /* Hauteur de la navbar */
-}
-
 /* Sidebar */
 .sidebar {
     position: fixed;
@@ -246,11 +241,7 @@ main {
 
 .sidebar-toggle:hover,
 .sidebar-toggle:focus {
-<<<<<<< Updated upstream
     color: var(--orange-main) !important;
-=======
-    color: var(--guinea-yellow) !important;
->>>>>>> Stashed changes
     text-decoration: none;
 }
 
@@ -317,11 +308,7 @@ main {
     }
     
     .sidebar-close:hover {
-<<<<<<< Updated upstream
         color: var(--orange-main);
-=======
-        color: var(--guinea-red);
->>>>>>> Stashed changes
     }
 }
 
