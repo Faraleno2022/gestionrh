@@ -38,15 +38,19 @@ class EntrepriseRegistrationForm(forms.ModelForm):
     
     class Meta:
         model = Entreprise
-        fields = ['nom_entreprise', 'email', 'telephone', 'ville', 'pays', 'plan_abonnement', 'logo']
+        fields = ['nom_entreprise', 'type_module', 'email', 'telephone', 'ville', 'pays', 'plan_abonnement', 'logo']
         widgets = {
             'nom_entreprise': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom de votre entreprise'}),
+            'type_module': forms.Select(attrs={'class': 'form-select'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'contact@entreprise.com'}),
             'telephone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+224 XXX XX XX XX'}),
             'ville': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Conakry'}),
             'pays': forms.TextInput(attrs={'class': 'form-control', 'value': 'Guinée'}),
             'plan_abonnement': forms.Select(attrs={'class': 'form-select'}),
             'logo': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+        }
+        labels = {
+            'type_module': 'Type de compte',
         }
     
     def clean_admin_password_confirm(self):
