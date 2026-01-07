@@ -6,9 +6,16 @@ import uuid
 
 class Entreprise(models.Model):
     """Modèle pour gérer plusieurs entreprises"""
+    TYPES_MODULE = [
+        ('rh', 'Ressources Humaines'),
+        ('compta', 'Comptabilité'),
+        ('both', 'RH + Comptabilité'),
+    ]
+    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     nom_entreprise = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, max_length=100)
+    type_module = models.CharField(max_length=10, choices=TYPES_MODULE, default='rh', verbose_name='Type de compte')
     secteur_activite = models.CharField(max_length=100, blank=True, null=True, verbose_name='Secteur d\'activité')
     nif = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name='NIF')
     num_cnss = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name='N° CNSS')
@@ -28,6 +35,14 @@ class Entreprise(models.Model):
         ('entreprise', 'Entreprise'),
     ])
     max_utilisateurs = models.IntegerField(default=5, help_text='Nombre maximum d\'utilisateurs')
+    
+    @property
+    def has_rh(self):
+        return self.type_module in ['rh', 'both']
+    
+    @property
+    def has_compta(self):
+        return self.type_module in ['compta', 'both']
     
     class Meta:
         db_table = 'entreprises'

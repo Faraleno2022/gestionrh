@@ -1,0 +1,58 @@
+from django.urls import path
+from . import views
+
+app_name = 'comptabilite'
+
+urlpatterns = [
+    # Dashboard comptabilité
+    path('', views.dashboard, name='dashboard'),
+    
+    # Plan comptable
+    path('plan-comptable/', views.plan_comptable_list, name='plan_comptable_list'),
+    path('plan-comptable/ajouter/', views.plan_comptable_create, name='plan_comptable_create'),
+    path('plan-comptable/<int:pk>/', views.plan_comptable_detail, name='plan_comptable_detail'),
+    path('plan-comptable/<int:pk>/modifier/', views.plan_comptable_update, name='plan_comptable_update'),
+    
+    # Journaux
+    path('journaux/', views.journal_list, name='journal_list'),
+    path('journaux/ajouter/', views.journal_create, name='journal_create'),
+    path('journaux/<int:pk>/modifier/', views.journal_update, name='journal_update'),
+    
+    # Exercices comptables
+    path('exercices/', views.exercice_list, name='exercice_list'),
+    path('exercices/ajouter/', views.exercice_create, name='exercice_create'),
+    path('exercices/<int:pk>/modifier/', views.exercice_update, name='exercice_update'),
+    
+    # Écritures comptables
+    path('ecritures/', views.ecriture_list, name='ecriture_list'),
+    path('ecritures/ajouter/', views.ecriture_create, name='ecriture_create'),
+    path('ecritures/<uuid:pk>/', views.ecriture_detail, name='ecriture_detail'),
+    path('ecritures/<uuid:pk>/modifier/', views.ecriture_update, name='ecriture_update'),
+    path('ecritures/<uuid:pk>/valider/', views.ecriture_valider, name='ecriture_valider'),
+    
+    # Tiers (clients/fournisseurs)
+    path('tiers/', views.tiers_list, name='tiers_list'),
+    path('tiers/ajouter/', views.tiers_create, name='tiers_create'),
+    path('tiers/<uuid:pk>/', views.tiers_detail, name='tiers_detail'),
+    path('tiers/<uuid:pk>/modifier/', views.tiers_update, name='tiers_update'),
+    
+    # Factures
+    path('factures/', views.facture_list, name='facture_list'),
+    path('factures/ajouter/', views.facture_create, name='facture_create'),
+    path('factures/<uuid:pk>/', views.facture_detail, name='facture_detail'),
+    path('factures/<uuid:pk>/modifier/', views.facture_update, name='facture_update'),
+    path('factures/<uuid:pk>/valider/', views.facture_valider, name='facture_valider'),
+    path('factures/<uuid:pk>/imprimer/', views.facture_print, name='facture_print'),
+    
+    # Règlements
+    path('reglements/', views.reglement_list, name='reglement_list'),
+    path('reglements/ajouter/', views.reglement_create, name='reglement_create'),
+    path('reglements/<uuid:pk>/', views.reglement_detail, name='reglement_detail'),
+    
+    # États financiers
+    path('etats/grand-livre/', views.grand_livre, name='grand_livre'),
+    path('etats/balance/', views.balance, name='balance'),
+    path('etats/journal-general/', views.journal_general, name='journal_general'),
+    path('etats/bilan/', views.bilan, name='bilan'),
+    path('etats/compte-resultat/', views.compte_resultat, name='compte_resultat'),
+]

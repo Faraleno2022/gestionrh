@@ -1,0 +1,45 @@
+{% extends 'comptabilite/base_compta.html' %}
+
+{% block title %}{% if ecriture %}Modifier{% else %}Nouvelle{% endif %} Écriture{% endblock %}
+
+{% block compta_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-journal-text me-2"></i>{% if ecriture %}Modifier l'écriture{% else %}Nouvelle écriture{% endif %}</h4>
+    <a href="{% url 'comptabilite:ecriture_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Exercice <span class="text-danger">*</span></label>
+                    {{ form.exercice }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Journal <span class="text-danger">*</span></label>
+                    {{ form.journal }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">N° Écriture <span class="text-danger">*</span></label>
+                    {{ form.numero_ecriture }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Date <span class="text-danger">*</span></label>
+                    {{ form.date_ecriture }}
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">Libellé <span class="text-danger">*</span></label>
+                    {{ form.libelle }}
+                </div>
+            </div>
+            <hr>
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'comptabilite:ecriture_list' %}" class="btn btn-outline-secondary">Annuler</a>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i>Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
