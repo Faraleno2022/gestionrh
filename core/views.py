@@ -165,8 +165,21 @@ def register_entreprise(request):
     
     # Vérifier si les inscriptions sont désactivées
     if getattr(settings, 'REGISTRATION_DISABLED', False):
-        messages.warning(request, "Les inscriptions sont temporairement suspendues. Veuillez réessayer plus tard ou contacter l'administrateur.")
-        return render(request, 'core/registration_disabled.html')
+        # Vérifier le code admin dans la session ou le paramètre GET
+        admin_code = getattr(settings, 'ADMIN_REGISTRATION_CODE', '')
+        code_saisi = request.GET.get('code', '') or request.session.get('admin_registration_code', '')
+        
+        # Si code fourni en GET, le sauvegarder en session
+        if request.GET.get('code'):
+            if request.GET.get('code') == admin_code:
+                request.session['admin_registration_code'] = request.GET.get('code')
+            else:
+                messages.error(request, "Code de vérification incorrect.")
+                return render(request, 'core/registration_disabled.html')
+        
+        # Si pas de code valide, afficher la page de blocage
+        if code_saisi != admin_code:
+            return render(request, 'core/registration_disabled.html')
     
     if request.method == 'POST':
         form = EntrepriseRegistrationForm(request.POST, request.FILES)

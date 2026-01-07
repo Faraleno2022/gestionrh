@@ -18,6 +18,9 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 # Bloquer temporairement les inscriptions (True = inscriptions bloquées)
 REGISTRATION_DISABLED = config('REGISTRATION_DISABLED', default=True, cast=bool)
 
+# Code de vérification administrateur pour créer un compte
+ADMIN_REGISTRATION_CODE = config('ADMIN_REGISTRATION_CODE', default='625196629')
+
 ALLOWED_HOSTS = ['www.guineerh.space', 'guineerh.space', 'guineerh.pythonanywhere.com', 'localhost', '127.0.0.1']
 
 # Application definition
