@@ -35,6 +35,9 @@ def log_activity(request, action, module=None, table=None, id_enreg=None, detail
 def login_view(request):
     """Vue de connexion"""
     if request.user.is_authenticated:
+        # Rediriger selon le type de module
+        if request.user.entreprise and request.user.entreprise.type_module == 'compta':
+            return redirect('comptabilite:dashboard')
         return redirect('dashboard:index')
     
     if request.method == 'POST':
@@ -49,6 +52,9 @@ def login_view(request):
                 user.enregistrer_connexion()
                 log_activity(request, 'Connexion', 'core')
                 messages.success(request, f'Bienvenue {user.get_full_name()}!')
+                # Rediriger selon le type de module
+                if user.entreprise and user.entreprise.type_module == 'compta':
+                    return redirect('comptabilite:dashboard')
                 return redirect('dashboard:index')
             else:
                 messages.error(request, 'Votre compte est désactivé.')
@@ -194,7 +200,11 @@ def register_entreprise(request):
                     request,
                     f'Entreprise {entreprise.nom_entreprise} créée avec succès! Bienvenue {admin_user.get_full_name()}!'
                 )
-                return redirect('dashboard:index')
+                # Rediriger selon le type de module choisi
+                if entreprise.type_module == 'compta':
+                    return redirect('comptabilite:dashboard')
+                else:
+                    return redirect('dashboard:index')
         else:
             messages.error(request, 'Veuillez corriger les erreurs ci-dessous.')
     else:
