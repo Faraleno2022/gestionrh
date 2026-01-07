@@ -160,7 +160,13 @@ def csrf_failure(request, reason=""):
 
 def register_entreprise(request):
     """Vue d'inscription d'une nouvelle entreprise"""
+    from django.conf import settings
     from .forms import EntrepriseRegistrationForm
+    
+    # Vérifier si les inscriptions sont désactivées
+    if getattr(settings, 'REGISTRATION_DISABLED', False):
+        messages.warning(request, "Les inscriptions sont temporairement suspendues. Veuillez réessayer plus tard ou contacter l'administrateur.")
+        return render(request, 'core/registration_disabled.html')
     
     if request.method == 'POST':
         form = EntrepriseRegistrationForm(request.POST, request.FILES)

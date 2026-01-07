@@ -15,6 +15,9 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-produc
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
+# Bloquer temporairement les inscriptions (True = inscriptions bloquées)
+REGISTRATION_DISABLED = config('REGISTRATION_DISABLED', default=True, cast=bool)
+
 ALLOWED_HOSTS = ['www.guineerh.space', 'guineerh.space', 'guineerh.pythonanywhere.com', 'localhost', '127.0.0.1']
 
 # Application definition
