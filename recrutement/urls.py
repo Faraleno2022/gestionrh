@@ -25,6 +25,7 @@ urlpatterns = [
     path('candidatures/creer/', views.creer_candidature, name='creer_candidature'),
     path('candidatures/<int:pk>/', views.detail_candidature, name='detail_candidature'),
     path('candidatures/<int:pk>/evaluer/', views.evaluer_candidature, name='evaluer_candidature'),
+    path('candidatures/<int:pk>/supprimer-document/', views.supprimer_document_candidature, name='supprimer_document_candidature'),
     
     # Entretiens
     path('entretiens/', views.liste_entretiens, name='entretiens'),

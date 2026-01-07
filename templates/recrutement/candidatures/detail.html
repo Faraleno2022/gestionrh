@@ -98,9 +98,14 @@
                             <i class="bi bi-file-earmark-person fs-1 text-primary"></i>
                             <h6 class="mt-2">CV</h6>
                             {% if candidature.cv_fichier %}
-                            <a href="{{ candidature.cv_fichier.url }}" target="_blank" class="btn btn-sm btn-primary">
-                                <i class="bi bi-download me-1"></i>Télécharger
-                            </a>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="{{ candidature.cv_fichier.url }}" target="_blank" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-download me-1"></i>Télécharger
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-file="cv_fichier" data-name="CV">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
                             {% else %}
                             <span class="text-muted">Non fourni</span>
                             {% endif %}
@@ -111,9 +116,14 @@
                             <i class="bi bi-file-earmark-text fs-1 text-info"></i>
                             <h6 class="mt-2">Lettre de Motivation</h6>
                             {% if candidature.lettre_motivation %}
-                            <a href="{{ candidature.lettre_motivation.url }}" target="_blank" class="btn btn-sm btn-info">
-                                <i class="bi bi-download me-1"></i>Télécharger
-                            </a>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="{{ candidature.lettre_motivation.url }}" target="_blank" class="btn btn-sm btn-info">
+                                    <i class="bi bi-download me-1"></i>Télécharger
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-file="lettre_motivation" data-name="Lettre de motivation">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
                             {% else %}
                             <span class="text-muted">Non fourni</span>
                             {% endif %}
@@ -124,9 +134,14 @@
                             <i class="bi bi-file-earmark-zip fs-1 text-warning"></i>
                             <h6 class="mt-2">Autres Documents</h6>
                             {% if candidature.autres_documents %}
-                            <a href="{{ candidature.autres_documents.url }}" target="_blank" class="btn btn-sm btn-warning">
-                                <i class="bi bi-download me-1"></i>Télécharger
-                            </a>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="{{ candidature.autres_documents.url }}" target="_blank" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-download me-1"></i>Télécharger
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-file="autres_documents" data-name="Autres documents">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
                             {% else %}
                             <span class="text-muted">Non fourni</span>
                             {% endif %}
@@ -253,4 +268,41 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'recrutement:supprimer_document_candidature' candidature.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>Êtes-vous sûr de vouloir supprimer le fichier <strong id="fileName"></strong> ?</p>
+                    <p class="text-muted small">Cette action est irréversible.</p>
+                    <input type="hidden" name="file_field" id="fileField">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Supprimer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var deleteModal = document.getElementById('deleteModal');
+    deleteModal.addEventListener('show.bs.modal', function(event) {
+        var button = event.relatedTarget;
+        var fileField = button.getAttribute('data-file');
+        var fileName = button.getAttribute('data-name');
+        document.getElementById('fileField').value = fileField;
+        document.getElementById('fileName').textContent = fileName;
+    });
+});
+</script>
 {% endblock %}

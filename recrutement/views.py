@@ -384,6 +384,36 @@ def detail_candidature(request, pk):
 
 @login_required
 @entreprise_active_required
+def supprimer_document_candidature(request, pk):
+    """Supprimer un document d'une candidature (CV, lettre, autres)"""
+    candidature = get_object_or_404(Candidature, pk=pk, offre__entreprise=request.user.entreprise)
+    
+    if request.method == 'POST':
+        file_field = request.POST.get('file_field')
+        
+        if file_field == 'cv_fichier' and candidature.cv_fichier:
+            candidature.cv_fichier.delete(save=False)
+            candidature.cv_fichier = None
+            candidature.save()
+            messages.success(request, 'CV supprimé avec succès.')
+        elif file_field == 'lettre_motivation' and candidature.lettre_motivation:
+            candidature.lettre_motivation.delete(save=False)
+            candidature.lettre_motivation = None
+            candidature.save()
+            messages.success(request, 'Lettre de motivation supprimée avec succès.')
+        elif file_field == 'autres_documents' and candidature.autres_documents:
+            candidature.autres_documents.delete(save=False)
+            candidature.autres_documents = None
+            candidature.save()
+            messages.success(request, 'Document supprimé avec succès.')
+        else:
+            messages.error(request, 'Fichier non trouvé.')
+    
+    return redirect('recrutement:detail_candidature', pk=pk)
+
+
+@login_required
+@entreprise_active_required
 def evaluer_candidature(request, pk):
     """Évaluer une candidature"""
     candidature = get_object_or_404(Candidature, pk=pk, offre__entreprise=request.user.entreprise)
