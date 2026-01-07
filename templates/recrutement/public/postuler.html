@@ -211,6 +211,11 @@
                             <div class="file-upload">
                                 <input type="file" class="form-control" name="cv_fichier" accept=".pdf,.doc,.docx" required>
                                 <small class="text-muted">Max 5 Mo</small>
+                                <div class="mt-2 d-flex justify-content-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="document.querySelector('input[name=\'cv_fichier\']').value='';">
+                                        <i class="bi bi-trash me-1"></i>Supprimer
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -218,6 +223,11 @@
                             <div class="file-upload">
                                 <input type="file" class="form-control" name="lettre_motivation" accept=".pdf,.doc,.docx">
                                 <small class="text-muted">Max 5 Mo</small>
+                                <div class="mt-2 d-flex justify-content-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="document.querySelector('input[name=\'lettre_motivation\']').value='';">
+                                        <i class="bi bi-trash me-1"></i>Supprimer
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div class="col-12">
@@ -225,6 +235,11 @@
                             <div class="file-upload">
                                 <input type="file" class="form-control" name="autres_documents" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
                                 <small class="text-muted">Max 5 Mo - PDF, Word ou Image</small>
+                                <div class="mt-2 d-flex justify-content-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="document.querySelector('input[name=\'autres_documents\']').value='';">
+                                        <i class="bi bi-trash me-1"></i>Supprimer
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
