@@ -1172,6 +1172,9 @@
                             <span class="job-badge">{{ offre.get_type_contrat_display|default:offre.type_contrat|default:"CDI" }}</span>
                         </div>
                         <h4 class="job-title">{{ offre.intitule_poste }}</h4>
+                        <div class="job-reference">
+                            <small class="text-muted"><i class="bi bi-hash me-1"></i>Réf: {{ offre.reference_offre|default:offre.pk }}</small>
+                        </div>
                         <div class="job-details">
                             {% if offre.service %}
                             <div class="job-detail">
