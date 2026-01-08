@@ -1,50 +1,62 @@
 {% load static %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Comptabilité{% endblock %}</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>{% block title %}Comptabilité - {{ request.user.entreprise.nom_entreprise|default:"RH Guinée" }}{% endblock %}</title>
+    
+    <!-- DNS Prefetch pour accélérer les connexions CDN -->
+    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" 
+          integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+    
+    <!-- Bootstrap Icons - Chargement différé -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" media="print" onload="this.media='all'">
+    
+    <!-- Font Awesome - Chargement différé -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+          integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" media="print" onload="this.media='all'">
+    
+    <!-- Custom CSS -->
+    {% if debug %}
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    {% else %}
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}" onerror="this.onerror=null;">
+    {% endif %}
+    
+    {% block extra_css %}{% endblock %}
     
     <style>
-        body { min-height: 100vh; background: #f5f6fa; }
-        .compta-navbar {
-            background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+        /* Styles de base pour éviter le FOUC (Flash of Unstyled Content) */
+        body { min-height: 100vh; background: #f8f9fa; }
+        .form-control, .form-select { min-height: 38px; }
+        .btn { cursor: pointer; }
+        /* Table header orange clair */
+        .table-orange-light, .table-orange-light > tr > th, .table-orange-light > tr > td {
+            background-color: #FFD699 !important;
+            color: #333 !important;
         }
-        .compta-sidebar {
-            background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
-            min-height: calc(100vh - 56px);
-            position: fixed;
-            top: 56px;
-            left: 0;
-            width: 220px;
-            overflow-y: auto;
-        }
-        .compta-sidebar .nav-link {
-            color: rgba(255,255,255,0.8);
-            padding: 0.6rem 1rem;
-            border-radius: 8px;
-            margin: 2px 8px;
-            transition: all 0.3s;
-            font-size: 0.9rem;
-        }
-        .compta-sidebar .nav-link:hover,
-        .compta-sidebar .nav-link.active {
-            background: rgba(255,255,255,0.15);
-            color: #fff;
-        }
-        .compta-sidebar .nav-link i { width: 22px; }
+        /* Sidebar styles identiques au module RH */
+        #sidebar .nav-link { color: #333333 !important; }
+        #sidebar .nav-link:hover { color: #EF7707 !important; background: rgba(0,0,0,0.05); }
+        #sidebar .nav-link.active { color: #EF7707 !important; background: rgba(239,119,7,0.15); border-left: 3px solid #EF7707; }
+        #sidebar .sidebar-heading { color: #EF7707 !important; }
+        #sidebar .border-top { border-color: rgba(0,0,0,0.1) !important; }
         .compta-main {
             margin-left: 220px;
             padding: 1.5rem;
             min-height: calc(100vh - 56px);
         }
         .compta-header {
-            background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+            background: linear-gradient(90deg, #EF7707 0%, #FF8C00 100%);
             color: white;
             padding: 1rem;
             border-radius: 12px;
@@ -74,77 +86,209 @@
     </style>
 </head>
 <body>
-    <!-- Navbar Comptabilité -->
-    <nav class="navbar navbar-expand-lg navbar-dark compta-navbar fixed-top">
+    <!-- Navbar identique au module RH -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top" style="background: linear-gradient(90deg, #EF7707 0%, #FF8C00 100%); border-bottom: 3px solid #CC6600;">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'comptabilite:dashboard' %}">
-                <i class="bi bi-calculator me-2"></i>Comptabilité
+            <!-- Bouton toggle sidebar pour mobile/tablette -->
+            <button class="btn btn-link d-md-none me-2 sidebar-toggle" type="button" id="sidebarToggle" style="color: #FFFFFF;">
+                <i class="fas fa-bars fa-lg"></i>
+            </button>
+            
+            <a class="navbar-brand d-flex align-items-center" href="{% url 'comptabilite:dashboard' %}">
+                {% if request.user.entreprise.logo %}
+                    <img src="{{ request.user.entreprise.logo.url }}" alt="{{ request.user.entreprise.nom_entreprise }}" style="height: 40px; margin-right: 10px;" class="d-inline-block">
+                {% else %}
+                    <i class="fas fa-calculator me-2" style="color: #FFFFFF;"></i>
+                {% endif %}
+                <span class="d-none d-sm-inline" style="color: #FFFFFF;">Comptabilité - {{ request.user.entreprise.nom_entreprise|default:"RH Guinée" }}</span>
+                <span class="d-sm-none" style="color: #FFFFFF;">Compta</span>
             </a>
-            <div class="d-flex align-items-center">
-                <span class="text-white me-3">{{ request.user.entreprise.nom_entreprise }}</span>
-                <div class="dropdown">
-                    <a class="btn btn-outline-light btn-sm dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                        <i class="bi bi-person-circle me-1"></i>{{ request.user.get_full_name|default:request.user.username }}
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="{% url 'core:profile' %}"><i class="bi bi-person me-2"></i>Mon profil</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger" href="{% url 'core:logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Déconnexion</a></li>
-                    </ul>
-                </div>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if user.est_admin_entreprise %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:entreprise_settings' %}">
+                            <i class="fas fa-building"></i> Paramètres Entreprise
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle"></i> {{ user.get_full_name|default:user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'core:profile' %}"><i class="fas fa-user"></i> Mon profil</a></li>
+                            {% if user.est_admin_entreprise %}
+                            <li><a class="dropdown-item" href="{% url 'core:admin_dashboard' %}"><i class="fas fa-tachometer-alt"></i> Tableau de bord admin</a></li>
+                            <li><a class="dropdown-item" href="{% url 'core:manage_users' %}"><i class="fas fa-users"></i> Gérer utilisateurs</a></li>
+                            <li><a class="dropdown-item" href="{% url 'core:entreprise_settings' %}"><i class="fas fa-building"></i> Paramètres entreprise</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'core:logout' %}"><i class="fas fa-sign-out-alt"></i> Déconnexion</a></li>
+                        </ul>
+                    </li>
+                </ul>
             </div>
         </div>
     </nav>
 
-    <!-- Sidebar Comptabilité -->
-    <div class="compta-sidebar p-2 pt-3">
-        <nav class="nav flex-column">
-            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'comptabilite:dashboard' %}">
-                <i class="bi bi-speedometer2 me-2"></i>Tableau de bord
-            </a>
-            <hr class="border-light my-2 mx-2">
-            <small class="text-white-50 px-3 mb-1">SAISIE</small>
-            <a class="nav-link {% if 'ecriture' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:ecriture_list' %}">
-                <i class="bi bi-journal-text me-2"></i>Écritures
-            </a>
-            <a class="nav-link {% if 'facture' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:facture_list' %}">
-                <i class="bi bi-receipt me-2"></i>Factures
-            </a>
-            <a class="nav-link {% if 'reglement' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:reglement_list' %}">
-                <i class="bi bi-cash-stack me-2"></i>Règlements
-            </a>
-            <hr class="border-light my-2 mx-2">
-            <small class="text-white-50 px-3 mb-1">PARAMÈTRES</small>
-            <a class="nav-link {% if 'plan_comptable' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:plan_comptable_list' %}">
-                <i class="bi bi-list-columns me-2"></i>Plan comptable
-            </a>
-            <a class="nav-link {% if 'journal' in request.resolver_match.url_name and 'general' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:journal_list' %}">
-                <i class="bi bi-book me-2"></i>Journaux
-            </a>
-            <a class="nav-link {% if 'exercice' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:exercice_list' %}">
-                <i class="bi bi-calendar-range me-2"></i>Exercices
-            </a>
-            <a class="nav-link {% if 'tiers' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:tiers_list' %}">
-                <i class="bi bi-people me-2"></i>Tiers
-            </a>
-            <hr class="border-light my-2 mx-2">
-            <small class="text-white-50 px-3 mb-1">ÉTATS</small>
-            <a class="nav-link {% if 'grand_livre' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:grand_livre' %}">
-                <i class="bi bi-file-earmark-text me-2"></i>Grand livre
-            </a>
-            <a class="nav-link {% if 'balance' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:balance' %}">
-                <i class="bi bi-bar-chart me-2"></i>Balance
-            </a>
-            <a class="nav-link {% if 'journal_general' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:journal_general' %}">
-                <i class="bi bi-journal me-2"></i>Journal général
-            </a>
-            <a class="nav-link {% if 'bilan' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:bilan' %}">
-                <i class="bi bi-pie-chart me-2"></i>Bilan
-            </a>
-            <a class="nav-link {% if 'compte_resultat' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:compte_resultat' %}">
-                <i class="bi bi-graph-up me-2"></i>Compte de résultat
-            </a>
-        </nav>
+    <!-- Sidebar identique au module RH avec menu comptabilité -->
+    <div class="col-md-3 col-lg-2 d-md-block" id="sidebar">
+        <div class="position-sticky pt-3">
+            <!-- Moyens de paiement et Plans -->
+            <div class="px-3 mb-2">
+                <a href="{% url 'payments:plans' %}" class="btn btn-sm w-100 py-1" style="font-size: 0.75rem; background: linear-gradient(135deg, #EF7707 0%, #d96a06 100%); color: white; border: none;">
+                    <i class="bi bi-gem"></i> Plans & Tarifs
+                </a>
+                <div class="d-flex justify-content-center gap-1 mt-1" style="font-size: 0.65rem;">
+                    <span class="badge bg-light text-muted border px-1 py-0" title="Orange Money">OM</span>
+                    <span class="badge bg-light text-muted border px-1 py-0" title="MTN">MTN</span>
+                    <span class="badge bg-light text-muted border px-1 py-0" title="Visa">Visa</span>
+                    <span class="badge bg-light text-muted border px-1 py-0" title="MC">MC</span>
+                </div>
+            </div>
+            
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'comptabilite:dashboard' %}">
+                        <i class="bi bi-speedometer2"></i> Tableau de bord
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                        <span>SAISIE</span>
+                    </h6>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if 'ecriture' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:ecriture_list' %}">
+                        <i class="bi bi-journal-text"></i> Écritures
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if 'facture' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:facture_list' %}">
+                        <i class="bi bi-receipt"></i> Factures
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if 'reglement' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:reglement_list' %}">
+                        <i class="bi bi-cash-stack"></i> Règlements
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                        <span>PARAMÈTRES</span>
+                    </h6>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if 'plan_comptable' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:plan_comptable_list' %}">
+                        <i class="bi bi-list-columns"></i> Plan comptable
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if 'journal' in request.resolver_match.url_name and 'general' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:journal_list' %}">
+                        <i class="bi bi-book"></i> Journaux
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if 'exercice' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:exercice_list' %}">
+                        <i class="bi bi-calendar-range"></i> Exercices
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if 'tiers' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:tiers_list' %}">
+                        <i class="bi bi-people"></i> Tiers
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                        <span>ÉTATS</span>
+                    </h6>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if 'grand_livre' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:grand_livre' %}">
+                        <i class="bi bi-file-earmark-text"></i> Grand livre
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if 'balance' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:balance' %}">
+                        <i class="bi bi-bar-chart"></i> Balance
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if 'journal_general' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:journal_general' %}">
+                        <i class="bi bi-journal"></i> Journal général
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if 'bilan' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:bilan' %}">
+                        <i class="bi bi-pie-chart"></i> Bilan
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if 'compte_resultat' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:compte_resultat' %}">
+                        <i class="bi bi-graph-up"></i> Compte de résultat
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                        <span>MODULES</span>
+                    </h6>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'dashboard:index' %}">
+                        <i class="bi bi-speedometer2"></i> RH Principal
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'recrutement:offres' %}">
+                        <i class="bi bi-briefcase"></i> Recrutement
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'formation:home' %}">
+                        <i class="bi bi-mortarboard"></i> Formation
+                    </a>
+                </li>
+                
+                <!-- Mon Profil (visible pour tous) -->
+                <li class="nav-item mt-4 border-top pt-3">
+                    <a class="nav-link" href="{% url 'core:profile' %}">
+                        <i class="bi bi-person-circle"></i> Mon Profil
+                    </a>
+                </li>
+                
+                <!-- Documentation CGI 2022 -->
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-success fw-bold" href="{% url 'core:telecharger_documentation' %}" style="background: rgba(40,167,69,0.1); border-radius: 5px; margin: 0 10px;">
+                        <i class="bi bi-file-earmark-zip-fill"></i> 📚 Documentation CGI 2022
+                    </a>
+                </li>
+            </ul>
+        </div>
     </div>
 
     <!-- Contenu principal -->
@@ -160,10 +304,21 @@
         </div>
         {% endif %}
         
-        {% block compta_content %}{% endblock %}
+        {% block compta_content %}
+        {% endblock %}
     </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Scripts communs -->
+    <script>
+        // Sidebar toggle pour mobile
+        document.getElementById('sidebarToggle')?.addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('d-none');
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
