@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.conf import settings
-from django.db import models
+from django.db import models, IntegrityError
 from .models import LogActivite, Utilisateur
 
 
@@ -190,7 +190,14 @@ def register_entreprise(request):
     if request.method == 'POST':
         form = EntrepriseRegistrationForm(request.POST, request.FILES)
         if form.is_valid():
-            entreprise = form.save()
+            try:
+                entreprise = form.save()
+            except IntegrityError as e:
+                if 'utilisateurs.email' in str(e):
+                    form.add_error('admin_email', 'Cet email est déjà utilisé par un autre compte.')
+                    return render(request, 'core/register_entreprise.html', {'form': form})
+                else:
+                    raise e
             
             # Connecter automatiquement l'administrateur
             admin_user = entreprise.utilisateurs.filter(est_admin_entreprise=True).first()
