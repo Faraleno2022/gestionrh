@@ -301,12 +301,33 @@ def ecriture_create(request):
             ecriture = form.save(commit=False)
             ecriture.entreprise = entreprise
             ecriture.save()
-            messages.success(request, f"Écriture {ecriture.numero_ecriture} créée.")
+            
+            # Traiter les lignes d'écriture
+            comptes_ids = request.POST.getlist('compte[]')
+            libelles = request.POST.getlist('libelle_ligne[]')
+            debits = request.POST.getlist('debit[]')
+            credits = request.POST.getlist('credit[]')
+            
+            for i, compte_id in enumerate(comptes_ids):
+                if compte_id:
+                    debit = Decimal(debits[i]) if debits[i] else Decimal('0')
+                    credit = Decimal(credits[i]) if credits[i] else Decimal('0')
+                    
+                    if debit > 0 or credit > 0:
+                        LigneEcriture.objects.create(
+                            ecriture=ecriture,
+                            compte_id=compte_id,
+                            libelle=libelles[i] if i < len(libelles) else '',
+                            montant_debit=debit,
+                            montant_credit=credit
+                        )
+            
+            messages.success(request, f"Écriture {ecriture.numero_ecriture} créée avec {ecriture.lignes.count()} lignes.")
             return redirect('comptabilite:ecriture_detail', pk=ecriture.pk)
     else:
         form = EcritureForm(entreprise=entreprise)
     
-    comptes = PlanComptable.objects.filter(entreprise=entreprise, est_actif=True)
+    comptes = PlanComptable.objects.filter(entreprise=entreprise, est_actif=True).order_by('numero_compte')
     
     context = {
         'form': form,
@@ -340,12 +361,35 @@ def ecriture_update(request, pk):
         form = EcritureForm(request.POST, instance=ecriture, entreprise=request.user.entreprise)
         if form.is_valid():
             form.save()
+            
+            # Supprimer les anciennes lignes et recréer
+            ecriture.lignes.all().delete()
+            
+            comptes_ids = request.POST.getlist('compte[]')
+            libelles = request.POST.getlist('libelle_ligne[]')
+            debits = request.POST.getlist('debit[]')
+            credits = request.POST.getlist('credit[]')
+            
+            for i, compte_id in enumerate(comptes_ids):
+                if compte_id:
+                    debit = Decimal(debits[i]) if debits[i] else Decimal('0')
+                    credit = Decimal(credits[i]) if credits[i] else Decimal('0')
+                    
+                    if debit > 0 or credit > 0:
+                        LigneEcriture.objects.create(
+                            ecriture=ecriture,
+                            compte_id=compte_id,
+                            libelle=libelles[i] if i < len(libelles) else '',
+                            montant_debit=debit,
+                            montant_credit=credit
+                        )
+            
             messages.success(request, "Écriture modifiée avec succès.")
             return redirect('comptabilite:ecriture_detail', pk=pk)
     else:
         form = EcritureForm(instance=ecriture, entreprise=request.user.entreprise)
     
-    comptes = PlanComptable.objects.filter(entreprise=request.user.entreprise, est_actif=True)
+    comptes = PlanComptable.objects.filter(entreprise=request.user.entreprise, est_actif=True).order_by('numero_compte')
     
     context = {
         'form': form,
