@@ -99,7 +99,7 @@ class BulkPayrollService:
             ).only(
                 'id', 'matricule', 'nom', 'prenoms', 'sexe',
                 'date_embauche', 'date_naissance', 'type_contrat',
-                'date_debut_contrat', 'situation_familiale',
+                'date_debut_contrat', 'situation_matrimoniale',
                 'nombre_enfants', 'mode_paiement',
                 'etablissement_id', 'service_id', 'poste_id',
                 'devise_paie_id', 'entreprise_id', 'statut_employe',
