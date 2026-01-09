@@ -130,24 +130,54 @@ def index(request):
 @login_required
 def rapports(request):
     """Page des rapports et statistiques"""
+    from datetime import date
+    from django.db.models import Avg, Count, Q
+    from django.db.models.functions import ExtractYear
+    
     context = {}
     
     # Statistiques annuelles
-    annee = request.GET.get('annee', timezone.now().year)
-    context['annee'] = int(annee)
+    annee = int(request.GET.get('annee', timezone.now().year))
+    context['annee'] = annee
+    aujourd_hui = timezone.now().date()
     
-    # Évolution effectif par mois
+    # Employés de l'entreprise
+    employes_entreprise = Employe.objects.filter(entreprise=request.user.entreprise)
+    employes_actifs = employes_entreprise.filter(statut_employe='actif')
+    
+    # Effectif total actuel
+    effectif_total = employes_actifs.count()
+    context['effectif_total'] = effectif_total
+    
+    # Recrutements de l'année
+    recrutements = employes_entreprise.filter(
+        date_embauche__year=annee
+    ).count()
+    context['recrutements'] = recrutements
+    
+    # Départs de l'année
+    departs = employes_entreprise.filter(
+        date_depart__year=annee
+    ).count()
+    context['departs'] = departs
+    
+    # Taux de rotation (turnover)
+    if effectif_total > 0:
+        taux_rotation = round((departs / effectif_total) * 100, 1)
+    else:
+        taux_rotation = 0
+    context['taux_rotation'] = taux_rotation
+    
+    # Évolution effectif par mois (corrigé)
     effectif_mensuel = []
     for mois in range(1, 13):
-        effectif = Employe.objects.filter(
-            entreprise=request.user.entreprise,
-            date_embauche__year__lte=annee,
-            date_embauche__month__lte=mois
-        ).exclude(
-            date_depart__year__lt=annee
-        ).exclude(
-            date_depart__year=annee,
-            date_depart__month__lt=mois
+        fin_mois = date(annee, mois, 28)  # Approximation fin de mois
+        
+        # Employés embauchés avant ou pendant ce mois
+        effectif = employes_entreprise.filter(
+            date_embauche__lte=fin_mois
+        ).filter(
+            Q(date_depart__isnull=True) | Q(date_depart__gt=fin_mois)
         ).count()
         effectif_mensuel.append(effectif)
     
@@ -156,12 +186,6 @@ def rapports(request):
                        'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
     
     # Pyramide des âges
-    aujourd_hui = timezone.now().date()
-    employes_actifs = Employe.objects.filter(
-        entreprise=request.user.entreprise,
-        statut_employe='actif'
-    )
-    
     pyramide_ages = {
         '< 25 ans': 0,
         '25-34 ans': 0,
@@ -170,9 +194,11 @@ def rapports(request):
         '55+ ans': 0
     }
     
+    ages = []
     for employe in employes_actifs:
         if employe.date_naissance:
             age = (aujourd_hui - employe.date_naissance).days // 365
+            ages.append(age)
             if age < 25:
                 pyramide_ages['< 25 ans'] += 1
             elif age < 35:
@@ -186,13 +212,31 @@ def rapports(request):
     
     context['pyramide_ages'] = pyramide_ages
     
+    # Âge moyen
+    context['age_moyen'] = round(sum(ages) / len(ages), 1) if ages else 0
+    
+    # Ancienneté moyenne
+    anciennetes = []
+    for employe in employes_actifs:
+        if employe.date_embauche:
+            anciennete = (aujourd_hui - employe.date_embauche).days / 365
+            anciennetes.append(anciennete)
+    context['anciennete_moyenne'] = round(sum(anciennetes) / len(anciennetes), 1) if anciennetes else 0
+    
+    # Répartition par genre
+    hommes = employes_actifs.filter(sexe='M').count()
+    femmes = employes_actifs.filter(sexe='F').count()
+    context['hommes'] = hommes
+    context['femmes'] = femmes
+    
     # Répartition par service
     from core.models import Service
     services_stats = []
-    for service in Service.objects.filter(
-        actif=True,
-        etablissement__societe__entreprise=request.user.entreprise,
-    ):
+    
+    # Essayer plusieurs chemins pour trouver les services
+    services = Service.objects.filter(actif=True)
+    
+    for service in services:
         effectif = employes_actifs.filter(service=service).count()
         if effectif > 0:
             services_stats.append({
@@ -200,7 +244,23 @@ def rapports(request):
                 'effectif': effectif
             })
     
+    # Si aucun service trouvé, regrouper par service_id
+    if not services_stats:
+        from django.db.models import Count
+        services_groupe = employes_actifs.exclude(service__isnull=True).values(
+            'service__nom_service'
+        ).annotate(effectif=Count('id')).order_by('-effectif')
+        
+        for s in services_groupe:
+            services_stats.append({
+                'nom': s['service__nom_service'],
+                'effectif': s['effectif']
+            })
+    
     context['services_stats'] = services_stats
+    
+    # Taux d'absentéisme (placeholder - à calculer si module absences existe)
+    context['taux_absenteisme'] = 0
     
     return render(request, 'dashboard/rapports.html', context)
 

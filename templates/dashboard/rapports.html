@@ -49,28 +49,28 @@
                     <div class="col-md-3">
                         <div class="stat-card p-3">
                             <i class="bi bi-people-fill text-primary" style="font-size: 2rem;"></i>
-                            <h3 class="mt-2">{{ effectif_mensuel|last }}</h3>
+                            <h3 class="mt-2">{{ effectif_total }}</h3>
                             <p class="text-muted">Effectif Total</p>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-card p-3">
                             <i class="bi bi-person-plus-fill text-success" style="font-size: 2rem;"></i>
-                            <h3 class="mt-2">0</h3>
+                            <h3 class="mt-2">{{ recrutements }}</h3>
                             <p class="text-muted">Recrutements</p>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-card p-3">
                             <i class="bi bi-person-dash-fill text-danger" style="font-size: 2rem;"></i>
-                            <h3 class="mt-2">0</h3>
+                            <h3 class="mt-2">{{ departs }}</h3>
                             <p class="text-muted">Départs</p>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-card p-3">
                             <i class="bi bi-percent text-warning" style="font-size: 2rem;"></i>
-                            <h3 class="mt-2">0%</h3>
+                            <h3 class="mt-2">{{ taux_rotation }}%</h3>
                             <p class="text-muted">Taux de Rotation</p>
                         </div>
                     </div>
@@ -205,21 +205,21 @@
                     <div class="col-md-4 mb-3">
                         <div class="border-left-primary p-3">
                             <h6>Taux d'Absentéisme</h6>
-                            <h4>0%</h4>
+                            <h4>{{ taux_absenteisme }}%</h4>
                             <small class="text-muted">Moyenne annuelle</small>
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
                         <div class="border-left-success p-3">
                             <h6>Ancienneté Moyenne</h6>
-                            <h4>0 ans</h4>
+                            <h4>{{ anciennete_moyenne }} ans</h4>
                             <small class="text-muted">Tous employés</small>
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
                         <div class="border-left-warning p-3">
                             <h6>Âge Moyen</h6>
-                            <h4>0 ans</h4>
+                            <h4>{{ age_moyen }} ans</h4>
                             <small class="text-muted">Tous employés</small>
                         </div>
                     </div>
