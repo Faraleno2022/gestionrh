@@ -1081,15 +1081,15 @@ def declarations_sociales(request):
     
     periodes = PeriodePaie.objects.filter(
         entreprise=request.user.entreprise,
-        annee=annee,
-        statut_periode__in=['validee', 'cloturee']
+        annee=annee
     )
     if mois:
         periodes = periodes.filter(mois=mois)
     
+    # Inclure tous les bulletins calculés, validés ou payés
     bulletins = BulletinPaie.objects.filter(
         periode__in=periodes,
-        statut_bulletin__in=['valide', 'paye'],
+        statut_bulletin__in=['calcule', 'valide', 'paye'],
         employe__entreprise=request.user.entreprise,
     ).select_related('employe', 'periode')
     
