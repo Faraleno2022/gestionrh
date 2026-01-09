@@ -658,7 +658,7 @@ class MoteurCalculPaie:
         if rubrique_cnss:
             self.lignes.append({
                 'rubrique': rubrique_cnss,
-                'base': self.montants['cnss_base'],
+                'base': base_cnss_plafonnee,  # Afficher la base plafonnée, pas la base brute
                 'taux': taux_cnss,
                 'nombre': Decimal('1'),
                 'montant': cnss_employe,

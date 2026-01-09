@@ -56,7 +56,7 @@ class PayrollCacheService:
     @classmethod
     def get_tranches_rts(cls, annee: int, force_refresh: bool = False) -> List[Dict]:
         """
-        Récupère les tranches RTS avec cache.
+        Récupère les tranches RTS avec cache et fallback année précédente.
         
         Args:
             annee: Année de validité
@@ -81,6 +81,32 @@ class PayrollCacheService:
                 'borne_superieure', 'taux_irg'
             )
         )
+        
+        # Fallback: année précédente si pas de tranches pour l'année demandée
+        if not tranches:
+            tranches = list(
+                TrancheRTS.objects.filter(
+                    annee_validite=annee - 1,
+                    actif=True
+                ).order_by('numero_tranche').values(
+                    'numero_tranche', 'borne_inferieure', 
+                    'borne_superieure', 'taux_irg'
+                )
+            )
+        
+        # Dernier recours: dernière année disponible
+        if not tranches:
+            derniere_annee = TrancheRTS.objects.filter(actif=True).order_by('-annee_validite').values_list('annee_validite', flat=True).first()
+            if derniere_annee:
+                tranches = list(
+                    TrancheRTS.objects.filter(
+                        annee_validite=derniere_annee,
+                        actif=True
+                    ).order_by('numero_tranche').values(
+                        'numero_tranche', 'borne_inferieure', 
+                        'borne_superieure', 'taux_irg'
+                    )
+                )
         
         cache.set(cache_key, tranches, cls.CACHE_TIMEOUT_TRANCHES)
         return tranches
