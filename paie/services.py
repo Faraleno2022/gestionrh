@@ -78,23 +78,45 @@ class MoteurCalculPaie:
         return PayrollCacheService.get_constantes()
     
     def _charger_tranches_irg(self):
-        """Charger le barème RTS (avec cache)"""
-        # Récupérer depuis le cache
+        """Charger le barème RTS (avec cache et fallback année précédente)"""
+        # Récupérer depuis le cache pour l'année en cours
         tranches_data = PayrollCacheService.get_tranches_rts(self.periode.annee)
         
-        # Si le cache retourne des dicts, on peut les utiliser directement
-        # Sinon, fallback sur la requête DB
         if tranches_data:
             return tranches_data
         
-        # Fallback: requête directe
-        return list(TrancheRTS.objects.filter(
+        # Fallback: requête directe pour l'année en cours
+        tranches = list(TrancheRTS.objects.filter(
             annee_validite=self.periode.annee,
             actif=True
         ).order_by('numero_tranche').values(
             'numero_tranche', 'borne_inferieure', 
             'borne_superieure', 'taux_irg'
         ))
+        
+        # Si pas de tranches pour l'année en cours, chercher l'année précédente
+        if not tranches:
+            tranches = list(TrancheRTS.objects.filter(
+                annee_validite=self.periode.annee - 1,
+                actif=True
+            ).order_by('numero_tranche').values(
+                'numero_tranche', 'borne_inferieure', 
+                'borne_superieure', 'taux_irg'
+            ))
+        
+        # Dernier recours: chercher la dernière année disponible
+        if not tranches:
+            derniere_annee = TrancheRTS.objects.filter(actif=True).order_by('-annee_validite').values_list('annee_validite', flat=True).first()
+            if derniere_annee:
+                tranches = list(TrancheRTS.objects.filter(
+                    annee_validite=derniere_annee,
+                    actif=True
+                ).order_by('numero_tranche').values(
+                    'numero_tranche', 'borne_inferieure', 
+                    'borne_superieure', 'taux_irg'
+                ))
+        
+        return tranches
     
     def _arrondir(self, montant):
         """Arrondir un montant à 2 décimales"""
