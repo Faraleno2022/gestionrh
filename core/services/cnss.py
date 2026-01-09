@@ -43,7 +43,7 @@ class CNSSService:
             employe__entreprise=self.entreprise,
             periode__mois=mois,
             periode__annee=annee,
-            statut='valide'
+            statut_bulletin='valide'
         ).select_related('employe', 'periode')
         
         # Calculer les totaux
