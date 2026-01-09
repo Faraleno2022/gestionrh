@@ -614,9 +614,17 @@ class MoteurCalculPaie:
         # Ajouter ligne CNSS
         rubrique_cnss = RubriquePaie.objects.filter(
             code_rubrique__icontains='CNSS',
-            type_rubrique='retenue',
+            type_rubrique__in=['retenue', 'cotisation'],
             actif=True
         ).first()
+        
+        # Si pas trouvé, chercher par libellé
+        if not rubrique_cnss:
+            rubrique_cnss = RubriquePaie.objects.filter(
+                libelle_rubrique__icontains='CNSS',
+                type_rubrique__in=['retenue', 'cotisation'],
+                actif=True
+            ).first()
         
         if rubrique_cnss:
             self.lignes.append({
@@ -725,12 +733,20 @@ class MoteurCalculPaie:
             self.montants['exoneration_rts'] = False
         self.montants['total_retenues'] += self.montants['irg']
         
-        # Ajouter ligne RTS
+        # Ajouter ligne RTS/IRG
         rubrique_irg = RubriquePaie.objects.filter(
-            code_rubrique__icontains='IRS',
-            type_rubrique='retenue',
+            code_rubrique__iregex=r'(IRS|IRG|RTS|IRPP)',
+            type_rubrique__in=['retenue', 'cotisation'],
             actif=True
         ).first()
+        
+        # Si pas trouvé, chercher par libellé
+        if not rubrique_irg:
+            rubrique_irg = RubriquePaie.objects.filter(
+                libelle_rubrique__iregex=r'(IRS|IRG|RTS|IRPP|Impôt|Revenu)',
+                type_rubrique__in=['retenue', 'cotisation'],
+                actif=True
+            ).first()
         
         if rubrique_irg:
             self.lignes.append({
