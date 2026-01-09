@@ -222,7 +222,7 @@
         <div class="col-md-6">
             <div class="card shadow-sm">
                 <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0"><i class="fas fa-building me-2"></i>Cotisations Patronales</h5>
+                    <h5 class="mb-0"><i class="fas fa-building me-2"></i>Charges Patronales</h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-sm table-borderless mb-0">
@@ -230,9 +230,17 @@
                             <td>CNSS Employeur (18%)</td>
                             <td class="text-end"><strong>{{ bulletin.cnss_employeur|floatformat:0|intcomma }} GNF</strong></td>
                         </tr>
+                        <tr>
+                            <td>Versement Forfaitaire VF (6%)</td>
+                            <td class="text-end"><strong>{{ bulletin.versement_forfaitaire|floatformat:0|intcomma }} GNF</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Taxe d'Apprentissage TA (1,5%)</td>
+                            <td class="text-end"><strong>{{ bulletin.taxe_apprentissage|floatformat:0|intcomma }} GNF</strong></td>
+                        </tr>
                         <tr class="border-top">
-                            <th>Total CNSS (Employé + Employeur)</th>
-                            <th class="text-end">{{ bulletin.cnss_employe|add:bulletin.cnss_employeur|floatformat:0|intcomma }} GNF</th>
+                            <th>Total Charges Patronales</th>
+                            <th class="text-end">{{ bulletin.cnss_employeur|add:bulletin.versement_forfaitaire|add:bulletin.taxe_apprentissage|floatformat:0|intcomma }} GNF</th>
                         </tr>
                     </table>
                 </div>

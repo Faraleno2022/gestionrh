@@ -962,6 +962,8 @@ class MoteurCalculPaie:
             irg=self.montants['irg'],
             net_a_payer=self.montants['net'],
             cnss_employeur=self.montants['cnss_employeur'],
+            versement_forfaitaire=self.montants['versement_forfaitaire'],
+            taxe_apprentissage=self.montants['taxe_apprentissage'],
             devise_bulletin=self.devise_employe,
             statut_bulletin='calcule',
             date_calcul=timezone.now()
