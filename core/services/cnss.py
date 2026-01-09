@@ -49,7 +49,6 @@ class CNSSService:
         # Calculer les totaux
         totaux = bulletins.aggregate(
             masse_salariale=Sum('salaire_brut'),
-            base_cnss=Sum('cnss_base'),
             cotisation_employe=Sum('cnss_employe'),
             cotisation_employeur=Sum('cnss_employeur')
         )
@@ -65,7 +64,7 @@ class CNSSService:
                 'reference': reference,
                 'nombre_salaries': bulletins.count(),
                 'masse_salariale_brute': totaux['masse_salariale'] or Decimal('0'),
-                'base_cnss_totale': totaux['base_cnss'] or Decimal('0'),
+                'base_cnss_totale': totaux['masse_salariale'] or Decimal('0'),
                 'cotisation_employe': totaux['cotisation_employe'] or Decimal('0'),
                 'cotisation_employeur': totaux['cotisation_employeur'] or Decimal('0'),
                 'total_cotisations': (totaux['cotisation_employe'] or Decimal('0')) + 
@@ -231,7 +230,7 @@ class CNSSService:
                 'date_naissance': emp.date_naissance.strftime('%Y-%m-%d') if emp.date_naissance else None,
                 'numero_cnss': emp.numero_cnss,
                 'salaire_brut': float(bulletin.salaire_brut),
-                'base_cnss': float(bulletin.cnss_base),
+                'base_cnss': float(bulletin.salaire_brut),
                 'cotisation_employe': float(bulletin.cnss_employe),
                 'cotisation_employeur': float(bulletin.cnss_employeur)
             })
