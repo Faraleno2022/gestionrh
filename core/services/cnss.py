@@ -99,7 +99,7 @@ class CNSSService:
             employe__entreprise=self.entreprise,
             periode__mois=transmission.periode_mois,
             periode__annee=transmission.periode_annee,
-            statut='valide'
+            statut_bulletin='valide'
         ).select_related('employe')
         
         output = io.StringIO()
@@ -151,7 +151,7 @@ class CNSSService:
             employe__entreprise=self.entreprise,
             periode__mois=transmission.periode_mois,
             periode__annee=transmission.periode_annee,
-            statut='valide'
+            statut_bulletin='valide'
         ).select_related('employe')
         
         # Créer la structure XML
@@ -198,7 +198,7 @@ class CNSSService:
             employe__entreprise=self.entreprise,
             periode__mois=transmission.periode_mois,
             periode__annee=transmission.periode_annee,
-            statut='valide'
+            statut_bulletin='valide'
         ).select_related('employe')
         
         data = {
@@ -286,7 +286,7 @@ class CNSSService:
             employe__entreprise=self.entreprise,
             periode__mois=transmission.periode_mois,
             periode__annee=transmission.periode_annee,
-            statut='valide'
+            statut_bulletin='valide'
         ).select_related('employe')
         
         employes_sans_cnss = [b.employe.nom_complet for b in bulletins if not b.employe.numero_cnss]
