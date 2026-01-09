@@ -9,6 +9,7 @@ OPTIMISATIONS PERFORMANCE:
 """
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import date, timedelta
+import calendar
 from django.db import transaction
 from django.db import models
 from django.utils import timezone
@@ -300,14 +301,20 @@ class MoteurCalculPaie:
     
     def _calculer_gains(self):
         """Calculer tous les éléments de gain"""
+        # Calculer le dernier jour du mois de la période
+        dernier_jour = calendar.monthrange(self.periode.annee, self.periode.mois)[1]
+        fin_mois = date(self.periode.annee, self.periode.mois, dernier_jour)
+        debut_mois = date(self.periode.annee, self.periode.mois, 1)
+        
         # Récupérer les éléments de salaire de l'employé
+        # Un élément est valide si sa date_debut <= fin du mois ET (date_fin est null OU date_fin >= debut du mois)
         elements = ElementSalaire.objects.filter(
             employe=self.employe,
             actif=True,
-            date_debut__lte=date(self.periode.annee, self.periode.mois, 1)
+            date_debut__lte=fin_mois
         ).filter(
             models.Q(date_fin__isnull=True) | 
-            models.Q(date_fin__gte=date(self.periode.annee, self.periode.mois, 1))
+            models.Q(date_fin__gte=debut_mois)
         ).select_related('rubrique')
         
         for element in elements:
