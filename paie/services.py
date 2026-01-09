@@ -951,23 +951,29 @@ class MoteurCalculPaie:
         numero = self._generer_numero_bulletin()
         
         # Créer le bulletin
-        bulletin = BulletinPaie.objects.create(
-            employe=self.employe,
-            periode=self.periode,
-            numero_bulletin=numero,
-            mois_paie=self.periode.mois,
-            annee_paie=self.periode.annee,
-            salaire_brut=self.montants['brut'],
-            cnss_employe=self.montants['cnss_employe'],
-            irg=self.montants['irg'],
-            net_a_payer=self.montants['net'],
-            cnss_employeur=self.montants['cnss_employeur'],
-            versement_forfaitaire=self.montants['versement_forfaitaire'],
-            taxe_apprentissage=self.montants['taxe_apprentissage'],
-            devise_bulletin=self.devise_employe,
-            statut_bulletin='calcule',
-            date_calcul=timezone.now()
-        )
+        bulletin_data = {
+            'employe': self.employe,
+            'periode': self.periode,
+            'numero_bulletin': numero,
+            'mois_paie': self.periode.mois,
+            'annee_paie': self.periode.annee,
+            'salaire_brut': self.montants['brut'],
+            'cnss_employe': self.montants['cnss_employe'],
+            'irg': self.montants['irg'],
+            'net_a_payer': self.montants['net'],
+            'cnss_employeur': self.montants['cnss_employeur'],
+            'devise_bulletin': self.devise_employe,
+            'statut_bulletin': 'calcule',
+            'date_calcul': timezone.now()
+        }
+        
+        # Ajouter VF et TA si les champs existent dans le modèle
+        if hasattr(BulletinPaie, 'versement_forfaitaire'):
+            bulletin_data['versement_forfaitaire'] = self.montants['versement_forfaitaire']
+        if hasattr(BulletinPaie, 'taxe_apprentissage'):
+            bulletin_data['taxe_apprentissage'] = self.montants['taxe_apprentissage']
+        
+        bulletin = BulletinPaie.objects.create(**bulletin_data)
         
         # Créer les lignes
         for ligne_data in sorted(self.lignes, key=lambda x: x['ordre']):
