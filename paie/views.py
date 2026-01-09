@@ -1405,8 +1405,16 @@ def ajouter_element_salaire(request, employe_id):
         except Exception as e:
             messages.error(request, f'Erreur lors de l\'ajout : {str(e)}')
     
-    # Rubriques disponibles
-    rubriques = RubriquePaie.objects.filter(actif=True).order_by('type_rubrique', 'libelle_rubrique')
+    # Rubriques disponibles (exclure celles calculées automatiquement: IRG, CNSS)
+    rubriques = RubriquePaie.objects.filter(
+        actif=True
+    ).exclude(
+        code_rubrique__in=['RTS', 'IRG', 'IRPP', 'CNSS_EMP', 'CNSS_PAT']
+    ).exclude(
+        code_rubrique__icontains='CNSS'
+    ).exclude(
+        libelle_rubrique__icontains='Impôt sur le Revenu'
+    ).order_by('type_rubrique', 'libelle_rubrique')
     
     return render(request, 'paie/elements_salaire/ajouter.html', {
         'employe': employe,
