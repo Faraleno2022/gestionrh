@@ -245,7 +245,7 @@
                 </div>
                 <div class="card-body">
                     <table class="table table-sm table-borderless mb-0">
-                        {% if bulletin.employe.mode_paiement == 'Virement' %}
+                        {% if bulletin.employe.mode_paiement == 'virement' or bulletin.employe.mode_paiement == 'Virement' %}
                         <tr>
                             <td>Banque :</td>
                             <td class="text-end">{{ bulletin.employe.nom_banque|default:"-" }}</td>
@@ -262,7 +262,7 @@
                             <td>RIB :</td>
                             <td class="text-end">{{ bulletin.employe.rib|default:"-" }}</td>
                         </tr>
-                        {% elif bulletin.employe.mode_paiement == 'Mobile Money' %}
+                        {% elif bulletin.employe.mode_paiement == 'mobile_money' or bulletin.employe.mode_paiement == 'Mobile Money' %}
                         <tr>
                             <td>Opérateur :</td>
                             <td class="text-end">{{ bulletin.employe.operateur_mobile_money|default:"-" }}</td>
