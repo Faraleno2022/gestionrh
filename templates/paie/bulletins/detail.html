@@ -232,15 +232,15 @@
                         </tr>
                         <tr>
                             <td>Versement Forfaitaire VF (6%)</td>
-                            <td class="text-end"><strong>{{ bulletin.versement_forfaitaire|floatformat:0|intcomma }} GNF</strong></td>
+                            <td class="text-end"><strong>{{ bulletin.versement_forfaitaire|default:0|floatformat:0|intcomma }} GNF</strong></td>
                         </tr>
                         <tr>
                             <td>Taxe d'Apprentissage TA (1,5%)</td>
-                            <td class="text-end"><strong>{{ bulletin.taxe_apprentissage|floatformat:0|intcomma }} GNF</strong></td>
+                            <td class="text-end"><strong>{{ bulletin.taxe_apprentissage|default:0|floatformat:0|intcomma }} GNF</strong></td>
                         </tr>
                         <tr class="border-top">
                             <th>Total Charges Patronales</th>
-                            <th class="text-end">{{ bulletin.cnss_employeur|add:bulletin.versement_forfaitaire|add:bulletin.taxe_apprentissage|floatformat:0|intcomma }} GNF</th>
+                            <th class="text-end">{{ bulletin.cnss_employeur|floatformat:0|intcomma }} GNF</th>
                         </tr>
                     </table>
                 </div>
