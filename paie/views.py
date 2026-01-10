@@ -2162,29 +2162,40 @@ def config_paie_entreprise(request):
             config.appliquer_mode_convention()
             messages.success(request, 'Configuration Convention Collective appliquée.')
         elif action == 'save':
+            # Fonction helper pour convertir en Decimal avec valeur par défaut
+            def to_decimal(value, default):
+                if value is None or value.strip() == '':
+                    return Decimal(default)
+                return Decimal(value)
+            
+            def to_int(value, default):
+                if value is None or value.strip() == '':
+                    return int(default)
+                return int(value)
+            
             # Heures supplémentaires
             config.mode_heures_sup = request.POST.get('mode_heures_sup', 'code_travail')
-            config.taux_hs_4_premieres = Decimal(request.POST.get('taux_hs_4_premieres', '30'))
-            config.taux_hs_au_dela = Decimal(request.POST.get('taux_hs_au_dela', '60'))
-            config.taux_hs_nuit = Decimal(request.POST.get('taux_hs_nuit', '50'))
-            config.taux_hs_dimanche = Decimal(request.POST.get('taux_hs_dimanche', '100'))
-            config.taux_hs_ferie_nuit = Decimal(request.POST.get('taux_hs_ferie_nuit', '100'))
+            config.taux_hs_4_premieres = to_decimal(request.POST.get('taux_hs_4_premieres'), '30')
+            config.taux_hs_au_dela = to_decimal(request.POST.get('taux_hs_au_dela'), '60')
+            config.taux_hs_nuit = to_decimal(request.POST.get('taux_hs_nuit'), '50')
+            config.taux_hs_dimanche = to_decimal(request.POST.get('taux_hs_dimanche'), '100')
+            config.taux_hs_ferie_nuit = to_decimal(request.POST.get('taux_hs_ferie_nuit'), '100')
             
             # Congés
             config.mode_conges = request.POST.get('mode_conges', 'code_travail')
-            config.jours_conges_par_mois = Decimal(request.POST.get('jours_conges_par_mois', '1.5'))
-            config.jours_conges_anciennete = Decimal(request.POST.get('jours_conges_anciennete', '2'))
-            config.tranche_anciennete_annees = int(request.POST.get('tranche_anciennete_annees', '5'))
+            config.jours_conges_par_mois = to_decimal(request.POST.get('jours_conges_par_mois'), '1.5')
+            config.jours_conges_anciennete = to_decimal(request.POST.get('jours_conges_anciennete'), '2')
+            config.tranche_anciennete_annees = to_int(request.POST.get('tranche_anciennete_annees'), '5')
             
             # CNSS
-            config.taux_cnss_employe = Decimal(request.POST.get('taux_cnss_employe', '5'))
-            config.taux_cnss_employeur = Decimal(request.POST.get('taux_cnss_employeur', '18'))
-            config.plancher_cnss = Decimal(request.POST.get('plancher_cnss', '550000'))
-            config.plafond_cnss = Decimal(request.POST.get('plafond_cnss', '2500000'))
+            config.taux_cnss_employe = to_decimal(request.POST.get('taux_cnss_employe'), '5')
+            config.taux_cnss_employeur = to_decimal(request.POST.get('taux_cnss_employeur'), '18')
+            config.plancher_cnss = to_decimal(request.POST.get('plancher_cnss'), '550000')
+            config.plafond_cnss = to_decimal(request.POST.get('plafond_cnss'), '2500000')
             
             # Charges patronales
-            config.taux_versement_forfaitaire = Decimal(request.POST.get('taux_versement_forfaitaire', '6'))
-            config.taux_taxe_apprentissage = Decimal(request.POST.get('taux_taxe_apprentissage', '1.5'))
+            config.taux_versement_forfaitaire = to_decimal(request.POST.get('taux_versement_forfaitaire'), '6')
+            config.taux_taxe_apprentissage = to_decimal(request.POST.get('taux_taxe_apprentissage'), '1.5')
             
             config.modifie_par = request.user
             config.save()
