@@ -3,9 +3,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Sum, Q
 from django.utils import timezone
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.core.paginator import Paginator
 from decimal import Decimal
+from collections import OrderedDict
+import io
 
 from .models import (
     PlanComptable, Journal, ExerciceComptable, EcritureComptable,
@@ -718,6 +720,220 @@ def grand_livre(request):
         'date_fin': date_fin,
     }
     return render(request, 'comptabilite/etats/grand_livre.html', context)
+
+
+def _get_grand_livre_data(request):
+    """Helper pour récupérer les données du grand livre"""
+    entreprise = request.user.entreprise
+    compte_id = request.GET.get('compte', '')
+    date_debut = request.GET.get('date_debut', '')
+    date_fin = request.GET.get('date_fin', '')
+    
+    lignes = LigneEcriture.objects.filter(
+        ecriture__entreprise=entreprise,
+        ecriture__est_validee=True
+    ).select_related('compte', 'ecriture', 'ecriture__journal')
+    
+    if compte_id:
+        lignes = lignes.filter(compte_id=compte_id)
+    if date_debut:
+        lignes = lignes.filter(ecriture__date_ecriture__gte=date_debut)
+    if date_fin:
+        lignes = lignes.filter(ecriture__date_ecriture__lte=date_fin)
+    
+    lignes = lignes.order_by('compte__numero_compte', 'ecriture__date_ecriture')
+    
+    comptes_groupes = OrderedDict()
+    for ligne in lignes:
+        compte = ligne.compte
+        if compte.pk not in comptes_groupes:
+            comptes_groupes[compte.pk] = {
+                'compte': compte,
+                'lignes': [],
+                'total_debit': Decimal('0'),
+                'total_credit': Decimal('0'),
+            }
+        comptes_groupes[compte.pk]['lignes'].append(ligne)
+        comptes_groupes[compte.pk]['total_debit'] += ligne.montant_debit or Decimal('0')
+        comptes_groupes[compte.pk]['total_credit'] += ligne.montant_credit or Decimal('0')
+    
+    return comptes_groupes, entreprise, date_debut, date_fin
+
+
+@login_required
+@compta_required
+def grand_livre_excel(request):
+    """Export Excel du Grand Livre"""
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+    from openpyxl.utils import get_column_letter
+    
+    comptes_groupes, entreprise, date_debut, date_fin = _get_grand_livre_data(request)
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Grand Livre"
+    
+    # Styles
+    header_font = Font(bold=True, size=14)
+    title_font = Font(bold=True, size=11)
+    header_fill = PatternFill(start_color="FFD699", end_color="FFD699", fill_type="solid")
+    total_fill = PatternFill(start_color="E8E8E8", end_color="E8E8E8", fill_type="solid")
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+    
+    # En-tête
+    ws.merge_cells('A1:F1')
+    ws['A1'] = entreprise.nom_entreprise
+    ws['A1'].font = header_font
+    ws['A1'].alignment = Alignment(horizontal='center')
+    
+    ws.merge_cells('A2:F2')
+    periode = f"GRAND LIVRE - Du {date_debut or '--'} au {date_fin or '--'}"
+    ws['A2'] = periode
+    ws['A2'].alignment = Alignment(horizontal='center')
+    
+    row = 4
+    for groupe in comptes_groupes.values():
+        compte = groupe['compte']
+        
+        # En-tête du compte
+        ws.merge_cells(f'A{row}:F{row}')
+        ws[f'A{row}'] = f"{compte.numero_compte} - {compte.intitule}"
+        ws[f'A{row}'].font = title_font
+        ws[f'A{row}'].fill = header_fill
+        row += 1
+        
+        # En-têtes colonnes
+        headers = ['Date', 'Journal', 'N° Pièce', 'Libellé', 'Débit', 'Crédit']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=row, column=col, value=header)
+            cell.font = Font(bold=True)
+            cell.border = thin_border
+        row += 1
+        
+        # Lignes
+        for ligne in groupe['lignes']:
+            ws.cell(row=row, column=1, value=ligne.ecriture.date_ecriture.strftime('%d/%m/%Y')).border = thin_border
+            ws.cell(row=row, column=2, value=ligne.ecriture.journal.code).border = thin_border
+            ws.cell(row=row, column=3, value=ligne.ecriture.numero_ecriture).border = thin_border
+            ws.cell(row=row, column=4, value=ligne.libelle or ligne.ecriture.libelle).border = thin_border
+            cell_d = ws.cell(row=row, column=5, value=float(ligne.montant_debit) if ligne.montant_debit else None)
+            cell_d.border = thin_border
+            cell_d.number_format = '#,##0'
+            cell_c = ws.cell(row=row, column=6, value=float(ligne.montant_credit) if ligne.montant_credit else None)
+            cell_c.border = thin_border
+            cell_c.number_format = '#,##0'
+            row += 1
+        
+        # Total compte
+        ws.merge_cells(f'A{row}:D{row}')
+        ws[f'A{row}'] = f"Total compte {compte.numero_compte}"
+        ws[f'A{row}'].font = Font(bold=True)
+        ws[f'A{row}'].fill = total_fill
+        ws[f'A{row}'].alignment = Alignment(horizontal='right')
+        cell_td = ws.cell(row=row, column=5, value=float(groupe['total_debit']))
+        cell_td.font = Font(bold=True)
+        cell_td.fill = total_fill
+        cell_td.number_format = '#,##0'
+        cell_tc = ws.cell(row=row, column=6, value=float(groupe['total_credit']))
+        cell_tc.font = Font(bold=True)
+        cell_tc.fill = total_fill
+        cell_tc.number_format = '#,##0'
+        row += 2
+    
+    # Ajuster largeurs colonnes
+    ws.column_dimensions['A'].width = 12
+    ws.column_dimensions['B'].width = 10
+    ws.column_dimensions['C'].width = 12
+    ws.column_dimensions['D'].width = 40
+    ws.column_dimensions['E'].width = 15
+    ws.column_dimensions['F'].width = 15
+    
+    # Réponse
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="grand_livre_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+    wb.save(response)
+    return response
+
+
+@login_required
+@compta_required
+def grand_livre_pdf(request):
+    """Export PDF du Grand Livre"""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    
+    comptes_groupes, entreprise, date_debut, date_fin = _get_grand_livre_data(request)
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), leftMargin=1*cm, rightMargin=1*cm, topMargin=1*cm, bottomMargin=1*cm)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, alignment=1, spaceAfter=10)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=10, alignment=1, spaceAfter=20)
+    compte_style = ParagraphStyle('Compte', parent=styles['Heading3'], fontSize=11, backColor=colors.HexColor('#FFD699'), spaceAfter=5)
+    
+    elements = []
+    
+    # En-tête
+    elements.append(Paragraph(entreprise.nom_entreprise, title_style))
+    periode = f"GRAND LIVRE COMPTABLE - Du {date_debut or '--/--/----'} au {date_fin or '--/--/----'}"
+    elements.append(Paragraph(periode, subtitle_style))
+    
+    for groupe in comptes_groupes.values():
+        compte = groupe['compte']
+        
+        # Titre du compte
+        elements.append(Paragraph(f"<b>{compte.numero_compte}</b> - {compte.intitule}", compte_style))
+        
+        # Table des lignes
+        data = [['Date', 'Journal', 'N° Pièce', 'Libellé', 'Débit', 'Crédit']]
+        for ligne in groupe['lignes']:
+            data.append([
+                ligne.ecriture.date_ecriture.strftime('%d/%m/%Y'),
+                ligne.ecriture.journal.code,
+                ligne.ecriture.numero_ecriture,
+                (ligne.libelle or ligne.ecriture.libelle)[:50],
+                f"{ligne.montant_debit:,.0f}" if ligne.montant_debit else '',
+                f"{ligne.montant_credit:,.0f}" if ligne.montant_credit else '',
+            ])
+        
+        # Ligne total
+        data.append([
+            '', '', '', f"Total compte {compte.numero_compte}",
+            f"{groupe['total_debit']:,.0f}",
+            f"{groupe['total_credit']:,.0f}"
+        ])
+        
+        table = Table(data, colWidths=[2.5*cm, 2*cm, 3*cm, 10*cm, 3.5*cm, 3.5*cm])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EF7707')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('ALIGN', (4, 0), (5, -1), 'RIGHT'),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#E8E8E8')),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        elements.append(table)
+        elements.append(Spacer(1, 0.5*cm))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="grand_livre_{timezone.now().strftime("%Y%m%d")}.pdf"'
+    return response
 
 
 @login_required

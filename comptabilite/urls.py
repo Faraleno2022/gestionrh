@@ -51,6 +51,8 @@ urlpatterns = [
     
     # États financiers
     path('etats/grand-livre/', views.grand_livre, name='grand_livre'),
+    path('etats/grand-livre/pdf/', views.grand_livre_pdf, name='grand_livre_pdf'),
+    path('etats/grand-livre/excel/', views.grand_livre_excel, name='grand_livre_excel'),
     path('etats/balance/', views.balance, name='balance'),
     path('etats/journal-general/', views.journal_general, name='journal_general'),
     path('etats/bilan/', views.bilan, name='bilan'),
