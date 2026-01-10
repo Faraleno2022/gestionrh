@@ -19,8 +19,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             '--entreprise',
-            type=int,
-            help='ID de l\'entreprise (utilise la première si non spécifié)'
+            type=str,
+            help='ID (UUID) de l\'entreprise (utilise la première si non spécifié)'
         )
 
     def handle(self, *args, **options):
