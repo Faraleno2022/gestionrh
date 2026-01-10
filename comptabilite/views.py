@@ -692,24 +692,30 @@ def grand_livre(request):
     
     lignes = lignes.order_by('compte__numero_compte', 'ecriture__date_ecriture')
     
-    # Calculer les totaux par compte
-    totaux_par_compte = {}
+    # Regrouper les lignes par compte avec totaux
+    from collections import OrderedDict
+    comptes_groupes = OrderedDict()
     for ligne in lignes:
-        compte_num = ligne.compte.numero_compte
-        if compte_num not in totaux_par_compte:
-            totaux_par_compte[compte_num] = {'debit': Decimal('0'), 'credit': Decimal('0')}
-        totaux_par_compte[compte_num]['debit'] += ligne.montant_debit or Decimal('0')
-        totaux_par_compte[compte_num]['credit'] += ligne.montant_credit or Decimal('0')
+        compte = ligne.compte
+        if compte.pk not in comptes_groupes:
+            comptes_groupes[compte.pk] = {
+                'compte': compte,
+                'lignes': [],
+                'total_debit': Decimal('0'),
+                'total_credit': Decimal('0'),
+            }
+        comptes_groupes[compte.pk]['lignes'].append(ligne)
+        comptes_groupes[compte.pk]['total_debit'] += ligne.montant_debit or Decimal('0')
+        comptes_groupes[compte.pk]['total_credit'] += ligne.montant_credit or Decimal('0')
     
     comptes = PlanComptable.objects.filter(entreprise=entreprise, est_actif=True).order_by('numero_compte')
     
     context = {
-        'lignes': lignes,
+        'comptes_groupes': comptes_groupes.values(),
         'comptes': comptes,
         'compte_id': compte_id,
         'date_debut': date_debut,
         'date_fin': date_fin,
-        'totaux_par_compte': totaux_par_compte,
     }
     return render(request, 'comptabilite/etats/grand_livre.html', context)
 
