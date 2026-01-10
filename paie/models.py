@@ -120,6 +120,10 @@ class BulletinPaie(models.Model):
     irg = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     net_a_payer = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     
+    # Charges patronales
+    versement_forfaitaire = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='VF 6% sur brut total')
+    taxe_apprentissage = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='TA 1,5% sur brut total')
+    
     # Devise du bulletin
     devise_bulletin = models.ForeignKey(Devise, on_delete=models.SET_NULL, null=True, blank=True,
                                       related_name='bulletins_devise',
