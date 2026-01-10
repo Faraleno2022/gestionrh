@@ -57,6 +57,12 @@ urlpatterns = [
     path('etats/balance/pdf/', views.balance_pdf, name='balance_pdf'),
     path('etats/balance/excel/', views.balance_excel, name='balance_excel'),
     path('etats/journal-general/', views.journal_general, name='journal_general'),
+    path('etats/journal-general/pdf/', views.journal_general_pdf, name='journal_general_pdf'),
+    path('etats/journal-general/excel/', views.journal_general_excel, name='journal_general_excel'),
     path('etats/bilan/', views.bilan, name='bilan'),
+    path('etats/bilan/pdf/', views.bilan_pdf, name='bilan_pdf'),
+    path('etats/bilan/excel/', views.bilan_excel, name='bilan_excel'),
     path('etats/compte-resultat/', views.compte_resultat, name='compte_resultat'),
+    path('etats/compte-resultat/pdf/', views.compte_resultat_pdf, name='compte_resultat_pdf'),
+    path('etats/compte-resultat/excel/', views.compte_resultat_excel, name='compte_resultat_excel'),
 ]

@@ -1330,3 +1330,636 @@ def compte_resultat(request):
         'today': timezone.now().date(),
     }
     return render(request, 'comptabilite/etats/compte_resultat.html', context)
+
+
+# ============ EXPORTS JOURNAL GENERAL ============
+
+def _get_journal_general_data(request):
+    """Helper pour récupérer les données du journal général"""
+    entreprise = request.user.entreprise
+    journal_id = request.GET.get('journal', '')
+    date_debut = request.GET.get('date_debut', '')
+    date_fin = request.GET.get('date_fin', '')
+    
+    ecritures = EcritureComptable.objects.filter(
+        entreprise=entreprise, est_validee=True
+    ).prefetch_related('lignes__compte').select_related('journal')
+    
+    if journal_id:
+        ecritures = ecritures.filter(journal_id=journal_id)
+    if date_debut:
+        ecritures = ecritures.filter(date_ecriture__gte=date_debut)
+    if date_fin:
+        ecritures = ecritures.filter(date_ecriture__lte=date_fin)
+    
+    return ecritures.order_by('date_ecriture', 'numero_ecriture'), entreprise, journal_id, date_debut, date_fin
+
+
+@login_required
+@compta_required
+def journal_general_excel(request):
+    """Export Excel du Journal Général"""
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+    
+    ecritures, entreprise, journal_id, date_debut, date_fin = _get_journal_general_data(request)
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Journal Général"
+    
+    header_font = Font(bold=True, size=14)
+    header_fill = PatternFill(start_color="FFD699", end_color="FFD699", fill_type="solid")
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    
+    ws.merge_cells('A1:F1')
+    ws['A1'] = entreprise.nom_entreprise
+    ws['A1'].font = header_font
+    ws['A1'].alignment = Alignment(horizontal='center')
+    
+    ws.merge_cells('A2:F2')
+    ws['A2'] = f"JOURNAL GÉNÉRAL"
+    ws['A2'].alignment = Alignment(horizontal='center')
+    
+    row = 4
+    for ecriture in ecritures:
+        # En-tête écriture
+        ws.merge_cells(f'A{row}:F{row}')
+        ws[f'A{row}'] = f"{ecriture.numero_ecriture} - {ecriture.libelle} ({ecriture.journal.code} - {ecriture.date_ecriture.strftime('%d/%m/%Y')})"
+        ws[f'A{row}'].font = Font(bold=True)
+        ws[f'A{row}'].fill = header_fill
+        row += 1
+        
+        # En-têtes colonnes
+        for col, header in enumerate(['Compte', 'Intitulé', 'Libellé', 'Débit', 'Crédit'], 1):
+            cell = ws.cell(row=row, column=col, value=header)
+            cell.font = Font(bold=True)
+            cell.border = thin_border
+        row += 1
+        
+        # Lignes
+        for ligne in ecriture.lignes.all():
+            ws.cell(row=row, column=1, value=ligne.compte.numero_compte).border = thin_border
+            ws.cell(row=row, column=2, value=ligne.compte.intitule).border = thin_border
+            ws.cell(row=row, column=3, value=ligne.libelle or '').border = thin_border
+            cell_d = ws.cell(row=row, column=4, value=float(ligne.montant_debit) if ligne.montant_debit else None)
+            cell_d.border = thin_border
+            cell_d.number_format = '#,##0'
+            cell_c = ws.cell(row=row, column=5, value=float(ligne.montant_credit) if ligne.montant_credit else None)
+            cell_c.border = thin_border
+            cell_c.number_format = '#,##0'
+            row += 1
+        row += 1
+    
+    ws.column_dimensions['A'].width = 12
+    ws.column_dimensions['B'].width = 30
+    ws.column_dimensions['C'].width = 25
+    ws.column_dimensions['D'].width = 15
+    ws.column_dimensions['E'].width = 15
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="journal_general_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+    wb.save(response)
+    return response
+
+
+@login_required
+@compta_required
+def journal_general_pdf(request):
+    """Export PDF du Journal Général"""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    
+    ecritures, entreprise, journal_id, date_debut, date_fin = _get_journal_general_data(request)
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), leftMargin=1*cm, rightMargin=1*cm, topMargin=1*cm, bottomMargin=1*cm)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, alignment=1, spaceAfter=10)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=10, alignment=1, spaceAfter=20)
+    
+    elements = []
+    elements.append(Paragraph(entreprise.nom_entreprise, title_style))
+    elements.append(Paragraph("JOURNAL GÉNÉRAL", subtitle_style))
+    
+    for ecriture in ecritures:
+        elements.append(Paragraph(f"<b>{ecriture.numero_ecriture}</b> - {ecriture.libelle} ({ecriture.journal.code} - {ecriture.date_ecriture.strftime('%d/%m/%Y')})", styles['Heading4']))
+        
+        data = [['Compte', 'Intitulé', 'Libellé', 'Débit', 'Crédit']]
+        for ligne in ecriture.lignes.all():
+            data.append([
+                ligne.compte.numero_compte,
+                ligne.compte.intitule[:35],
+                (ligne.libelle or '')[:25],
+                f"{ligne.montant_debit:,.0f}" if ligne.montant_debit else '',
+                f"{ligne.montant_credit:,.0f}" if ligne.montant_credit else '',
+            ])
+        
+        table = Table(data, colWidths=[2.5*cm, 8*cm, 6*cm, 3.5*cm, 3.5*cm])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EF7707')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('ALIGN', (3, 0), (4, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 0.3*cm))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="journal_general_{timezone.now().strftime("%Y%m%d")}.pdf"'
+    return response
+
+
+# ============ EXPORTS BILAN ============
+
+def _get_bilan_data(request):
+    """Helper pour récupérer les données du bilan"""
+    entreprise = request.user.entreprise
+    exercice = ExerciceComptable.objects.filter(entreprise=entreprise, est_courant=True).first()
+    
+    def get_comptes_avec_solde(classes):
+        comptes = PlanComptable.objects.filter(
+            entreprise=entreprise, classe__in=classes, est_actif=True
+        ).annotate(
+            total_debit=Sum('lignes_ecritures__montant_debit'),
+            total_credit=Sum('lignes_ecritures__montant_credit')
+        ).order_by('numero_compte')
+        
+        result = []
+        for c in comptes:
+            d = c.total_debit or Decimal('0')
+            cr = c.total_credit or Decimal('0')
+            solde = d - cr if d > cr else cr - d
+            if solde > 0:
+                result.append({'numero_compte': c.numero_compte, 'intitule': c.intitule, 'solde': solde, 'debiteur': d > cr})
+        return result
+    
+    actif_immobilise = get_comptes_avec_solde(['2'])
+    actif_circulant = get_comptes_avec_solde(['3', '5'])
+    
+    comptes_4 = PlanComptable.objects.filter(entreprise=entreprise, classe='4', est_actif=True).annotate(
+        total_debit=Sum('lignes_ecritures__montant_debit'),
+        total_credit=Sum('lignes_ecritures__montant_credit')
+    )
+    for c in comptes_4:
+        d = c.total_debit or Decimal('0')
+        cr = c.total_credit or Decimal('0')
+        if d > cr:
+            actif_circulant.append({'numero_compte': c.numero_compte, 'intitule': c.intitule, 'solde': d - cr, 'debiteur': True})
+    
+    capitaux_propres = get_comptes_avec_solde(['1'])
+    dettes = []
+    for c in comptes_4:
+        d = c.total_debit or Decimal('0')
+        cr = c.total_credit or Decimal('0')
+        if cr > d:
+            dettes.append({'numero_compte': c.numero_compte, 'intitule': c.intitule, 'solde': cr - d, 'debiteur': False})
+    
+    total_actif = sum(c['solde'] for c in actif_immobilise) + sum(c['solde'] for c in actif_circulant)
+    total_passif = sum(c['solde'] for c in capitaux_propres) + sum(c['solde'] for c in dettes)
+    
+    return actif_immobilise, actif_circulant, capitaux_propres, dettes, total_actif, total_passif, entreprise, exercice
+
+
+@login_required
+@compta_required
+def bilan_excel(request):
+    """Export Excel du Bilan"""
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+    
+    actif_immobilise, actif_circulant, capitaux_propres, dettes, total_actif, total_passif, entreprise, exercice = _get_bilan_data(request)
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Bilan"
+    
+    header_font = Font(bold=True, size=14)
+    actif_fill = PatternFill(start_color="CFE2FF", end_color="CFE2FF", fill_type="solid")
+    passif_fill = PatternFill(start_color="D1E7DD", end_color="D1E7DD", fill_type="solid")
+    section_fill = PatternFill(start_color="E8E8E8", end_color="E8E8E8", fill_type="solid")
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    
+    ws.merge_cells('A1:F1')
+    ws['A1'] = entreprise.nom_entreprise
+    ws['A1'].font = header_font
+    ws['A1'].alignment = Alignment(horizontal='center')
+    
+    ws.merge_cells('A2:F2')
+    ws['A2'] = f"BILAN COMPTABLE - Arrêté au {timezone.now().strftime('%d/%m/%Y')}"
+    ws['A2'].alignment = Alignment(horizontal='center')
+    
+    # ACTIF
+    row = 4
+    ws.merge_cells(f'A{row}:C{row}')
+    ws[f'A{row}'] = 'ACTIF'
+    ws[f'A{row}'].font = Font(bold=True, color='FFFFFF')
+    ws[f'A{row}'].fill = PatternFill(start_color="0D6EFD", end_color="0D6EFD", fill_type="solid")
+    
+    ws.merge_cells(f'D{row}:F{row}')
+    ws[f'D{row}'] = 'PASSIF'
+    ws[f'D{row}'].font = Font(bold=True, color='FFFFFF')
+    ws[f'D{row}'].fill = PatternFill(start_color="198754", end_color="198754", fill_type="solid")
+    row += 1
+    
+    # Headers
+    for col, header in enumerate(['Compte', 'Intitulé', 'Montant'], 1):
+        ws.cell(row=row, column=col, value=header).font = Font(bold=True)
+        ws.cell(row=row, column=col).fill = actif_fill
+    for col, header in enumerate(['Compte', 'Intitulé', 'Montant'], 4):
+        ws.cell(row=row, column=col, value=header).font = Font(bold=True)
+        ws.cell(row=row, column=col).fill = passif_fill
+    row += 1
+    
+    # Actif immobilisé / Capitaux propres
+    ws.merge_cells(f'A{row}:C{row}')
+    ws[f'A{row}'] = 'ACTIF IMMOBILISÉ'
+    ws[f'A{row}'].fill = section_fill
+    ws.merge_cells(f'D{row}:F{row}')
+    ws[f'D{row}'] = 'CAPITAUX PROPRES'
+    ws[f'D{row}'].fill = section_fill
+    row += 1
+    
+    max_rows = max(len(actif_immobilise), len(capitaux_propres))
+    for i in range(max_rows):
+        if i < len(actif_immobilise):
+            ws.cell(row=row, column=1, value=actif_immobilise[i]['numero_compte'])
+            ws.cell(row=row, column=2, value=actif_immobilise[i]['intitule'])
+            ws.cell(row=row, column=3, value=float(actif_immobilise[i]['solde'])).number_format = '#,##0'
+        if i < len(capitaux_propres):
+            ws.cell(row=row, column=4, value=capitaux_propres[i]['numero_compte'])
+            ws.cell(row=row, column=5, value=capitaux_propres[i]['intitule'])
+            ws.cell(row=row, column=6, value=float(capitaux_propres[i]['solde'])).number_format = '#,##0'
+        row += 1
+    
+    # Actif circulant / Dettes
+    ws.merge_cells(f'A{row}:C{row}')
+    ws[f'A{row}'] = 'ACTIF CIRCULANT'
+    ws[f'A{row}'].fill = section_fill
+    ws.merge_cells(f'D{row}:F{row}')
+    ws[f'D{row}'] = 'DETTES'
+    ws[f'D{row}'].fill = section_fill
+    row += 1
+    
+    max_rows = max(len(actif_circulant), len(dettes))
+    for i in range(max_rows):
+        if i < len(actif_circulant):
+            ws.cell(row=row, column=1, value=actif_circulant[i]['numero_compte'])
+            ws.cell(row=row, column=2, value=actif_circulant[i]['intitule'])
+            ws.cell(row=row, column=3, value=float(actif_circulant[i]['solde'])).number_format = '#,##0'
+        if i < len(dettes):
+            ws.cell(row=row, column=4, value=dettes[i]['numero_compte'])
+            ws.cell(row=row, column=5, value=dettes[i]['intitule'])
+            ws.cell(row=row, column=6, value=float(dettes[i]['solde'])).number_format = '#,##0'
+        row += 1
+    
+    # Totaux
+    row += 1
+    ws.cell(row=row, column=2, value='TOTAL ACTIF').font = Font(bold=True)
+    ws.cell(row=row, column=3, value=float(total_actif)).number_format = '#,##0'
+    ws.cell(row=row, column=3).font = Font(bold=True)
+    ws.cell(row=row, column=5, value='TOTAL PASSIF').font = Font(bold=True)
+    ws.cell(row=row, column=6, value=float(total_passif)).number_format = '#,##0'
+    ws.cell(row=row, column=6).font = Font(bold=True)
+    
+    ws.column_dimensions['A'].width = 12
+    ws.column_dimensions['B'].width = 30
+    ws.column_dimensions['C'].width = 15
+    ws.column_dimensions['D'].width = 12
+    ws.column_dimensions['E'].width = 30
+    ws.column_dimensions['F'].width = 15
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="bilan_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+    wb.save(response)
+    return response
+
+
+@login_required
+@compta_required
+def bilan_pdf(request):
+    """Export PDF du Bilan"""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    
+    actif_immobilise, actif_circulant, capitaux_propres, dettes, total_actif, total_passif, entreprise, exercice = _get_bilan_data(request)
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), leftMargin=1*cm, rightMargin=1*cm, topMargin=1*cm, bottomMargin=1*cm)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, alignment=1, spaceAfter=10)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=10, alignment=1, spaceAfter=20)
+    
+    elements = []
+    elements.append(Paragraph(entreprise.nom_entreprise, title_style))
+    elements.append(Paragraph(f"BILAN COMPTABLE - Arrêté au {timezone.now().strftime('%d/%m/%Y')}", subtitle_style))
+    
+    # Build table with ACTIF and PASSIF side by side
+    data = [['ACTIF', '', '', 'PASSIF', '', ''],
+            ['Compte', 'Intitulé', 'Montant', 'Compte', 'Intitulé', 'Montant'],
+            ['ACTIF IMMOBILISÉ', '', '', 'CAPITAUX PROPRES', '', '']]
+    
+    max_rows = max(len(actif_immobilise), len(capitaux_propres))
+    for i in range(max_rows):
+        row = ['', '', '', '', '', '']
+        if i < len(actif_immobilise):
+            row[0] = actif_immobilise[i]['numero_compte']
+            row[1] = actif_immobilise[i]['intitule'][:25]
+            row[2] = f"{actif_immobilise[i]['solde']:,.0f}"
+        if i < len(capitaux_propres):
+            row[3] = capitaux_propres[i]['numero_compte']
+            row[4] = capitaux_propres[i]['intitule'][:25]
+            row[5] = f"{capitaux_propres[i]['solde']:,.0f}"
+        data.append(row)
+    
+    data.append(['ACTIF CIRCULANT', '', '', 'DETTES', '', ''])
+    
+    max_rows = max(len(actif_circulant), len(dettes))
+    for i in range(max_rows):
+        row = ['', '', '', '', '', '']
+        if i < len(actif_circulant):
+            row[0] = actif_circulant[i]['numero_compte']
+            row[1] = actif_circulant[i]['intitule'][:25]
+            row[2] = f"{actif_circulant[i]['solde']:,.0f}"
+        if i < len(dettes):
+            row[3] = dettes[i]['numero_compte']
+            row[4] = dettes[i]['intitule'][:25]
+            row[5] = f"{dettes[i]['solde']:,.0f}"
+        data.append(row)
+    
+    data.append(['', 'TOTAL ACTIF', f"{total_actif:,.0f}", '', 'TOTAL PASSIF', f"{total_passif:,.0f}"])
+    
+    table = Table(data, colWidths=[2*cm, 5*cm, 3*cm, 2*cm, 5*cm, 3*cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (2, 0), colors.HexColor('#0D6EFD')),
+        ('BACKGROUND', (3, 0), (5, 0), colors.HexColor('#198754')),
+        ('TEXTCOLOR', (0, 0), (5, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+        ('ALIGN', (5, 0), (5, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#E8E8E8')),
+    ]))
+    
+    elements.append(table)
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="bilan_{timezone.now().strftime("%Y%m%d")}.pdf"'
+    return response
+
+
+# ============ EXPORTS COMPTE DE RESULTAT ============
+
+def _get_compte_resultat_data(request):
+    """Helper pour récupérer les données du compte de résultat"""
+    entreprise = request.user.entreprise
+    exercice = ExerciceComptable.objects.filter(entreprise=entreprise, est_courant=True).first()
+    
+    def get_comptes_classe(classe_prefix):
+        comptes = PlanComptable.objects.filter(
+            entreprise=entreprise, numero_compte__startswith=classe_prefix, est_actif=True
+        ).annotate(
+            total_debit=Sum('lignes_ecritures__montant_debit'),
+            total_credit=Sum('lignes_ecritures__montant_credit')
+        ).order_by('numero_compte')
+        
+        result = []
+        for c in comptes:
+            d = c.total_debit or Decimal('0')
+            cr = c.total_credit or Decimal('0')
+            solde = d - cr if d > cr else cr - d
+            if solde > 0:
+                result.append({'numero_compte': c.numero_compte, 'intitule': c.intitule, 'solde': solde})
+        return result
+    
+    charges_exploitation = get_comptes_classe('60') + get_comptes_classe('61') + get_comptes_classe('62') + get_comptes_classe('63') + get_comptes_classe('64') + get_comptes_classe('65')
+    charges_financieres = get_comptes_classe('66') + get_comptes_classe('67')
+    produits_exploitation = get_comptes_classe('70') + get_comptes_classe('71') + get_comptes_classe('72') + get_comptes_classe('73') + get_comptes_classe('74') + get_comptes_classe('75')
+    produits_financiers = get_comptes_classe('76') + get_comptes_classe('77')
+    
+    total_charges = sum(c['solde'] for c in charges_exploitation) + sum(c['solde'] for c in charges_financieres)
+    total_produits = sum(c['solde'] for c in produits_exploitation) + sum(c['solde'] for c in produits_financiers)
+    resultat = total_produits - total_charges
+    
+    return charges_exploitation, charges_financieres, produits_exploitation, produits_financiers, total_charges, total_produits, resultat, entreprise, exercice
+
+
+@login_required
+@compta_required
+def compte_resultat_excel(request):
+    """Export Excel du Compte de Résultat"""
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+    
+    charges_exploitation, charges_financieres, produits_exploitation, produits_financiers, total_charges, total_produits, resultat, entreprise, exercice = _get_compte_resultat_data(request)
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Compte de Résultat"
+    
+    header_font = Font(bold=True, size=14)
+    charges_fill = PatternFill(start_color="F8D7DA", end_color="F8D7DA", fill_type="solid")
+    produits_fill = PatternFill(start_color="D1E7DD", end_color="D1E7DD", fill_type="solid")
+    section_fill = PatternFill(start_color="E8E8E8", end_color="E8E8E8", fill_type="solid")
+    
+    ws.merge_cells('A1:F1')
+    ws['A1'] = entreprise.nom_entreprise
+    ws['A1'].font = header_font
+    ws['A1'].alignment = Alignment(horizontal='center')
+    
+    ws.merge_cells('A2:F2')
+    ws['A2'] = f"COMPTE DE RÉSULTAT - Au {timezone.now().strftime('%d/%m/%Y')}"
+    ws['A2'].alignment = Alignment(horizontal='center')
+    
+    row = 4
+    # Headers
+    ws.merge_cells(f'A{row}:C{row}')
+    ws[f'A{row}'] = 'CHARGES'
+    ws[f'A{row}'].font = Font(bold=True, color='FFFFFF')
+    ws[f'A{row}'].fill = PatternFill(start_color="DC3545", end_color="DC3545", fill_type="solid")
+    
+    ws.merge_cells(f'D{row}:F{row}')
+    ws[f'D{row}'] = 'PRODUITS'
+    ws[f'D{row}'].font = Font(bold=True, color='FFFFFF')
+    ws[f'D{row}'].fill = PatternFill(start_color="198754", end_color="198754", fill_type="solid")
+    row += 1
+    
+    for col, header in enumerate(['Compte', 'Intitulé', 'Montant'], 1):
+        ws.cell(row=row, column=col, value=header).font = Font(bold=True)
+        ws.cell(row=row, column=col).fill = charges_fill
+    for col, header in enumerate(['Compte', 'Intitulé', 'Montant'], 4):
+        ws.cell(row=row, column=col, value=header).font = Font(bold=True)
+        ws.cell(row=row, column=col).fill = produits_fill
+    row += 1
+    
+    # Exploitation
+    ws.merge_cells(f'A{row}:C{row}')
+    ws[f'A{row}'] = "Charges d'exploitation"
+    ws[f'A{row}'].fill = section_fill
+    ws.merge_cells(f'D{row}:F{row}')
+    ws[f'D{row}'] = "Produits d'exploitation"
+    ws[f'D{row}'].fill = section_fill
+    row += 1
+    
+    max_rows = max(len(charges_exploitation), len(produits_exploitation))
+    for i in range(max_rows):
+        if i < len(charges_exploitation):
+            ws.cell(row=row, column=1, value=charges_exploitation[i]['numero_compte'])
+            ws.cell(row=row, column=2, value=charges_exploitation[i]['intitule'])
+            ws.cell(row=row, column=3, value=float(charges_exploitation[i]['solde'])).number_format = '#,##0'
+        if i < len(produits_exploitation):
+            ws.cell(row=row, column=4, value=produits_exploitation[i]['numero_compte'])
+            ws.cell(row=row, column=5, value=produits_exploitation[i]['intitule'])
+            ws.cell(row=row, column=6, value=float(produits_exploitation[i]['solde'])).number_format = '#,##0'
+        row += 1
+    
+    # Financiers
+    ws.merge_cells(f'A{row}:C{row}')
+    ws[f'A{row}'] = "Charges financières"
+    ws[f'A{row}'].fill = section_fill
+    ws.merge_cells(f'D{row}:F{row}')
+    ws[f'D{row}'] = "Produits financiers"
+    ws[f'D{row}'].fill = section_fill
+    row += 1
+    
+    max_rows = max(len(charges_financieres), len(produits_financiers))
+    for i in range(max_rows):
+        if i < len(charges_financieres):
+            ws.cell(row=row, column=1, value=charges_financieres[i]['numero_compte'])
+            ws.cell(row=row, column=2, value=charges_financieres[i]['intitule'])
+            ws.cell(row=row, column=3, value=float(charges_financieres[i]['solde'])).number_format = '#,##0'
+        if i < len(produits_financiers):
+            ws.cell(row=row, column=4, value=produits_financiers[i]['numero_compte'])
+            ws.cell(row=row, column=5, value=produits_financiers[i]['intitule'])
+            ws.cell(row=row, column=6, value=float(produits_financiers[i]['solde'])).number_format = '#,##0'
+        row += 1
+    
+    # Totaux
+    row += 1
+    ws.cell(row=row, column=2, value='TOTAL CHARGES').font = Font(bold=True)
+    ws.cell(row=row, column=3, value=float(total_charges)).number_format = '#,##0'
+    ws.cell(row=row, column=3).font = Font(bold=True)
+    ws.cell(row=row, column=5, value='TOTAL PRODUITS').font = Font(bold=True)
+    ws.cell(row=row, column=6, value=float(total_produits)).number_format = '#,##0'
+    ws.cell(row=row, column=6).font = Font(bold=True)
+    
+    row += 2
+    ws.merge_cells(f'A{row}:F{row}')
+    ws[f'A{row}'] = f"RÉSULTAT: {resultat:,.0f} GNF ({'Bénéfice' if resultat >= 0 else 'Perte'})"
+    ws[f'A{row}'].font = Font(bold=True, size=12)
+    ws[f'A{row}'].alignment = Alignment(horizontal='center')
+    
+    ws.column_dimensions['A'].width = 12
+    ws.column_dimensions['B'].width = 30
+    ws.column_dimensions['C'].width = 15
+    ws.column_dimensions['D'].width = 12
+    ws.column_dimensions['E'].width = 30
+    ws.column_dimensions['F'].width = 15
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="compte_resultat_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+    wb.save(response)
+    return response
+
+
+@login_required
+@compta_required
+def compte_resultat_pdf(request):
+    """Export PDF du Compte de Résultat"""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    
+    charges_exploitation, charges_financieres, produits_exploitation, produits_financiers, total_charges, total_produits, resultat, entreprise, exercice = _get_compte_resultat_data(request)
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), leftMargin=1*cm, rightMargin=1*cm, topMargin=1*cm, bottomMargin=1*cm)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, alignment=1, spaceAfter=10)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=10, alignment=1, spaceAfter=20)
+    
+    elements = []
+    elements.append(Paragraph(entreprise.nom_entreprise, title_style))
+    elements.append(Paragraph(f"COMPTE DE RÉSULTAT - Au {timezone.now().strftime('%d/%m/%Y')}", subtitle_style))
+    
+    data = [['CHARGES', '', '', 'PRODUITS', '', ''],
+            ['Compte', 'Intitulé', 'Montant', 'Compte', 'Intitulé', 'Montant'],
+            ["Charges d'exploitation", '', '', "Produits d'exploitation", '', '']]
+    
+    max_rows = max(len(charges_exploitation), len(produits_exploitation))
+    for i in range(max_rows):
+        row = ['', '', '', '', '', '']
+        if i < len(charges_exploitation):
+            row[0] = charges_exploitation[i]['numero_compte']
+            row[1] = charges_exploitation[i]['intitule'][:25]
+            row[2] = f"{charges_exploitation[i]['solde']:,.0f}"
+        if i < len(produits_exploitation):
+            row[3] = produits_exploitation[i]['numero_compte']
+            row[4] = produits_exploitation[i]['intitule'][:25]
+            row[5] = f"{produits_exploitation[i]['solde']:,.0f}"
+        data.append(row)
+    
+    data.append(['Charges financières', '', '', 'Produits financiers', '', ''])
+    
+    max_rows = max(len(charges_financieres), len(produits_financiers))
+    for i in range(max_rows):
+        row = ['', '', '', '', '', '']
+        if i < len(charges_financieres):
+            row[0] = charges_financieres[i]['numero_compte']
+            row[1] = charges_financieres[i]['intitule'][:25]
+            row[2] = f"{charges_financieres[i]['solde']:,.0f}"
+        if i < len(produits_financiers):
+            row[3] = produits_financiers[i]['numero_compte']
+            row[4] = produits_financiers[i]['intitule'][:25]
+            row[5] = f"{produits_financiers[i]['solde']:,.0f}"
+        data.append(row)
+    
+    data.append(['', 'TOTAL CHARGES', f"{total_charges:,.0f}", '', 'TOTAL PRODUITS', f"{total_produits:,.0f}"])
+    
+    table = Table(data, colWidths=[2*cm, 5*cm, 3*cm, 2*cm, 5*cm, 3*cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (2, 0), colors.HexColor('#DC3545')),
+        ('BACKGROUND', (3, 0), (5, 0), colors.HexColor('#198754')),
+        ('TEXTCOLOR', (0, 0), (5, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+        ('ALIGN', (5, 0), (5, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#E8E8E8')),
+    ]))
+    
+    elements.append(table)
+    elements.append(Spacer(1, 1*cm))
+    
+    resultat_text = f"RÉSULTAT: {resultat:,.0f} GNF ({'Bénéfice' if resultat >= 0 else 'Perte'})"
+    resultat_style = ParagraphStyle('Resultat', parent=styles['Heading2'], fontSize=14, alignment=1)
+    elements.append(Paragraph(resultat_text, resultat_style))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="compte_resultat_{timezone.now().strftime("%Y%m%d")}.pdf"'
+    return response
