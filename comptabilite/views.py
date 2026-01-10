@@ -1963,3 +1963,377 @@ def compte_resultat_pdf(request):
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="compte_resultat_{timezone.now().strftime("%Y%m%d")}.pdf"'
     return response
+
+
+# ============ MODULE CLIENTS & FOURNISSEURS DÉTAILLÉS ============
+
+@login_required
+@compta_required
+def compte_client_list(request):
+    """Liste des comptes clients"""
+    entreprise = request.user.entreprise
+    
+    clients = Tiers.objects.filter(
+        entreprise=entreprise,
+        type_tiers__in=['client', 'mixte'],
+        est_actif=True
+    ).annotate(
+        total_factures=Sum('factures__montant_ttc', filter=models.Q(factures__type_facture='vente', factures__statut='validee')),
+        total_paye=Sum('factures__montant_paye', filter=models.Q(factures__type_facture='vente', factures__statut='validee')),
+        nb_factures=Count('factures', filter=models.Q(factures__type_facture='vente'))
+    ).order_by('raison_sociale')
+    
+    # Calculer le solde pour chaque client
+    for client in clients:
+        client.solde_calcule = (client.total_factures or Decimal('0')) - (client.total_paye or Decimal('0'))
+    
+    total_creances = sum(c.solde_calcule for c in clients)
+    
+    context = {
+        'clients': clients,
+        'total_creances': total_creances,
+    }
+    return render(request, 'comptabilite/clients_fournisseurs/compte_client_list.html', context)
+
+
+@login_required
+@compta_required
+def compte_client_detail(request, pk):
+    """Détail du compte client avec historique des mouvements"""
+    entreprise = request.user.entreprise
+    client = get_object_or_404(Tiers, pk=pk, entreprise=entreprise, type_tiers__in=['client', 'mixte'])
+    
+    factures = Facture.objects.filter(
+        tiers=client,
+        type_facture='vente',
+        statut__in=['validee', 'payee']
+    ).order_by('-date_facture')
+    
+    reglements = Reglement.objects.filter(
+        facture__tiers=client,
+        facture__type_facture='vente'
+    ).order_by('-date_reglement')
+    
+    # Construire l'historique des mouvements
+    mouvements = []
+    solde_cumule = Decimal('0')
+    
+    for facture in factures:
+        solde_cumule += facture.montant_ttc
+        mouvements.append({
+            'date': facture.date_facture,
+            'type': 'Facture',
+            'reference': facture.numero,
+            'libelle': f"Facture {facture.numero}",
+            'debit': facture.montant_ttc,
+            'credit': Decimal('0'),
+            'solde': solde_cumule,
+        })
+    
+    for reglement in reglements:
+        solde_cumule -= reglement.montant
+        mouvements.append({
+            'date': reglement.date_reglement,
+            'type': 'Règlement',
+            'reference': reglement.numero,
+            'libelle': f"Règlement {reglement.mode_paiement}",
+            'debit': Decimal('0'),
+            'credit': reglement.montant,
+            'solde': solde_cumule,
+        })
+    
+    # Trier par date
+    mouvements.sort(key=lambda x: x['date'])
+    
+    # Recalculer le solde cumulé dans l'ordre
+    solde_cumule = Decimal('0')
+    for mvt in mouvements:
+        solde_cumule += mvt['debit'] - mvt['credit']
+        mvt['solde'] = solde_cumule
+    
+    total_debit = sum(m['debit'] for m in mouvements)
+    total_credit = sum(m['credit'] for m in mouvements)
+    
+    context = {
+        'client': client,
+        'mouvements': mouvements,
+        'total_debit': total_debit,
+        'total_credit': total_credit,
+        'solde_final': solde_cumule,
+    }
+    return render(request, 'comptabilite/clients_fournisseurs/compte_client_detail.html', context)
+
+
+@login_required
+@compta_required
+def compte_fournisseur_list(request):
+    """Liste des comptes fournisseurs"""
+    entreprise = request.user.entreprise
+    
+    fournisseurs = Tiers.objects.filter(
+        entreprise=entreprise,
+        type_tiers__in=['fournisseur', 'mixte'],
+        est_actif=True
+    ).annotate(
+        total_factures=Sum('factures__montant_ttc', filter=models.Q(factures__type_facture='achat', factures__statut='validee')),
+        total_paye=Sum('factures__montant_paye', filter=models.Q(factures__type_facture='achat', factures__statut='validee')),
+        nb_factures=Count('factures', filter=models.Q(factures__type_facture='achat'))
+    ).order_by('raison_sociale')
+    
+    for fournisseur in fournisseurs:
+        fournisseur.solde_calcule = (fournisseur.total_factures or Decimal('0')) - (fournisseur.total_paye or Decimal('0'))
+    
+    total_dettes = sum(f.solde_calcule for f in fournisseurs)
+    
+    context = {
+        'fournisseurs': fournisseurs,
+        'total_dettes': total_dettes,
+    }
+    return render(request, 'comptabilite/clients_fournisseurs/compte_fournisseur_list.html', context)
+
+
+@login_required
+@compta_required
+def compte_fournisseur_detail(request, pk):
+    """Détail du compte fournisseur avec historique des mouvements"""
+    entreprise = request.user.entreprise
+    fournisseur = get_object_or_404(Tiers, pk=pk, entreprise=entreprise, type_tiers__in=['fournisseur', 'mixte'])
+    
+    factures = Facture.objects.filter(
+        tiers=fournisseur,
+        type_facture='achat',
+        statut__in=['validee', 'payee']
+    ).order_by('-date_facture')
+    
+    reglements = Reglement.objects.filter(
+        facture__tiers=fournisseur,
+        facture__type_facture='achat'
+    ).order_by('-date_reglement')
+    
+    mouvements = []
+    solde_cumule = Decimal('0')
+    
+    for facture in factures:
+        solde_cumule += facture.montant_ttc
+        mouvements.append({
+            'date': facture.date_facture,
+            'type': 'Facture',
+            'reference': facture.numero,
+            'libelle': f"Facture {facture.numero}",
+            'debit': Decimal('0'),
+            'credit': facture.montant_ttc,
+            'solde': solde_cumule,
+        })
+    
+    for reglement in reglements:
+        solde_cumule -= reglement.montant
+        mouvements.append({
+            'date': reglement.date_reglement,
+            'type': 'Règlement',
+            'reference': reglement.numero,
+            'libelle': f"Règlement {reglement.mode_paiement}",
+            'debit': reglement.montant,
+            'credit': Decimal('0'),
+            'solde': solde_cumule,
+        })
+    
+    mouvements.sort(key=lambda x: x['date'])
+    
+    solde_cumule = Decimal('0')
+    for mvt in mouvements:
+        solde_cumule += mvt['credit'] - mvt['debit']
+        mvt['solde'] = solde_cumule
+    
+    total_debit = sum(m['debit'] for m in mouvements)
+    total_credit = sum(m['credit'] for m in mouvements)
+    
+    context = {
+        'fournisseur': fournisseur,
+        'mouvements': mouvements,
+        'total_debit': total_debit,
+        'total_credit': total_credit,
+        'solde_final': solde_cumule,
+    }
+    return render(request, 'comptabilite/clients_fournisseurs/compte_fournisseur_detail.html', context)
+
+
+@login_required
+@compta_required
+def vieillissement_creances(request):
+    """Analyse du vieillissement des créances clients"""
+    entreprise = request.user.entreprise
+    today = timezone.now().date()
+    
+    # Récupérer les factures clients non totalement payées
+    factures = Facture.objects.filter(
+        entreprise=entreprise,
+        type_facture='vente',
+        statut='validee'
+    ).exclude(
+        montant_paye__gte=models.F('montant_ttc')
+    ).select_related('tiers').order_by('tiers__raison_sociale', 'date_echeance')
+    
+    # Classifier par tranche d'âge
+    tranches = {
+        'non_echu': {'label': 'Non échu', 'factures': [], 'total': Decimal('0')},
+        '0_30': {'label': '0-30 jours', 'factures': [], 'total': Decimal('0')},
+        '31_60': {'label': '31-60 jours', 'factures': [], 'total': Decimal('0')},
+        '61_90': {'label': '61-90 jours', 'factures': [], 'total': Decimal('0')},
+        'plus_90': {'label': '> 90 jours', 'factures': [], 'total': Decimal('0')},
+    }
+    
+    for facture in factures:
+        reste = facture.montant_ttc - facture.montant_paye
+        date_ref = facture.date_echeance or facture.date_facture
+        jours_retard = (today - date_ref).days
+        
+        facture.reste_a_payer = reste
+        facture.jours_retard = jours_retard
+        
+        if jours_retard <= 0:
+            tranches['non_echu']['factures'].append(facture)
+            tranches['non_echu']['total'] += reste
+        elif jours_retard <= 30:
+            tranches['0_30']['factures'].append(facture)
+            tranches['0_30']['total'] += reste
+        elif jours_retard <= 60:
+            tranches['31_60']['factures'].append(facture)
+            tranches['31_60']['total'] += reste
+        elif jours_retard <= 90:
+            tranches['61_90']['factures'].append(facture)
+            tranches['61_90']['total'] += reste
+        else:
+            tranches['plus_90']['factures'].append(facture)
+            tranches['plus_90']['total'] += reste
+    
+    total_creances = sum(t['total'] for t in tranches.values())
+    
+    context = {
+        'tranches': tranches,
+        'total_creances': total_creances,
+        'today': today,
+    }
+    return render(request, 'comptabilite/clients_fournisseurs/vieillissement_creances.html', context)
+
+
+@login_required
+@compta_required
+def vieillissement_dettes(request):
+    """Analyse du vieillissement des dettes fournisseurs"""
+    entreprise = request.user.entreprise
+    today = timezone.now().date()
+    
+    factures = Facture.objects.filter(
+        entreprise=entreprise,
+        type_facture='achat',
+        statut='validee'
+    ).exclude(
+        montant_paye__gte=models.F('montant_ttc')
+    ).select_related('tiers').order_by('tiers__raison_sociale', 'date_echeance')
+    
+    tranches = {
+        'non_echu': {'label': 'Non échu', 'factures': [], 'total': Decimal('0')},
+        '0_30': {'label': '0-30 jours', 'factures': [], 'total': Decimal('0')},
+        '31_60': {'label': '31-60 jours', 'factures': [], 'total': Decimal('0')},
+        '61_90': {'label': '61-90 jours', 'factures': [], 'total': Decimal('0')},
+        'plus_90': {'label': '> 90 jours', 'factures': [], 'total': Decimal('0')},
+    }
+    
+    for facture in factures:
+        reste = facture.montant_ttc - facture.montant_paye
+        date_ref = facture.date_echeance or facture.date_facture
+        jours_retard = (today - date_ref).days
+        
+        facture.reste_a_payer = reste
+        facture.jours_retard = jours_retard
+        
+        if jours_retard <= 0:
+            tranches['non_echu']['factures'].append(facture)
+            tranches['non_echu']['total'] += reste
+        elif jours_retard <= 30:
+            tranches['0_30']['factures'].append(facture)
+            tranches['0_30']['total'] += reste
+        elif jours_retard <= 60:
+            tranches['31_60']['factures'].append(facture)
+            tranches['31_60']['total'] += reste
+        elif jours_retard <= 90:
+            tranches['61_90']['factures'].append(facture)
+            tranches['61_90']['total'] += reste
+        else:
+            tranches['plus_90']['factures'].append(facture)
+            tranches['plus_90']['total'] += reste
+    
+    total_dettes = sum(t['total'] for t in tranches.values())
+    
+    context = {
+        'tranches': tranches,
+        'total_dettes': total_dettes,
+        'today': today,
+    }
+    return render(request, 'comptabilite/clients_fournisseurs/vieillissement_dettes.html', context)
+
+
+@login_required
+@compta_required
+def impayes_clients(request):
+    """Liste des factures clients impayées"""
+    entreprise = request.user.entreprise
+    today = timezone.now().date()
+    
+    factures = Facture.objects.filter(
+        entreprise=entreprise,
+        type_facture='vente',
+        statut='validee'
+    ).exclude(
+        montant_paye__gte=models.F('montant_ttc')
+    ).select_related('tiers').order_by('-date_facture')
+    
+    for facture in factures:
+        facture.reste_a_payer_calc = facture.montant_ttc - facture.montant_paye
+        date_ref = facture.date_echeance or facture.date_facture
+        facture.jours_retard = (today - date_ref).days
+        facture.est_en_retard = facture.jours_retard > 0
+    
+    total_impayes = sum(f.reste_a_payer_calc for f in factures)
+    nb_impayes = factures.count()
+    
+    context = {
+        'factures': factures,
+        'total_impayes': total_impayes,
+        'nb_impayes': nb_impayes,
+        'today': today,
+    }
+    return render(request, 'comptabilite/clients_fournisseurs/impayes_clients.html', context)
+
+
+@login_required
+@compta_required
+def impayes_fournisseurs(request):
+    """Liste des factures fournisseurs impayées"""
+    entreprise = request.user.entreprise
+    today = timezone.now().date()
+    
+    factures = Facture.objects.filter(
+        entreprise=entreprise,
+        type_facture='achat',
+        statut='validee'
+    ).exclude(
+        montant_paye__gte=models.F('montant_ttc')
+    ).select_related('tiers').order_by('-date_facture')
+    
+    for facture in factures:
+        facture.reste_a_payer_calc = facture.montant_ttc - facture.montant_paye
+        date_ref = facture.date_echeance or facture.date_facture
+        facture.jours_retard = (today - date_ref).days
+        facture.est_en_retard = facture.jours_retard > 0
+    
+    total_impayes = sum(f.reste_a_payer_calc for f in factures)
+    nb_impayes = factures.count()
+    
+    context = {
+        'factures': factures,
+        'total_impayes': total_impayes,
+        'nb_impayes': nb_impayes,
+        'today': today,
+    }
+    return render(request, 'comptabilite/clients_fournisseurs/impayes_fournisseurs.html', context)

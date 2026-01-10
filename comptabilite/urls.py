@@ -65,4 +65,14 @@ urlpatterns = [
     path('etats/compte-resultat/', views.compte_resultat, name='compte_resultat'),
     path('etats/compte-resultat/pdf/', views.compte_resultat_pdf, name='compte_resultat_pdf'),
     path('etats/compte-resultat/excel/', views.compte_resultat_excel, name='compte_resultat_excel'),
+    
+    # Clients & Fournisseurs détaillés
+    path('clients/', views.compte_client_list, name='compte_client_list'),
+    path('clients/<uuid:pk>/', views.compte_client_detail, name='compte_client_detail'),
+    path('clients/vieillissement/', views.vieillissement_creances, name='vieillissement_creances'),
+    path('clients/impayes/', views.impayes_clients, name='impayes_clients'),
+    path('fournisseurs/', views.compte_fournisseur_list, name='compte_fournisseur_list'),
+    path('fournisseurs/<uuid:pk>/', views.compte_fournisseur_detail, name='compte_fournisseur_detail'),
+    path('fournisseurs/vieillissement/', views.vieillissement_dettes, name='vieillissement_dettes'),
+    path('fournisseurs/impayes/', views.impayes_fournisseurs, name='impayes_fournisseurs'),
 ]

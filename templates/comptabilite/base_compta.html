@@ -136,6 +136,20 @@
                         </li>
                         
                         <li class="nav-item mt-3">
+                            <h6 class="sidebar-heading px-3 text-muted"><span>CLIENTS & FOURNISSEURS</span></h6>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'compte_client' in request.resolver_match.url_name or 'vieillissement_creances' in request.resolver_match.url_name or 'impayes_clients' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:compte_client_list' %}">
+                                <i class="bi bi-person-badge"></i> Comptes Clients
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'compte_fournisseur' in request.resolver_match.url_name or 'vieillissement_dettes' in request.resolver_match.url_name or 'impayes_fournisseurs' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:compte_fournisseur_list' %}">
+                                <i class="bi bi-building"></i> Comptes Fournisseurs
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item mt-3">
                             <h6 class="sidebar-heading px-3 text-muted"><span>ÉTATS</span></h6>
                         </li>
                         <li class="nav-item">
