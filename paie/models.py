@@ -173,6 +173,15 @@ class BulletinPaie(models.Model):
     def rts(self, value):
         """Setter pour l'alias RTS"""
         self.irg = value
+    
+    @property
+    def total_charges_patronales(self):
+        """Total des charges patronales (CNSS + VF + TA)"""
+        from decimal import Decimal
+        cnss = self.cnss_employeur or Decimal('0')
+        vf = self.versement_forfaitaire or Decimal('0')
+        ta = self.taxe_apprentissage or Decimal('0')
+        return cnss + vf + ta
 
 
 class ParametrePaie(models.Model):
