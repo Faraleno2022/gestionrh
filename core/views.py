@@ -561,7 +561,7 @@ def superuser_manage_users(request):
     from django.db.models import Count
     
     entreprises = Entreprise.objects.annotate(
-        effectif=Count('employes')
+        effectif=Count('employes_entreprise')
     ).order_by('nom_entreprise')
     
     # Statistiques
