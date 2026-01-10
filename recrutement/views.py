@@ -248,7 +248,11 @@ def modifier_offre(request, pk):
 @entreprise_active_required
 def supprimer_offre(request, pk):
     """Supprimer une offre d'emploi"""
-    offre = get_object_or_404(OffreEmploi, pk=pk, entreprise=request.user.entreprise)
+    try:
+        offre = OffreEmploi.objects.get(pk=pk, entreprise=request.user.entreprise)
+    except OffreEmploi.DoesNotExist:
+        messages.error(request, f"L'offre d'emploi #{pk} n'existe pas ou a déjà été supprimée.")
+        return redirect('recrutement:offres')
     
     if request.method == 'POST':
         reference = offre.reference_offre
