@@ -1,4 +1,5 @@
 {% extends 'comptabilite/base_compta.html' %}
+{% load compta_tags %}
 
 {% block title %}Grand Livre{% endblock %}
 
@@ -81,19 +82,17 @@
                     {% endfor %}
                 </tbody>
                 <tfoot class="table-light fw-bold">
+                    {% with compte_totaux=totaux_par_compte|get_item:compte_lignes.grouper.numero_compte %}
                     <tr>
                         <td colspan="4" class="text-end">Total compte {{ compte_lignes.grouper.numero_compte }} :</td>
                         <td class="text-end text-primary">
-                            {% with total_d=0 %}
-                            {% for l in compte_lignes.list %}{% if l.montant_debit %}{{ l.montant_debit|add:total_d }}{% endif %}{% endfor %}
-                            {% endwith %}
+                            {% if compte_totaux.debit %}{{ compte_totaux.debit|floatformat:0 }}{% endif %}
                         </td>
                         <td class="text-end text-success">
-                            {% with total_c=0 %}
-                            {% for l in compte_lignes.list %}{% if l.montant_credit %}{{ l.montant_credit|add:total_c }}{% endif %}{% endfor %}
-                            {% endwith %}
+                            {% if compte_totaux.credit %}{{ compte_totaux.credit|floatformat:0 }}{% endif %}
                         </td>
                     </tr>
+                    {% endwith %}
                 </tfoot>
             </table>
         </div>
