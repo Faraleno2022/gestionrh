@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, F, Count
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from django.core.paginator import Paginator
@@ -1978,9 +1978,9 @@ def compte_client_list(request):
         type_tiers__in=['client', 'mixte'],
         est_actif=True
     ).annotate(
-        total_factures=Sum('factures__montant_ttc', filter=models.Q(factures__type_facture='vente', factures__statut='validee')),
-        total_paye=Sum('factures__montant_paye', filter=models.Q(factures__type_facture='vente', factures__statut='validee')),
-        nb_factures=Count('factures', filter=models.Q(factures__type_facture='vente'))
+        total_factures=Sum('factures__montant_ttc', filter=Q(factures__type_facture='vente', factures__statut='validee')),
+        total_paye=Sum('factures__montant_paye', filter=Q(factures__type_facture='vente', factures__statut='validee')),
+        nb_factures=Count('factures', filter=Q(factures__type_facture='vente'))
     ).order_by('raison_sociale')
     
     # Calculer le solde pour chaque client
@@ -2075,9 +2075,9 @@ def compte_fournisseur_list(request):
         type_tiers__in=['fournisseur', 'mixte'],
         est_actif=True
     ).annotate(
-        total_factures=Sum('factures__montant_ttc', filter=models.Q(factures__type_facture='achat', factures__statut='validee')),
-        total_paye=Sum('factures__montant_paye', filter=models.Q(factures__type_facture='achat', factures__statut='validee')),
-        nb_factures=Count('factures', filter=models.Q(factures__type_facture='achat'))
+        total_factures=Sum('factures__montant_ttc', filter=Q(factures__type_facture='achat', factures__statut='validee')),
+        total_paye=Sum('factures__montant_paye', filter=Q(factures__type_facture='achat', factures__statut='validee')),
+        nb_factures=Count('factures', filter=Q(factures__type_facture='achat'))
     ).order_by('raison_sociale')
     
     for fournisseur in fournisseurs:
@@ -2170,7 +2170,7 @@ def vieillissement_creances(request):
         type_facture='vente',
         statut='validee'
     ).exclude(
-        montant_paye__gte=models.F('montant_ttc')
+        montant_paye__gte=F('montant_ttc')
     ).select_related('tiers').order_by('tiers__raison_sociale', 'date_echeance')
     
     # Classifier par tranche d'âge
@@ -2228,7 +2228,7 @@ def vieillissement_dettes(request):
         type_facture='achat',
         statut='validee'
     ).exclude(
-        montant_paye__gte=models.F('montant_ttc')
+        montant_paye__gte=F('montant_ttc')
     ).select_related('tiers').order_by('tiers__raison_sociale', 'date_echeance')
     
     tranches = {
@@ -2285,7 +2285,7 @@ def impayes_clients(request):
         type_facture='vente',
         statut='validee'
     ).exclude(
-        montant_paye__gte=models.F('montant_ttc')
+        montant_paye__gte=F('montant_ttc')
     ).select_related('tiers').order_by('-date_facture')
     
     for facture in factures:
@@ -2318,7 +2318,7 @@ def impayes_fournisseurs(request):
         type_facture='achat',
         statut='validee'
     ).exclude(
-        montant_paye__gte=models.F('montant_ttc')
+        montant_paye__gte=F('montant_ttc')
     ).select_related('tiers').order_by('-date_facture')
     
     for facture in factures:
