@@ -29,7 +29,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
                 <h6 class="text-muted mb-1">Nombre de Fournisseurs</h6>
-                <h3 class="mb-0 text-success">{{ fournisseurs|length }}</h3>
+                <h3 class="mb-0 text-success">{{ nb_fournisseurs }}</h3>
             </div>
         </div>
     </div>
@@ -37,11 +37,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
                 <h6 class="text-muted mb-1">Dette Moyenne</h6>
-                <h3 class="mb-0 text-info">
-                    {% if fournisseurs|length > 0 %}
-                        {{ total_dettes|divisibleby:fournisseurs|length|floatformat:0 }} GNF
-                    {% else %}0 GNF{% endif %}
-                </h3>
+                <h3 class="mb-0 text-info">{{ dette_moyenne|floatformat:0 }} GNF</h3>
             </div>
         </div>
     </div>

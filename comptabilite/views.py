@@ -1984,14 +1984,19 @@ def compte_client_list(request):
     ).order_by('raison_sociale')
     
     # Calculer le solde pour chaque client
-    for client in clients:
+    clients_list = list(clients)
+    for client in clients_list:
         client.solde_calcule = (client.total_factures or Decimal('0')) - (client.total_paye or Decimal('0'))
     
-    total_creances = sum(c.solde_calcule for c in clients)
+    total_creances = sum(c.solde_calcule for c in clients_list)
+    nb_clients = len(clients_list)
+    creance_moyenne = total_creances / nb_clients if nb_clients > 0 else Decimal('0')
     
     context = {
-        'clients': clients,
+        'clients': clients_list,
         'total_creances': total_creances,
+        'nb_clients': nb_clients,
+        'creance_moyenne': creance_moyenne,
     }
     return render(request, 'comptabilite/clients_fournisseurs/compte_client_list.html', context)
 
@@ -2080,14 +2085,19 @@ def compte_fournisseur_list(request):
         nb_factures=Count('factures', filter=Q(factures__type_facture='achat'))
     ).order_by('raison_sociale')
     
-    for fournisseur in fournisseurs:
+    fournisseurs_list = list(fournisseurs)
+    for fournisseur in fournisseurs_list:
         fournisseur.solde_calcule = (fournisseur.total_factures or Decimal('0')) - (fournisseur.total_paye or Decimal('0'))
     
-    total_dettes = sum(f.solde_calcule for f in fournisseurs)
+    total_dettes = sum(f.solde_calcule for f in fournisseurs_list)
+    nb_fournisseurs = len(fournisseurs_list)
+    dette_moyenne = total_dettes / nb_fournisseurs if nb_fournisseurs > 0 else Decimal('0')
     
     context = {
-        'fournisseurs': fournisseurs,
+        'fournisseurs': fournisseurs_list,
         'total_dettes': total_dettes,
+        'nb_fournisseurs': nb_fournisseurs,
+        'dette_moyenne': dette_moyenne,
     }
     return render(request, 'comptabilite/clients_fournisseurs/compte_fournisseur_list.html', context)
 
