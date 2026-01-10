@@ -692,11 +692,14 @@ def grand_livre(request):
     
     lignes = lignes.order_by('compte__numero_compte', 'ecriture__date_ecriture')
     
-    comptes = PlanComptable.objects.filter(entreprise=entreprise, est_actif=True)
+    comptes = PlanComptable.objects.filter(entreprise=entreprise, est_actif=True).order_by('numero_compte')
     
     context = {
         'lignes': lignes,
         'comptes': comptes,
+        'compte_id': compte_id,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
     }
     return render(request, 'comptabilite/etats/grand_livre.html', context)
 
@@ -714,7 +717,31 @@ def balance(request):
         total_credit=Sum('lignes_ecritures__montant_credit')
     ).order_by('numero_compte')
     
-    return render(request, 'comptabilite/etats/balance.html', {'comptes': comptes})
+    # Calculer les totaux
+    total_debit = Decimal('0')
+    total_credit = Decimal('0')
+    total_solde_debit = Decimal('0')
+    total_solde_credit = Decimal('0')
+    
+    for c in comptes:
+        d = c.total_debit or Decimal('0')
+        cr = c.total_credit or Decimal('0')
+        total_debit += d
+        total_credit += cr
+        if d > cr:
+            total_solde_debit += (d - cr)
+        else:
+            total_solde_credit += (cr - d)
+    
+    context = {
+        'comptes': comptes,
+        'total_debit': total_debit,
+        'total_credit': total_credit,
+        'total_solde_debit': total_solde_debit,
+        'total_solde_credit': total_solde_credit,
+        'today': timezone.now().date(),
+    }
+    return render(request, 'comptabilite/etats/balance.html', context)
 
 
 @login_required
@@ -755,29 +782,69 @@ def bilan(request):
     """Bilan comptable"""
     entreprise = request.user.entreprise
     
-    # Actif (classes 2, 3, 4 débiteur, 5)
-    actif = PlanComptable.objects.filter(
-        entreprise=entreprise,
-        classe__in=['2', '3', '5'],
-        est_actif=True
-    ).annotate(
-        total_debit=Sum('lignes_ecritures__montant_debit'),
-        total_credit=Sum('lignes_ecritures__montant_credit')
-    )
+    exercice = ExerciceComptable.objects.filter(entreprise=entreprise, est_courant=True).first()
     
-    # Passif (classes 1, 4 créditeur)
-    passif = PlanComptable.objects.filter(
-        entreprise=entreprise,
-        classe='1',
-        est_actif=True
-    ).annotate(
+    def get_comptes_avec_solde(classes):
+        comptes = PlanComptable.objects.filter(
+            entreprise=entreprise,
+            classe__in=classes,
+            est_actif=True
+        ).annotate(
+            total_debit=Sum('lignes_ecritures__montant_debit'),
+            total_credit=Sum('lignes_ecritures__montant_credit')
+        ).order_by('numero_compte')
+        
+        result = []
+        for c in comptes:
+            d = c.total_debit or Decimal('0')
+            cr = c.total_credit or Decimal('0')
+            solde = d - cr if d > cr else cr - d
+            if solde > 0:
+                result.append({'numero_compte': c.numero_compte, 'intitule': c.intitule, 'solde': solde, 'debiteur': d > cr})
+        return result
+    
+    # Actif immobilisé (classe 2)
+    actif_immobilise = get_comptes_avec_solde(['2'])
+    
+    # Actif circulant (classes 3, 4 débiteur, 5)
+    actif_circulant = get_comptes_avec_solde(['3', '5'])
+    # Ajouter comptes classe 4 débiteurs
+    comptes_4 = PlanComptable.objects.filter(entreprise=entreprise, classe='4', est_actif=True).annotate(
         total_debit=Sum('lignes_ecritures__montant_debit'),
         total_credit=Sum('lignes_ecritures__montant_credit')
     )
+    for c in comptes_4:
+        d = c.total_debit or Decimal('0')
+        cr = c.total_credit or Decimal('0')
+        if d > cr:
+            actif_circulant.append({'numero_compte': c.numero_compte, 'intitule': c.intitule, 'solde': d - cr, 'debiteur': True})
+    
+    # Capitaux propres (classe 1)
+    capitaux_propres = get_comptes_avec_solde(['1'])
+    
+    # Dettes (classe 4 créditeur)
+    dettes = []
+    for c in comptes_4:
+        d = c.total_debit or Decimal('0')
+        cr = c.total_credit or Decimal('0')
+        if cr > d:
+            dettes.append({'numero_compte': c.numero_compte, 'intitule': c.intitule, 'solde': cr - d, 'debiteur': False})
+    
+    # Totaux
+    total_actif = sum(c['solde'] for c in actif_immobilise) + sum(c['solde'] for c in actif_circulant)
+    total_passif = sum(c['solde'] for c in capitaux_propres) + sum(c['solde'] for c in dettes)
+    ecart = total_actif - total_passif
     
     context = {
-        'actif': actif,
-        'passif': passif,
+        'actif_immobilise': actif_immobilise,
+        'actif_circulant': actif_circulant,
+        'capitaux_propres': capitaux_propres,
+        'dettes': dettes,
+        'total_actif': total_actif,
+        'total_passif': total_passif,
+        'ecart': ecart,
+        'exercice': exercice,
+        'today': timezone.now().date(),
     }
     return render(request, 'comptabilite/etats/bilan.html', context)
 
@@ -787,29 +854,53 @@ def bilan(request):
 def compte_resultat(request):
     """Compte de résultat"""
     entreprise = request.user.entreprise
+    exercice = ExerciceComptable.objects.filter(entreprise=entreprise, est_courant=True).first()
     
-    # Charges (classe 6)
-    charges = PlanComptable.objects.filter(
-        entreprise=entreprise,
-        classe='6',
-        est_actif=True
-    ).annotate(
-        total_debit=Sum('lignes_ecritures__montant_debit'),
-        total_credit=Sum('lignes_ecritures__montant_credit')
-    )
+    def get_comptes_classe(classe_prefix):
+        comptes = PlanComptable.objects.filter(
+            entreprise=entreprise,
+            numero_compte__startswith=classe_prefix,
+            est_actif=True
+        ).annotate(
+            total_debit=Sum('lignes_ecritures__montant_debit'),
+            total_credit=Sum('lignes_ecritures__montant_credit')
+        ).order_by('numero_compte')
+        
+        result = []
+        for c in comptes:
+            d = c.total_debit or Decimal('0')
+            cr = c.total_credit or Decimal('0')
+            solde = d - cr if d > cr else cr - d
+            if solde > 0:
+                result.append({'numero_compte': c.numero_compte, 'intitule': c.intitule, 'solde': solde})
+        return result
     
-    # Produits (classe 7)
-    produits = PlanComptable.objects.filter(
-        entreprise=entreprise,
-        classe='7',
-        est_actif=True
-    ).annotate(
-        total_debit=Sum('lignes_ecritures__montant_debit'),
-        total_credit=Sum('lignes_ecritures__montant_credit')
-    )
+    # Charges d'exploitation (60-65)
+    charges_exploitation = get_comptes_classe('60') + get_comptes_classe('61') + get_comptes_classe('62') + get_comptes_classe('63') + get_comptes_classe('64') + get_comptes_classe('65')
+    
+    # Charges financières (66-67)
+    charges_financieres = get_comptes_classe('66') + get_comptes_classe('67')
+    
+    # Produits d'exploitation (70-75)
+    produits_exploitation = get_comptes_classe('70') + get_comptes_classe('71') + get_comptes_classe('72') + get_comptes_classe('73') + get_comptes_classe('74') + get_comptes_classe('75')
+    
+    # Produits financiers (76-77)
+    produits_financiers = get_comptes_classe('76') + get_comptes_classe('77')
+    
+    # Totaux
+    total_charges = sum(c['solde'] for c in charges_exploitation) + sum(c['solde'] for c in charges_financieres)
+    total_produits = sum(c['solde'] for c in produits_exploitation) + sum(c['solde'] for c in produits_financiers)
+    resultat = total_produits - total_charges
     
     context = {
-        'charges': charges,
-        'produits': produits,
+        'charges_exploitation': charges_exploitation,
+        'charges_financieres': charges_financieres,
+        'produits_exploitation': produits_exploitation,
+        'produits_financiers': produits_financiers,
+        'total_charges': total_charges,
+        'total_produits': total_produits,
+        'resultat': resultat,
+        'exercice': exercice,
+        'today': timezone.now().date(),
     }
     return render(request, 'comptabilite/etats/compte_resultat.html', context)
