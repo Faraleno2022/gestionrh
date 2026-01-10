@@ -967,11 +967,9 @@ class MoteurCalculPaie:
             'date_calcul': timezone.now()
         }
         
-        # Ajouter VF et TA si les champs existent dans le modèle
-        if hasattr(BulletinPaie, 'versement_forfaitaire'):
-            bulletin_data['versement_forfaitaire'] = self.montants['versement_forfaitaire']
-        if hasattr(BulletinPaie, 'taxe_apprentissage'):
-            bulletin_data['taxe_apprentissage'] = self.montants['taxe_apprentissage']
+        # Ajouter VF et TA (charges patronales)
+        bulletin_data['versement_forfaitaire'] = self.montants.get('versement_forfaitaire', Decimal('0'))
+        bulletin_data['taxe_apprentissage'] = self.montants.get('taxe_apprentissage', Decimal('0'))
         
         bulletin = BulletinPaie.objects.create(**bulletin_data)
         
