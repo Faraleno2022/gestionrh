@@ -9,7 +9,7 @@ from datetime import date, timedelta
 
 from comptabilite.models import (
     PlanComptable, Journal, ExerciceComptable, EcritureComptable, LigneEcriture, 
-    Tiers, Facture, LigneFacture
+    Tiers, Facture, LigneFacture, Reglement
 )
 from core.models import Entreprise
 
@@ -55,6 +55,9 @@ class Command(BaseCommand):
         
         # 6. Créer des factures impayées
         self.creer_factures(entreprise)
+        
+        # 7. Créer des règlements
+        self.creer_reglements(entreprise)
         
         self.stdout.write(self.style.SUCCESS('Données de test créées avec succès!'))
 
@@ -544,3 +547,65 @@ class Command(BaseCommand):
             nb_factures += 1
         
         self.stdout.write(f'  {nb_factures} factures impayées créées')
+
+    def creer_reglements(self, entreprise):
+        """Créer des règlements de test"""
+        
+        if Reglement.objects.filter(entreprise=entreprise).exists():
+            self.stdout.write('  Règlements déjà existants, ignoré')
+            return
+        
+        today = timezone.now().date()
+        
+        # Récupérer les factures validées
+        factures = Facture.objects.filter(entreprise=entreprise, statut='validee')
+        
+        if not factures.exists():
+            self.stdout.write('  Aucune facture pour créer des règlements')
+            return
+        
+        modes_paiement = ['virement', 'cheque', 'especes', 'mobile']
+        reglements_data = []
+        
+        # Créer des règlements partiels et complets pour quelques factures
+        for i, facture in enumerate(factures[:4], 1):
+            # Règlement partiel (50%) pour les 2 premières factures
+            if i <= 2:
+                montant = facture.montant_ttc * Decimal('0.5')
+                reference = f"REF-PART-{i:03d}"
+            else:
+                # Règlement complet pour les autres
+                montant = facture.montant_ttc
+                reference = f"REF-COMP-{i:03d}"
+            
+            reglements_data.append({
+                'numero': f'REG-2026-{i:03d}',
+                'facture': facture,
+                'date': today - timedelta(days=10-i*2),
+                'montant': montant,
+                'mode': modes_paiement[i % len(modes_paiement)],
+                'reference': reference,
+            })
+        
+        nb_reglements = 0
+        for data in reglements_data:
+            reglement = Reglement.objects.create(
+                entreprise=entreprise,
+                numero=data['numero'],
+                facture=data['facture'],
+                date_reglement=data['date'],
+                montant=data['montant'],
+                mode_paiement=data['mode'],
+                reference=data['reference'],
+                notes=f"Règlement de la facture {data['facture'].numero}",
+            )
+            
+            # Mettre à jour le montant payé de la facture
+            data['facture'].montant_paye += data['montant']
+            if data['facture'].montant_paye >= data['facture'].montant_ttc:
+                data['facture'].statut = 'payee'
+            data['facture'].save()
+            
+            nb_reglements += 1
+        
+        self.stdout.write(f'  {nb_reglements} règlements créés')
