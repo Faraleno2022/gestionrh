@@ -8,7 +8,8 @@ from decimal import Decimal
 from datetime import date, timedelta
 
 from comptabilite.models import (
-    PlanComptable, Journal, ExerciceComptable, EcritureComptable, LigneEcriture, Tiers
+    PlanComptable, Journal, ExerciceComptable, EcritureComptable, LigneEcriture, 
+    Tiers, Facture, LigneFacture
 )
 from core.models import Entreprise
 
@@ -51,6 +52,9 @@ class Command(BaseCommand):
         
         # 5. Créer des écritures de test
         self.creer_ecritures(entreprise, exercice)
+        
+        # 6. Créer des factures impayées
+        self.creer_factures(entreprise)
         
         self.stdout.write(self.style.SUCCESS('Données de test créées avec succès!'))
 
@@ -444,3 +448,99 @@ class Command(BaseCommand):
             nb_ecritures += 1
         
         self.stdout.write(f'  {nb_ecritures} écritures créées')
+
+    def creer_factures(self, entreprise):
+        """Créer des factures impayées de test"""
+        
+        if Facture.objects.filter(entreprise=entreprise).exists():
+            self.stdout.write('  Factures déjà existantes, ignoré')
+            return
+        
+        today = timezone.now().date()
+        
+        # Récupérer les tiers
+        clients = Tiers.objects.filter(entreprise=entreprise, type_tiers='client')
+        fournisseurs = Tiers.objects.filter(entreprise=entreprise, type_tiers='fournisseur')
+        
+        # Récupérer les comptes pour les lignes
+        compte_vente = PlanComptable.objects.filter(entreprise=entreprise, numero_compte='706000').first()
+        compte_marchandises = PlanComptable.objects.filter(entreprise=entreprise, numero_compte='701000').first()
+        compte_achat = PlanComptable.objects.filter(entreprise=entreprise, numero_compte='601000').first()
+        compte_fournitures = PlanComptable.objects.filter(entreprise=entreprise, numero_compte='605000').first()
+        
+        factures_data = []
+        
+        # Factures de vente impayées (clients)
+        for i, client in enumerate(clients[:3], 1):
+            factures_data.append({
+                'numero': f'FV-2026-{i:03d}',
+                'type': 'vente',
+                'tiers': client,
+                'date_facture': today - timedelta(days=30-i*5),
+                'date_echeance': today - timedelta(days=10-i*5),  # Certaines en retard
+                'lignes': [
+                    {'designation': 'Prestation de conseil', 'qte': 1, 'pu': Decimal('5000000'), 'compte': compte_vente},
+                    {'designation': 'Formation personnel', 'qte': 2, 'pu': Decimal('2500000'), 'compte': compte_vente},
+                ],
+                'statut': 'validee',
+            })
+        
+        # Factures d'achat impayées (fournisseurs)
+        for i, fournisseur in enumerate(fournisseurs[:3], 1):
+            factures_data.append({
+                'numero': f'FA-2026-{i:03d}',
+                'type': 'achat',
+                'tiers': fournisseur,
+                'date_facture': today - timedelta(days=25-i*5),
+                'date_echeance': today + timedelta(days=5+i*5),  # À venir
+                'lignes': [
+                    {'designation': 'Fournitures de bureau', 'qte': 10, 'pu': Decimal('150000'), 'compte': compte_fournitures},
+                    {'designation': 'Consommables informatiques', 'qte': 5, 'pu': Decimal('350000'), 'compte': compte_achat},
+                ],
+                'statut': 'validee',
+            })
+        
+        nb_factures = 0
+        for data in factures_data:
+            # Calculer les montants
+            montant_ht = Decimal('0')
+            for ligne in data['lignes']:
+                montant_ht += ligne['qte'] * ligne['pu']
+            
+            taux_tva = Decimal('18')
+            montant_tva = montant_ht * taux_tva / 100
+            montant_ttc = montant_ht + montant_tva
+            
+            facture = Facture.objects.create(
+                entreprise=entreprise,
+                numero=data['numero'],
+                type_facture=data['type'],
+                tiers=data['tiers'],
+                date_facture=data['date_facture'],
+                date_echeance=data['date_echeance'],
+                montant_ht=montant_ht,
+                montant_tva=montant_tva,
+                montant_ttc=montant_ttc,
+                montant_paye=Decimal('0'),
+                statut=data['statut'],
+            )
+            
+            # Créer les lignes
+            for ligne in data['lignes']:
+                montant_ligne_ht = ligne['qte'] * ligne['pu']
+                montant_ligne_tva = montant_ligne_ht * taux_tva / 100
+                LigneFacture.objects.create(
+                    facture=facture,
+                    designation=ligne['designation'],
+                    quantite=ligne['qte'],
+                    prix_unitaire=ligne['pu'],
+                    taux_tva=taux_tva,
+                    montant_ht=montant_ligne_ht,
+                    montant_tva=montant_ligne_tva,
+                    montant_ttc=montant_ligne_ht + montant_ligne_tva,
+                    compte_comptable=ligne['compte'],
+                )
+            
+            nb_factures += 1
+        
+        self.stdout.write(f'  {nb_factures} factures impayées créées')
