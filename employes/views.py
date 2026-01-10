@@ -169,6 +169,10 @@ class EmployeCreateView(LoginRequiredMixin, CreateView):
         if not employe.matricule:
             employe.matricule = self.generer_matricule()
         
+        # S'assurer que nombre_enfants a une valeur par défaut
+        if employe.nombre_enfants is None:
+            employe.nombre_enfants = 0
+        
         employe.utilisateur_creation = self.request.user
         employe.save()
         
