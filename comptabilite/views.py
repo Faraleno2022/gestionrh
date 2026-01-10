@@ -976,6 +976,200 @@ def balance(request):
     return render(request, 'comptabilite/etats/balance.html', context)
 
 
+def _get_balance_data(request):
+    """Helper pour récupérer les données de la balance"""
+    entreprise = request.user.entreprise
+    
+    comptes = PlanComptable.objects.filter(
+        entreprise=entreprise, est_actif=True
+    ).annotate(
+        total_debit=Sum('lignes_ecritures__montant_debit'),
+        total_credit=Sum('lignes_ecritures__montant_credit')
+    ).order_by('numero_compte')
+    
+    total_debit = Decimal('0')
+    total_credit = Decimal('0')
+    total_solde_debit = Decimal('0')
+    total_solde_credit = Decimal('0')
+    
+    comptes_avec_mvt = []
+    for c in comptes:
+        d = c.total_debit or Decimal('0')
+        cr = c.total_credit or Decimal('0')
+        if d or cr:
+            solde_d = (d - cr) if d > cr else Decimal('0')
+            solde_c = (cr - d) if cr > d else Decimal('0')
+            comptes_avec_mvt.append({
+                'numero': c.numero_compte,
+                'intitule': c.intitule,
+                'mvt_debit': d,
+                'mvt_credit': cr,
+                'solde_debit': solde_d,
+                'solde_credit': solde_c,
+            })
+            total_debit += d
+            total_credit += cr
+            total_solde_debit += solde_d
+            total_solde_credit += solde_c
+    
+    return comptes_avec_mvt, entreprise, total_debit, total_credit, total_solde_debit, total_solde_credit
+
+
+@login_required
+@compta_required
+def balance_excel(request):
+    """Export Excel de la Balance"""
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+    
+    comptes, entreprise, total_debit, total_credit, total_solde_debit, total_solde_credit = _get_balance_data(request)
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Balance"
+    
+    header_font = Font(bold=True, size=14)
+    header_fill = PatternFill(start_color="FFD699", end_color="FFD699", fill_type="solid")
+    total_fill = PatternFill(start_color="FFD699", end_color="FFD699", fill_type="solid")
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+    
+    # En-tête
+    ws.merge_cells('A1:F1')
+    ws['A1'] = entreprise.nom_entreprise
+    ws['A1'].font = header_font
+    ws['A1'].alignment = Alignment(horizontal='center')
+    
+    ws.merge_cells('A2:F2')
+    ws['A2'] = f"BALANCE GÉNÉRALE - Arrêtée au {timezone.now().strftime('%d/%m/%Y')}"
+    ws['A2'].alignment = Alignment(horizontal='center')
+    
+    # En-têtes colonnes
+    headers = ['N° Compte', 'Intitulé', 'Mvt Débit', 'Mvt Crédit', 'Solde Débit', 'Solde Crédit']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col, value=header)
+        cell.font = Font(bold=True)
+        cell.fill = header_fill
+        cell.border = thin_border
+    
+    # Données
+    row = 5
+    for c in comptes:
+        ws.cell(row=row, column=1, value=c['numero']).border = thin_border
+        ws.cell(row=row, column=2, value=c['intitule']).border = thin_border
+        cell_md = ws.cell(row=row, column=3, value=float(c['mvt_debit']))
+        cell_md.border = thin_border
+        cell_md.number_format = '#,##0'
+        cell_mc = ws.cell(row=row, column=4, value=float(c['mvt_credit']))
+        cell_mc.border = thin_border
+        cell_mc.number_format = '#,##0'
+        cell_sd = ws.cell(row=row, column=5, value=float(c['solde_debit']) if c['solde_debit'] else None)
+        cell_sd.border = thin_border
+        cell_sd.number_format = '#,##0'
+        cell_sc = ws.cell(row=row, column=6, value=float(c['solde_credit']) if c['solde_credit'] else None)
+        cell_sc.border = thin_border
+        cell_sc.number_format = '#,##0'
+        row += 1
+    
+    # Totaux
+    ws.cell(row=row, column=1, value='').border = thin_border
+    ws.cell(row=row, column=2, value='TOTAUX').border = thin_border
+    ws[f'B{row}'].font = Font(bold=True)
+    ws[f'B{row}'].fill = total_fill
+    for col in range(1, 7):
+        ws.cell(row=row, column=col).fill = total_fill
+        ws.cell(row=row, column=col).font = Font(bold=True)
+    ws.cell(row=row, column=3, value=float(total_debit)).number_format = '#,##0'
+    ws.cell(row=row, column=4, value=float(total_credit)).number_format = '#,##0'
+    ws.cell(row=row, column=5, value=float(total_solde_debit)).number_format = '#,##0'
+    ws.cell(row=row, column=6, value=float(total_solde_credit)).number_format = '#,##0'
+    
+    # Largeurs colonnes
+    ws.column_dimensions['A'].width = 12
+    ws.column_dimensions['B'].width = 40
+    ws.column_dimensions['C'].width = 15
+    ws.column_dimensions['D'].width = 15
+    ws.column_dimensions['E'].width = 15
+    ws.column_dimensions['F'].width = 15
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="balance_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+    wb.save(response)
+    return response
+
+
+@login_required
+@compta_required
+def balance_pdf(request):
+    """Export PDF de la Balance"""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    
+    comptes, entreprise, total_debit, total_credit, total_solde_debit, total_solde_credit = _get_balance_data(request)
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), leftMargin=1*cm, rightMargin=1*cm, topMargin=1*cm, bottomMargin=1*cm)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, alignment=1, spaceAfter=10)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=10, alignment=1, spaceAfter=20)
+    
+    elements = []
+    
+    # En-tête
+    elements.append(Paragraph(entreprise.nom_entreprise, title_style))
+    elements.append(Paragraph(f"BALANCE GÉNÉRALE - Arrêtée au {timezone.now().strftime('%d/%m/%Y')}", subtitle_style))
+    
+    # Table
+    data = [['N° Compte', 'Intitulé', 'Mvt Débit', 'Mvt Crédit', 'Solde Débit', 'Solde Crédit']]
+    for c in comptes:
+        data.append([
+            c['numero'],
+            c['intitule'][:50],
+            f"{c['mvt_debit']:,.0f}",
+            f"{c['mvt_credit']:,.0f}",
+            f"{c['solde_debit']:,.0f}" if c['solde_debit'] else '',
+            f"{c['solde_credit']:,.0f}" if c['solde_credit'] else '',
+        ])
+    
+    # Ligne totaux
+    data.append([
+        '', 'TOTAUX',
+        f"{total_debit:,.0f}",
+        f"{total_credit:,.0f}",
+        f"{total_solde_debit:,.0f}",
+        f"{total_solde_credit:,.0f}",
+    ])
+    
+    table = Table(data, colWidths=[2.5*cm, 10*cm, 3.5*cm, 3.5*cm, 3.5*cm, 3.5*cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EF7707')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#FFD699')),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    
+    elements.append(table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="balance_{timezone.now().strftime("%Y%m%d")}.pdf"'
+    return response
+
+
 @login_required
 @compta_required
 def journal_general(request):
