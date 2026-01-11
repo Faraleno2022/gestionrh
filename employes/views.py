@@ -204,6 +204,17 @@ class EmployeCreateView(LoginRequiredMixin, CreateView):
                 conjoint.acte_mariage = self.request.FILES['conjoint_acte_mariage']
             conjoint.save()
             
+            # Aussi créer un DocumentEmploye pour l'acte de mariage
+            if 'conjoint_acte_mariage' in self.request.FILES:
+                from .models import DocumentEmploye
+                DocumentEmploye.objects.create(
+                    employe=employe,
+                    type_document='acte_mariage',
+                    titre='Acte de mariage',
+                    fichier=self.request.FILES['conjoint_acte_mariage'],
+                    ajoute_par=self.request.user
+                )
+            
             # Mettre à jour la situation matrimoniale
             employe.situation_matrimoniale = 'marie'
             employe.save(update_fields=['situation_matrimoniale'])
