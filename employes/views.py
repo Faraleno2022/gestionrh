@@ -9,7 +9,7 @@ from django.http import HttpResponse
 from openpyxl import Workbook
 from datetime import datetime
 
-from .models import Employe, ContratEmploye, EvaluationEmploye, SanctionDisciplinaire
+from .models import Employe, ContratEmploye, EvaluationEmploye, SanctionDisciplinaire, EnfantEmploye, ConjointEmploye
 from .forms import EmployeForm, ContratForm, EvaluationEmployeForm, SanctionDisciplinaireForm
 from core.views import log_activity
 
@@ -150,6 +150,13 @@ class EmployeDetailView(EntrepriseEmployeQuerysetMixin, DetailView):
         context['stats_documents'] = DocumentEmploye.objects.filter(
             employe=employe
         ).values('type_document').annotate(count=Count('id'))
+        
+        # Famille (conjoint et enfants)
+        context['enfants'] = employe.enfants.all().order_by('-date_naissance')
+        try:
+            context['conjoint'] = employe.conjoint
+        except ConjointEmploye.DoesNotExist:
+            context['conjoint'] = None
         
         return context
 
@@ -619,4 +626,136 @@ def employe_document_delete(request, document_id):
         
         messages.success(request, f'Document "{titre}" supprimé avec succès')
     
+    return redirect('employes:detail', pk=employe.id)
+
+
+@login_required
+def sauvegarder_conjoint(request, employe_id):
+    """Ajouter ou modifier le conjoint d'un employé"""
+    employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
+    
+    if request.method == 'POST':
+        nom = request.POST.get('nom', '').strip()
+        prenoms = request.POST.get('prenoms', '').strip()
+        
+        if not nom or not prenoms:
+            messages.error(request, 'Le nom et les prénoms du conjoint sont obligatoires')
+            return redirect('employes:detail', pk=employe.id)
+        
+        # Récupérer ou créer le conjoint
+        try:
+            conjoint = employe.conjoint
+        except ConjointEmploye.DoesNotExist:
+            conjoint = ConjointEmploye(employe=employe)
+        
+        conjoint.nom = nom
+        conjoint.prenoms = prenoms
+        conjoint.date_naissance = request.POST.get('date_naissance') or None
+        conjoint.sexe = request.POST.get('sexe') or None
+        conjoint.telephone = request.POST.get('telephone', '')
+        conjoint.profession = request.POST.get('profession', '')
+        conjoint.employeur = request.POST.get('employeur', '')
+        conjoint.date_mariage = request.POST.get('date_mariage') or None
+        conjoint.lieu_mariage = request.POST.get('lieu_mariage', '')
+        
+        if 'acte_mariage' in request.FILES:
+            conjoint.acte_mariage = request.FILES['acte_mariage']
+        
+        conjoint.save()
+        
+        # Mettre à jour le nombre d'enfants et la situation matrimoniale
+        if employe.situation_matrimoniale != 'marie':
+            employe.situation_matrimoniale = 'marie'
+            employe.save(update_fields=['situation_matrimoniale'])
+        
+        log_activity(
+            request,
+            f"Modification conjoint pour {employe.matricule}",
+            'employes',
+            'employes',
+            employe.id
+        )
+        
+        messages.success(request, f'Conjoint {conjoint.nom} {conjoint.prenoms} enregistré avec succès')
+    
+    return redirect('employes:detail', pk=employe.id)
+
+
+@login_required
+def sauvegarder_enfant(request, employe_id):
+    """Ajouter ou modifier un enfant d'un employé"""
+    employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
+    
+    if request.method == 'POST':
+        nom = request.POST.get('nom', '').strip()
+        prenoms = request.POST.get('prenoms', '').strip()
+        date_naissance = request.POST.get('date_naissance')
+        
+        if not nom or not prenoms or not date_naissance:
+            messages.error(request, 'Le nom, les prénoms et la date de naissance sont obligatoires')
+            return redirect('employes:detail', pk=employe.id)
+        
+        enfant_id = request.POST.get('enfant_id')
+        
+        if enfant_id:
+            # Modification
+            enfant = get_object_or_404(EnfantEmploye, pk=enfant_id, employe=employe)
+        else:
+            # Création
+            enfant = EnfantEmploye(employe=employe)
+        
+        enfant.nom = nom
+        enfant.prenoms = prenoms
+        enfant.date_naissance = date_naissance
+        enfant.sexe = request.POST.get('sexe') or None
+        enfant.lieu_naissance = request.POST.get('lieu_naissance', '')
+        enfant.scolarise = 'scolarise' in request.POST
+        enfant.etablissement_scolaire = request.POST.get('etablissement_scolaire', '')
+        
+        if 'acte_naissance' in request.FILES:
+            enfant.acte_naissance = request.FILES['acte_naissance']
+        if 'certificat_scolarite' in request.FILES:
+            enfant.certificat_scolarite = request.FILES['certificat_scolarite']
+        
+        enfant.save()
+        
+        # Mettre à jour le nombre d'enfants
+        employe.nombre_enfants = employe.enfants.count()
+        employe.save(update_fields=['nombre_enfants'])
+        
+        log_activity(
+            request,
+            f"{'Modification' if enfant_id else 'Ajout'} enfant {enfant.nom} pour {employe.matricule}",
+            'employes',
+            'employes',
+            employe.id
+        )
+        
+        messages.success(request, f'Enfant {enfant.nom} {enfant.prenoms} enregistré avec succès')
+    
+    return redirect('employes:detail', pk=employe.id)
+
+
+@login_required
+def supprimer_enfant(request, enfant_id):
+    """Supprimer un enfant d'un employé"""
+    enfant = get_object_or_404(EnfantEmploye, pk=enfant_id, employe__entreprise=request.user.entreprise)
+    employe = enfant.employe
+    nom_enfant = f"{enfant.nom} {enfant.prenoms}"
+    
+    enfant.delete()
+    
+    # Mettre à jour le nombre d'enfants
+    employe.nombre_enfants = employe.enfants.count()
+    employe.save(update_fields=['nombre_enfants'])
+    
+    log_activity(
+        request,
+        f"Suppression enfant {nom_enfant} pour {employe.matricule}",
+        'employes',
+        'employes',
+        employe.id
+    )
+    
+    messages.success(request, f'Enfant {nom_enfant} supprimé avec succès')
     return redirect('employes:detail', pk=employe.id)

@@ -325,6 +325,34 @@ class AllocationFamiliale(models.Model):
         super().save(*args, **kwargs)
 
 
+class ConjointEmploye(models.Model):
+    """Conjoint (époux/épouse) de l'employé"""
+    SEXES = (
+        ('M', 'Masculin'),
+        ('F', 'Féminin'),
+    )
+    
+    employe = models.OneToOneField('employes.Employe', on_delete=models.CASCADE, related_name='conjoint')
+    nom = models.CharField(max_length=100)
+    prenoms = models.CharField(max_length=200)
+    date_naissance = models.DateField(blank=True, null=True)
+    sexe = models.CharField(max_length=1, choices=SEXES, blank=True, null=True)
+    profession = models.CharField(max_length=100, blank=True, null=True)
+    employeur = models.CharField(max_length=200, blank=True, null=True)
+    telephone = models.CharField(max_length=20, blank=True, null=True)
+    date_mariage = models.DateField(blank=True, null=True)
+    lieu_mariage = models.CharField(max_length=100, blank=True, null=True)
+    acte_mariage = models.FileField(upload_to='conjoints/actes_mariage/', blank=True, null=True)
+    
+    class Meta:
+        db_table = 'conjoints_employes'
+        verbose_name = 'Conjoint employé'
+        verbose_name_plural = 'Conjoints employés'
+    
+    def __str__(self):
+        return f"{self.nom} {self.prenoms} (conjoint de {self.employe.nom_complet})"
+
+
 class EnfantEmploye(models.Model):
     """Enfants des employés pour les allocations familiales"""
     SEXES = (
@@ -336,8 +364,10 @@ class EnfantEmploye(models.Model):
     nom = models.CharField(max_length=100)
     prenoms = models.CharField(max_length=200)
     date_naissance = models.DateField()
-    sexe = models.CharField(max_length=1, choices=SEXES)
+    sexe = models.CharField(max_length=1, choices=SEXES, blank=True, null=True)
+    lieu_naissance = models.CharField(max_length=100, blank=True, null=True)
     scolarise = models.BooleanField(default=False, help_text="Si scolarisé, éligible jusqu'à 20 ans")
+    etablissement_scolaire = models.CharField(max_length=200, blank=True, null=True)
     certificat_scolarite = models.FileField(upload_to='enfants/scolarite/', blank=True, null=True)
     acte_naissance = models.FileField(upload_to='enfants/actes/', blank=True, null=True)
     

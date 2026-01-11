@@ -24,6 +24,11 @@ urlpatterns = [
     # Documents
     path('<int:employe_id>/document/upload/', views.employe_document_upload, name='document_upload'),
     path('document/<int:document_id>/delete/', views.employe_document_delete, name='document_delete'),
+    
+    # Famille (conjoint et enfants)
+    path('<int:employe_id>/conjoint/', views.sauvegarder_conjoint, name='sauvegarder_conjoint'),
+    path('<int:employe_id>/enfant/', views.sauvegarder_enfant, name='sauvegarder_enfant'),
+    path('enfant/<int:enfant_id>/supprimer/', views.supprimer_enfant, name='supprimer_enfant'),
 
     # Évaluations (performance)
     path('<int:employe_id>/evaluations/', views.evaluation_list, name='evaluation_list'),

@@ -379,10 +379,14 @@ class DocumentEmploye(models.Model):
         ('certificat', 'Certificat'),
         ('piece_identite', 'Pièce d\'identité'),
         ('acte_naissance', 'Acte de naissance'),
+        ('acte_mariage', 'Acte de mariage'),
+        ('livret_famille', 'Livret de famille'),
         ('certificat_medical', 'Certificat médical'),
         ('contrat', 'Contrat de travail'),
         ('avenant', 'Avenant au contrat'),
         ('attestation_travail', 'Attestation de travail'),
+        ('lettre_recommandation', 'Lettre de recommandation'),
+        ('certificat_emploi', 'Certificat d\'emploi antérieur'),
         ('fiche_paie', 'Fiche de paie'),
         ('photo', 'Photo d\'identité'),
         ('autre', 'Autre document'),
@@ -760,5 +764,5 @@ from .models_reclamation import CategorieReclamation, Reclamation, CommentaireRe
 # Import des modèles RH légaux guinéens
 from .models_rh_legal import (
     FinContrat, CongeMaternite, AllocationFamiliale, EnfantEmploye,
-    PensionRetraite
+    ConjointEmploye, PensionRetraite
 )
