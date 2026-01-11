@@ -546,17 +546,26 @@ def telecharger_bulletin_pdf(request, pk):
     y -= 0.3*cm
     
     retenues_data = [["Libellé", "Base", "Taux", "Montant"]]
+    # Filtrer les doublons CNSS et IRG (déjà dans les lignes du bulletin)
+    cnss_irg_codes = ['CNSS', 'IRG', 'RTS', 'IRS', 'IRPP']
     for r in retenues:
-        retenues_data.append([
-            r.rubrique.libelle_rubrique[:35],
-            f"{r.base:,.0f}".replace(",", " ") if r.base else "-",
-            f"{r.taux}%" if r.taux else "-",
-            f"{r.montant:,.0f}".replace(",", " ")
-        ])
+        # Éviter les doublons - ne pas réafficher si déjà traité
+        code = r.rubrique.code_rubrique.upper() if r.rubrique.code_rubrique else ''
+        libelle = r.rubrique.libelle_rubrique.upper() if r.rubrique.libelle_rubrique else ''
+        is_cnss_irg = any(c in code or c in libelle for c in cnss_irg_codes)
+        if not is_cnss_irg:
+            retenues_data.append([
+                r.rubrique.libelle_rubrique[:35],
+                f"{r.base:,.0f}".replace(",", " ") if r.base else "-",
+                f"{r.taux}%" if r.taux else "-",
+                f"{r.montant:,.0f}".replace(",", " ")
+            ])
     
-    # Ajouter CNSS et RTS
-    retenues_data.append(["CNSS Employé (5%)", f"{bulletin.salaire_brut:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
-    retenues_data.append(["RTS (Impôt sur le Revenu)", "", "", f"{bulletin.irg:,.0f}".replace(",", " ")])
+    # Ajouter CNSS (base plafonnée) et IRG une seule fois
+    # Base CNSS plafonnée à 2 500 000 GNF
+    base_cnss = min(bulletin.salaire_brut, 2500000)
+    retenues_data.append(["CNSS Employé (5%)", f"{base_cnss:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
+    retenues_data.append(["Impôt sur le Revenu (IRG)", "", "", f"{bulletin.irg:,.0f}".replace(",", " ")])
     
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
@@ -800,17 +809,26 @@ def telecharger_bulletin_public(request, token):
     y -= 0.3*cm
     
     retenues_data = [["Libellé", "Base", "Taux", "Montant"]]
+    # Filtrer les doublons CNSS et IRG (déjà dans les lignes du bulletin)
+    cnss_irg_codes = ['CNSS', 'IRG', 'RTS', 'IRS', 'IRPP']
     for r in retenues:
-        retenues_data.append([
-            r.rubrique.libelle_rubrique[:35],
-            f"{r.base:,.0f}".replace(",", " ") if r.base else "-",
-            f"{r.taux}%" if r.taux else "-",
-            f"{r.montant:,.0f}".replace(",", " ")
-        ])
+        # Éviter les doublons - ne pas réafficher si déjà traité
+        code = r.rubrique.code_rubrique.upper() if r.rubrique.code_rubrique else ''
+        libelle = r.rubrique.libelle_rubrique.upper() if r.rubrique.libelle_rubrique else ''
+        is_cnss_irg = any(c in code or c in libelle for c in cnss_irg_codes)
+        if not is_cnss_irg:
+            retenues_data.append([
+                r.rubrique.libelle_rubrique[:35],
+                f"{r.base:,.0f}".replace(",", " ") if r.base else "-",
+                f"{r.taux}%" if r.taux else "-",
+                f"{r.montant:,.0f}".replace(",", " ")
+            ])
     
-    # Ajouter CNSS et RTS
-    retenues_data.append(["CNSS Employé (5%)", f"{bulletin.salaire_brut:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
-    retenues_data.append(["RTS (Impôt sur le Revenu)", "", "", f"{bulletin.irg:,.0f}".replace(",", " ")])
+    # Ajouter CNSS (base plafonnée) et IRG une seule fois
+    # Base CNSS plafonnée à 2 500 000 GNF
+    base_cnss = min(bulletin.salaire_brut, 2500000)
+    retenues_data.append(["CNSS Employé (5%)", f"{base_cnss:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
+    retenues_data.append(["Impôt sur le Revenu (IRG)", "", "", f"{bulletin.irg:,.0f}".replace(",", " ")])
     
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
