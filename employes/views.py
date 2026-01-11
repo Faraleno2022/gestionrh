@@ -183,6 +183,64 @@ class EmployeCreateView(LoginRequiredMixin, CreateView):
         employe.utilisateur_creation = self.request.user
         employe.save()
         
+        # Traiter les données du conjoint
+        conjoint_nom = self.request.POST.get('conjoint_nom', '').strip()
+        conjoint_prenoms = self.request.POST.get('conjoint_prenoms', '').strip()
+        
+        if conjoint_nom and conjoint_prenoms:
+            conjoint = ConjointEmploye(
+                employe=employe,
+                nom=conjoint_nom,
+                prenoms=conjoint_prenoms,
+                date_naissance=self.request.POST.get('conjoint_date_naissance') or None,
+                sexe=self.request.POST.get('conjoint_sexe') or None,
+                telephone=self.request.POST.get('conjoint_telephone', ''),
+                profession=self.request.POST.get('conjoint_profession', ''),
+                employeur=self.request.POST.get('conjoint_employeur', ''),
+                date_mariage=self.request.POST.get('conjoint_date_mariage') or None,
+                lieu_mariage=self.request.POST.get('conjoint_lieu_mariage', '')
+            )
+            if 'conjoint_acte_mariage' in self.request.FILES:
+                conjoint.acte_mariage = self.request.FILES['conjoint_acte_mariage']
+            conjoint.save()
+            
+            # Mettre à jour la situation matrimoniale
+            employe.situation_matrimoniale = 'marie'
+            employe.save(update_fields=['situation_matrimoniale'])
+        
+        # Traiter les données des enfants
+        enfants_noms = self.request.POST.getlist('enfant_nom[]')
+        enfants_prenoms = self.request.POST.getlist('enfant_prenoms[]')
+        enfants_dates = self.request.POST.getlist('enfant_date_naissance[]')
+        enfants_sexes = self.request.POST.getlist('enfant_sexe[]')
+        enfants_lieux = self.request.POST.getlist('enfant_lieu_naissance[]')
+        enfants_scolarises = self.request.POST.getlist('enfant_scolarise[]')
+        enfants_etablissements = self.request.POST.getlist('enfant_etablissement[]')
+        enfants_actes = self.request.FILES.getlist('enfant_acte_naissance[]')
+        
+        nb_enfants = 0
+        for i, nom in enumerate(enfants_noms):
+            if nom and enfants_prenoms[i] and enfants_dates[i]:
+                enfant = EnfantEmploye(
+                    employe=employe,
+                    nom=nom,
+                    prenoms=enfants_prenoms[i],
+                    date_naissance=enfants_dates[i],
+                    sexe=enfants_sexes[i] if i < len(enfants_sexes) and enfants_sexes[i] else None,
+                    lieu_naissance=enfants_lieux[i] if i < len(enfants_lieux) else '',
+                    scolarise=str(i) in [s.split('_')[-1] if '_' in s else s for s in enfants_scolarises] or (i < len(enfants_scolarises) and enfants_scolarises[i] == '1'),
+                    etablissement_scolaire=enfants_etablissements[i] if i < len(enfants_etablissements) else ''
+                )
+                if i < len(enfants_actes):
+                    enfant.acte_naissance = enfants_actes[i]
+                enfant.save()
+                nb_enfants += 1
+        
+        # Mettre à jour le nombre d'enfants
+        if nb_enfants > 0:
+            employe.nombre_enfants = nb_enfants
+            employe.save(update_fields=['nombre_enfants'])
+        
         # Log
         log_activity(
             self.request,

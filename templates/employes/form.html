@@ -91,6 +91,141 @@
         </div>
     </div>
 </div>
+
+<!-- Section Famille -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header text-white" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <h5 class="mb-0">
+                    <i class="bi bi-people-fill"></i> 
+                    Informations familiales (optionnel)
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Conjoint -->
+                <h5 class="mb-3"><i class="bi bi-heart"></i> Conjoint(e)</h5>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Nom du conjoint</label>
+                        <input type="text" name="conjoint_nom" class="form-control" placeholder="Nom">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Prénoms du conjoint</label>
+                        <input type="text" name="conjoint_prenoms" class="form-control" placeholder="Prénoms">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Date de naissance</label>
+                        <input type="date" name="conjoint_date_naissance" class="form-control">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Sexe</label>
+                        <select name="conjoint_sexe" class="form-select">
+                            <option value="">--</option>
+                            <option value="M">Masculin</option>
+                            <option value="F">Féminin</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Téléphone</label>
+                        <input type="text" name="conjoint_telephone" class="form-control" placeholder="6XX XX XX XX">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Profession</label>
+                        <input type="text" name="conjoint_profession" class="form-control">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Employeur</label>
+                        <input type="text" name="conjoint_employeur" class="form-control">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Date de mariage</label>
+                        <input type="date" name="conjoint_date_mariage" class="form-control">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Lieu de mariage</label>
+                        <input type="text" name="conjoint_lieu_mariage" class="form-control">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Acte de mariage</label>
+                        <input type="file" name="conjoint_acte_mariage" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Enfants -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> Enfants</h5>
+                    <button type="button" class="btn btn-sm btn-success" id="btn-ajouter-enfant">
+                        <i class="bi bi-plus-circle"></i> Ajouter un enfant
+                    </button>
+                </div>
+                
+                <div id="enfants-container">
+                    <!-- Les enfants seront ajoutés dynamiquement ici -->
+                </div>
+                
+                <template id="enfant-template">
+                    <div class="enfant-row card mb-3 p-3 bg-light">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong class="enfant-numero">Enfant #1</strong>
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-supprimer-enfant">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                                <input type="text" name="enfant_nom[]" class="form-control" required>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Prénoms <span class="text-danger">*</span></label>
+                                <input type="text" name="enfant_prenoms[]" class="form-control" required>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Date naissance <span class="text-danger">*</span></label>
+                                <input type="date" name="enfant_date_naissance[]" class="form-control" required>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Sexe</label>
+                                <select name="enfant_sexe[]" class="form-select">
+                                    <option value="">--</option>
+                                    <option value="M">Masculin</option>
+                                    <option value="F">Féminin</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Lieu de naissance</label>
+                                <input type="text" name="enfant_lieu_naissance[]" class="form-control">
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" name="enfant_scolarise[]" value="1">
+                                    <label class="form-check-label">Scolarisé</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Établissement scolaire</label>
+                                <input type="text" name="enfant_etablissement[]" class="form-control">
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Acte de naissance</label>
+                                <input type="file" name="enfant_acte_naissance[]" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -242,6 +377,42 @@ $(document).ready(function() {
     $('button[name="cancel"]').on('click', function(e) {
         if (!confirm('Êtes-vous sûr de vouloir annuler ? Les modifications non enregistrées seront perdues.')) {
             e.preventDefault();
+        }
+    });
+    
+    // ===== GESTION DYNAMIQUE DES ENFANTS =====
+    let enfantCount = 0;
+    
+    $('#btn-ajouter-enfant').on('click', function() {
+        enfantCount++;
+        const template = document.getElementById('enfant-template');
+        const clone = template.content.cloneNode(true);
+        
+        // Mettre à jour le numéro
+        clone.querySelector('.enfant-numero').textContent = 'Enfant #' + enfantCount;
+        
+        // Ajouter au conteneur
+        $('#enfants-container').append(clone);
+        
+        // Mettre à jour le nombre d'enfants dans le formulaire principal si le champ existe
+        if ($('#id_nombre_enfants').length) {
+            $('#id_nombre_enfants').val(enfantCount);
+        }
+    });
+    
+    // Supprimer un enfant
+    $(document).on('click', '.btn-supprimer-enfant', function() {
+        $(this).closest('.enfant-row').remove();
+        enfantCount--;
+        
+        // Renuméroter les enfants
+        $('.enfant-row').each(function(index) {
+            $(this).find('.enfant-numero').text('Enfant #' + (index + 1));
+        });
+        
+        // Mettre à jour le nombre d'enfants
+        if ($('#id_nombre_enfants').length) {
+            $('#id_nombre_enfants').val(enfantCount);
         }
     });
 });
