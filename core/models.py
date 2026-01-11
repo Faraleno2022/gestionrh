@@ -368,10 +368,22 @@ class Expatrie(models.Model):
         ('vip', 'VIP/Impatrié'),
     )
     
+    STATUTS_EXPATRIE = (
+        ('actif', 'Actif'),
+        ('termine', 'Terminé'),
+        ('suspendu', 'Suspendu'),
+    )
+    
     employe = models.OneToOneField('employes.Employe', on_delete=models.CASCADE, related_name='info_expatrie')
     type_contrat_expat = models.CharField(max_length=30, choices=TYPES_CONTRAT_EXPAT)
     pays_origine = models.CharField(max_length=100)
-    devise_salaire = models.ForeignKey(Devise, on_delete=models.SET_NULL, null=True, related_name='expatries')
+    nationalite = models.CharField(max_length=100, blank=True, null=True)
+    date_arrivee = models.DateField(blank=True, null=True, help_text="Date d'arrivée en Guinée")
+    motif_expatriation = models.CharField(max_length=255, blank=True, null=True)
+    duree_prevue_mois = models.IntegerField(blank=True, null=True, help_text="Durée prévue en mois")
+    statut = models.CharField(max_length=20, choices=STATUTS_EXPATRIE, default='actif')
+    devise_salaire = models.ForeignKey(Devise, on_delete=models.SET_NULL, null=True, blank=True, related_name='expatries')
+    contact_urgence_pays = models.CharField(max_length=255, blank=True, null=True, help_text="Contact d'urgence au pays d'origine")
     
     # Salaire split (partie locale + partie pays d'origine)
     salaire_local_pct = models.DecimalField(max_digits=5, decimal_places=2, default=100, help_text="% payé en GNF")

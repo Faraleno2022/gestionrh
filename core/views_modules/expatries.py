@@ -93,6 +93,12 @@ def expatrie_ajouter(request):
             employe=employe,
             type_contrat_expat=request.POST.get('type_contrat_expat', 'expatriation'),
             pays_origine=request.POST.get('pays_origine', ''),
+            nationalite=request.POST.get('nationalite', ''),
+            date_arrivee=request.POST.get('date_arrivee') or None,
+            motif_expatriation=request.POST.get('motif_expatriation', ''),
+            duree_prevue_mois=int(request.POST.get('duree_prevue_mois', 0)) or None,
+            statut=request.POST.get('statut', 'actif'),
+            contact_urgence_pays=request.POST.get('contact_urgence_pays', ''),
             date_debut_mission=request.POST.get('date_debut_mission') or timezone.now().date(),
             date_fin_mission_prevue=request.POST.get('date_fin_mission_prevue') or None,
             observations=request.POST.get('observations', ''),
@@ -133,6 +139,7 @@ def expatrie_modifier(request, pk):
     )
     
     if request.method == 'POST':
+        expatrie.type_contrat_expat = request.POST.get('type_contrat_expat', expatrie.type_contrat_expat)
         expatrie.nationalite = request.POST.get('nationalite', '')
         expatrie.pays_origine = request.POST.get('pays_origine', '')
         expatrie.date_arrivee = request.POST.get('date_arrivee') or None
@@ -140,6 +147,9 @@ def expatrie_modifier(request, pk):
         expatrie.duree_prevue_mois = int(request.POST.get('duree_prevue_mois', 0)) or None
         expatrie.statut = request.POST.get('statut', 'actif')
         expatrie.contact_urgence_pays = request.POST.get('contact_urgence_pays', '')
+        expatrie.date_debut_mission = request.POST.get('date_debut_mission') or expatrie.date_debut_mission
+        expatrie.date_fin_mission_prevue = request.POST.get('date_fin_mission_prevue') or None
+        expatrie.observations = request.POST.get('observations', '')
         expatrie.save()
         
         log_activity(request, f"Modification expatrié {expatrie.employe.nom_complet}", 'core')
