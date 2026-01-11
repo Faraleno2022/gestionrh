@@ -141,6 +141,63 @@
 </div>
 {% endif %}
 
+<!-- Candidatures / Inscriptions publiques -->
+{% if inscriptions_publiques %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center bg-warning text-dark">
+        <h5 class="mb-0"><i class="bi bi-people"></i> Candidatures reçues ({{ inscriptions_publiques.count }})</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Nom</th>
+                        <th>Prénom</th>
+                        <th>Email</th>
+                        <th>Téléphone</th>
+                        <th>Entreprise</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for candidat in inscriptions_publiques %}
+                    <tr>
+                        <td>{{ candidat.date_inscription|date:"d/m/Y H:i" }}</td>
+                        <td><strong>{{ candidat.nom }}</strong></td>
+                        <td>{{ candidat.prenom }}</td>
+                        <td><a href="mailto:{{ candidat.email }}">{{ candidat.email }}</a></td>
+                        <td><a href="tel:{{ candidat.telephone }}">{{ candidat.telephone }}</a></td>
+                        <td>{{ candidat.entreprise|default:"-" }}</td>
+                        <td>
+                            {% if candidat.statut == 'en_attente' %}
+                                <span class="badge bg-warning text-dark">En attente</span>
+                            {% elif candidat.statut == 'contacte' %}
+                                <span class="badge bg-info">Contacté</span>
+                            {% elif candidat.statut == 'confirme' %}
+                                <span class="badge bg-success">Confirmé</span>
+                            {% elif candidat.statut == 'refuse' %}
+                                <span class="badge bg-danger">Refusé</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Annulé</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'formation:gerer_candidature' candidat.pk %}" class="btn btn-sm btn-primary" title="Gérer">
+                                <i class="bi bi-gear"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Liste des sessions -->
 <div class="card shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center">

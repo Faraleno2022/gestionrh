@@ -140,10 +140,13 @@ def detail_formation(request, pk):
     sessions = formation.sessions.all().annotate(
         nb_inscrits=Count('inscriptions')
     )
+    # Récupérer les candidatures/inscriptions publiques
+    inscriptions_publiques = formation.inscriptions_publiques.all().order_by('-date_inscription')
     
     return render(request, 'formation/catalogue/detail.html', {
         'formation': formation,
-        'sessions': sessions
+        'sessions': sessions,
+        'inscriptions_publiques': inscriptions_publiques
     })
 
 
@@ -557,4 +560,62 @@ def inscription_formation_public(request, pk):
     return render(request, 'formation/public/inscription.html', {
         'formation': formation,
         'sessions': sessions_disponibles,
+    })
+
+
+@login_required
+@entreprise_active_required
+def liste_candidatures(request):
+    """Liste de toutes les candidatures publiques"""
+    candidatures = InscriptionFormationPublic.objects.filter(
+        formation__entreprise=request.user.entreprise
+    ).select_related('formation', 'session').order_by('-date_inscription')
+    
+    # Filtres
+    statut = request.GET.get('statut')
+    if statut:
+        candidatures = candidatures.filter(statut=statut)
+    
+    formation_id = request.GET.get('formation')
+    if formation_id:
+        candidatures = candidatures.filter(formation_id=formation_id)
+    
+    formations = CatalogueFormation.objects.filter(
+        entreprise=request.user.entreprise,
+        actif=True
+    )
+    
+    return render(request, 'formation/candidatures/liste.html', {
+        'candidatures': candidatures,
+        'formations': formations,
+        'statut_filtre': statut,
+        'formation_filtre': formation_id,
+    })
+
+
+@login_required
+@entreprise_active_required
+def gerer_candidature(request, pk):
+    """Gérer une candidature (changer statut, ajouter notes)"""
+    candidature = get_object_or_404(
+        InscriptionFormationPublic,
+        pk=pk,
+        formation__entreprise=request.user.entreprise
+    )
+    
+    if request.method == 'POST':
+        nouveau_statut = request.POST.get('statut')
+        notes = request.POST.get('notes_admin')
+        
+        if nouveau_statut:
+            candidature.statut = nouveau_statut
+        if notes is not None:
+            candidature.notes_admin = notes
+        
+        candidature.save()
+        messages.success(request, f'Candidature de {candidature.prenom} {candidature.nom} mise à jour.')
+        return redirect('formation:detail_formation', pk=candidature.formation.pk)
+    
+    return render(request, 'formation/candidatures/gerer.html', {
+        'candidature': candidature,
     })
