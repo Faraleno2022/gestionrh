@@ -241,6 +241,47 @@ class EmployeCreateView(LoginRequiredMixin, CreateView):
             employe.nombre_enfants = nb_enfants
             employe.save(update_fields=['nombre_enfants'])
         
+        # Traiter les documents de parcours professionnel
+        from .models import DocumentEmploye
+        
+        # Documents simples (un seul fichier)
+        docs_simples = {
+            'doc_cv': ('cv', 'CV'),
+            'doc_diplome': ('diplome', 'Diplôme'),
+            'doc_piece_identite': ('piece_identite', 'Pièce d\'identité'),
+            'doc_certificat_medical': ('certificat_medical', 'Certificat médical'),
+        }
+        
+        for field_name, (type_doc, titre) in docs_simples.items():
+            if field_name in self.request.FILES:
+                DocumentEmploye.objects.create(
+                    employe=employe,
+                    type_document=type_doc,
+                    titre=titre,
+                    fichier=self.request.FILES[field_name],
+                    ajoute_par=self.request.user
+                )
+        
+        # Documents multiples
+        docs_multiples = {
+            'doc_attestation_travail[]': ('attestation_travail', 'Attestation de travail'),
+            'doc_certificat_emploi[]': ('certificat_emploi', 'Certificat d\'emploi antérieur'),
+            'doc_lettre_recommandation[]': ('lettre_recommandation', 'Lettre de recommandation'),
+            'doc_certifications[]': ('certificat', 'Certification / Formation'),
+        }
+        
+        for field_name, (type_doc, titre_base) in docs_multiples.items():
+            fichiers = self.request.FILES.getlist(field_name)
+            for i, fichier in enumerate(fichiers, 1):
+                titre = f"{titre_base} {i}" if len(fichiers) > 1 else titre_base
+                DocumentEmploye.objects.create(
+                    employe=employe,
+                    type_document=type_doc,
+                    titre=titre,
+                    fichier=fichier,
+                    ajoute_par=self.request.user
+                )
+        
         # Log
         log_activity(
             self.request,

@@ -226,6 +226,92 @@
         </div>
     </div>
 </div>
+
+<!-- Section Documents Parcours Professionnel -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header text-white" style="background: linear-gradient(135deg, #6f42c1 0%, #8e44ad 100%);">
+                <h5 class="mb-0">
+                    <i class="bi bi-folder-fill"></i> 
+                    Documents de parcours professionnel (optionnel)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    Vous pouvez joindre les documents justificatifs du parcours professionnel de l'employé.
+                </div>
+                
+                <div class="row">
+                    <!-- CV -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><i class="bi bi-file-person"></i> CV / Curriculum Vitae</label>
+                        <input type="file" name="doc_cv" class="form-control" accept=".pdf,.doc,.docx">
+                        <small class="text-muted">PDF ou Word</small>
+                    </div>
+                    
+                    <!-- Diplôme principal -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><i class="bi bi-mortarboard"></i> Diplôme le plus élevé</label>
+                        <input type="file" name="doc_diplome" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                        <small class="text-muted">PDF ou Image</small>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- Pièce d'identité -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><i class="bi bi-person-badge"></i> Pièce d'identité</label>
+                        <input type="file" name="doc_piece_identite" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                        <small class="text-muted">CNI, Passeport, etc.</small>
+                    </div>
+                    
+                    <!-- Certificat médical -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><i class="bi bi-heart-pulse"></i> Certificat médical d'aptitude</label>
+                        <input type="file" name="doc_certificat_medical" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                    </div>
+                </div>
+                
+                <hr class="my-3">
+                <h6 class="mb-3"><i class="bi bi-briefcase"></i> Expériences professionnelles antérieures</h6>
+                
+                <div class="row">
+                    <!-- Attestation de travail -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><i class="bi bi-file-earmark-check"></i> Attestation(s) de travail</label>
+                        <input type="file" name="doc_attestation_travail[]" class="form-control" accept=".pdf,.jpg,.jpeg,.png" multiple>
+                        <small class="text-muted">Plusieurs fichiers possibles</small>
+                    </div>
+                    
+                    <!-- Certificat d'emploi -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><i class="bi bi-file-earmark-text"></i> Certificat(s) d'emploi antérieur</label>
+                        <input type="file" name="doc_certificat_emploi[]" class="form-control" accept=".pdf,.jpg,.jpeg,.png" multiple>
+                        <small class="text-muted">Plusieurs fichiers possibles</small>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- Lettre de recommandation -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><i class="bi bi-envelope-paper"></i> Lettre(s) de recommandation</label>
+                        <input type="file" name="doc_lettre_recommandation[]" class="form-control" accept=".pdf,.jpg,.jpeg,.png" multiple>
+                        <small class="text-muted">Plusieurs fichiers possibles</small>
+                    </div>
+                    
+                    <!-- Autres certifications -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><i class="bi bi-award"></i> Autres certifications / formations</label>
+                        <input type="file" name="doc_certifications[]" class="form-control" accept=".pdf,.jpg,.jpeg,.png" multiple>
+                        <small class="text-muted">Plusieurs fichiers possibles</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
