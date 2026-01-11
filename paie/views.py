@@ -619,7 +619,8 @@ def telecharger_bulletin_pdf(request, pk):
     p.setFont("Helvetica", 8)
     p.drawString(1.5*cm, y, f"CNSS Employeur (18%): {bulletin.cnss_employeur:,.0f} GNF".replace(",", " "))
     p.drawString(6.5*cm, y, f"VF (6%): {vf:,.0f} GNF".replace(",", " "))
-    p.drawString(10.5*cm, y, f"TA (1,5%): {ta:,.0f} GNF".replace(",", " "))
+    ta_fmt = f"{ta:,.0f}".replace(",", " ")
+    p.drawString(10.5*cm, y, f"TA (1,5%): {ta_fmt} GNF")
     p.setFont("Helvetica-Bold", 8)
     p.drawString(14*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     
@@ -883,7 +884,8 @@ def telecharger_bulletin_public(request, token):
     p.setFont("Helvetica", 8)
     p.drawString(1.5*cm, y, f"CNSS Employeur (18%): {bulletin.cnss_employeur:,.0f} GNF".replace(",", " "))
     p.drawString(6.5*cm, y, f"VF (6%): {vf:,.0f} GNF".replace(",", " "))
-    p.drawString(10.5*cm, y, f"TA (1,5%): {ta:,.0f} GNF".replace(",", " "))
+    ta_fmt = f"{ta:,.0f}".replace(",", " ")
+    p.drawString(10.5*cm, y, f"TA (1,5%): {ta_fmt} GNF")
     p.setFont("Helvetica-Bold", 8)
     p.drawString(14*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     
