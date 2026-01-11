@@ -611,16 +611,17 @@ def telecharger_bulletin_pdf(request, pk):
     
     # === CHARGES PATRONALES ===
     p.setFont("Helvetica-Bold", 8)
-    p.drawString(1.5*cm, y, "Charges patronales:")
-    p.setFont("Helvetica", 8)
+    p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     vf = getattr(bulletin, 'versement_forfaitaire', 0) or 0
     ta = getattr(bulletin, 'taxe_apprentissage', 0) or 0
-    p.drawString(1.5*cm, y, f"CNSS Empl. (18%): {bulletin.cnss_employeur:,.0f}".replace(",", " "))
-    p.drawString(5.5*cm, y, f"VF (6%): {vf:,.0f}".replace(",", " "))
-    p.drawString(9*cm, y, f"TA (1,5%): {ta:,.0f}".replace(",", " "))
     total_charges = bulletin.cnss_employeur + vf + ta
+    y -= 0.35*cm
+    p.setFont("Helvetica", 8)
+    p.drawString(1.5*cm, y, f"CNSS Employeur (18%): {bulletin.cnss_employeur:,.0f} GNF".replace(",", " "))
+    p.drawString(6.5*cm, y, f"VF (6%): {vf:,.0f} GNF".replace(",", " "))
+    p.drawString(10.5*cm, y, f"TA (1,5%): {ta:,.0f} GNF".replace(",", " "))
     p.setFont("Helvetica-Bold", 8)
-    p.drawString(12.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
+    p.drawString(14*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     
     # === PIED DE PAGE ===
     p.setFont("Helvetica", 7)
@@ -874,16 +875,17 @@ def telecharger_bulletin_public(request, token):
     
     # === CHARGES PATRONALES ===
     p.setFont("Helvetica-Bold", 8)
-    p.drawString(1.5*cm, y, "Charges patronales:")
-    p.setFont("Helvetica", 8)
+    p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     vf = getattr(bulletin, 'versement_forfaitaire', 0) or 0
     ta = getattr(bulletin, 'taxe_apprentissage', 0) or 0
-    p.drawString(1.5*cm, y, f"CNSS Empl. (18%): {bulletin.cnss_employeur:,.0f}".replace(",", " "))
-    p.drawString(5.5*cm, y, f"VF (6%): {vf:,.0f}".replace(",", " "))
-    p.drawString(9*cm, y, f"TA (1,5%): {ta:,.0f}".replace(",", " "))
     total_charges = bulletin.cnss_employeur + vf + ta
+    y -= 0.35*cm
+    p.setFont("Helvetica", 8)
+    p.drawString(1.5*cm, y, f"CNSS Employeur (18%): {bulletin.cnss_employeur:,.0f} GNF".replace(",", " "))
+    p.drawString(6.5*cm, y, f"VF (6%): {vf:,.0f} GNF".replace(",", " "))
+    p.drawString(10.5*cm, y, f"TA (1,5%): {ta:,.0f} GNF".replace(",", " "))
     p.setFont("Helvetica-Bold", 8)
-    p.drawString(12.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
+    p.drawString(14*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     
     # === PIED DE PAGE ===
     p.setFont("Helvetica", 7)
