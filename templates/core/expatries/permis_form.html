@@ -36,9 +36,10 @@
                 <div class="col-md-4">
                     <label class="form-label">Statut</label>
                     <select name="statut" class="form-select">
-                        <option value="valide" {% if permis.statut == 'valide' %}selected{% endif %}>Valide</option>
+                        <option value="en_cours" {% if permis.statut == 'en_cours' %}selected{% endif %}>En cours de validité</option>
                         <option value="expire" {% if permis.statut == 'expire' %}selected{% endif %}>Expiré</option>
-                        <option value="en_cours" {% if permis.statut == 'en_cours' %}selected{% endif %}>En cours</option>
+                        <option value="en_renouvellement" {% if permis.statut == 'en_renouvellement' %}selected{% endif %}>En renouvellement</option>
+                        <option value="refuse" {% if permis.statut == 'refuse' %}selected{% endif %}>Refusé</option>
                     </select>
                 </div>
             </div>
@@ -47,8 +48,8 @@
                 <input type="text" name="autorite_emission" class="form-control" value="{{ permis.autorite_emission|default:'' }}">
             </div>
             <div class="mb-3">
-                <label class="form-label">Notes</label>
-                <textarea name="notes" class="form-control" rows="2">{{ permis.notes|default:'' }}</textarea>
+                <label class="form-label">Observations</label>
+                <textarea name="notes" class="form-control" rows="2">{{ permis.observations|default:'' }}</textarea>
             </div>
             <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Enregistrer</button>
         </form>

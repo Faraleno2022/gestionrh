@@ -179,8 +179,8 @@ def permis_ajouter(request, expatrie_id):
             date_emission=request.POST.get('date_emission') or None,
             date_expiration=request.POST.get('date_expiration') or None,
             autorite_emission=request.POST.get('autorite_emission', ''),
-            statut=request.POST.get('statut', 'valide'),
-            notes=request.POST.get('notes', ''),
+            statut=request.POST.get('statut', 'en_cours'),
+            observations=request.POST.get('notes', ''),
         )
         
         log_activity(
@@ -214,8 +214,8 @@ def permis_modifier(request, pk):
         permis.date_emission = request.POST.get('date_emission') or None
         permis.date_expiration = request.POST.get('date_expiration') or None
         permis.autorite_emission = request.POST.get('autorite_emission', '')
-        permis.statut = request.POST.get('statut', 'valide')
-        permis.notes = request.POST.get('notes', '')
+        permis.statut = request.POST.get('statut', 'en_cours')
+        permis.observations = request.POST.get('notes', '')
         permis.save()
         
         log_activity(request, f"Modification document {permis.numero_document}", 'core')
@@ -238,7 +238,7 @@ def alertes_expatries(request):
         expatrie__employe__entreprise=request.user.entreprise,
         date_expiration__lte=date_limite,
         date_expiration__gte=date.today(),
-        statut='valide'
+        statut='en_cours'
     ).select_related('expatrie', 'expatrie__employe').order_by('date_expiration')
     
     alertes = []
