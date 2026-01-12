@@ -7,6 +7,20 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>{% block title %}Gestionnaire RH Guinée{% endblock %}</title>
     
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="{% block meta_description %}GuinéeRH - Logiciel de gestion des ressources humaines conforme au Code du Travail Guinéen. Paie, CNSS, congés, contrats.{% endblock %}">
+    <meta name="keywords" content="logiciel RH Guinée, gestion paie Guinée, CNSS Guinée, ressources humaines Conakry, logiciel paie guinéen">
+    <meta name="author" content="GuinéeRH">
+    <meta name="robots" content="{% block robots %}noindex, nofollow{% endblock %}">
+    
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="GuinéeRH">
+    <meta property="og:locale" content="fr_GN">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/img/favicon.png">
+    
     <!-- DNS Prefetch pour accélérer les connexions CDN -->
     <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
     <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">

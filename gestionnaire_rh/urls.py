@@ -5,8 +5,50 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import TemplateView
+from django.http import HttpResponse
+
+def robots_txt(request):
+    content = """# Robots.txt pour GuinéeRH
+User-agent: *
+Allow: /
+Allow: /login/
+Allow: /inscription/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /employes/
+Disallow: /paie/
+Disallow: /conges/
+Disallow: /core/
+Disallow: /comptabilite/
+Sitemap: https://www.guineerh.space/sitemap.xml
+"""
+    return HttpResponse(content, content_type="text/plain")
+
+def sitemap_xml(request):
+    content = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://www.guineerh.space/</loc>
+        <changefreq>weekly</changefreq>
+        <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>https://www.guineerh.space/login/</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.9</priority>
+    </url>
+    <url>
+        <loc>https://www.guineerh.space/inscription/</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+</urlset>"""
+    return HttpResponse(content, content_type="application/xml")
 
 urlpatterns = [
+    path('robots.txt', robots_txt, name='robots_txt'),
+    path('sitemap.xml', sitemap_xml, name='sitemap_xml'),
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
     path('dashboard/', include('dashboard.urls')),
