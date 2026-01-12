@@ -163,6 +163,28 @@ def expatrie_modifier(request, pk):
 
 
 @login_required
+def expatrie_supprimer(request, pk):
+    """Supprimer un expatrié"""
+    expatrie = get_object_or_404(
+        Expatrie,
+        pk=pk,
+        employe__entreprise=request.user.entreprise
+    )
+    
+    if request.method == 'POST':
+        nom_complet = expatrie.employe.nom_complet
+        expatrie.delete()
+        
+        log_activity(request, f"Suppression expatrié {nom_complet}", 'core')
+        messages.success(request, f'Expatrié {nom_complet} supprimé avec succès')
+        return redirect('core:expatries_liste')
+    
+    return render(request, 'core/expatries/confirmer_suppression.html', {
+        'expatrie': expatrie,
+    })
+
+
+@login_required
 def permis_ajouter(request, expatrie_id):
     """Ajouter un permis/visa à un expatrié"""
     expatrie = get_object_or_404(

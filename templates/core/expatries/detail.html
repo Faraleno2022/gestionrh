@@ -5,6 +5,7 @@
     <h1 class="h4 mb-0"><i class="bi bi-person-badge"></i> {{ expatrie.employe.nom_complet }}</h1>
     <div class="btn-group">
         <a href="{% url 'core:expatrie_modifier' expatrie.id %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i> Modifier</a>
+        <a href="{% url 'core:expatrie_supprimer' expatrie.id %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Supprimer</a>
         <a href="{% url 'core:expatries_liste' %}" class="btn btn-outline-secondary btn-sm">Retour</a>
     </div>
 </div>

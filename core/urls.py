@@ -51,6 +51,7 @@ urlpatterns = [
     path('expatries/ajouter/', expatries.expatrie_ajouter, name='expatrie_ajouter'),
     path('expatries/<int:pk>/', expatries.expatrie_detail, name='expatrie_detail'),
     path('expatries/<int:pk>/modifier/', expatries.expatrie_modifier, name='expatrie_modifier'),
+    path('expatries/<int:pk>/supprimer/', expatries.expatrie_supprimer, name='expatrie_supprimer'),
     path('expatries/<int:expatrie_id>/permis/ajouter/', expatries.permis_ajouter, name='permis_ajouter'),
     path('expatries/permis/<int:pk>/modifier/', expatries.permis_modifier, name='permis_modifier'),
     path('expatries/alertes/', expatries.alertes_expatries, name='alertes_expatries'),
