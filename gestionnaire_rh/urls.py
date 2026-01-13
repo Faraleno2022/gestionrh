@@ -46,9 +46,13 @@ def sitemap_xml(request):
 </urlset>"""
     return HttpResponse(content, content_type="application/xml")
 
+def google_verification(request):
+    return HttpResponse("google-site-verification: google47b11a2550ab2dda.html", content_type="text/html")
+
 urlpatterns = [
     path('robots.txt', robots_txt, name='robots_txt'),
     path('sitemap.xml', sitemap_xml, name='sitemap_xml'),
+    path('google47b11a2550ab2dda.html', google_verification, name='google_verification'),
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
     path('dashboard/', include('dashboard.urls')),
