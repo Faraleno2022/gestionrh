@@ -37,6 +37,11 @@ def documentation_legale(request):
     return render(request, 'core/documentation_legale.html')
 
 
+def documentation_legale_print(request):
+    """Version imprimable de la documentation légale"""
+    return render(request, 'core/documentation_legale_print.html')
+
+
 def login_view(request):
     """Vue de connexion"""
     if request.user.is_authenticated:
