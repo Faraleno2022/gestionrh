@@ -32,6 +32,11 @@ def log_activity(request, action, module=None, table=None, id_enreg=None, detail
         )
 
 
+def documentation_legale(request):
+    """Page publique de documentation légale sur la paie en Guinée"""
+    return render(request, 'core/documentation_legale.html')
+
+
 def login_view(request):
     """Vue de connexion"""
     if request.user.is_authenticated:

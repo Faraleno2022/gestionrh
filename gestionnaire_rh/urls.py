@@ -43,6 +43,11 @@ def sitemap_xml(request):
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
     </url>
+    <url>
+        <loc>https://www.guineerh.space/documentation-legale/</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
 </urlset>"""
     return HttpResponse(content, content_type="application/xml")
 
