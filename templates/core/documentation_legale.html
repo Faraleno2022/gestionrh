@@ -111,6 +111,32 @@
             body { background: white; }
             .doc-card { box-shadow: none; }
         }
+        /* Styles pour génération PDF */
+        .doc-card {
+            background: white !important;
+        }
+        .doc-header {
+            background: #212121 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .section-title {
+            background: #EF7707 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .card-header {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .badge {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .highlight-box, .warning-box, .info-box {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
     </style>
 </head>
 <body>
@@ -391,22 +417,44 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
         document.getElementById('btn-download-pdf').addEventListener('click', function() {
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Génération...';
+            
             // Masquer les boutons pendant la génération
             const noPrintElements = document.querySelectorAll('.no-print');
             noPrintElements.forEach(el => el.style.display = 'none');
             
             const element = document.querySelector('.doc-card');
             const opt = {
-                margin: 10,
+                margin: [10, 10, 10, 10],
                 filename: 'Documentation_Legale_Paie_Guinee.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true,
+                    logging: false,
+                    letterRendering: true,
+                    allowTaint: true,
+                    scrollY: 0,
+                    windowWidth: element.scrollWidth,
+                    windowHeight: element.scrollHeight
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             };
             
             html2pdf().set(opt).from(element).save().then(function() {
                 // Réafficher les boutons après génération
                 noPrintElements.forEach(el => el.style.display = '');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> Télécharger PDF';
+            }).catch(function(error) {
+                console.error('Erreur PDF:', error);
+                noPrintElements.forEach(el => el.style.display = '');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> Télécharger PDF';
+                alert('Erreur lors de la génération du PDF. Veuillez réessayer.');
             });
         });
     </script>
