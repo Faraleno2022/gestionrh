@@ -7,15 +7,23 @@
     <title>{{ offre.intitule_poste }} - {{ offre.entreprise.nom_entreprise }}</title>
     
     <!-- Meta description -->
-    <meta name="description" content="{{ offre.description_poste|truncatewords:30|striptags }}">
+    <meta name="description" content="🎯 {{ offre.intitule_poste }} chez {{ offre.entreprise.nom_entreprise }} | {{ offre.type_contrat }} | {{ offre.profil_recherche|striptags }}">
     
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph / Facebook / WhatsApp -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request.build_absolute_uri }}">
-    <meta property="og:title" content="{{ offre.intitule_poste }} - {{ offre.entreprise.nom_entreprise }}">
-    <meta property="og:description" content="{{ offre.description_poste|truncatewords:30|striptags }}">
+    <meta property="og:site_name" content="{{ offre.entreprise.nom_entreprise }}">
+    <meta property="og:title" content="🚀 {{ offre.intitule_poste }} - {{ offre.entreprise.nom_entreprise }} recrute!">
+    <meta property="og:description" content="📋 Profil recherché: {{ offre.profil_recherche|striptags }}
+
+💼 Type: {{ offre.type_contrat }} | 📍 {{ offre.nombre_postes }} poste(s)
+{% if offre.date_limite_candidature %}⏰ Date limite: {{ offre.date_limite_candidature|date:'d/m/Y' }}{% endif %}
+
+✅ Postulez maintenant!">
     {% if offre.image %}
     <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ offre.image.url }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     {% elif offre.entreprise.logo %}
     <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ offre.entreprise.logo.url }}">
     {% endif %}
@@ -23,8 +31,11 @@
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="{{ request.build_absolute_uri }}">
-    <meta name="twitter:title" content="{{ offre.intitule_poste }} - {{ offre.entreprise.nom_entreprise }}">
-    <meta name="twitter:description" content="{{ offre.description_poste|truncatewords:30|striptags }}">
+    <meta name="twitter:title" content="🚀 {{ offre.intitule_poste }} - {{ offre.entreprise.nom_entreprise }} recrute!">
+    <meta name="twitter:description" content="📋 Profil recherché: {{ offre.profil_recherche|striptags }}
+
+💼 Type: {{ offre.type_contrat }} | 📍 {{ offre.nombre_postes }} poste(s)
+✅ Postulez maintenant!">
     {% if offre.image %}
     <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ offre.image.url }}">
     {% elif offre.entreprise.logo %}
