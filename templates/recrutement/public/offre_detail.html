@@ -5,6 +5,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ offre.intitule_poste }} - {{ offre.entreprise.nom_entreprise }}</title>
+    
+    <!-- Meta description -->
+    <meta name="description" content="{{ offre.description_poste|truncatewords:30|striptags }}">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta property="og:title" content="{{ offre.intitule_poste }} - {{ offre.entreprise.nom_entreprise }}">
+    <meta property="og:description" content="{{ offre.description_poste|truncatewords:30|striptags }}">
+    {% if offre.image %}
+    <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ offre.image.url }}">
+    {% elif offre.entreprise.logo %}
+    <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ offre.entreprise.logo.url }}">
+    {% endif %}
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ request.build_absolute_uri }}">
+    <meta name="twitter:title" content="{{ offre.intitule_poste }} - {{ offre.entreprise.nom_entreprise }}">
+    <meta name="twitter:description" content="{{ offre.description_poste|truncatewords:30|striptags }}">
+    {% if offre.image %}
+    <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ offre.image.url }}">
+    {% elif offre.entreprise.logo %}
+    <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ offre.entreprise.logo.url }}">
+    {% endif %}
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
@@ -83,16 +109,22 @@
             <a href="/" class="text-white text-decoration-none mb-3 d-inline-block">
                 <i class="bi bi-arrow-left me-2"></i>Retour à l'accueil
             </a>
-            <div class="mt-3">
+            <div class="mt-3 d-flex align-items-start gap-4">
+                {% if offre.entreprise.logo %}
+                <img src="{{ offre.entreprise.logo.url }}" alt="{{ offre.entreprise.nom_entreprise }}" 
+                     style="width: 80px; height: 80px; object-fit: contain; background: white; border-radius: 0.5rem; padding: 0.5rem;">
+                {% endif %}
+                <div>
                 <span class="badge bg-light text-dark mb-2">{{ offre.entreprise.nom_entreprise }}</span>
                 <h1>{{ offre.intitule_poste }}</h1>
                 <div class="text-white-50 mb-2">
-                    <small><i class="bi bi-hash me-1"></i>Référence: {{ offre.reference_offre|default:offre.pk }}</small>
+                    <small><i class="bi bi-hash me-1"></i>Référence: {{ offre.reference_offre }}</small>
                 </div>
                 <div class="d-flex gap-3 flex-wrap mt-3">
                     {% if offre.type_contrat %}<span class="info-badge bg-white"><i class="bi bi-briefcase"></i>{{ offre.type_contrat }}</span>{% endif %}
                     {% if offre.service %}<span class="info-badge bg-white"><i class="bi bi-diagram-3"></i>{{ offre.service.nom_service }}</span>{% endif %}
                     <span class="info-badge bg-white"><i class="bi bi-people"></i>{{ offre.nombre_postes }} poste{{ offre.nombre_postes|pluralize }}</span>
+                </div>
                 </div>
             </div>
         </div>
