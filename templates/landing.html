@@ -1193,7 +1193,7 @@
                         </div>
                         <h4 class="job-title">{{ offre.intitule_poste }}</h4>
                         <div class="job-reference">
-                            <small class="text-muted"><i class="bi bi-hash me-1"></i>Réf: {{ offre.reference_offre|default:offre.pk }}</small>
+                            <small class="text-muted"><i class="bi bi-hash me-1"></i>Réf: {{ offre.reference_poste|default:offre.reference_offre }}</small>
                         </div>
                         <div class="job-details">
                             {% if offre.service %}
