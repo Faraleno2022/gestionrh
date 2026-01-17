@@ -118,7 +118,7 @@
                 <span class="badge bg-light text-dark mb-2">{{ offre.entreprise.nom_entreprise }}</span>
                 <h1>{{ offre.intitule_poste }}</h1>
                 <div class="text-white-50 mb-2">
-                    <small><i class="bi bi-hash me-1"></i>Référence: {{ offre.reference_offre }}</small>
+                    <small><i class="bi bi-hash me-1"></i>Référence: {{ offre.reference_poste|default:offre.reference_offre }}</small>
                 </div>
                 <div class="d-flex gap-3 flex-wrap mt-3">
                     {% if offre.type_contrat %}<span class="info-badge bg-white"><i class="bi bi-briefcase"></i>{{ offre.type_contrat }}</span>{% endif %}
