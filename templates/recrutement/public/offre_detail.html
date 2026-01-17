@@ -126,8 +126,8 @@
                      style="width: 80px; height: 80px; object-fit: contain; border-radius: 0.5rem;">
                 {% endif %}
                 <div>
-                <span class="text-white mb-2 d-block">{{ offre.entreprise.nom_entreprise }}</span>
-                <h3>{{ offre.intitule_poste }}</h3>
+                <small class="text-white-50 mb-1 d-block">{{ offre.entreprise.nom_entreprise }}</small>
+                <h5 class="mb-1">{{ offre.intitule_poste }}</h5>
                 <div class="text-white-50 mb-2">
                     <small><i class="bi bi-hash me-1"></i>Référence: {{ offre.reference_poste|default:offre.reference_offre }}</small>
                 </div>
