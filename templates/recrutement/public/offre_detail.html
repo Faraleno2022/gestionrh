@@ -131,11 +131,11 @@
                 <div class="text-white-50 mb-2" style="font-size: 0.7rem;">
                     <small><i class="bi bi-hash me-1"></i>Référence: {{ offre.reference_poste|default:offre.reference_offre }}</small>
                 </div>
-                <div class="d-flex gap-2 flex-wrap mt-2">
-                    {% if offre.type_contrat %}<span class="info-badge bg-white" style="font-size: 0.7rem; padding: 0.3rem 0.6rem;"><i class="bi bi-briefcase"></i>{{ offre.type_contrat }}</span>{% endif %}
-                    {% if offre.secteur_activite %}<span class="info-badge bg-white" style="font-size: 0.7rem; padding: 0.3rem 0.6rem;"><i class="bi bi-building"></i>Secteur d'Activité: {{ offre.get_secteur_activite_display|default:offre.secteur_activite }}</span>{% endif %}
-                    {% if offre.service %}<span class="info-badge bg-white" style="font-size: 0.7rem; padding: 0.3rem 0.6rem;"><i class="bi bi-diagram-3"></i>{{ offre.service.nom_service }}</span>{% endif %}
-                    <span class="info-badge bg-white" style="font-size: 0.7rem; padding: 0.3rem 0.6rem;"><i class="bi bi-people"></i>{{ offre.nombre_postes }} poste{{ offre.nombre_postes|pluralize }}</span>
+                <div class="d-flex gap-1 mt-2 overflow-auto pb-1" style="white-space: nowrap; -webkit-overflow-scrolling: touch;">
+                    {% if offre.type_contrat %}<span class="info-badge bg-white" style="font-size: 0.65rem; padding: 0.2rem 0.5rem; flex-shrink: 0;"><i class="bi bi-briefcase"></i>{{ offre.type_contrat }}</span>{% endif %}
+                    {% if offre.secteur_activite %}<span class="info-badge bg-white" style="font-size: 0.65rem; padding: 0.2rem 0.5rem; flex-shrink: 0;"><i class="bi bi-building"></i>{{ offre.get_secteur_activite_display|default:offre.secteur_activite }}</span>{% endif %}
+                    {% if offre.service %}<span class="info-badge bg-white" style="font-size: 0.65rem; padding: 0.2rem 0.5rem; flex-shrink: 0;"><i class="bi bi-diagram-3"></i>{{ offre.service.nom_service }}</span>{% endif %}
+                    <span class="info-badge bg-white" style="font-size: 0.65rem; padding: 0.2rem 0.5rem; flex-shrink: 0;"><i class="bi bi-people"></i>{{ offre.nombre_postes }} poste{{ offre.nombre_postes|pluralize }}</span>
                 </div>
                 </div>
             </div>
