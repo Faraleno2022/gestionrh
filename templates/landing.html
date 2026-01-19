@@ -5,10 +5,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>International Consulting Guinea - Solution complète de gestion des ressources humaines</title>
+    
+    <!-- Preconnect pour accélérer les connexions aux CDN -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    
+    <!-- DNS Prefetch pour les ressources secondaires -->
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    
+    <!-- CSS critique - Bootstrap (prioritaire) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Google Fonts optimisé - seulement 4 poids essentiels avec display=swap -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CSS non-critique chargé en async -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" media="print" onload="this.media='all'">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+        <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    </noscript>
     <style>
         :root {
             --orange-main: #EF7707;
@@ -1424,97 +1444,94 @@
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <!-- Scripts avec defer pour ne pas bloquer le rendu -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js" defer></script>
     <script>
-        // Initialize AOS rapidement avec animations fluides
+        // Initialisation rapide dès que le DOM est prêt
         document.addEventListener('DOMContentLoaded', function() {
-            // Ajouter la classe aos-initialized au body pour activer les animations
-            document.body.classList.add('aos-initialized');
-            
-            AOS.init({
-                duration: 600,
-                easing: 'ease-out',
-                once: true,
-                offset: 30,
-                delay: 0,
-                startEvent: 'DOMContentLoaded',
-                disable: false,
-                anchorPlacement: 'top-bottom'
-            });
-        });
-        
-        // Navbar scroll effect
-        const navbar = document.querySelector('.navbar-glass');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
-        });
-        
-        // Smooth scroll for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
+            // AOS - vérifier si chargé, sinon attendre
+            function initAOS() {
+                if (typeof AOS !== 'undefined') {
+                    document.body.classList.add('aos-initialized');
+                    AOS.init({
+                        duration: 500,
+                        easing: 'ease-out',
+                        once: true,
+                        offset: 20,
+                        delay: 0
                     });
-                }
-            });
-        });
-        
-        // Counter animation for stats
-        const animateCounter = (el, target) => {
-            let current = 0;
-            const increment = target / 50;
-            const timer = setInterval(() => {
-                current += increment;
-                if (current >= target) {
-                    el.textContent = target;
-                    clearInterval(timer);
                 } else {
-                    el.textContent = Math.floor(current);
+                    setTimeout(initAOS, 50);
                 }
-            }, 30);
-        };
-        
-        // Intersection Observer for stat counters
-        const observerOptions = {
-            threshold: 0.5
-        };
-        
-        const statObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const statNumber = entry.target.querySelector('.stat-number');
-                    const value = statNumber.textContent;
-                    if (!isNaN(parseInt(value))) {
-                        animateCounter(statNumber, parseInt(value));
-                    }
-                    statObserver.unobserve(entry.target);
-                }
-            });
-        }, observerOptions);
-        
-        document.querySelectorAll('.stat-card').forEach(card => {
-            statObserver.observe(card);
-        });
-        
-        // Parallax effect for particles
-        document.addEventListener('mousemove', (e) => {
-            const particles = document.querySelectorAll('.particle');
-            const x = e.clientX / window.innerWidth;
-            const y = e.clientY / window.innerHeight;
+            }
+            initAOS();
             
-            particles.forEach((particle, index) => {
-                const speed = (index + 1) * 20;
-                particle.style.transform = `translate(${x * speed}px, ${y * speed}px)`;
+            // Navbar scroll effect
+            const navbar = document.querySelector('.navbar-glass');
+            if (navbar) {
+                let ticking = false;
+                window.addEventListener('scroll', () => {
+                    if (!ticking) {
+                        requestAnimationFrame(() => {
+                            navbar.classList.toggle('scrolled', window.scrollY > 50);
+                            ticking = false;
+                        });
+                        ticking = true;
+                    }
+                }, { passive: true });
+            }
+            
+            // Smooth scroll pour ancres
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        e.preventDefault();
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
             });
+            
+            // Counter animation avec IntersectionObserver
+            const statObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const el = entry.target.querySelector('.stat-number');
+                        if (el) {
+                            const target = parseInt(el.textContent);
+                            if (!isNaN(target)) {
+                                let current = 0;
+                                const increment = target / 40;
+                                const timer = setInterval(() => {
+                                    current += increment;
+                                    if (current >= target) {
+                                        el.textContent = target;
+                                        clearInterval(timer);
+                                    } else {
+                                        el.textContent = Math.floor(current);
+                                    }
+                                }, 25);
+                            }
+                        }
+                        statObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            document.querySelectorAll('.stat-card').forEach(card => statObserver.observe(card));
+            
+            // Parallax particles (désactivé sur mobile pour performance)
+            if (window.innerWidth > 768) {
+                document.addEventListener('mousemove', (e) => {
+                    const particles = document.querySelectorAll('.particle');
+                    const x = e.clientX / window.innerWidth;
+                    const y = e.clientY / window.innerHeight;
+                    particles.forEach((p, i) => {
+                        p.style.transform = `translate(${x * (i + 1) * 20}px, ${y * (i + 1) * 20}px)`;
+                    });
+                }, { passive: true });
+            }
         });
     </script>
 </body>
