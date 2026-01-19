@@ -999,6 +999,126 @@
             transform: none !important;
         }
         
+        /* About Us Section */
+        .about-us-section {
+            padding: 80px 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffffff;
+        }
+        
+        .about-us-section .section-title {
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 800;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .about-us-section .section-subtitle {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.9);
+            text-align: center;
+            margin-bottom: 40px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .about-us-section .orange-text {
+            color: var(--orange-main);
+        }
+        
+        .about-intro-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: start;
+        }
+        
+        .about-intro-text p {
+            color: rgba(255,255,255,0.85);
+            font-size: 1rem;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+        
+        .about-right-column .about-image img {
+            width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 25px;
+        }
+        
+        .about-services-list h3 {
+            color: var(--orange-main);
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+        
+        .about-services-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .about-services-list li {
+            color: rgba(255,255,255,0.85);
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .about-services-list li i {
+            color: var(--orange-main);
+            margin-top: 4px;
+        }
+        
+        .mission-vision-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 50px;
+        }
+        
+        .mv-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+        }
+        
+        .mv-card h4 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #ffffff;
+        }
+        
+        .mv-card p {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+        
+        @media (max-width: 991px) {
+            .about-intro-content {
+                grid-template-columns: 1fr;
+            }
+            .mission-vision-grid {
+                grid-template-columns: 1fr;
+            }
+            .about-us-section { padding: 60px 0; }
+        }
+        
+        @media (max-width: 767px) {
+            .about-us-section .section-title { font-size: 1.6rem; }
+            .about-us-section .section-subtitle { font-size: 1rem; }
+            .about-intro-text p { font-size: 0.95rem; }
+            .mv-card { padding: 20px; }
+        }
+        
         /* Jobs Section */
         .jobs {
             padding: 120px 0;
@@ -1143,6 +1263,55 @@
             </div>
         </div>
     </nav>
+
+    <!-- Section QUI SOMMES-NOUS -->
+    <section class="about-us-section">
+        <div class="container">
+            <h2 class="section-title" data-aos="fade-up">QUI SOMMES-<span class="orange-text">NOUS</span> ?</h2>
+            <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">International Consulting Guinea : Votre partenaire de confiance pour un développement qui fait du bien à tous.</p>
+            
+            <div class="about-intro-content">
+                <div class="about-intro-text" data-aos="fade-right" data-aos-delay="200">
+                    <p>
+                        Chez International Consulting Guinea (ICG), nous ne sommes pas juste des conseillers. Nous sommes des bâtisseurs de liens, unissant les envies des personnes aux besoins des entreprises, pour de très bons résultats partout dans le monde. Notre rôle est d'accompagner les entreprises, les organisations et les institutions pour qu'elles grandissent, en leur donnant des solutions simples et faites pour leurs besoins précis.
+                    </p>
+                    <p>
+                        Depuis le début, nous transformons les défis en de belles occasions de développement qui durent. Nous sommes convaincus qu'une entreprise qui marche bien fait attention à ses équipes, travaille en sécurité, prend soin de notre planète et s'implique vraiment pour le bien de tous. C'est pourquoi nos services couvrent tous ces points importants, toujours avec une approche humaine et respectueuse.
+                    </p>
+                </div>
+                <div class="about-right-column" data-aos="fade-left" data-aos-delay="300">
+                    <div class="about-image">
+                        <img src="{% static 'img/rse.jpg' %}" alt="ICG Team Vision">
+                    </div>
+                    <div class="about-services-list">
+                        <h3>Nos domaines d'aide pour vous :</h3>
+                        <ul>
+                            <li><i class="bi bi-check-circle-fill"></i> Ressources Humaines : pour le recrutement, la formation et la gestion des parcours de travail</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Hygiène, Sécurité et Environnement (HSE) : pour un cadre de travail sain et sécurisé</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Responsabilité Sociétale de l'Entreprise (RSE) : pour un impact positif sur la société</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Accompagnement et Conseil : pour vous guider dans vos grandes décisions</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Systèmes de Gestion de la Qualité : pour que ce que vous faites soit toujours de la meilleure qualité</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mission-vision-grid">
+                <div class="mv-card" data-aos="fade-up" data-aos-delay="400">
+                    <h4>NOTRE <span class="orange-text">MISSION</span></h4>
+                    <p>
+                        Notre mission est de vous donner les outils, les idées et l'aide qu'il vous faut pour avancer et bien réussir dans le monde des affaires. Que ce soit en améliorant votre capital humain, en assurant un environnement de travail sûr et bon pour la nature, en intégrant le bien-être social à votre activité ou en atteignant le meilleur niveau de qualité, nous sommes là pour vous.
+                    </p>
+                </div>
+                <div class="mv-card" data-aos="fade-up" data-aos-delay="500">
+                    <h4>NOTRE <span class="orange-text">VISION</span></h4>
+                    <p>
+                        Nous voulons être un cabinet de conseil reconnu dans le monde entier, grâce aux résultats positifs que nous apportons à nos clients et à notre participation au développement des pays où nous travaillons. Nous rêvons d'un futur où chaque entreprise, petite ou grande, peut obtenir l'aide nécessaire pour bien fonctionner de façon juste et sur le long terme, partout dans le monde.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Hero Section -->
     <section class="hero">
