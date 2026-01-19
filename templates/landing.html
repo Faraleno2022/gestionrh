@@ -999,6 +999,106 @@
             transform: none !important;
         }
         
+        /* Hero Slider Section */
+        .hero-slider {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .hero-slider .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+        
+        .hero-slider .slide.active {
+            opacity: 1;
+        }
+        
+        .hero-slider .slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .hero-slider .slide-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.7) 0%, rgba(22, 33, 62, 0.5) 100%);
+        }
+        
+        .slider-dots {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            z-index: 10;
+        }
+        
+        .slider-dots .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .slider-dots .dot.active {
+            background: var(--orange-main);
+            transform: scale(1.2);
+        }
+        
+        .slider-dots .dot:hover {
+            background: rgba(255,255,255,0.8);
+        }
+        
+        .slider-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .slider-nav:hover {
+            background: var(--orange-main);
+        }
+        
+        .slider-nav.prev { left: 20px; }
+        .slider-nav.next { right: 20px; }
+        
+        @media (max-width: 767px) {
+            .hero-slider { height: 60vh; }
+            .slider-nav { width: 40px; height: 40px; font-size: 1.2rem; }
+            .slider-nav.prev { left: 10px; }
+            .slider-nav.next { right: 10px; }
+            .slider-dots { bottom: 20px; }
+            .slider-dots .dot { width: 10px; height: 10px; }
+        }
+        
         /* About Us Section */
         .about-us-section {
             padding: 80px 0;
@@ -1263,6 +1363,35 @@
             </div>
         </div>
     </nav>
+
+    <!-- Hero Slider plein écran -->
+    <section class="hero-slider">
+        <div class="slide active">
+            <img src="{% static 'img/home3.png' %}" alt="International Consulting Guinea">
+            <div class="slide-overlay"></div>
+        </div>
+        <div class="slide">
+            <img src="{% static 'img/home4.png' %}" alt="ICG GuinéeRH">
+            <div class="slide-overlay"></div>
+        </div>
+        <div class="slide">
+            <img src="{% static 'img/home5.png' %}" alt="Guinearh.space">
+            <div class="slide-overlay"></div>
+        </div>
+        
+        <button class="slider-nav prev" onclick="changeSlide(-1)">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+        <button class="slider-nav next" onclick="changeSlide(1)">
+            <i class="bi bi-chevron-right"></i>
+        </button>
+        
+        <div class="slider-dots">
+            <span class="dot active" onclick="goToSlide(0)"></span>
+            <span class="dot" onclick="goToSlide(1)"></span>
+            <span class="dot" onclick="goToSlide(2)"></span>
+        </div>
+    </section>
 
     <!-- Section QUI SOMMES-NOUS -->
     <section class="about-us-section">
@@ -1883,6 +2012,38 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js" defer></script>
     <script>
+        // Hero Slider
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.hero-slider .slide');
+        const dots = document.querySelectorAll('.slider-dots .dot');
+        
+        function showSlide(index) {
+            if (index >= slides.length) currentSlide = 0;
+            if (index < 0) currentSlide = slides.length - 1;
+            
+            slides.forEach(slide => slide.classList.remove('active'));
+            dots.forEach(dot => dot.classList.remove('active'));
+            
+            slides[currentSlide].classList.add('active');
+            dots[currentSlide].classList.add('active');
+        }
+        
+        function changeSlide(direction) {
+            currentSlide += direction;
+            showSlide(currentSlide);
+        }
+        
+        function goToSlide(index) {
+            currentSlide = index;
+            showSlide(currentSlide);
+        }
+        
+        // Auto-slide toutes les 5 secondes
+        setInterval(() => {
+            currentSlide++;
+            showSlide(currentSlide);
+        }, 5000);
+        
         // Initialisation rapide dès que le DOM est prêt
         document.addEventListener('DOMContentLoaded', function() {
             // AOS - vérifier si chargé, sinon attendre
