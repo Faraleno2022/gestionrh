@@ -165,12 +165,12 @@ class DeclarationTVAForm(ComptaBaseForm):
     
     class Meta:
         model = DeclarationTVA
-        fields = ['regime_tva', 'periode', 'periode_debut', 'periode_fin', 'reference_administration']
+        fields = ['regime_tva', 'exercice', 'periode_debut', 'periode_fin', 'statut']
         widgets = {
-            'regime': forms.Select(attrs={
+            'regime_tva': forms.Select(attrs={
                 'class': 'form-control',
             }),
-            'periode': forms.Select(attrs={
+            'exercice': forms.Select(attrs={
                 'class': 'form-control',
             }),
             'periode_debut': forms.DateInput(attrs={
@@ -181,8 +181,7 @@ class DeclarationTVAForm(ComptaBaseForm):
                 'type': 'date',
                 'class': 'form-control',
             }),
-            'reference_administration': forms.TextInput(attrs={
-                'placeholder': 'Numéro TVA ou référence fournie par l\'administration',
+            'statut': forms.Select(attrs={
                 'class': 'form-control',
             }),
         }
