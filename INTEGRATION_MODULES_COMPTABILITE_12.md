@@ -669,4 +669,10 @@ Intégration réussie de 12 modules manquants dans le module de comptabilité po
 
 ---
 
+## 📋 Voir aussi:
+
+📄 **[PLAN_DEVELOPPEMENT_COMPTABILITE.md](PLAN_DEVELOPPEMENT_COMPTABILITE.md)** - Plan de développement stratégique avec priorisation des phases
+
+---
+
 *Document généré le 20 Janvier 2026*
