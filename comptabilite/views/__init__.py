@@ -19,8 +19,6 @@ from .rapprochements.views import (
     LettrageView,
     LettrageAnnulationView,
     RapprochementFinalisationView,
-    DeleteLettrageView,
-    BulkLettrageView,
 )
 
 # Importer les vues de fiscalité
@@ -97,6 +95,4 @@ __all__ = [
     'LettrageView',
     'LettrageAnnulationView',
     'RapprochementFinalisationView',
-    'DeleteLettrageView',
-    'BulkLettrageView',
 ]
