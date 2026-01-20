@@ -6,7 +6,10 @@ Exports principaux:
 - Formulaires de base
 """
 
-from .base import ComptaBaseForm, CompteBancaireForm, DecimalMoneyField
+from .base import (
+    ComptaBaseForm, CompteBancaireForm, DecimalMoneyField, RapprochementBancaireForm,
+    OperationImportForm, EcartBancaireForm, BulkLettrageForm
+)
 from .tva_forms import (
     RegimeTVAForm,
     TauxTVAForm,
@@ -50,6 +53,10 @@ __all__ = [
     # Base
     'ComptaBaseForm',
     'CompteBancaireForm',
+    'RapprochementBancaireForm',
+    'OperationImportForm',
+    'EcartBancaireForm',
+    'BulkLettrageForm',
     'DecimalMoneyField',
     # TVA
     'RegimeTVAForm',
