@@ -103,18 +103,18 @@ class TauxTVAForm(ComptaBaseForm):
     
     class Meta:
         model = TauxTVA
-        fields = ['code', 'libelle', 'taux', 'regime', 'date_debut', 'date_fin', 'actif']
+        fields = ['code', 'nom', 'taux', 'regime_tva', 'date_debut', 'date_fin', 'actif']
         widgets = {
             'code': forms.TextInput(attrs={
                 'placeholder': 'ex: NORMAL_20',
                 'class': 'form-control',
                 'maxlength': '50'
             }),
-            'libelle': forms.TextInput(attrs={
+            'nom': forms.TextInput(attrs={
                 'placeholder': 'ex: TVA normale 20%',
                 'class': 'form-control',
             }),
-            'regime': forms.Select(attrs={
+            'regime_tva': forms.Select(attrs={
                 'class': 'form-control',
             }),
             'date_debut': forms.DateInput(attrs={
@@ -165,7 +165,7 @@ class DeclarationTVAForm(ComptaBaseForm):
     
     class Meta:
         model = DeclarationTVA
-        fields = ['regime', 'periode', 'periode_debut', 'periode_fin', 'reference_administration']
+        fields = ['regime_tva', 'periode', 'periode_debut', 'periode_fin', 'reference_administration']
         widgets = {
             'regime': forms.Select(attrs={
                 'class': 'form-control',
@@ -191,7 +191,7 @@ class DeclarationTVAForm(ComptaBaseForm):
         super().__init__(*args, user=user, **kwargs)
         # Filtrer les régimes par entreprise
         if user and user.entreprise:
-            self.fields['regime'].queryset = RegimeTVA.objects.filter(
+            self.fields['regime_tva'].queryset = RegimeTVA.objects.filter(
                 entreprise=user.entreprise,
                 actif=True
             )
@@ -256,9 +256,9 @@ class LigneDeclarationTVAForm(ComptaBaseForm):
         self.declaration = declaration
         
         # Filtrer les taux par entreprise et régime
-        if declaration and declaration.regime:
+        if declaration and declaration.regime_tva:
             self.fields['taux_tva'].queryset = TauxTVA.objects.filter(
-                regime=declaration.regime,
+                regime_tva=declaration.regime_tva,
                 actif=True
             )
     
@@ -324,7 +324,7 @@ class DeclarationTVAFilterForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     
-    regime = forms.ModelChoiceField(
+    regime_tva = forms.ModelChoiceField(
         label=_("Régime TVA"),
         queryset=RegimeTVA.objects.all(),
         required=False,
