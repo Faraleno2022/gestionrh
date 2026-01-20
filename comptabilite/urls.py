@@ -73,9 +73,6 @@ dashboard_report_patterns = [
 # ============================================================================
 
 legacy_patterns = [
-    # Dashboard comptabilité
-    path('', views.dashboard, name='dashboard'),
-    
     # Plan comptable
     path('plan-comptable/', views.plan_comptable_list, name='plan_comptable_list'),
     path('plan-comptable/ajouter/', views.plan_comptable_create, name='plan_comptable_create'),
