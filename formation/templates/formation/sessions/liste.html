@@ -37,7 +37,7 @@
                         <button type="submit" class="btn btn-outline-primary">
                             <i class="bi bi-funnel"></i> Filtrer
                         </button>
-                        <a href="{% url 'formation:list_sessions' %}" class="btn btn-outline-secondary">
+                        <a href="{% url 'formation:sessions' %}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-circle"></i> Réinitialiser
                         </a>
                     </div>
@@ -71,14 +71,9 @@
                                 <a href="{% url 'formation:detail_session' session.pk %}" class="btn btn-outline-primary btn-sm">
                                     <i class="bi bi-eye"></i> Voir
                                 </a>
-                                <a href="{% url 'formation:session_update' session.pk %}" class="btn btn-outline-warning btn-sm">
+                                <a href="{% url 'formation:detail_session' session.pk %}" class="btn btn-outline-warning btn-sm">
                                     <i class="bi bi-pencil"></i> Modifier
                                 </a>
-                                {% if session.nb_inscrits|default:0 == 0 %}
-                                    <a href="{% url 'formation:session_delete' session.pk %}" class="btn btn-outline-danger btn-sm">
-                                        <i class="bi bi-trash"></i> Supprimer
-                                    </a>
-                                {% endif %}
                             </div>
                         </div>
                     </div>
