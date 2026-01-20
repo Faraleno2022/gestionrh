@@ -52,9 +52,6 @@ lettrage_patterns = [
 import_export_patterns = [
     # Import
     path('importer/', views.OperationImportView.as_view(), name='operation-import'),
-    path('importer/traiter/', views.OperationImportProcessView.as_view(), name='operation-import-process'),
-    path('importer/modele/', views.DownloadTemplateView.as_view(), name='download-template'),
-    path('importer/resultats/<uuid:import_id>/', views.ImportResultsView.as_view(), name='import-results'),
     
     # Export
     path('comptes/exporter/', views.ExportComptesView.as_view(), name='comptes-export'),
