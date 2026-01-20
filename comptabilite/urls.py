@@ -66,11 +66,6 @@ ajax_patterns = [
 # ============================================================================
 
 dashboard_report_patterns = [
-    path('tableau-de-bord/', views.ComptabiliteDashboardView.as_view(), name='comptabilite-dashboard'),
-    path('tableau-de-bord/rapprochements/', views.RapprochementDashboardView.as_view(), name='rapprochement-dashboard'),
-    path('rapports/rapprochement/', views.RapprochementReportView.as_view(), name='rapprochement-report'),
-    path('rapports/divergences/', views.DivergenceReportView.as_view(), name='divergence-report'),
-    path('rapports/lettrage/', views.LettrageReportView.as_view(), name='lettrage-report'),
 ]
 
 # ============================================================================
