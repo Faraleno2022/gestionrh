@@ -59,10 +59,6 @@ import_export_patterns = [
 # ============================================================================
 
 ajax_patterns = [
-    path('ajax/compte/<uuid:compte_id>/solde/', views.GetCompteBalanceAjaxView.as_view(), name='ajax-compte-balance'),
-    path('ajax/rapprochement/<uuid:rapprochement_id>/statut/', views.GetRapprochementStatusAjaxView.as_view(), name='ajax-rapprochement-status'),
-    path('ajax/operations/verifier-correspondance/', views.CheckOperationMatchAjaxView.as_view(), name='ajax-check-match'),
-    path('ajax/operations/<uuid:operation_id>/suggestions/', views.GetMatchSuggestionsAjaxView.as_view(), name='ajax-match-suggestions'),
 ]
 
 # ============================================================================
