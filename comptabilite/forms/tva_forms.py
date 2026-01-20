@@ -231,21 +231,31 @@ class LigneDeclarationTVAForm(ComptaBaseForm):
     
     class Meta:
         model = LigneDeclarationTVA
-        fields = ['code', 'libelle', 'taux_tva', 'montant_ht', 'montant_tva', 'montant_ttc', 'nature_operation']
+        fields = ['numero_ligne', 'description', 'taux', 'montant_ht', 'montant_tva', 'type_ligne', 'compte_comptable']
         widgets = {
-            'code': forms.TextInput(attrs={
-                'placeholder': 'ex: 3.1',
+            'numero_ligne': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'maxlength': '20'
+                'min': '1'
             }),
-            'libelle': forms.TextInput(attrs={
+            'description': forms.TextInput(attrs={
                 'placeholder': 'Description de l\'opération',
                 'class': 'form-control',
             }),
-            'taux_tva': forms.Select(attrs={
+            'taux': forms.Select(attrs={
                 'class': 'form-control',
             }),
-            'nature_operation': forms.Select(attrs={
+            'montant_ht': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01'
+            }),
+            'montant_tva': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01'
+            }),
+            'type_ligne': forms.Select(attrs={
+                'class': 'form-control',
+            }),
+            'compte_comptable': forms.Select(attrs={
                 'class': 'form-control',
             }),
         }
@@ -256,7 +266,7 @@ class LigneDeclarationTVAForm(ComptaBaseForm):
         
         # Filtrer les taux par entreprise et régime
         if declaration and declaration.regime_tva:
-            self.fields['taux_tva'].queryset = TauxTVA.objects.filter(
+            self.fields['taux'].queryset = TauxTVA.objects.filter(
                 regime_tva=declaration.regime_tva,
                 actif=True
             )
