@@ -303,6 +303,39 @@ def detail_session(request, pk):
 
 @login_required
 @entreprise_active_required
+def modifier_session(request, pk):
+    """Modifier une session existante"""
+    session = get_object_or_404(SessionFormation, pk=pk, formation__entreprise=request.user.entreprise)
+    
+    if request.method == 'POST':
+        try:
+            # Récupérer les données du formulaire
+            session.date_debut = request.POST.get('date_debut')
+            session.date_fin = request.POST.get('date_fin')
+            session.lieu = request.POST.get('lieu')
+            session.formateur = request.POST.get('formateur')
+            session.nombre_places = request.POST.get('nombre_places')
+            session.observations = request.POST.get('observations')
+            
+            # Valider les dates
+            if session.date_debut > session.date_fin:
+                messages.error(request, 'La date de début doit être antérieure à la date de fin.')
+                return redirect('formation:modifier_session', pk=pk)
+            
+            session.save()
+            messages.success(request, 'Session modifiée avec succès.')
+            return redirect('formation:detail_session', pk=pk)
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la modification: {e}')
+    
+    return render(request, 'formation/sessions/modifier.html', {
+        'session': session
+    })
+
+
+@login_required
+@entreprise_active_required
 def inscrire_employe(request, session_id):
     """Inscrire un employé à une session"""
     session = get_object_or_404(SessionFormation, pk=session_id, formation__entreprise=request.user.entreprise)
