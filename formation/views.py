@@ -293,11 +293,54 @@ def planifier_session(request):
 def detail_session(request, pk):
     """Détail d'une session"""
     session = get_object_or_404(SessionFormation, pk=pk, formation__entreprise=request.user.entreprise)
-    inscriptions = session.inscriptions.all().select_related('employe')
+    
+    # Récupérer les inscriptions des employés
+    inscriptions_employes = session.inscriptions.all().select_related('employe')
+    
+    # Récupérer les inscriptions publiques pour cette session
+    inscriptions_publiques = session.inscriptions_publiques.all()
+    
+    # Combiner les deux types d'inscriptions pour l'affichage
+    tous_participants = []
+    
+    # Ajouter les inscriptions des employés
+    for inscription in inscriptions_employes:
+        tous_participants.append({
+            'type': 'employe',
+            'nom': inscription.employe.nom,
+            'prenom': inscription.employe.prenom,
+            'email': inscription.employe.email,
+            'telephone': inscription.employe.telephone,
+            'entreprise': inscription.employe.entreprise.nom if inscription.employe.entreprise else '',
+            'fonction': inscription.employe.poste,
+            'statut': inscription.statut,
+            'date_inscription': inscription.date_inscription,
+            'pk': inscription.pk
+        })
+    
+    # Ajouter les inscriptions publiques
+    for inscription in inscriptions_publiques:
+        tous_participants.append({
+            'type': 'public',
+            'nom': inscription.nom,
+            'prenom': inscription.prenom,
+            'email': inscription.email,
+            'telephone': inscription.telephone,
+            'entreprise': inscription.entreprise or '',
+            'fonction': inscription.fonction or '',
+            'statut': inscription.statut,
+            'date_inscription': inscription.date_inscription,
+            'pk': inscription.pk
+        })
+    
+    # Trier par date d'inscription
+    tous_participants.sort(key=lambda x: x['date_inscription'], reverse=True)
     
     return render(request, 'formation/sessions/detail.html', {
         'session': session,
-        'inscriptions': inscriptions
+        'inscriptions': inscriptions_employes,
+        'inscriptions_publiques': inscriptions_publiques,
+        'tous_participants': tous_participants
     })
 
 
