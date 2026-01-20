@@ -328,7 +328,7 @@ class DeclarationTVAFilterForm(forms.Form):
     
     statut = forms.ChoiceField(
         label=_("Statut"),
-        choices=[('', '--- Tous les statuts ---')] + list(DeclarationTVA.STATUT_CHOICES),
+        choices=[('', '--- Tous les statuts ---')] + list(DeclarationTVA.STATUTS),
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
