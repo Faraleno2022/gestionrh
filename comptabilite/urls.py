@@ -1,9 +1,95 @@
+"""
+URLs for the Comptabilité module - Comprehensive routing
+This file organizes URLs for accounting operations, bank reconciliation, 
+fiscal declarations, and audit operations across multiple phases.
+
+Pattern structure:
+- CompteBancaire: comptes/
+- RapprochementBancaire: rapprochements/
+- OperationBancaire: operations/
+- Utility endpoints: /importer/, /exporter/, /ajax/
+- Dashboards: /tableau-de-bord/
+"""
+
 from django.urls import path
 from . import views
 
 app_name = 'comptabilite'
 
-urlpatterns = [
+# ============================================================================
+# RAPPROCHEMENTS BANCAIRES - Main Module for Phase 1
+# ============================================================================
+
+# Compte Bancaire URLs
+compte_bancaire_patterns = [
+    path('comptes/', views.CompteBancaireListView.as_view(), name='compte-bancaire-list'),
+    path('comptes/nouveau/', views.CompteBancaireCreateView.as_view(), name='compte-bancaire-create'),
+    path('comptes/<uuid:pk>/', views.CompteBancaireDetailView.as_view(), name='compte-bancaire-detail'),
+    path('comptes/<uuid:pk>/editer/', views.CompteBancaireUpdateView.as_view(), name='compte-bancaire-update'),
+    path('comptes/<uuid:pk>/supprimer/', views.CompteBancaireDeleteView.as_view(), name='compte-bancaire-delete'),
+]
+
+# Rapprochement Bancaire URLs
+rapprochement_patterns = [
+    path('rapprochements/', views.RapprochementListView.as_view(), name='rapprochement-list'),
+    path('rapprochements/nouveau/', views.RapprochementCreateView.as_view(), name='rapprochement-create'),
+    path('rapprochements/<uuid:pk>/', views.RapprochementDetailView.as_view(), name='rapprochement-detail'),
+    path('rapprochements/<uuid:pk>/editer/', views.RapprochementUpdateView.as_view(), name='rapprochement-update'),
+    path('rapprochements/<uuid:pk>/supprimer/', views.RapprochementDeleteView.as_view(), name='rapprochement-delete'),
+    path('rapprochements/<uuid:pk>/finaliser/', views.RapprochementFinalisationView.as_view(), name='rapprochement-finalize'),
+]
+
+# Lettrage (Matching) URLs
+lettrage_patterns = [
+    path('rapprochements/<uuid:rapprochement_id>/lettrer/', views.LettrageView.as_view(), name='rapprochement-lettrage'),
+    path('rapprochements/<uuid:rapprochement_id>/lettrage/<uuid:lettrage_id>/supprimer/', views.LettrageAnnulationView.as_view(), name='rapprochement-lettrage-delete'),
+]
+
+# ============================================================================
+# IMPORT/EXPORT Operations
+# ============================================================================
+
+import_export_patterns = [
+    # Import
+    path('importer/', views.OperationImportView.as_view(), name='operation-import'),
+    path('importer/traiter/', views.OperationImportProcessView.as_view(), name='operation-import-process'),
+    path('importer/modele/', views.DownloadTemplateView.as_view(), name='download-template'),
+    path('importer/resultats/<uuid:import_id>/', views.ImportResultsView.as_view(), name='import-results'),
+    
+    # Export
+    path('comptes/exporter/', views.ExportComptesView.as_view(), name='comptes-export'),
+    path('rapprochements/exporter/', views.ExportRapprochementsView.as_view(), name='rapprochements-export'),
+    path('operations/exporter/', views.ExportOperationsView.as_view(), name='operations-export'),
+]
+
+# ============================================================================
+# AJAX/API Endpoints
+# ============================================================================
+
+ajax_patterns = [
+    path('ajax/compte/<uuid:compte_id>/solde/', views.GetCompteBalanceAjaxView.as_view(), name='ajax-compte-balance'),
+    path('ajax/rapprochement/<uuid:rapprochement_id>/statut/', views.GetRapprochementStatusAjaxView.as_view(), name='ajax-rapprochement-status'),
+    path('ajax/operations/verifier-correspondance/', views.CheckOperationMatchAjaxView.as_view(), name='ajax-check-match'),
+    path('ajax/operations/<uuid:operation_id>/suggestions/', views.GetMatchSuggestionsAjaxView.as_view(), name='ajax-match-suggestions'),
+]
+
+# ============================================================================
+# DASHBOARDS & REPORTS
+# ============================================================================
+
+dashboard_report_patterns = [
+    path('tableau-de-bord/', views.ComptabiliteDashboardView.as_view(), name='comptabilite-dashboard'),
+    path('tableau-de-bord/rapprochements/', views.RapprochementDashboardView.as_view(), name='rapprochement-dashboard'),
+    path('rapports/rapprochement/', views.RapprochementReportView.as_view(), name='rapprochement-report'),
+    path('rapports/divergences/', views.DivergenceReportView.as_view(), name='divergence-report'),
+    path('rapports/lettrage/', views.LettrageReportView.as_view(), name='lettrage-report'),
+]
+
+# ============================================================================
+# LEGACY/EXISTING URLs (Keep for backward compatibility)
+# ============================================================================
+
+legacy_patterns = [
     # Dashboard comptabilité
     path('', views.dashboard, name='dashboard'),
     
@@ -76,3 +162,41 @@ urlpatterns = [
     path('fournisseurs/vieillissement/', views.vieillissement_dettes, name='vieillissement_dettes'),
     path('fournisseurs/impayes/', views.impayes_fournisseurs, name='impayes_fournisseurs'),
 ]
+
+# ============================================================================
+# COMBINED URL PATTERNS
+# ============================================================================
+
+urlpatterns = (
+    # Phase 1: Rapprochements Bancaires (primary)
+    rapprochement_patterns +
+    compte_bancaire_patterns +
+    lettrage_patterns +
+    
+    # Utilities
+    import_export_patterns +
+    ajax_patterns +
+    dashboard_report_patterns +
+    
+    # Legacy patterns (backward compatibility)
+    legacy_patterns
+)
+
+# ============================================================================
+# FUTURE PHASES (stubs for planning)
+# ============================================================================
+# Phase 2: FISCALITE
+#   - path('declarations/', ...),
+#   - path('tva/', ...),
+#   - path('cotisations/', ...),
+#
+# Phase 3: AUDIT
+#   - path('audit/', ...),
+#   - path('controles/', ...),
+#
+# Phase 4+: OTHER MODULES
+#   - PAIE
+#   - IMMOBILISATIONS
+#   - STOCKS
+#   - ANALYTIQUE
+# ============================================================================
