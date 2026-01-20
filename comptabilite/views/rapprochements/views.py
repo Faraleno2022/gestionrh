@@ -25,7 +25,7 @@ from comptabilite.forms import (
     CompteBancaireForm, RapprochementBancaireForm,
     OperationImportForm, EcartBancaireForm, BulkLettrageForm
 )
-from comptabilite.services.rapprochement import RapprochementService
+from comptabilite.services.rapprochement_service import RapprochementService
 from comptabilite.views.base.generic import (
     ComptaListView, ComptaDetailView, ComptaCreateView,
     ComptaUpdateView, ComptaDeleteView, ComptaAjaxView
