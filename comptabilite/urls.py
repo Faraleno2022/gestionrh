@@ -28,8 +28,8 @@ from comptabilite.views import (
     compte_client_list, compte_client_detail, vieillissement_creances, impayes_clients,
     compte_fournisseur_list, compte_fournisseur_detail, vieillissement_dettes, impayes_fournisseurs,
 )
-from comptabilite.views import (
-    # Vues des sous-modules (classes)
+# Importer les classes depuis les sous-modules
+from comptabilite.views.rapprochements.views import (
     CompteBancaireListView, CompteBancaireDetailView, CompteBancaireCreateView, CompteBancaireUpdateView, CompteBancaireDeleteView,
     RapprochementListView, RapprochementDetailView, RapprochementCreateView, RapprochementUpdateView, RapprochementDeleteView,
     OperationImportView,
