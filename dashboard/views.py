@@ -15,6 +15,12 @@ from temps_travail.models import Conge, Pointage
 @login_required
 def index(request):
     """Tableau de bord principal - Optimisé pour rapidité"""
+    entreprise = request.user.entreprise
+    
+    # Rediriger les utilisateurs comptabilité vers le module comptabilité
+    if entreprise and entreprise.type_module == 'compta':
+        return redirect('comptabilite:compte-bancaire-list')
+    
     entreprise_id = request.user.entreprise_id
     cache_key = f'dashboard_stats_{entreprise_id}'
     
