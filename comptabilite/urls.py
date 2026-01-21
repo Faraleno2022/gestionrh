@@ -12,16 +12,6 @@ Pattern structure:
 """
 
 from django.urls import path, include
-import importlib.util
-import sys
-import os
-
-# Importer views.py dynamiquement pour éviter le conflit avec le dossier views/
-views_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'views.py')
-spec = importlib.util.spec_from_file_location("comptabilite_views_legacy", views_path)
-comptabilite_views_legacy = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(comptabilite_views_legacy)
-
 # Importer les classes depuis les sous-modules
 from views.rapprochements.views import (
     CompteBancaireListView, CompteBancaireDetailView, CompteBancaireCreateView, CompteBancaireUpdateView, CompteBancaireDeleteView,
@@ -89,72 +79,8 @@ dashboard_report_patterns = [
 # ============================================================================
 
 legacy_patterns = [
-    # Plan comptable
-    path('plan-comptable/', comptabilite_views_legacy.plan_comptable_list, name='plan_comptable_list'),
-    path('plan-comptable/ajouter/', comptabilite_views_legacy.plan_comptable_create, name='plan_comptable_create'),
-    path('plan-comptable/<int:pk>/', comptabilite_views_legacy.plan_comptable_detail, name='plan_comptable_detail'),
-    path('plan-comptable/<int:pk>/modifier/', comptabilite_views_legacy.plan_comptable_update, name='plan_comptable_update'),
-    
-    # Journaux
-    path('journaux/', comptabilite_views_legacy.journal_list, name='journal_list'),
-    path('journaux/ajouter/', comptabilite_views_legacy.journal_create, name='journal_create'),
-    path('journaux/<int:pk>/modifier/', comptabilite_views_legacy.journal_update, name='journal_update'),
-    path('journaux/<int:pk>/supprimer/', comptabilite_views_legacy.journal_delete, name='journal_delete'),
-    
-    # Écritures comptables
-    path('ecritures/', comptabilite_views_legacy.ecriture_list, name='ecriture_list'),
-    path('ecritures/ajouter/', comptabilite_views_legacy.ecriture_create, name='ecriture_create'),
-    path('ecritures/<int:pk>/', comptabilite_views_legacy.ecriture_detail, name='ecriture_detail'),
-    path('ecritures/<int:pk>/modifier/', comptabilite_views_legacy.ecriture_update, name='ecriture_update'),
-    path('ecritures/<int:pk>/supprimer/', comptabilite_views_legacy.ecriture_delete, name='ecriture_delete'),
-    
-    # Tiers
-    path('tiers/', comptabilite_views_legacy.tiers_list, name='tiers_list'),
-    path('tiers/ajouter/', comptabilite_views_legacy.tiers_create, name='tiers_create'),
-    path('tiers/<int:pk>/', comptabilite_views_legacy.tiers_detail, name='tiers_detail'),
-    path('tiers/<int:pk>/modifier/', comptabilite_views_legacy.tiers_update, name='tiers_update'),
-    path('tiers/<int:pk>/supprimer/', comptabilite_views_legacy.tiers_delete, name='tiers_delete'),
-    
-    # Factures
-    path('factures/', comptabilite_views_legacy.facture_list, name='facture_list'),
-    path('factures/ajouter/', comptabilite_views_legacy.facture_create, name='facture_create'),
-    path('factures/<int:pk>/', comptabilite_views_legacy.facture_detail, name='facture_detail'),
-    path('factures/<int:pk>/modifier/', comptabilite_views_legacy.facture_update, name='facture_update'),
-    path('factures/<int:pk>/supprimer/', comptabilite_views_legacy.facture_delete, name='facture_delete'),
-    
-    # Règlements
-    path('reglements/', comptabilite_views_legacy.reglement_list, name='reglement_list'),
-    path('reglements/ajouter/', comptabilite_views_legacy.reglement_create, name='reglement_create'),
-    path('reglements/<int:pk>/', comptabilite_views_legacy.reglement_detail, name='reglement_detail'),
-    path('reglements/<int:pk>/modifier/', comptabilite_views_legacy.reglement_update, name='reglement_update'),
-    path('reglements/<int:pk>/supprimer/', comptabilite_views_legacy.reglement_delete, name='reglement_delete'),
-    
-    # États financiers
-    path('etats/grand-livre/', comptabilite_views_legacy.grand_livre, name='grand_livre'),
-    path('etats/grand-livre/pdf/', comptabilite_views_legacy.grand_livre_pdf, name='grand_livre_pdf'),
-    path('etats/grand-livre/excel/', comptabilite_views_legacy.grand_livre_excel, name='grand_livre_excel'),
-    path('etats/balance/', comptabilite_views_legacy.balance, name='balance'),
-    path('etats/balance/pdf/', comptabilite_views_legacy.balance_pdf, name='balance_pdf'),
-    path('etats/balance/excel/', comptabilite_views_legacy.balance_excel, name='balance_excel'),
-    path('etats/journal-general/', comptabilite_views_legacy.journal_general, name='journal_general'),
-    path('etats/journal-general/pdf/', comptabilite_views_legacy.journal_general_pdf, name='journal_general_pdf'),
-    path('etats/journal-general/excel/', comptabilite_views_legacy.journal_general_excel, name='journal_general_excel'),
-    path('etats/bilan/', comptabilite_views_legacy.bilan, name='bilan'),
-    path('etats/bilan/pdf/', comptabilite_views_legacy.bilan_pdf, name='bilan_pdf'),
-    path('etats/bilan/excel/', comptabilite_views_legacy.bilan_excel, name='bilan_excel'),
-    path('etats/compte-resultat/', comptabilite_views_legacy.compte_resultat, name='compte_resultat'),
-    path('etats/compte-resultat/pdf/', comptabilite_views_legacy.compte_resultat_pdf, name='compte_resultat_pdf'),
-    path('etats/compte-resultat/excel/', comptabilite_views_legacy.compte_resultat_excel, name='compte_resultat_excel'),
-    
-    # Clients & Fournisseurs détaillés
-    path('clients/', comptabilite_views_legacy.compte_client_list, name='compte_client_list'),
-    path('clients/<uuid:pk>/', comptabilite_views_legacy.compte_client_detail, name='compte_client_detail'),
-    path('clients/vieillissement/', comptabilite_views_legacy.vieillissement_creances, name='vieillissement_creances'),
-    path('clients/impayes/', comptabilite_views_legacy.impayes_clients, name='impayes_clients'),
-    path('fournisseurs/', comptabilite_views_legacy.compte_fournisseur_list, name='compte_fournisseur_list'),
-    path('fournisseurs/<uuid:pk>/', comptabilite_views_legacy.compte_fournisseur_detail, name='compte_fournisseur_detail'),
-    path('fournisseurs/vieillissement/', comptabilite_views_legacy.vieillissement_dettes, name='vieillissement_dettes'),
-    path('fournisseurs/impayes/', comptabilite_views_legacy.impayes_fournisseurs, name='impayes_fournisseurs'),
+    # Les URLs legacy sont désactivées temporairement car elles posent des problèmes d'import
+    # TODO: Réimplémenter les vues legacy dans les sous-modules appropriés
 ]
 
 # ============================================================================
