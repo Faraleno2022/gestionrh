@@ -12,11 +12,16 @@ Pattern structure:
 """
 
 from django.urls import path, include
+import importlib.util
 import sys
 import os
-# Ajouter le chemin du module pour importer views.py directement
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import views as comptabilite_views_legacy
+
+# Importer views.py dynamiquement pour éviter le conflit avec le dossier views/
+views_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'views.py')
+spec = importlib.util.spec_from_file_location("comptabilite_views_legacy", views_path)
+comptabilite_views_legacy = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(comptabilite_views_legacy)
+
 # Importer les classes depuis les sous-modules
 from views.rapprochements.views import (
     CompteBancaireListView, CompteBancaireDetailView, CompteBancaireCreateView, CompteBancaireUpdateView, CompteBancaireDeleteView,
