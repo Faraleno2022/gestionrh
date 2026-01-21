@@ -64,7 +64,7 @@ def login_view(request):
                 messages.success(request, f'Bienvenue {user.get_full_name()}!')
                 # Rediriger selon le type de module
                 if user.entreprise and user.entreprise.type_module == 'compta':
-                    return redirect('comptabilite:dashboard')
+                    return redirect('dashboard:index')
                 return redirect('dashboard:index')
             else:
                 messages.error(request, 'Votre compte est désactivé.')
