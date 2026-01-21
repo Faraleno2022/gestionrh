@@ -72,8 +72,8 @@ class ReglementAdmin(admin.ModelAdmin):
 
 @admin.register(TauxTVA)
 class TauxTVAAdmin(admin.ModelAdmin):
-    list_display = ['libelle', 'taux', 'est_defaut', 'est_actif', 'entreprise']
-    list_filter = ['est_actif', 'entreprise']
+    list_display = ['code', 'nom', 'taux', 'nature', 'actif', 'date_debut']
+    list_filter = ['nature', 'actif', 'regime_tva']
 
 
 @admin.register(PieceComptable)
