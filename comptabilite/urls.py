@@ -12,8 +12,8 @@ Pattern structure:
 """
 
 from django.urls import path, include
-# Importer les classes depuis les sous-modules
-from views.rapprochements.views import (
+# Importer les classes depuis les sous-modules avec des imports absolus
+from comptabilite.views.rapprochements.views import (
     CompteBancaireListView, CompteBancaireDetailView, CompteBancaireCreateView, CompteBancaireUpdateView, CompteBancaireDeleteView,
     RapprochementListView, RapprochementDetailView, RapprochementCreateView, RapprochementUpdateView, RapprochementDeleteView,
     OperationImportView,
