@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('comptabilite', '0003_fiscalite_models'),
         ('core', '0005_societe_entreprise'),
-        ('authentification', '0001_initial'),
+        ('core', '0001_initial'),
     ]
 
     operations = [
