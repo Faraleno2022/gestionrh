@@ -816,42 +816,6 @@ class AnalyseComparative(models.Model):
 # MODULE 5: FISCALITÉ & DÉCLARATIONS
 # ============================================================================
 
-class DeclarationTVA(models.Model):
-    """Déclarations TVA"""
-    PERIODES = [
-        ('mensuelle', 'Mensuelle'),
-        ('trimestrielle', 'Trimestrielle'),
-    ]
-    STATUTS = [
-        ('brouillon', 'Brouillon'),
-        ('declaree', 'Déclarée'),
-        ('payee', 'Payée'),
-    ]
-    
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    entreprise = models.ForeignKey('core.Entreprise', on_delete=models.CASCADE, related_name='declarations_tva')
-    periode = models.CharField(max_length=20, choices=PERIODES)
-    date_debut = models.DateField()
-    date_fin = models.DateField()
-    tva_collectee = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
-    tva_deductible = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
-    tva_a_payer = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
-    statut = models.CharField(max_length=20, choices=STATUTS, default='brouillon')
-    date_declaration = models.DateField(null=True, blank=True)
-    montant_paye = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
-    date_paiement = models.DateField(null=True, blank=True)
-    notes = models.TextField(blank=True, null=True)
-    date_creation = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        db_table = 'declarations_tva'
-        verbose_name = 'Déclaration TVA'
-        verbose_name_plural = 'Déclarations TVA'
-    
-    def __str__(self):
-        return f"TVA {self.date_debut.strftime('%m/%Y')}"
-
-
 class RecapitulatifTVA(models.Model):
     """Récapitulatifs TVA"""
     declaration = models.ForeignKey('comptabilite.DeclarationTVA', on_delete=models.CASCADE, related_name='recapitulatifs')
