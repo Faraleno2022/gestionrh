@@ -219,7 +219,7 @@ def register_entreprise(request):
                 )
                 # Rediriger selon le type de module choisi
                 if entreprise.type_module == 'compta':
-                    return redirect('comptabilite:dashboard')
+                    return redirect('dashboard:index')
                 else:
                     return redirect('dashboard:index')
         else:
