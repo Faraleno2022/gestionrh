@@ -854,7 +854,7 @@ class DeclarationTVA(models.Model):
 
 class RecapitulatifTVA(models.Model):
     """Récapitulatifs TVA"""
-    declaration = models.ForeignKey(DeclarationTVA, on_delete=models.CASCADE, related_name='recapitulatifs')
+    declaration = models.ForeignKey('comptabilite.DeclarationTVA', on_delete=models.CASCADE, related_name='recapitulatifs')
     operation = models.CharField(max_length=100)  # ex: "Ventes UE", "Acquisitions UE"
     montant_ht = models.DecimalField(max_digits=15, decimal_places=2)
     taux_tva = models.DecimalField(max_digits=5, decimal_places=2)
