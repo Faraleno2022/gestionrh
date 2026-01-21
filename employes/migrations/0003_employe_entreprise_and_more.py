@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('core', '0005_societe_entreprise'),
         ('employes', '0002_documentemploye'),
-        ('formation', '0003_catalogueformation_entreprise_and_more'),
+        ('formation', '0002_catalogueformation_evaluationformation_and_more'),
     ]
 
     operations = [
