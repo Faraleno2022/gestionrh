@@ -218,8 +218,8 @@ class EntrepriseQuotaMiddleware:
                         from django.contrib import messages
                         messages.warning(request, "Votre abonnement a expiré. Veuillez le renouveler.")
                         # Permettre l'accès uniquement aux pages de renouvellement
-                        if not request.path.startswith('/renouvellement/'):
-                            return redirect('core:renouvellement')
+                        if not (request.path.startswith('/payments/') or request.path.startswith('/renouvellement/')):
+                            return redirect('payments:plans')
                 
                 # Vérifier le quota d'utilisateurs (seulement pour les admins qui créent des users)
                 if request.path == '/manage-users/' and request.method == 'POST':

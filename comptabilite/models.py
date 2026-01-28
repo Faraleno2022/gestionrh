@@ -335,8 +335,6 @@ class TauxTVA(models.Model):
     
     def __str__(self):
         return f"{self.libelle} ({self.taux}%)"
-
-# ============================================================================
 # MODULE 1: GESTION DES IMMOBILISATIONS
 # ============================================================================
 
@@ -374,19 +372,19 @@ class Immobilisation(models.Model):
         verbose_name = 'Immobilisation'
         verbose_name_plural = 'Immobilisations'
         ordering = ['-date_acquisition']
-    
+
     def __str__(self):
         return f"{self.numero} - {self.designation}"
 
 
 class Amortissement(models.Model):
     """Amortissements des immobilisations"""
-    immobilisation = models.ForeignKey(Immobilisation, on_delete=models.CASCADE, related_name='amortissements')
-    exercice = models.ForeignKey(ExerciceComptable, on_delete=models.CASCADE, related_name='amortissements')
+    immobilisation = models.ForeignKey('Immobilisation', on_delete=models.CASCADE, related_name='amortissements')
+    exercice = models.ForeignKey('ExerciceComptable', on_delete=models.CASCADE, related_name='amortissements')
     taux_amortissement = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('20.00'))
     montant_amortissement = models.DecimalField(max_digits=15, decimal_places=2)
     montant_cumule = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
-    ecriture = models.ForeignKey(EcritureComptable, on_delete=models.SET_NULL, null=True, blank=True)
+    ecriture = models.ForeignKey('EcritureComptable', on_delete=models.SET_NULL, null=True, blank=True)
     date_enregistrement = models.DateField(auto_now_add=True)
     
     class Meta:
@@ -409,13 +407,13 @@ class CessionImmobilisation(models.Model):
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    immobilisation = models.ForeignKey(Immobilisation, on_delete=models.CASCADE, related_name='cessions')
+    immobilisation = models.ForeignKey('Immobilisation', on_delete=models.CASCADE, related_name='cessions')
     type_sortie = models.CharField(max_length=20, choices=TYPES_SORTIE)
     date_sortie = models.DateField(verbose_name='Date sortie')
     prix_vente = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), blank=True, null=True)
-    acheteur = models.ForeignKey(Tiers, on_delete=models.SET_NULL, null=True, blank=True)
+    acheteur = models.ForeignKey('Tiers', on_delete=models.SET_NULL, null=True, blank=True)
     resultat_cession = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), help_text='Plus ou moins-value')
-    ecriture = models.ForeignKey(EcritureComptable, on_delete=models.SET_NULL, null=True, blank=True)
+    ecriture = models.ForeignKey('EcritureComptable', on_delete=models.SET_NULL, null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
     date_creation = models.DateTimeField(auto_now_add=True)
     
