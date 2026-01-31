@@ -21,33 +21,16 @@ from .tva_forms import (
     RegimeTVAFilterForm,
 )
 
-# Importer les formulaires depuis forms.py
-try:
-    from ..forms import (
-        PlanComptableForm,
-        JournalForm,
-        ExerciceForm,
-        EcritureForm,
-        TiersForm,
-        FactureForm,
-        ReglementForm,
-    )
-except ImportError:
-    # Si forms.py n'est pas encore complet, on définit des classes vides
-    class PlanComptableForm:
-        pass
-    class JournalForm:
-        pass
-    class ExerciceForm:
-        pass
-    class EcritureForm:
-        pass
-    class TiersForm:
-        pass
-    class FactureForm:
-        pass
-    class ReglementForm:
-        pass
+# Importer les formulaires depuis forms_base.py
+from .forms_base import (
+    PlanComptableForm,
+    JournalForm,
+    ExerciceForm,
+    EcritureForm,
+    TiersForm,
+    FactureForm,
+    ReglementForm,
+)
 
 __all__ = [
     # Base
