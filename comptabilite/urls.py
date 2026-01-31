@@ -95,11 +95,17 @@ try:
     facture_detail_view = comptabilite_views.facture_detail
     facture_update_view = comptabilite_views.facture_update
     
-    print("✅ Import des vues comptabilité réussi")
+    # Vues vieillissement et impayés
+    vieillissement_creances_view = comptabilite_views.vieillissement_creances
+    impayes_clients_view = comptabilite_views.impayes_clients
+    vieillissement_dettes_view = comptabilite_views.vieillissement_dettes
+    impayes_fournisseurs_view = comptabilite_views.impayes_fournisseurs
+    
+    pass  # Import des vues comptabilite reussi
     
 except Exception as e:
     # Fallback vers TemplateView si import échoue
-    print(f"❌ Import error: {e}")
+    print(f"Import error: {e}")
     
     # Créer une vue simple pour le formulaire d'écriture
     from django.shortcuts import render
@@ -1599,11 +1605,15 @@ reglement_patterns = [
 compte_client_patterns = [
     path('comptes-clients/', compte_client_list_view, name='compte_client_list'),
     path('comptes-clients/<uuid:pk>/', compte_client_detail_view, name='compte_client_detail'),
+    path('comptes-clients/vieillissement/', vieillissement_creances_view, name='vieillissement_creances'),
+    path('comptes-clients/impayes/', impayes_clients_view, name='impayes_clients'),
 ]
 
 compte_fournisseur_patterns = [
     path('comptes-fournisseurs/', compte_fournisseur_list_view, name='compte_fournisseur_list'),
     path('comptes-fournisseurs/<uuid:pk>/', compte_fournisseur_detail_view, name='compte_fournisseur_detail'),
+    path('comptes-fournisseurs/vieillissement/', vieillissement_dettes_view, name='vieillissement_dettes'),
+    path('comptes-fournisseurs/impayes/', impayes_fournisseurs_view, name='impayes_fournisseurs'),
 ]
 
 # États Financiers URLs
@@ -1696,6 +1706,43 @@ legacy_patterns = [
 # COMBINED URL PATTERNS
 # ============================================================================
 
+from django.urls import include
+
+# Patterns de trésorerie avancée
+tresorerie_patterns = [
+    path('tresorerie/', include('comptabilite.urls_tresorerie')),
+]
+
+# Patterns de consolidation & reporting
+consolidation_patterns = [
+    path('consolidation/', include('comptabilite.urls_consolidation')),
+]
+
+# Patterns de comptabilité analytique
+analytique_patterns = [
+    path('analytique/', include('comptabilite.urls_analytique')),
+]
+
+# Patterns de fiscalité
+fiscalite_patterns = [
+    path('fiscalite/', include('comptabilite.urls_fiscalite')),
+]
+
+# Patterns de contrôle interne
+controle_patterns = [
+    path('controle/', include('comptabilite.urls_controle')),
+]
+
+# Patterns de gestion des contrats
+contrats_compta_patterns = [
+    path('contrats/', include('comptabilite.urls_contrats')),
+]
+
+# Patterns d'archivage
+archivage_patterns = [
+    path('archivage/', include('comptabilite.urls_archivage')),
+]
+
 urlpatterns = (
     # Comptabilité Générale
     plan_comptable_patterns +
@@ -1713,6 +1760,27 @@ urlpatterns = (
     rapprochement_patterns +
     compte_bancaire_patterns +
     lettrage_patterns +
+    
+    # Trésorerie Avancée (CRITIQUE)
+    tresorerie_patterns +
+    
+    # Consolidation & Reporting (CRITIQUE)
+    consolidation_patterns +
+    
+    # Comptabilité Analytique Avancée
+    analytique_patterns +
+    
+    # Fiscalité
+    fiscalite_patterns +
+    
+    # Contrôle Interne & Conformité
+    controle_patterns +
+    
+    # Gestion Comptable des Contrats
+    contrats_compta_patterns +
+    
+    # Documentation & Archivage
+    archivage_patterns +
     
     # Utilities
     import_export_patterns +

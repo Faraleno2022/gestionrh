@@ -26,6 +26,7 @@
             </a>
         </li>
         
+        {% if user.entreprise.has_rh %}
         <li class="nav-item">
             <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
                 <span>GESTION</span>
@@ -211,10 +212,176 @@
                 <i class="bi bi-person-workspace"></i> Portail Employé
             </a>
         </li>
+        {% endif %}  <!-- Fin condition has_rh -->
+        
+        {% if user.entreprise.has_compta %}
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>COMPTABILITÉ</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'comptabilite:dashboard' %}">
+                <i class="bi bi-speedometer2"></i> Tableau de bord Compta
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'compte-bancaire' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:compte-bancaire-list' %}">
+                <i class="bi bi-bank"></i> Comptes Bancaires
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'rapprochement' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:rapprochement-list' %}">
+                <i class="bi bi-balance-scale"></i> Rapprochements
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'ecriture' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:ecriture_list' %}">
+                <i class="bi bi-journal-text"></i> Écritures
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'facture' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:facture_list' %}">
+                <i class="bi bi-receipt"></i> Factures
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'reglement' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:reglement_list' %}">
+                <i class="bi bi-cash-stack"></i> Règlements
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'plan_comptable' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:plan_comptable_list' %}">
+                <i class="bi bi-list-columns"></i> Plan Comptable
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'journal' in request.resolver_match.url_name and 'general' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:journal_list' %}">
+                <i class="bi bi-book"></i> Journaux
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'exercice' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:exercice_list' %}">
+                <i class="bi bi-calendar-range"></i> Exercices
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'tiers' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:tiers_list' %}">
+                <i class="bi bi-people"></i> Tiers
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'compte_client' in request.resolver_match.url_name or 'vieillissement_creances' in request.resolver_match.url_name or 'impayes_clients' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:compte_client_list' %}">
+                <i class="bi bi-person-badge"></i> Comptes Clients
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'compte_fournisseur' in request.resolver_match.url_name or 'vieillissement_dettes' in request.resolver_match.url_name or 'impayes_fournisseurs' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:compte_fournisseur_list' %}">
+                <i class="bi bi-building"></i> Comptes Fournisseurs
+            </a>
+        </li>
         
         <li class="nav-item">
             <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
-                <span>RAPPORTS</span>
+                <span>ÉTATS FINANCIERS</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'grand_livre' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:grand_livre' %}">
+                <i class="bi bi-file-earmark-text"></i> Grand Livre
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'balance' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:balance' %}">
+                <i class="bi bi-bar-chart"></i> Balance
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'journal_general' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:journal_general' %}">
+                <i class="bi bi-journal"></i> Journal Général
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'bilan' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:bilan' %}">
+                <i class="bi bi-pie-chart"></i> Bilan
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'compte_resultat' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:compte_resultat' %}">
+                <i class="bi bi-graph-up"></i> Compte de Résultat
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>MODULES AVANCÉS</span>
+            </h6>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'tresorerie' in request.path %}active{% endif %}" href="{% url 'comptabilite:tresorerie_dashboard' %}">
+                <i class="bi bi-cash-coin"></i> Trésorerie
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'consolidation' in request.path %}active{% endif %}" href="{% url 'comptabilite:consolidation_dashboard' %}">
+                <i class="bi bi-diagram-3"></i> Consolidation
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'analytique' in request.path %}active{% endif %}" href="{% url 'comptabilite:analytique_dashboard' %}">
+                <i class="bi bi-pie-chart-fill"></i> Analytique
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'fiscalite' in request.path %}active{% endif %}" href="{% url 'comptabilite:fiscalite_dashboard' %}">
+                <i class="bi bi-file-earmark-ruled"></i> Fiscalité
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'controle' in request.path %}active{% endif %}" href="{% url 'comptabilite:controle_dashboard' %}">
+                <i class="bi bi-shield-check"></i> Contrôle Interne
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'contrats' in request.path %}active{% endif %}" href="{% url 'comptabilite:contrats_dashboard' %}">
+                <i class="bi bi-file-earmark-text"></i> Contrats
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link {% if 'archivage' in request.path %}active{% endif %}" href="{% url 'comptabilite:archivage_dashboard' %}">
+                <i class="bi bi-archive"></i> Archivage
+            </a>
+        </li>
+        {% endif %}  <!-- Fin condition has_compta -->
+        
+        {% if user.entreprise.has_rh %}
+        <li class="nav-item">
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>RAPPORTS RH</span>
             </h6>
         </li>
         
@@ -241,6 +408,7 @@
                 <i class="bi bi-file-earmark-spreadsheet"></i> Déclarations
             </a>
         </li>
+        {% endif %}  <!-- Fin condition has_rh -->
         
         {% if user.profil.niveau_acces >= 4 %}
         <li class="nav-item">

@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import views_public
+from . import views_integration
 
 app_name = 'recrutement'
 
@@ -32,4 +33,22 @@ urlpatterns = [
     path('entretiens/creer/<int:candidature_id>/', views.creer_entretien, name='creer_entretien'),
     path('entretiens/<int:pk>/', views.detail_entretien, name='detail_entretien'),
     path('entretiens/<int:pk>/evaluer/', views.evaluer_entretien, name='evaluer_entretien'),
+    
+    # Décisions d'embauche
+    path('decisions/', views_integration.liste_decisions, name='decisions'),
+    path('decisions/creer/<int:candidature_id>/', views_integration.creer_decision, name='creer_decision'),
+    path('decisions/<int:pk>/', views_integration.detail_decision, name='detail_decision'),
+    path('decisions/<int:pk>/accepter/', views_integration.accepter_offre, name='accepter_offre'),
+    path('decisions/<int:pk>/refuser/', views_integration.refuser_offre, name='refuser_offre'),
+    
+    # Intégration candidat
+    path('integration/', views_integration.liste_integrations, name='integrations'),
+    path('integration/demarrer/<int:pk>/', views_integration.demarrer_integration, name='demarrer_integration'),
+    path('integration/<int:pk>/', views_integration.detail_integration, name='detail_integration'),
+    path('integration/etape/<int:pk>/valider/', views_integration.valider_etape, name='valider_etape'),
+    path('integration/<int:pk>/creer-employe/', views_integration.creer_employe_depuis_candidat, name='creer_employe'),
+    
+    # Alertes recrutement
+    path('alertes/', views_integration.liste_alertes_recrutement, name='alertes'),
+    path('alertes/<int:pk>/traiter/', views_integration.traiter_alerte_recrutement, name='traiter_alerte'),
 ]

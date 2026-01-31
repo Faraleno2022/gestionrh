@@ -2,12 +2,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Sum, Q, F, Count
+from django.db import transaction
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from django.core.paginator import Paginator
 from decimal import Decimal
 from collections import OrderedDict
 import io
+from datetime import datetime
 
 from .models import (
     PlanComptable, Journal, ExerciceComptable, EcritureComptable,
@@ -32,6 +34,50 @@ def compta_required(view_func):
             return redirect('dashboard:index')
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def generer_numero_unique(entreprise, prefixe, modele, champ='numero'):
+    """Génère un numéro unique avec gestion des doublons"""
+    annee = datetime.now().year
+    max_attempts = 10
+    
+    for attempt in range(max_attempts):
+        with transaction.atomic():
+            # Récupérer le dernier numéro avec un verrou row-level
+            dernier = modele.objects.select_for_update().filter(
+                entreprise=entreprise,
+                **{f"{champ}__startswith": f"{prefixe}{annee}"}
+            ).order_by(f"-{champ}").first()
+            
+            if dernier:
+                try:
+                    # Extraire le numéro séquentiel
+                    dernier_numero = getattr(dernier, champ)
+                    if '-' in dernier_numero:
+                        numero = int(dernier_numero.split('-')[-1]) + 1
+                    else:
+                        numero = int(dernier_numero[-4:]) + 1
+                except (ValueError, IndexError):
+                    numero = 1
+            else:
+                numero = 1
+            
+            nouveau_numero = f"{prefixe}{annee}-{numero:04d}"
+            
+            # Vérifier si le numéro existe déjà (double sécurité)
+            if not modele.objects.filter(
+                entreprise=entreprise,
+                **{champ: nouveau_numero}
+            ).exists():
+                return nouveau_numero
+            
+            # Si existe déjà, incrémenter et réessayer
+            numero += 1
+    
+    # Si toutes les tentatives échouent, générer un numéro avec timestamp
+    import time
+    timestamp = int(time.time()) % 10000
+    return f"{prefixe}{annee}-{timestamp:04d}"
 
 
 @login_required
@@ -114,16 +160,22 @@ def plan_comptable_create(request):
     if request.method == 'POST':
         form = PlanComptableForm(request.POST, entreprise=request.user.entreprise)
         if form.is_valid():
-            compte = form.save(commit=False)
-            compte.entreprise = request.user.entreprise
-            compte.classe = compte.numero_compte[0] if compte.numero_compte else '1'
-            compte.save()
-            messages.success(request, f"Compte {compte.numero_compte} créé avec succès.")
-            return redirect('comptabilite:plan_comptable_list')
+            try:
+                with transaction.atomic():
+                    compte = form.save(commit=False)
+                    compte.entreprise = request.user.entreprise
+                    compte.classe = compte.numero_compte[0] if compte.numero_compte else '1'
+                    compte.save()
+                    messages.success(request, f"Compte {compte.numero_compte} créé avec succès.")
+                    return redirect('comptabilite:plan_comptable_list')
+            except Exception as e:
+                messages.error(request, f"Une erreur est survenue lors de la création: {str(e)}")
+        else:
+            messages.error(request, "Veuillez corriger les erreurs dans le formulaire.")
     else:
         form = PlanComptableForm(entreprise=request.user.entreprise)
     
-    return render(request, 'comptabilite/plan_comptable/form.html', {'form': form})
+    return render(request, 'comptabilite/plan_comptable_form.html', {'form': form})
 
 
 @login_required
@@ -179,11 +231,17 @@ def journal_create(request):
     if request.method == 'POST':
         form = JournalForm(request.POST, entreprise=request.user.entreprise)
         if form.is_valid():
-            journal = form.save(commit=False)
-            journal.entreprise = request.user.entreprise
-            journal.save()
-            messages.success(request, f"Journal {journal.code} créé avec succès.")
-            return redirect('comptabilite:journal_list')
+            try:
+                with transaction.atomic():
+                    journal = form.save(commit=False)
+                    journal.entreprise = request.user.entreprise
+                    journal.save()
+                    messages.success(request, f"Journal {journal.code} créé avec succès.")
+                    return redirect('comptabilite:journal_list')
+            except Exception as e:
+                messages.error(request, f"Une erreur est survenue lors de la création: {str(e)}")
+        else:
+            messages.error(request, "Veuillez corriger les erreurs dans le formulaire.")
     else:
         form = JournalForm(entreprise=request.user.entreprise)
     
@@ -225,11 +283,17 @@ def exercice_create(request):
     if request.method == 'POST':
         form = ExerciceForm(request.POST)
         if form.is_valid():
-            exercice = form.save(commit=False)
-            exercice.entreprise = request.user.entreprise
-            exercice.save()
-            messages.success(request, f"Exercice {exercice.libelle} créé avec succès.")
-            return redirect('comptabilite:exercice_list')
+            try:
+                with transaction.atomic():
+                    exercice = form.save(commit=False)
+                    exercice.entreprise = request.user.entreprise
+                    exercice.save()
+                    messages.success(request, f"Exercice {exercice.libelle} créé avec succès.")
+                    return redirect('comptabilite:exercice_list')
+            except Exception as e:
+                messages.error(request, f"Une erreur est survenue lors de la création: {str(e)}")
+        else:
+            messages.error(request, "Veuillez corriger les erreurs dans le formulaire.")
     else:
         form = ExerciceForm()
     
@@ -457,11 +521,17 @@ def tiers_create(request):
     if request.method == 'POST':
         form = TiersForm(request.POST, entreprise=request.user.entreprise)
         if form.is_valid():
-            tiers = form.save(commit=False)
-            tiers.entreprise = request.user.entreprise
-            tiers.save()
-            messages.success(request, f"Tiers {tiers.raison_sociale} créé avec succès.")
-            return redirect('comptabilite:tiers_list')
+            try:
+                with transaction.atomic():
+                    tiers = form.save(commit=False)
+                    tiers.entreprise = request.user.entreprise
+                    tiers.save()
+                    messages.success(request, f"Tiers {tiers.raison_sociale} créé avec succès.")
+                    return redirect('comptabilite:tiers_list')
+            except Exception as e:
+                messages.error(request, f"Une erreur est survenue lors de la création: {str(e)}")
+        else:
+            messages.error(request, "Veuillez corriger les erreurs dans le formulaire.")
     else:
         form = TiersForm(entreprise=request.user.entreprise)
     
@@ -538,15 +608,46 @@ def facture_create(request):
     if request.method == 'POST':
         form = FactureForm(request.POST, entreprise=request.user.entreprise)
         if form.is_valid():
-            facture = form.save(commit=False)
-            facture.entreprise = request.user.entreprise
-            facture.save()
-            messages.success(request, f"Facture {facture.numero} créée.")
-            return redirect('comptabilite:facture_detail', pk=facture.pk)
+            try:
+                with transaction.atomic():
+                    facture = form.save(commit=False)
+                    facture.entreprise = request.user.entreprise
+                    
+                    # Générer un numéro unique si vide
+                    if not facture.numero:
+                        prefixe = 'FA' if type_facture == 'vente' else 'FF'
+                        facture.numero = generer_numero_unique(
+                            request.user.entreprise, 
+                            prefixe, 
+                            Facture, 
+                            'numero'
+                        )
+                    
+                    facture.save()
+                    messages.success(request, f"Facture {facture.numero} créée.")
+                    return redirect('comptabilite:facture_detail', pk=facture.pk)
+            except Exception as e:
+                messages.error(request, f"Une erreur est survenue lors de la création: {str(e)}")
+        else:
+            messages.error(request, "Veuillez corriger les erreurs dans le formulaire.")
     else:
-        form = FactureForm(entreprise=request.user.entreprise, initial={'type_facture': type_facture})
+        # Pré-générer un numéro pour le formulaire
+        prefixe = 'FA' if type_facture == 'vente' else 'FF'
+        numero_suggestion = generer_numero_unique(
+            request.user.entreprise, 
+            prefixe, 
+            Facture, 
+            'numero'
+        )
+        form = FactureForm(
+            entreprise=request.user.entreprise, 
+            initial={
+                'type_facture': type_facture,
+                'numero': numero_suggestion
+            }
+        )
     
-    return render(request, 'comptabilite/factures/form.html', {'form': form})
+    return render(request, 'comptabilite/factures/form.html', {'form': form, 'type_facture': type_facture})
 
 
 @login_required
@@ -636,23 +737,49 @@ def reglement_create(request):
     if request.method == 'POST':
         form = ReglementForm(request.POST, entreprise=request.user.entreprise)
         if form.is_valid():
-            reglement = form.save(commit=False)
-            reglement.entreprise = request.user.entreprise
-            reglement.save()
-            
-            # Mettre à jour le montant payé sur la facture
-            facture = reglement.facture
-            facture.montant_paye += reglement.montant
-            if facture.montant_paye >= facture.montant_ttc:
-                facture.statut = 'payee'
-            facture.save()
-            
-            messages.success(request, "Règlement enregistré avec succès.")
-            return redirect('comptabilite:facture_detail', pk=facture.pk)
+            try:
+                with transaction.atomic():
+                    reglement = form.save(commit=False)
+                    reglement.entreprise = request.user.entreprise
+                    
+                    # Générer un numéro unique si vide
+                    if not reglement.numero:
+                        reglement.numero = generer_numero_unique(
+                            request.user.entreprise, 
+                            'RG', 
+                            Reglement, 
+                            'numero'
+                        )
+                    
+                    reglement.save()
+                    
+                    # Mettre à jour le montant payé sur la facture
+                    facture = reglement.facture
+                    facture.montant_paye += reglement.montant
+                    if facture.montant_paye >= facture.montant_ttc:
+                        facture.statut = 'payee'
+                    facture.save()
+                    
+                    messages.success(request, "Règlement enregistré avec succès.")
+                    return redirect('comptabilite:facture_detail', pk=facture.pk)
+            except Exception as e:
+                messages.error(request, f"Une erreur est survenue lors de la création: {str(e)}")
+        else:
+            messages.error(request, "Veuillez corriger les erreurs dans le formulaire.")
     else:
         initial = {}
         if facture_id:
             initial['facture'] = facture_id
+        
+        # Pré-générer un numéro pour le formulaire
+        numero_suggestion = generer_numero_unique(
+            request.user.entreprise, 
+            'RG', 
+            Reglement, 
+            'numero'
+        )
+        initial['numero'] = numero_suggestion
+        
         form = ReglementForm(entreprise=request.user.entreprise, initial=initial)
     
     return render(request, 'comptabilite/reglements/form.html', {'form': form})

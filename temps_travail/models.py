@@ -1,6 +1,8 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 from decimal import Decimal
+from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
 from employes.models import Employe
 from core.models import Entreprise
 
@@ -105,6 +107,58 @@ class SoldeConge(models.Model):
     
     def __str__(self):
         return f"{self.employe.nom_complet} - {self.annee} ({self.conges_restants} jours)"
+    
+    def calculer_conges_acquis(self):
+        """Calcule les congés acquis selon le Code du Travail guinéen"""
+        # Base: 1,5 jour ouvrable par mois = 18 jours/an
+        conges_base = Decimal('18.00')
+        
+        # Bonus d'ancienneté: +2 jours par tranche de 5 ans
+        if hasattr(self.employe, 'date_embauche') and self.employe.date_embauche:
+            anciennete_annees = (date(self.annee, 12, 31) - self.employe.date_embauche).days // 365
+            bonus_anciennete = (anciennete_annees // 5) * 2
+            conges_base += Decimal(str(bonus_anciennete))
+        
+        # Cas spécial: moins de 18 ans = 24 jours/an
+        if hasattr(self.employe, 'date_naissance') and self.employe.date_naissance:
+            age_fin_annee = self.annee - self.employe.date_naissance.year
+            if age_fin_annee < 18:
+                conges_base = Decimal('24.00')
+        
+        return conges_base
+    
+    def calculer_conges_proportionnels(self, date_embauche):
+        """Calcule les congés proportionnels pour la première année"""
+        if date_embauche.year != self.annee:
+            return self.calculer_conges_acquis()
+        
+        # Calcul proportionnel: 1,5 jour par mois travaillé
+        mois_travailles = 12 - date_embauche.month + 1
+        if date_embauche.day > 15:  # Si embauché après le 15, mois non complet
+            mois_travailles -= 0.5
+        
+        conges_proportionnels = Decimal(str(mois_travailles * 1.5))
+        return min(conges_proportionnels, self.calculer_conges_acquis())
+    
+    def mettre_a_jour_solde(self):
+        """Met à jour automatiquement le solde de congés"""
+        # Recalculer les congés acquis
+        if hasattr(self.employe, 'date_embauche'):
+            self.conges_acquis = self.calculer_conges_proportionnels(self.employe.date_embauche)
+        else:
+            self.conges_acquis = self.calculer_conges_acquis()
+        
+        # Calculer les congés pris dans l'année
+        conges_pris_annee = self.employe.conges.filter(
+            annee_reference=self.annee,
+            statut_demande='approuve'
+        ).aggregate(total=models.Sum('nombre_jours'))['total'] or 0
+        
+        self.conges_pris = Decimal(str(conges_pris_annee))
+        self.conges_restants = self.conges_acquis + self.conges_reports - self.conges_pris
+        
+        self.save()
+        return self.conges_restants
 
 
 class Pointage(models.Model):
@@ -146,6 +200,10 @@ class Absence(models.Model):
         ('accident_travail', 'Accident de travail'),
         ('absence_injustifiee', 'Absence injustifiée'),
         ('permission', 'Permission'),
+        ('permission_exceptionnelle', 'Permission exceptionnelle'),
+        ('rendez_vous_medical', 'Rendez-vous médical'),
+        ('demarche_administrative', 'Démarche administrative'),
+        ('urgence_familiale', 'Urgence familiale'),
     )
     
     IMPACTS = (
@@ -162,6 +220,14 @@ class Absence(models.Model):
     justificatif = models.FileField(upload_to='absences/', blank=True, null=True)
     impact_paie = models.CharField(max_length=20, choices=IMPACTS, default='paye')
     taux_maintien_salaire = models.DecimalField(max_digits=5, decimal_places=2, default=100.00)
+    
+    # Permissions exceptionnelles
+    heure_debut = models.TimeField(null=True, blank=True, help_text="Heure de début pour permissions partielles")
+    heure_fin = models.TimeField(null=True, blank=True, help_text="Heure de fin pour permissions partielles")
+    approuve_par = models.ForeignKey(Employe, on_delete=models.SET_NULL, null=True, blank=True, related_name='absences_approuvees')
+    date_approbation = models.DateTimeField(null=True, blank=True)
+    heures_a_recuperer = models.BooleanField(default=False, help_text="Heures à récupérer")
+    
     observations = models.TextField(blank=True, null=True)
     
     class Meta:
@@ -172,6 +238,21 @@ class Absence(models.Model):
     
     def __str__(self):
         return f"{self.employe.nom} {self.employe.prenoms} - {self.get_type_absence_display()} ({self.date_absence})"
+    
+    @property
+    def duree_heures(self):
+        """Calcule la durée en heures pour les permissions partielles"""
+        if self.heure_debut and self.heure_fin:
+            from datetime import datetime, timedelta
+            debut = datetime.combine(self.date_absence, self.heure_debut)
+            fin = datetime.combine(self.date_absence, self.heure_fin)
+            duree = fin - debut
+            return duree.total_seconds() / 3600
+        return float(self.duree_jours * 8)  # 8h par jour par défaut
+    
+    def est_permission_exceptionnelle(self):
+        """Vérifie si c'est une permission exceptionnelle"""
+        return self.type_absence in ['permission_exceptionnelle', 'rendez_vous_medical', 'demarche_administrative', 'urgence_familiale']
 
 
 class ArretTravail(models.Model):

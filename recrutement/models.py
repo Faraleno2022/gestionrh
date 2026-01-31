@@ -201,6 +201,15 @@ class DecisionEmbauche(models.Model):
         ('reserve', 'Mise en réserve'),
     )
     
+    STATUTS_INTEGRATION = (
+        ('offre_envoyee', 'Offre envoyée'),
+        ('offre_acceptee', 'Offre acceptée'),
+        ('offre_refusee', 'Offre refusée'),
+        ('documents_attente', 'Documents en attente'),
+        ('integration_cours', 'Intégration en cours'),
+        ('integration_terminee', 'Intégration terminée'),
+    )
+    
     candidature = models.OneToOneField(Candidature, on_delete=models.CASCADE, related_name='decision_embauche')
     decision = models.CharField(max_length=20, choices=DECISIONS)
     date_decision = models.DateField()
@@ -217,6 +226,12 @@ class DecisionEmbauche(models.Model):
     certificat_medical = models.BooleanField(default=False, help_text="Certificat médical fourni")
     diplomes_verifies = models.BooleanField(default=False, help_text="Diplômes vérifiés")
     references_verifiees = models.BooleanField(default=False, help_text="Références vérifiées")
+    
+    # Processus d'intégration
+    statut_integration = models.CharField(max_length=30, choices=STATUTS_INTEGRATION, default='offre_envoyee')
+    date_envoi_offre = models.DateField(null=True, blank=True)
+    date_reponse_candidat = models.DateField(null=True, blank=True)
+    date_debut_integration = models.DateField(null=True, blank=True)
     
     # Validation
     valide_par = models.ForeignKey(Employe, on_delete=models.SET_NULL, null=True, related_name='embauches_validees')

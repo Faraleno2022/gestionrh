@@ -112,7 +112,18 @@ class BulletinPaie(models.Model):
     mois_paie = models.IntegerField()
     annee_paie = models.IntegerField()
     
+    # Heures et temps de travail
+    heures_normales = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="Heures normales travaillées")
+    heures_supplementaires_30 = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="HS à +30% (4 premières HS/semaine)")
+    heures_supplementaires_60 = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="HS à +60% (au-delà 4 HS/semaine)")
+    heures_nuit = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="Heures de nuit (20h-6h) à +20%")
+    heures_feries = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="Heures jours fériés")
+    
     # Calculs de paie
+    salaire_base = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Salaire de base")
+    prime_heures_sup = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Prime heures supplémentaires")
+    prime_nuit = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Prime de nuit")
+    prime_feries = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Prime jours fériés")
     salaire_brut = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     cnss_employe = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     cnss_employeur = models.DecimalField(max_digits=15, decimal_places=2, default=0)
@@ -1026,3 +1037,10 @@ class ConfigurationPaieEntreprise(models.Model):
 
 # Import des modèles de frais
 from .models_frais import CategoriesFrais, NoteFrais, LigneFrais, BaremeFrais
+
+# Import des modèles charges sociales
+from .models_social import (
+    CotisationSociale, DeclarationCNSS, LigneCNSS, MutuelleEntreprise,
+    AffiliationMutuelle, RetraiteComplementaire, AffiliationRetraite,
+    AffiliationSecuriteSociale, DossierPaie, BilanPaie
+)

@@ -1,5 +1,6 @@
 from django.db import migrations
 from decimal import Decimal
+from django.utils import timezone
 
 
 def set_taux_ta_default(apps, schema_editor):
@@ -15,6 +16,7 @@ def set_taux_ta_default(apps, schema_editor):
             'type_valeur': 'pourcentage',
             'description': 'Taux de la Taxe d\'Apprentissage - 1,5% du brut (légal Guinée)',
             'actif': True,
+            'date_debut_validite': timezone.now().date(),
         }
     )
     
@@ -27,6 +29,7 @@ def set_taux_ta_default(apps, schema_editor):
             'type_valeur': 'pourcentage',
             'description': 'Taux du Versement Forfaitaire - 6% du brut (légal Guinée)',
             'actif': True,
+            'date_debut_validite': timezone.now().date(),
         }
     )
 

@@ -23,8 +23,17 @@ class EntrepriseRequiredMixin(LoginRequiredMixin):
     """Garantit que l'utilisateur appartient à une entreprise."""
     
     def dispatch(self, request, *args, **kwargs):
+        # Vérifier d'abord si l'utilisateur est authentifié (utilise LoginRequiredMixin)
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+        
+        # Les superusers et staff peuvent accéder sans entreprise
+        if request.user.is_superuser or request.user.is_staff:
+            return super().dispatch(request, *args, **kwargs)
+        
+        # Vérifier si l'utilisateur a une entreprise
         if not hasattr(request.user, 'entreprise') or not request.user.entreprise:
-            raise PermissionDenied("Vous n'appartinez à aucune entreprise")
+            raise PermissionDenied("Vous n'appartenez à aucune entreprise")
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -35,7 +44,7 @@ class ComptabiliteAccessMixin(EntrepriseRequiredMixin, UserPassesTestMixin):
     L'utilisateur doit:
     - Être connecté
     - Appartenir à une entreprise
-    - Avoir la permission 'comptabilite'
+    - Avoir la permission 'comptabilite' (ou être admin/staff)
     """
     
     def test_func(self):
@@ -43,14 +52,22 @@ class ComptabiliteAccessMixin(EntrepriseRequiredMixin, UserPassesTestMixin):
         user = self.request.user
         
         # Admin = accès complet
-        if user.is_superuser or user.est_admin_entreprise:
+        if user.is_superuser or user.is_staff:
+            return True
+        
+        # Admin entreprise = accès complet
+        if hasattr(user, 'est_admin_entreprise') and user.est_admin_entreprise:
+            return True
+        
+        # Utilisateur avec entreprise = accès (pour le moment)
+        if hasattr(user, 'entreprise') and user.entreprise:
             return True
         
         # Vérifie la permission
         return user.has_perm('comptabilite.view_comptabilite')
     
     def handle_no_permission(self):
-        if self.request.is_ajax() or self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'error': 'Permission refusée'}, status=403)
         raise PermissionDenied("Accès refusé au module de comptabilité")
 
@@ -60,11 +77,45 @@ class EntrepriseFilterMixin:
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.filter(entreprise=self.request.user.entreprise)
+        
+        # Les superusers/staff sans entreprise voient tout
+        user = self.request.user
+        if (user.is_superuser or user.is_staff) and not getattr(user, 'entreprise', None):
+            return queryset
+        
+        # Vérifier si l'utilisateur a une entreprise
+        entreprise = getattr(user, 'entreprise', None)
+        if not entreprise:
+            return queryset.none()
+        
+        # Vérifier si le modèle a un champ direct 'entreprise'
+        model_fields = [field.name for field in self.model._meta.get_fields()]
+        
+        if 'entreprise' in model_fields:
+            # Filtrage direct
+            return queryset.filter(entreprise=entreprise)
+        elif 'compte_bancaire' in model_fields:
+            # Filtrage via relation compte_bancaire (pour RapprochementBancaire, etc.)
+            return queryset.filter(compte_bancaire__entreprise=entreprise)
+        elif 'exercice' in model_fields:
+            # Filtrage via relation exercice
+            return queryset.filter(exercice__entreprise=entreprise)
+        elif 'journal' in model_fields:
+            # Filtrage via relation journal
+            return queryset.filter(journal__entreprise=entreprise)
+        elif 'tiers' in model_fields:
+            # Filtrage via relation tiers
+            return queryset.filter(tiers__entreprise=entreprise)
+        elif 'plan_comptable' in model_fields:
+            # Filtrage via relation plan_comptable
+            return queryset.filter(plan_comptable__entreprise=entreprise)
+        
+        # Si aucune relation d'entreprise trouvée, retourner le queryset sans filtre
+        return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['entreprise'] = self.request.user.entreprise
+        context['entreprise'] = getattr(self.request.user, 'entreprise', None)
         return context
 
 

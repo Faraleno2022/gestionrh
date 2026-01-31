@@ -37,14 +37,15 @@ class CompteBancaireListView(ComptaListView):
     
     model = CompteBancaire
     template_name = 'comptabilite/rapprochements/compte_list.html'
-    search_fields = ['numero_compte', 'iban', 'intitule_tiers']
-    filter_fields = ['devise', 'actif']
+    search_fields = ['code', 'iban', 'libelle']
+    filter_fields = ['banque', 'est_actif']
+    ordering = ['code']  # Correction: utiliser 'code' au lieu de 'numero_compte'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Ajoute des statistiques
         context['total_solde'] = sum(
-            c.solde_comptable for c in context['objects']
+            c.solde_initial for c in context['objects']
         ) if context['objects'] else Decimal('0.00')
         return context
 
@@ -86,7 +87,7 @@ class CompteBancaireCreateView(ComptaCreateView):
     model = CompteBancaire
     form_class = CompteBancaireForm
     template_name = 'comptabilite/rapprochements/compte_form.html'
-    success_url = reverse_lazy('comptabilite:compte-list')
+    success_url = reverse_lazy('comptabilite:compte-bancaire-list')  # Correction: utiliser le bon nom d'URL
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -100,19 +101,15 @@ class CompteBancaireUpdateView(ComptaUpdateView):
     model = CompteBancaire
     form_class = CompteBancaireForm
     template_name = 'comptabilite/rapprochements/compte_form.html'
-    success_url = reverse_lazy('comptabilite:compte-list')
+    success_url = reverse_lazy('comptabilite:compte-bancaire-list')  # Correction: utiliser le bon nom d'URL
     
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
 
 
 class CompteBancaireDeleteView(ComptaDeleteView):
     """Suppression d'un compte bancaire."""
     
     model = CompteBancaire
-    success_url = reverse_lazy('comptabilite:compte-list')
+    success_url = reverse_lazy('comptabilite:compte-bancaire-list')
 
 
 class RapprochementListView(ComptaListView):
@@ -120,7 +117,7 @@ class RapprochementListView(ComptaListView):
     
     model = RapprochementBancaire
     template_name = 'comptabilite/rapprochements/rapprochement_list.html'
-    search_fields = ['compte_bancaire__numero_compte']
+    search_fields = ['compte_bancaire__code', 'compte_bancaire__libelle', 'notes']
     filter_fields = ['statut', 'compte_bancaire']
     
     def get_context_data(self, **kwargs):

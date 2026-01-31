@@ -20,10 +20,34 @@ class PlanComptableForm(forms.ModelForm):
     
     def __init__(self, *args, entreprise=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.entreprise = entreprise
         if entreprise:
             self.fields['compte_parent'].queryset = PlanComptable.objects.filter(
                 entreprise=entreprise
             ).order_by('numero_compte')
+    
+    def clean_numero_compte(self):
+        """Validation du numéro de compte pour éviter les doublons"""
+        numero_compte = self.cleaned_data.get('numero_compte')
+        
+        if numero_compte and self.entreprise:
+            # Vérifier l'unicité du numéro de compte
+            if self.instance.pk:
+                # Mode édition
+                if PlanComptable.objects.exclude(pk=self.instance.pk).filter(
+                    entreprise=self.entreprise,
+                    numero_compte=numero_compte
+                ).exists():
+                    raise forms.ValidationError('Ce numéro de compte est déjà utilisé dans cette entreprise.')
+            else:
+                # Mode création
+                if PlanComptable.objects.filter(
+                    entreprise=self.entreprise,
+                    numero_compte=numero_compte
+                ).exists():
+                    raise forms.ValidationError('Ce numéro de compte est déjà utilisé dans cette entreprise.')
+        
+        return numero_compte
 
 
 class JournalForm(forms.ModelForm):
@@ -42,10 +66,34 @@ class JournalForm(forms.ModelForm):
     
     def __init__(self, *args, entreprise=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.entreprise = entreprise
         if entreprise:
             self.fields['compte_contrepartie'].queryset = PlanComptable.objects.filter(
                 entreprise=entreprise, est_actif=True
             ).order_by('numero_compte')
+    
+    def clean_code(self):
+        """Validation du code journal pour éviter les doublons"""
+        code = self.cleaned_data.get('code')
+        
+        if code and self.entreprise:
+            # Vérifier l'unicité du code journal
+            if self.instance.pk:
+                # Mode édition
+                if Journal.objects.exclude(pk=self.instance.pk).filter(
+                    entreprise=self.entreprise,
+                    code=code.upper()
+                ).exists():
+                    raise forms.ValidationError('Ce code journal est déjà utilisé dans cette entreprise.')
+            else:
+                # Mode création
+                if Journal.objects.filter(
+                    entreprise=self.entreprise,
+                    code=code.upper()
+                ).exists():
+                    raise forms.ValidationError('Ce code journal est déjà utilisé dans cette entreprise.')
+        
+        return code.upper() if code else code
 
 
 class ExerciceForm(forms.ModelForm):
@@ -124,10 +172,34 @@ class TiersForm(forms.ModelForm):
     
     def __init__(self, *args, entreprise=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.entreprise = entreprise
         if entreprise:
             self.fields['compte_comptable'].queryset = PlanComptable.objects.filter(
                 entreprise=entreprise, classe='4', est_actif=True
             ).order_by('numero_compte')
+    
+    def clean_code(self):
+        """Validation du code tiers pour éviter les doublons"""
+        code = self.cleaned_data.get('code')
+        
+        if code and self.entreprise:
+            # Vérifier l'unicité du code tiers
+            if self.instance.pk:
+                # Mode édition
+                if Tiers.objects.exclude(pk=self.instance.pk).filter(
+                    entreprise=self.entreprise,
+                    code=code.upper()
+                ).exists():
+                    raise forms.ValidationError('Ce code tiers est déjà utilisé dans cette entreprise.')
+            else:
+                # Mode création
+                if Tiers.objects.filter(
+                    entreprise=self.entreprise,
+                    code=code.upper()
+                ).exists():
+                    raise forms.ValidationError('Ce code tiers est déjà utilisé dans cette entreprise.')
+        
+        return code.upper() if code else code
 
 
 class FactureForm(forms.ModelForm):

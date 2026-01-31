@@ -60,11 +60,13 @@
             
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
+                    {% if user.entreprise.has_rh %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'dashboard:index' %}">
                             <i class="fas fa-home"></i> Module RH
                         </a>
                     </li>
+                    {% endif %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-user-circle"></i> {{ user.get_full_name|default:user.username }}
@@ -91,6 +93,18 @@
                                 <i class="bi bi-speedometer2"></i> Tableau de bord
                             </a>
                         </li>
+                        
+                        <!-- Navigation vers autres modules -->
+                        {% if user.entreprise.has_rh %}
+                        <li class="nav-item mt-3">
+                            <h6 class="sidebar-heading px-3 text-muted"><span>AUTRES MODULES</span></h6>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:index' %}">
+                                <i class="bi bi-house-door"></i> Retour Accueil RH
+                            </a>
+                        </li>
+                        {% endif %}
                         
                         <li class="nav-item mt-3">
                             <h6 class="sidebar-heading px-3 text-muted"><span>SAISIE</span></h6>
@@ -175,6 +189,58 @@
                         <li class="nav-item">
                             <a class="nav-link {% if 'compte_resultat' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'comptabilite:compte_resultat' %}">
                                 <i class="bi bi-graph-up"></i> Compte de résultat
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item mt-3">
+                            <h6 class="sidebar-heading px-3 text-muted"><span>MODULES AVANCÉS</span></h6>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'tresorerie' in request.path %}active{% endif %}" href="{% url 'comptabilite:tresorerie_dashboard' %}">
+                                <i class="bi bi-cash-coin"></i> Trésorerie
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'consolidation' in request.path %}active{% endif %}" href="{% url 'comptabilite:consolidation_dashboard' %}">
+                                <i class="bi bi-diagram-3"></i> Consolidation
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'analytique' in request.path %}active{% endif %}" href="{% url 'comptabilite:analytique_dashboard' %}">
+                                <i class="bi bi-pie-chart-fill"></i> Analytique
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'fiscalite' in request.path %}active{% endif %}" href="{% url 'comptabilite:fiscalite_dashboard' %}">
+                                <i class="bi bi-file-earmark-ruled"></i> Fiscalité
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'controle' in request.path %}active{% endif %}" href="{% url 'comptabilite:controle_dashboard' %}">
+                                <i class="bi bi-shield-check"></i> Contrôle Interne
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'contrats' in request.path %}active{% endif %}" href="{% url 'comptabilite:contrats_dashboard' %}">
+                                <i class="bi bi-file-earmark-text"></i> Contrats
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'archivage' in request.path %}active{% endif %}" href="{% url 'comptabilite:archivage_dashboard' %}">
+                                <i class="bi bi-archive"></i> Archivage
+                            </a>
+                        </li>
+                        
+                        <!-- Profil et Déconnexion -->
+                        <li class="nav-item mt-4 border-top pt-3">
+                            <a class="nav-link" href="{% url 'core:profile' %}">
+                                <i class="bi bi-person-circle"></i> Mon Profil
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'core:logout' %}">
+                                <i class="bi bi-box-arrow-right"></i> Déconnexion
                             </a>
                         </li>
                     </ul>

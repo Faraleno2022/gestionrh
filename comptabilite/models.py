@@ -5,6 +5,9 @@ from decimal import Decimal
 import uuid
 from core.models import Entreprise, Utilisateur
 
+# Import des modèles de trésorerie avancée à la fin du fichier pour éviter les imports circulaires
+# from .models_tresorerie import *
+
 
 class PlanComptable(models.Model):
     """Plan comptable SYSCOHADA"""
@@ -1650,9 +1653,9 @@ class TauxTVA(models.Model):
     date_fin = models.DateField(null=True, blank=True)
     
     # Audit
-    utilisateur_creation = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='taux_tva_created')
+    utilisateur_creation = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='taux_tva_created', null=True, blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
-    utilisateur_modification = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='taux_tva_modified')
+    utilisateur_modification = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='taux_tva_modified', null=True, blank=True)
     date_modification = models.DateTimeField(auto_now=True)
     
     class Meta:
@@ -2015,3 +2018,54 @@ class HistoriqueModification(models.Model):
     
     def __str__(self):
         return f"{self.get_action_display()} {self.nom_objet} ({self.date_modification.strftime('%d/%m/%Y %H:%M')})"
+
+
+# Import des modèles de trésorerie avancée
+from .models_tresorerie import (
+    SynchronisationBancaire, EcheancierTresorerie, SituationTresorerie,
+    OptimisationTresorerie, LiquiditeSouhaitee, GestionNumeraire,
+    AlerteTresorerie, FluxTresorerieJournalier
+)
+
+# Import des modèles de consolidation
+from .models_consolidation import (
+    MatriceConsolidation, ConsolidationFiliales, PerimetreConsolidation,
+    EliminationIGF, AjustementConsolidation, AffectationResultat,
+    VariationCapitaux, NoteExplicative, DocumentationConsolidation,
+    BilanConsolide, CompteResultatConsolide, FluxTresorerieConsolide
+)
+
+# Import des modèles fiscalité avancée
+from .models_fiscalite import (
+    DossierFiscalComplet, DeclarationIS, DeclarationCAT,
+    DeclarationCVAE, LiasseFiscale, AnnexeFiscale, DocumentationFiscale,
+    RobustesseControleFiscal, HistoriqueDeclaration, RegleFiscale
+)
+
+# Import des modèles contrôle interne
+from .models_controle import (
+    MatriceRisques, ProcedureControle, TestControle, NonConformite,
+    DelegationPouvoirs, ApprovalMatrix, WorkflowApprobation, EtapeApprobation,
+    SegregationTaches, RapportControleInterne, TraceModification
+)
+
+# Import des modèles comptabilité analytique
+from .models_analytique import (
+    CentreCouts, SectionAnalytique, CommandeAnalytique, ImputationAnalytique,
+    CleRepartition, TauxRepartition, BudgetAnalytique, AnalyseVariance,
+    ReclassementCharge, RepriseCharge, RapportAnalytique, TableauBordAnalytique
+)
+
+# Import des modèles gestion comptable des contrats
+from .models_contrats_comptables import (
+    ContratFournisseur, ContratClient, ConditionsPaiement, ConditionsLivraison,
+    PointGaranti, PenaliteRetard, ReclamationContractuelle, SuiviContrat,
+    AlerteContrat, HistoriqueContrat
+)
+
+# Import des modèles documentation et archivage
+from .models_archivage import (
+    ClassementDocument, PolitiqueRetention, ArchiveDocument, MatricePiecesJustificatives,
+    ValidationDocument, VerificationSignature, FluxDocument, SuppressionDocument,
+    TraceAccesDocument, AlerteArchivage, RapportArchivage
+)

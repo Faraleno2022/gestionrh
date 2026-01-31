@@ -5,6 +5,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Q
+from django.db import transaction
 from django.http import HttpResponse
 from openpyxl import Workbook
 from datetime import datetime
@@ -169,160 +170,193 @@ class EmployeCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy('employes:list')
     
     def form_valid(self, form):
-        employe = form.save(commit=False)
-        employe.entreprise = self.request.user.entreprise
-        
-        # Générer le matricule si vide
-        if not employe.matricule:
-            employe.matricule = self.generer_matricule()
-        
-        # S'assurer que nombre_enfants a une valeur par défaut
-        if employe.nombre_enfants is None:
-            employe.nombre_enfants = 0
-        
-        employe.utilisateur_creation = self.request.user
-        employe.save()
-        
-        # Traiter les données du conjoint
-        conjoint_nom = self.request.POST.get('conjoint_nom', '').strip()
-        conjoint_prenoms = self.request.POST.get('conjoint_prenoms', '').strip()
-        
-        if conjoint_nom and conjoint_prenoms:
-            conjoint = ConjointEmploye(
-                employe=employe,
-                nom=conjoint_nom,
-                prenoms=conjoint_prenoms,
-                date_naissance=self.request.POST.get('conjoint_date_naissance') or None,
-                sexe=self.request.POST.get('conjoint_sexe') or None,
-                telephone=self.request.POST.get('conjoint_telephone', ''),
-                profession=self.request.POST.get('conjoint_profession', ''),
-                employeur=self.request.POST.get('conjoint_employeur', ''),
-                date_mariage=self.request.POST.get('conjoint_date_mariage') or None,
-                lieu_mariage=self.request.POST.get('conjoint_lieu_mariage', '')
-            )
-            if 'conjoint_acte_mariage' in self.request.FILES:
-                conjoint.acte_mariage = self.request.FILES['conjoint_acte_mariage']
-            conjoint.save()
-            
-            # Aussi créer un DocumentEmploye pour l'acte de mariage
-            if 'conjoint_acte_mariage' in self.request.FILES:
+        try:
+            with transaction.atomic():
+                employe = form.save(commit=False)
+                employe.entreprise = self.request.user.entreprise
+                
+                # Générer le matricule si vide avec gestion des doublons
+                if not employe.matricule:
+                    employe.matricule = self.generer_matricule_unique()
+                
+                # S'assurer que nombre_enfants a une valeur par défaut
+                if employe.nombre_enfants is None:
+                    employe.nombre_enfants = 0
+                
+                employe.utilisateur_creation = self.request.user
+                employe.save()
+                
+                # Traiter les données du conjoint
+                conjoint_nom = self.request.POST.get('conjoint_nom', '').strip()
+                conjoint_prenoms = self.request.POST.get('conjoint_prenoms', '').strip()
+                
+                if conjoint_nom and conjoint_prenoms:
+                    conjoint = ConjointEmploye(
+                        employe=employe,
+                        nom=conjoint_nom,
+                        prenoms=conjoint_prenoms,
+                        date_naissance=self.request.POST.get('conjoint_date_naissance') or None,
+                        sexe=self.request.POST.get('conjoint_sexe') or None,
+                        telephone=self.request.POST.get('conjoint_telephone', ''),
+                        profession=self.request.POST.get('conjoint_profession', ''),
+                        employeur=self.request.POST.get('conjoint_employeur', ''),
+                        date_mariage=self.request.POST.get('conjoint_date_mariage') or None,
+                        lieu_mariage=self.request.POST.get('conjoint_lieu_mariage', '')
+                    )
+                    if 'conjoint_acte_mariage' in self.request.FILES:
+                        conjoint.acte_mariage = self.request.FILES['conjoint_acte_mariage']
+                    conjoint.save()
+                    
+                    # Aussi créer un DocumentEmploye pour l'acte de mariage
+                    if 'conjoint_acte_mariage' in self.request.FILES:
+                        from .models import DocumentEmploye
+                        DocumentEmploye.objects.create(
+                            employe=employe,
+                            type_document='acte_mariage',
+                            titre='Acte de mariage',
+                            fichier=self.request.FILES['conjoint_acte_mariage'],
+                            ajoute_par=self.request.user
+                        )
+                    
+                    # Mettre à jour la situation matrimoniale
+                    employe.situation_matrimoniale = 'marie'
+                    employe.save(update_fields=['situation_matrimoniale'])
+                
+                # Traiter les données des enfants
+                enfants_noms = self.request.POST.getlist('enfant_nom[]')
+                enfants_prenoms = self.request.POST.getlist('enfant_prenoms[]')
+                enfants_dates = self.request.POST.getlist('enfant_date_naissance[]')
+                enfants_sexes = self.request.POST.getlist('enfant_sexe[]')
+                enfants_lieux = self.request.POST.getlist('enfant_lieu_naissance[]')
+                enfants_scolarises = self.request.POST.getlist('enfant_scolarise[]')
+                enfants_etablissements = self.request.POST.getlist('enfant_etablissement[]')
+                enfants_actes = self.request.FILES.getlist('enfant_acte_naissance[]')
+                
+                nb_enfants = 0
+                for i, nom in enumerate(enfants_noms):
+                    if nom and enfants_prenoms[i] and enfants_dates[i]:
+                        enfant = EnfantEmploye(
+                            employe=employe,
+                            nom=nom,
+                            prenoms=enfants_prenoms[i],
+                            date_naissance=enfants_dates[i],
+                            sexe=enfants_sexes[i] if i < len(enfants_sexes) and enfants_sexes[i] else None,
+                            lieu_naissance=enfants_lieux[i] if i < len(enfants_lieux) else '',
+                            scolarise=str(i) in [s.split('_')[-1] if '_' in s else s for s in enfants_scolarises] or (i < len(enfants_scolarises) and enfants_scolarises[i] == '1'),
+                            etablissement_scolaire=enfants_etablissements[i] if i < len(enfants_etablissements) else ''
+                        )
+                        if i < len(enfants_actes):
+                            enfant.acte_naissance = enfants_actes[i]
+                        enfant.save()
+                        nb_enfants += 1
+                
+                # Mettre à jour le nombre d'enfants
+                if nb_enfants > 0:
+                    employe.nombre_enfants = nb_enfants
+                    employe.save(update_fields=['nombre_enfants'])
+                
+                # Traiter les documents de parcours professionnel
                 from .models import DocumentEmploye
-                DocumentEmploye.objects.create(
-                    employe=employe,
-                    type_document='acte_mariage',
-                    titre='Acte de mariage',
-                    fichier=self.request.FILES['conjoint_acte_mariage'],
-                    ajoute_par=self.request.user
+                
+                # Documents simples (un seul fichier)
+                docs_simples = {
+                    'doc_cv': ('cv', 'CV'),
+                    'doc_diplome': ('diplome', 'Diplôme'),
+                    'doc_piece_identite': ('piece_identite', 'Pièce d\'identité'),
+                    'doc_certificat_medical': ('certificat_medical', 'Certificat médical'),
+                }
+                
+                for field_name, (type_doc, titre) in docs_simples.items():
+                    if field_name in self.request.FILES:
+                        DocumentEmploye.objects.create(
+                            employe=employe,
+                            type_document=type_doc,
+                            titre=titre,
+                            fichier=self.request.FILES[field_name],
+                            ajoute_par=self.request.user
+                        )
+                
+                # Documents multiples
+                docs_multiples = {
+                    'doc_attestation_travail[]': ('attestation_travail', 'Attestation de travail'),
+                    'doc_certificat_emploi[]': ('certificat_emploi', 'Certificat d\'emploi antérieur'),
+                    'doc_lettre_recommandation[]': ('lettre_recommandation', 'Lettre de recommandation'),
+                    'doc_certifications[]': ('certificat', 'Certification / Formation'),
+                }
+                
+                for field_name, (type_doc, titre_base) in docs_multiples.items():
+                    fichiers = self.request.FILES.getlist(field_name)
+                    for i, fichier in enumerate(fichiers, 1):
+                        titre = f"{titre_base} {i}" if len(fichiers) > 1 else titre_base
+                        DocumentEmploye.objects.create(
+                            employe=employe,
+                            type_document=type_doc,
+                            titre=titre,
+                            fichier=fichier,
+                            ajoute_par=self.request.user
+                        )
+                
+                # Log
+                log_activity(
+                    self.request,
+                    f"Création employé {employe.matricule}",
+                    'employes',
+                    'employes',
+                    employe.id
                 )
-            
-            # Mettre à jour la situation matrimoniale
-            employe.situation_matrimoniale = 'marie'
-            employe.save(update_fields=['situation_matrimoniale'])
-        
-        # Traiter les données des enfants
-        enfants_noms = self.request.POST.getlist('enfant_nom[]')
-        enfants_prenoms = self.request.POST.getlist('enfant_prenoms[]')
-        enfants_dates = self.request.POST.getlist('enfant_date_naissance[]')
-        enfants_sexes = self.request.POST.getlist('enfant_sexe[]')
-        enfants_lieux = self.request.POST.getlist('enfant_lieu_naissance[]')
-        enfants_scolarises = self.request.POST.getlist('enfant_scolarise[]')
-        enfants_etablissements = self.request.POST.getlist('enfant_etablissement[]')
-        enfants_actes = self.request.FILES.getlist('enfant_acte_naissance[]')
-        
-        nb_enfants = 0
-        for i, nom in enumerate(enfants_noms):
-            if nom and enfants_prenoms[i] and enfants_dates[i]:
-                enfant = EnfantEmploye(
-                    employe=employe,
-                    nom=nom,
-                    prenoms=enfants_prenoms[i],
-                    date_naissance=enfants_dates[i],
-                    sexe=enfants_sexes[i] if i < len(enfants_sexes) and enfants_sexes[i] else None,
-                    lieu_naissance=enfants_lieux[i] if i < len(enfants_lieux) else '',
-                    scolarise=str(i) in [s.split('_')[-1] if '_' in s else s for s in enfants_scolarises] or (i < len(enfants_scolarises) and enfants_scolarises[i] == '1'),
-                    etablissement_scolaire=enfants_etablissements[i] if i < len(enfants_etablissements) else ''
+                
+                messages.success(
+                    self.request,
+                    f'Employé {employe.nom} {employe.prenoms} créé avec succès (Matricule: {employe.matricule})'
                 )
-                if i < len(enfants_actes):
-                    enfant.acte_naissance = enfants_actes[i]
-                enfant.save()
-                nb_enfants += 1
+                
+                return super().form_valid(form)
         
-        # Mettre à jour le nombre d'enfants
-        if nb_enfants > 0:
-            employe.nombre_enfants = nb_enfants
-            employe.save(update_fields=['nombre_enfants'])
-        
-        # Traiter les documents de parcours professionnel
-        from .models import DocumentEmploye
-        
-        # Documents simples (un seul fichier)
-        docs_simples = {
-            'doc_cv': ('cv', 'CV'),
-            'doc_diplome': ('diplome', 'Diplôme'),
-            'doc_piece_identite': ('piece_identite', 'Pièce d\'identité'),
-            'doc_certificat_medical': ('certificat_medical', 'Certificat médical'),
-        }
-        
-        for field_name, (type_doc, titre) in docs_simples.items():
-            if field_name in self.request.FILES:
-                DocumentEmploye.objects.create(
-                    employe=employe,
-                    type_document=type_doc,
-                    titre=titre,
-                    fichier=self.request.FILES[field_name],
-                    ajoute_par=self.request.user
-                )
-        
-        # Documents multiples
-        docs_multiples = {
-            'doc_attestation_travail[]': ('attestation_travail', 'Attestation de travail'),
-            'doc_certificat_emploi[]': ('certificat_emploi', 'Certificat d\'emploi antérieur'),
-            'doc_lettre_recommandation[]': ('lettre_recommandation', 'Lettre de recommandation'),
-            'doc_certifications[]': ('certificat', 'Certification / Formation'),
-        }
-        
-        for field_name, (type_doc, titre_base) in docs_multiples.items():
-            fichiers = self.request.FILES.getlist(field_name)
-            for i, fichier in enumerate(fichiers, 1):
-                titre = f"{titre_base} {i}" if len(fichiers) > 1 else titre_base
-                DocumentEmploye.objects.create(
-                    employe=employe,
-                    type_document=type_doc,
-                    titre=titre,
-                    fichier=fichier,
-                    ajoute_par=self.request.user
-                )
-        
-        # Log
-        log_activity(
-            self.request,
-            f"Création employé {employe.matricule}",
-            'employes',
-            'employes',
-            employe.id
-        )
-        
-        messages.success(
-            self.request,
-            f'Employé {employe.nom} {employe.prenoms} créé avec succès (Matricule: {employe.matricule})'
-        )
-        
-        return super().form_valid(form)
+        except Exception as e:
+            messages.error(
+                self.request,
+                f'Une erreur est survenue lors de la création: {str(e)}'
+            )
+            return self.form_invalid(form)
     
-    def generer_matricule(self):
-        """Génère un matricule automatique"""
+    def generer_matricule_unique(self):
+        """Génère un matricule unique avec gestion des doublons"""
         annee = datetime.now().year
-        dernier = Employe.objects.filter(
-            entreprise=self.request.user.entreprise,
-            matricule__startswith=f'EMP{annee}'
-        ).order_by('-matricule').first()
+        max_attempts = 10
         
-        if dernier:
-            numero = int(dernier.matricule[-4:]) + 1
-        else:
-            numero = 1
+        for attempt in range(max_attempts):
+            # Verrouiller la table pour éviter les conditions de course
+            with transaction.atomic():
+                # Récupérer le dernier matricule avec un verrou row-level
+                dernier = Employe.objects.select_for_update().filter(
+                    entreprise=self.request.user.entreprise,
+                    matricule__startswith=f'EMP{annee}'
+                ).order_by('-matricule').first()
+                
+                if dernier:
+                    try:
+                        numero = int(dernier.matricule[-4:]) + 1
+                    except (ValueError, IndexError):
+                        numero = 1
+                else:
+                    numero = 1
+                
+                nouveau_matricule = f'EMP{annee}{numero:04d}'
+                
+                # Vérifier si le matricule existe déjà (double sécurité)
+                if not Employe.objects.filter(
+                    entreprise=self.request.user.entreprise,
+                    matricule=nouveau_matricule
+                ).exists():
+                    return nouveau_matricule
+                
+                # Si existe déjà, incrémenter et réessayer
+                numero += 1
         
-        return f'EMP{annee}{numero:04d}'
+        # Si toutes les tentatives échouent, générer un matricule avec timestamp
+        import time
+        timestamp = int(time.time()) % 10000
+        return f'EMP{annee}{timestamp:04d}'
 
 
 class EmployeUpdateView(EntrepriseEmployeQuerysetMixin, UpdateView):

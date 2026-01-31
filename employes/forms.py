@@ -217,6 +217,25 @@ class EmployeForm(forms.ModelForm):
             ),
         )
     
+    def clean_matricule(self):
+        """Validation du matricule pour éviter les doublons"""
+        matricule = self.cleaned_data.get('matricule')
+        
+        if matricule:
+            # Vérifier l'unicité du matricule
+            if self.instance.pk:
+                # Mode édition
+                if Employe.objects.exclude(pk=self.instance.pk).filter(
+                    matricule=matricule
+                ).exists():
+                    raise forms.ValidationError('Ce matricule est déjà utilisé par un autre employé')
+            else:
+                # Mode création
+                if Employe.objects.filter(matricule=matricule).exists():
+                    raise forms.ValidationError('Ce matricule est déjà utilisé')
+        
+        return matricule
+    
     def clean_num_cnss_individuel(self):
         """Validation du numéro CNSS"""
         num_cnss = self.cleaned_data.get('num_cnss_individuel')
