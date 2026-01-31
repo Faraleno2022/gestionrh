@@ -321,9 +321,9 @@ class Reglement(models.Model):
         return f"{self.numero} - {self.montant} GNF"
 
 
-class TauxTVA(models.Model):
-    """Taux de TVA configurables"""
-    entreprise = models.ForeignKey('core.Entreprise', on_delete=models.CASCADE, related_name='taux_tva')
+class TauxTVASimple(models.Model):
+    """Taux de TVA configurables (version simple pour factures)"""
+    entreprise = models.ForeignKey('core.Entreprise', on_delete=models.CASCADE, related_name='taux_tva_simple')
     libelle = models.CharField(max_length=50)
     taux = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)])
     compte_tva_collectee = models.ForeignKey(PlanComptable, on_delete=models.SET_NULL, null=True, blank=True, related_name='tva_collectee')
@@ -332,9 +332,9 @@ class TauxTVA(models.Model):
     est_actif = models.BooleanField(default=True)
     
     class Meta:
-        db_table = 'taux_tva'
-        verbose_name = 'Taux de TVA'
-        verbose_name_plural = 'Taux de TVA'
+        db_table = 'taux_tva_simple'
+        verbose_name = 'Taux de TVA (Simple)'
+        verbose_name_plural = 'Taux de TVA (Simple)'
     
     def __str__(self):
         return f"{self.libelle} ({self.taux}%)"
