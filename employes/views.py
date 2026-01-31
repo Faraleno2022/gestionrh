@@ -6,7 +6,7 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Q
 from django.db import transaction
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from openpyxl import Workbook
 from datetime import datetime
 
@@ -90,6 +90,13 @@ class EmployeDetailView(EntrepriseEmployeQuerysetMixin, DetailView):
     model = Employe
     template_name = 'employes/detail.html'
     context_object_name = 'employe'
+    
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except Http404:
+            messages.error(request, "L'employé demandé n'existe pas ou n'est pas accessible.")
+            return redirect('employes:list')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -365,6 +372,20 @@ class EmployeUpdateView(EntrepriseEmployeQuerysetMixin, UpdateView):
     form_class = EmployeForm
     template_name = 'employes/form.html'
     
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except Http404:
+            messages.error(request, "L'employé demandé n'existe pas ou n'est pas accessible.")
+            return redirect('employes:list')
+    
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except Http404:
+            messages.error(request, "L'employé demandé n'existe pas ou n'est pas accessible.")
+            return redirect('employes:list')
+    
     def get_success_url(self):
         return reverse_lazy('employes:detail', kwargs={'pk': self.object.pk})
     
@@ -395,6 +416,20 @@ class EmployeDeleteView(EntrepriseEmployeQuerysetMixin, DeleteView):
     model = Employe
     template_name = 'employes/delete.html'
     success_url = reverse_lazy('employes:list')
+    
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except Http404:
+            messages.error(request, "L'employé demandé n'existe pas ou a déjà été supprimé.")
+            return redirect('employes:list')
+    
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except Http404:
+            messages.error(request, "L'employé demandé n'existe pas ou a déjà été supprimé.")
+            return redirect('employes:list')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
