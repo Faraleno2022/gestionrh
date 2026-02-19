@@ -1737,6 +1737,10 @@ def creer_rubrique(request):
         affichage_bulletin = request.POST.get('affichage_bulletin') == 'on'
         actif = request.POST.get('actif') == 'on'
         
+        if RubriquePaie.objects.filter(code_rubrique=code).exists():
+            messages.error(request, f'Une rubrique avec le code "{code}" existe déjà. Veuillez choisir un autre code.')
+            return render(request, 'paie/rubriques/creer.html')
+        
         try:
             rubrique = RubriquePaie.objects.create(
                 code_rubrique=code,
