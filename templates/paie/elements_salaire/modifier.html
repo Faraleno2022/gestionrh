@@ -32,7 +32,7 @@
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="montant" class="form-label">Montant Fixe (GNF)</label>
-                    <input type="number" class="form-control" id="montant" name="montant" step="1000" value="{{ element.montant|default:'' }}">
+                    <input type="text" class="form-control" id="montant" name="montant" inputmode="decimal" value="{{ element.montant|default:'' }}">
                 </div>
                 <div class="col-md-6">
                     <label for="taux" class="form-label">Taux (%)</label>

@@ -65,6 +65,7 @@
                         <a href="{% url 'comptabilite:ecriture_detail' ecriture.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
                         {% if not ecriture.est_validee %}
                         <a href="{% url 'comptabilite:ecriture_update' ecriture.pk %}" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></a>
+                        <a href="{% url 'comptabilite:ecriture_delete' ecriture.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
                         {% endif %}
                     </td>
                 </tr>

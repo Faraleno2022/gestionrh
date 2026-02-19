@@ -72,6 +72,9 @@
                             <a href="{% url 'comptabilite:plan_comptable_update' compte.pk %}" class="btn btn-sm btn-outline-warning" title="Modifier">
                                 <i class="bi bi-pencil"></i>
                             </a>
+                            <a href="{% url 'comptabilite:plan_comptable_delete' compte.pk %}" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                                <i class="bi bi-trash"></i>
+                            </a>
                         </td>
                     </tr>
                     {% empty %}

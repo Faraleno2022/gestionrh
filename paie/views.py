@@ -5,9 +5,40 @@ from django.db.models import Sum, Count, Q
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.db import transaction
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from datetime import datetime, date
 import json
+
+
+def parse_montant(valeur):
+    """Convertir un montant saisi (format français ou anglais) en Decimal.
+    Supporte: 1 500,50 / 1500,50 / 1500.50 / 1,500.50
+    Retourne None si la valeur est vide ou invalide."""
+    if not valeur:
+        return None
+    valeur = str(valeur).strip().replace('\xa0', '').replace(' ', '')
+    # Si contient à la fois . et , déterminer le séparateur décimal
+    if ',' in valeur and '.' in valeur:
+        # 1.500,50 → français ou 1,500.50 → anglais
+        if valeur.rindex(',') > valeur.rindex('.'):
+            # virgule après point → format français: 1.500,50
+            valeur = valeur.replace('.', '').replace(',', '.')
+        else:
+            # point après virgule → format anglais: 1,500.50
+            valeur = valeur.replace(',', '')
+    elif ',' in valeur:
+        # Seulement virgule: 1500,50 ou 1,500
+        parts = valeur.split(',')
+        if len(parts) == 2 and len(parts[1]) <= 2:
+            # Décimale: 1500,50
+            valeur = valeur.replace(',', '.')
+        else:
+            # Séparateur milliers: 1,500,000
+            valeur = valeur.replace(',', '')
+    try:
+        return Decimal(valeur)
+    except (InvalidOperation, ValueError):
+        return None
 
 from .models import (
     PeriodePaie, BulletinPaie, LigneBulletin, RubriquePaie,
@@ -24,11 +55,11 @@ from core.decorators import reauth_required, entreprise_active_required
 @reauth_required
 def paie_home(request):
     """Vue d'accueil du module paie"""
-    # Statistiques générales
+    # Statistiques générales - chercher la période la plus récente (ouverte, calculée ou validée)
     periode_actuelle = PeriodePaie.objects.filter(
         entreprise=request.user.entreprise,
-        statut_periode='ouverte'
-    ).first()
+        statut_periode__in=['ouverte', 'calculee', 'validee', 'payee']
+    ).order_by('-annee', '-mois').first()
     
     stats = {
         'periode_actuelle': periode_actuelle,
@@ -468,7 +499,12 @@ def telecharger_bulletin_pdf(request, pk):
     p.drawString(1.5*cm, y, f"N°: {bulletin.numero_bulletin}")
     p.drawCentredString(width/2, y, f"Période: {bulletin.periode}")
     p.drawRightString(width - 1.5*cm, y, f"Date: {bulletin.date_calcul.strftime('%d/%m/%Y') if bulletin.date_calcul else '-'}")
-    y -= 0.8*cm
+    y -= 0.35*cm
+    # Dates de la période
+    p.setFont("Helvetica", 8)
+    periode_detail = f"Du {bulletin.periode.date_debut.strftime('%d/%m/%Y')} au {bulletin.periode.date_fin.strftime('%d/%m/%Y')}" if bulletin.periode.date_debut and bulletin.periode.date_fin else ""
+    p.drawCentredString(width/2, y, periode_detail)
+    y -= 0.6*cm
     
     # === INFORMATIONS EMPLOYÉ ===
     p.setFillColor(colors.HexColor("#ce1126"))
@@ -478,11 +514,34 @@ def telecharger_bulletin_pdf(request, pk):
     y -= 0.5*cm
     
     emp = bulletin.employe
+    
+    # Calcul de l'ancienneté
+    anciennete_str = "-"
+    if emp.date_embauche:
+        from datetime import date as date_cls
+        ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie, 1)
+        delta = ref_date - emp.date_embauche
+        annees_anc = delta.days // 365
+        mois_anc = (delta.days % 365) // 30
+        if annees_anc > 0:
+            anciennete_str = f"{annees_anc} an{'s' if annees_anc > 1 else ''} {mois_anc} mois"
+        else:
+            anciennete_str = f"{mois_anc} mois"
+    
+    # Récupération des congés
+    from temps_travail.models import SoldeConge
+    solde_conge = SoldeConge.objects.filter(employe=emp, annee=bulletin.annee_paie).first()
+    conges_acquis = solde_conge.conges_acquis if solde_conge else Decimal('0')
+    conges_pris = solde_conge.conges_pris if solde_conge else Decimal('0')
+    conges_restants = solde_conge.conges_restants if solde_conge else Decimal('0')
+    
     infos_emp = [
         ["Matricule:", emp.matricule or "-", "N° CNSS:", emp.num_cnss_individuel or "-"],
-        ["Nom et Prénoms:", f"{emp.nom} {emp.prenoms}", "", ""],
+        ["Nom et Prénoms:", f"{emp.nom} {emp.prenoms}", "Ancienneté:", anciennete_str],
         ["Poste:", str(emp.poste or "-"), "Service:", str(emp.service or "-")],
         ["Date embauche:", emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else "-", "Mode paiement:", emp.mode_paiement or "-"],
+        ["Congés acquis:", f"{conges_acquis:g} j", "Congés pris:", f"{conges_pris:g} j"],
+        ["Solde congés:", f"{conges_restants:g} j", "", ""],
     ]
     
     for row in infos_emp:
@@ -561,11 +620,15 @@ def telecharger_bulletin_pdf(request, pk):
                 f"{r.montant:,.0f}".replace(",", " ")
             ])
     
-    # Ajouter CNSS (base plafonnée) et IRG une seule fois
-    # Base CNSS plafonnée à 2 500 000 GNF
+    # Ajouter CNSS (base plafonnée) et RTS avec détail
     base_cnss = min(bulletin.salaire_brut, 2500000)
     retenues_data.append(["CNSS Employé (5%)", f"{base_cnss:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
-    retenues_data.append(["Impôt sur le Revenu (IRG)", "", "", f"{bulletin.irg:,.0f}".replace(",", " ")])
+    # RTS avec base, taux effectif et montant
+    base_rts_val = getattr(bulletin, 'base_rts', 0) or 0
+    taux_eff_rts_val = getattr(bulletin, 'taux_effectif_rts', 0) or 0
+    rts_base_str = f"{base_rts_val:,.0f}".replace(",", " ") if base_rts_val else "-"
+    rts_taux_str = f"{taux_eff_rts_val:.2f}%" if taux_eff_rts_val else "-"
+    retenues_data.append(["RTS (Impôt sur le Revenu)", rts_base_str, rts_taux_str, f"{bulletin.irg:,.0f}".replace(",", " ")])
     
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
@@ -584,7 +647,12 @@ def telecharger_bulletin_pdf(request, pk):
     y -= table_height + 0.6*cm
     
     # === RÉCAPITULATIF ===
-    recap_height = 2.5*cm
+    rappel = getattr(bulletin, 'rappel_salaire', 0) or 0
+    trop_percu = getattr(bulletin, 'retenue_trop_percu', 0) or 0
+    has_rappel = rappel > 0
+    has_trop_percu = trop_percu > 0
+    extra_lines = (1 if has_rappel else 0) + (1 if has_trop_percu else 0)
+    recap_height = 2.5*cm + extra_lines * 0.4*cm
     p.setStrokeColor(colors.HexColor("#ce1126"))
     p.setLineWidth(2)
     p.rect(1.5*cm, y - recap_height, width - 3*cm, recap_height, stroke=1, fill=0)
@@ -598,13 +666,25 @@ def telecharger_bulletin_pdf(request, pk):
     p.setFillColor(colors.HexColor("#dc3545"))
     p.drawString(2*cm, y - 1*cm, "Cotisation CNSS (5%):")
     p.drawRightString(width - 2*cm, y - 1*cm, f"- {bulletin.cnss_employe:,.0f} GNF".replace(",", " "))
-    p.drawString(2*cm, y - 1.4*cm, "RTS:")
+    p.drawString(2*cm, y - 1.4*cm, f"RTS (base: {base_rts_val:,.0f} | taux eff.: {taux_eff_rts_val:.2f}%):")
     p.drawRightString(width - 2*cm, y - 1.4*cm, f"- {bulletin.irg:,.0f} GNF".replace(",", " "))
+    
+    offset_y = 1.4*cm
+    if has_rappel:
+        offset_y += 0.4*cm
+        p.setFillColor(colors.HexColor("#007bff"))
+        p.drawString(2*cm, y - offset_y, "Rappel/Complément salaire précédent:")
+        p.drawRightString(width - 2*cm, y - offset_y, f"+ {rappel:,.0f} GNF".replace(",", " "))
+    if has_trop_percu:
+        offset_y += 0.4*cm
+        p.setFillColor(colors.HexColor("#dc3545"))
+        p.drawString(2*cm, y - offset_y, "Retenue trop-perçu salaire précédent:")
+        p.drawRightString(width - 2*cm, y - offset_y, f"- {trop_percu:,.0f} GNF".replace(",", " "))
     
     p.setFillColor(colors.HexColor("#28a745"))
     p.setFont("Helvetica-Bold", 11)
-    p.drawString(2*cm, y - 2.1*cm, "NET À PAYER:")
-    p.drawRightString(width - 2*cm, y - 2.1*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
+    p.drawString(2*cm, y - offset_y - 0.7*cm, "NET À PAYER:")
+    p.drawRightString(width - 2*cm, y - offset_y - 0.7*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
     p.setFillColor(colors.black)
     
     y -= recap_height + 0.5*cm
@@ -614,15 +694,43 @@ def telecharger_bulletin_pdf(request, pk):
     p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     vf = getattr(bulletin, 'versement_forfaitaire', 0) or 0
     ta = getattr(bulletin, 'taxe_apprentissage', 0) or 0
-    total_charges = bulletin.cnss_employeur + vf + ta
+    onfpp = getattr(bulletin, 'contribution_onfpp', 0) or 0
+    total_charges = bulletin.cnss_employeur + vf + ta + onfpp
     y -= 0.35*cm
     p.setFont("Helvetica", 8)
     p.drawString(1.5*cm, y, f"CNSS Employeur (18%): {bulletin.cnss_employeur:,.0f} GNF".replace(",", " "))
     p.drawString(6.5*cm, y, f"VF (6%): {vf:,.0f} GNF".replace(",", " "))
-    ta_fmt = f"{ta:,.0f}".replace(",", " ")
-    p.drawString(10.5*cm, y, f"TA (1,5%): {ta_fmt} GNF")
+    # TA et ONFPP mutuellement exclusifs
+    if ta > 0:
+        ta_fmt = f"{ta:,.0f}".replace(",", " ")
+        p.drawString(10.5*cm, y, f"TA (2%): {ta_fmt} GNF")
+    elif onfpp > 0:
+        onfpp_fmt = f"{onfpp:,.0f}".replace(",", " ")
+        p.drawString(10.5*cm, y, f"ONFPP (1,5%): {onfpp_fmt} GNF")
     p.setFont("Helvetica-Bold", 8)
+    y -= 0.35*cm
     p.drawString(14*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
+    
+    # === ZONE DE SIGNATURES ===
+    y -= 1.2*cm
+    p.setFont("Helvetica-Bold", 8)
+    p.drawString(2*cm, y, "L'Employeur")
+    p.drawString(12*cm, y, "L'Employé(e)")
+    y -= 0.4*cm
+    p.setFont("Helvetica", 7)
+    if entreprise:
+        p.drawString(2*cm, y, entreprise.nom_entreprise or '')
+    p.drawString(12*cm, y, f"{emp.nom} {emp.prenoms}")
+    # Lignes de signature
+    y -= 1.5*cm
+    p.setDash(3, 3)
+    p.line(2*cm, y, 7*cm, y)
+    p.line(12*cm, y, 17*cm, y)
+    p.setDash()
+    y -= 0.3*cm
+    p.setFont("Helvetica", 6)
+    p.drawCentredString(4.5*cm, y, "Date et signature")
+    p.drawCentredString(14.5*cm, y, "Lu et approuvé, date et signature")
     
     # === PIED DE PAGE ===
     p.setFont("Helvetica", 7)
@@ -735,7 +843,12 @@ def telecharger_bulletin_public(request, token):
     p.drawString(1.5*cm, y, f"N°: {bulletin.numero_bulletin}")
     p.drawCentredString(width/2, y, f"Période: {bulletin.periode}")
     p.drawRightString(width - 1.5*cm, y, f"Date: {bulletin.date_calcul.strftime('%d/%m/%Y') if bulletin.date_calcul else '-'}")
-    y -= 0.8*cm
+    y -= 0.35*cm
+    # Dates de la période
+    p.setFont("Helvetica", 8)
+    periode_detail = f"Du {bulletin.periode.date_debut.strftime('%d/%m/%Y')} au {bulletin.periode.date_fin.strftime('%d/%m/%Y')}" if bulletin.periode.date_debut and bulletin.periode.date_fin else ""
+    p.drawCentredString(width/2, y, periode_detail)
+    y -= 0.6*cm
     
     # === INFORMATIONS EMPLOYÉ ===
     p.setFillColor(colors.HexColor("#ce1126"))
@@ -745,11 +858,34 @@ def telecharger_bulletin_public(request, token):
     y -= 0.5*cm
     
     emp = bulletin.employe
+    
+    # Calcul de l'ancienneté
+    anciennete_str = "-"
+    if emp.date_embauche:
+        from datetime import date as date_cls
+        ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie, 1)
+        delta = ref_date - emp.date_embauche
+        annees_anc = delta.days // 365
+        mois_anc = (delta.days % 365) // 30
+        if annees_anc > 0:
+            anciennete_str = f"{annees_anc} an{'s' if annees_anc > 1 else ''} {mois_anc} mois"
+        else:
+            anciennete_str = f"{mois_anc} mois"
+    
+    # Récupération des congés
+    from temps_travail.models import SoldeConge
+    solde_conge = SoldeConge.objects.filter(employe=emp, annee=bulletin.annee_paie).first()
+    conges_acquis = solde_conge.conges_acquis if solde_conge else Decimal('0')
+    conges_pris = solde_conge.conges_pris if solde_conge else Decimal('0')
+    conges_restants = solde_conge.conges_restants if solde_conge else Decimal('0')
+    
     infos_emp = [
         ["Matricule:", emp.matricule or "-", "N° CNSS:", emp.num_cnss_individuel or "-"],
-        ["Nom et Prénoms:", f"{emp.nom} {emp.prenoms}", "", ""],
+        ["Nom et Prénoms:", f"{emp.nom} {emp.prenoms}", "Ancienneté:", anciennete_str],
         ["Poste:", str(emp.poste or "-"), "Service:", str(emp.service or "-")],
         ["Date embauche:", emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else "-", "Mode paiement:", emp.mode_paiement or "-"],
+        ["Congés acquis:", f"{conges_acquis:g} j", "Congés pris:", f"{conges_pris:g} j"],
+        ["Solde congés:", f"{conges_restants:g} j", "", ""],
     ]
     
     for row in infos_emp:
@@ -826,11 +962,15 @@ def telecharger_bulletin_public(request, token):
                 f"{r.montant:,.0f}".replace(",", " ")
             ])
     
-    # Ajouter CNSS (base plafonnée) et IRG une seule fois
-    # Base CNSS plafonnée à 2 500 000 GNF
+    # Ajouter CNSS (base plafonnée) et RTS avec détail
     base_cnss = min(bulletin.salaire_brut, 2500000)
     retenues_data.append(["CNSS Employé (5%)", f"{base_cnss:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
-    retenues_data.append(["Impôt sur le Revenu (IRG)", "", "", f"{bulletin.irg:,.0f}".replace(",", " ")])
+    # RTS avec base, taux effectif et montant
+    base_rts_val = getattr(bulletin, 'base_rts', 0) or 0
+    taux_eff_rts_val = getattr(bulletin, 'taux_effectif_rts', 0) or 0
+    rts_base_str = f"{base_rts_val:,.0f}".replace(",", " ") if base_rts_val else "-"
+    rts_taux_str = f"{taux_eff_rts_val:.2f}%" if taux_eff_rts_val else "-"
+    retenues_data.append(["RTS (Impôt sur le Revenu)", rts_base_str, rts_taux_str, f"{bulletin.irg:,.0f}".replace(",", " ")])
     
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
@@ -849,7 +989,12 @@ def telecharger_bulletin_public(request, token):
     y -= table_height + 0.6*cm
     
     # === RÉCAPITULATIF ===
-    recap_height = 2.5*cm
+    rappel = getattr(bulletin, 'rappel_salaire', 0) or 0
+    trop_percu = getattr(bulletin, 'retenue_trop_percu', 0) or 0
+    has_rappel = rappel > 0
+    has_trop_percu = trop_percu > 0
+    extra_lines = (1 if has_rappel else 0) + (1 if has_trop_percu else 0)
+    recap_height = 2.5*cm + extra_lines * 0.4*cm
     p.setStrokeColor(colors.HexColor("#ce1126"))
     p.setLineWidth(2)
     p.rect(1.5*cm, y - recap_height, width - 3*cm, recap_height, stroke=1, fill=0)
@@ -863,13 +1008,25 @@ def telecharger_bulletin_public(request, token):
     p.setFillColor(colors.HexColor("#dc3545"))
     p.drawString(2*cm, y - 1*cm, "Cotisation CNSS (5%):")
     p.drawRightString(width - 2*cm, y - 1*cm, f"- {bulletin.cnss_employe:,.0f} GNF".replace(",", " "))
-    p.drawString(2*cm, y - 1.4*cm, "RTS:")
+    p.drawString(2*cm, y - 1.4*cm, f"RTS (base: {base_rts_val:,.0f} | taux eff.: {taux_eff_rts_val:.2f}%):")
     p.drawRightString(width - 2*cm, y - 1.4*cm, f"- {bulletin.irg:,.0f} GNF".replace(",", " "))
+    
+    offset_y = 1.4*cm
+    if has_rappel:
+        offset_y += 0.4*cm
+        p.setFillColor(colors.HexColor("#007bff"))
+        p.drawString(2*cm, y - offset_y, "Rappel/Complément salaire précédent:")
+        p.drawRightString(width - 2*cm, y - offset_y, f"+ {rappel:,.0f} GNF".replace(",", " "))
+    if has_trop_percu:
+        offset_y += 0.4*cm
+        p.setFillColor(colors.HexColor("#dc3545"))
+        p.drawString(2*cm, y - offset_y, "Retenue trop-perçu salaire précédent:")
+        p.drawRightString(width - 2*cm, y - offset_y, f"- {trop_percu:,.0f} GNF".replace(",", " "))
     
     p.setFillColor(colors.HexColor("#28a745"))
     p.setFont("Helvetica-Bold", 11)
-    p.drawString(2*cm, y - 2.1*cm, "NET À PAYER:")
-    p.drawRightString(width - 2*cm, y - 2.1*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
+    p.drawString(2*cm, y - offset_y - 0.7*cm, "NET À PAYER:")
+    p.drawRightString(width - 2*cm, y - offset_y - 0.7*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
     p.setFillColor(colors.black)
     
     y -= recap_height + 0.5*cm
@@ -879,15 +1036,43 @@ def telecharger_bulletin_public(request, token):
     p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     vf = getattr(bulletin, 'versement_forfaitaire', 0) or 0
     ta = getattr(bulletin, 'taxe_apprentissage', 0) or 0
-    total_charges = bulletin.cnss_employeur + vf + ta
+    onfpp = getattr(bulletin, 'contribution_onfpp', 0) or 0
+    total_charges = bulletin.cnss_employeur + vf + ta + onfpp
     y -= 0.35*cm
     p.setFont("Helvetica", 8)
     p.drawString(1.5*cm, y, f"CNSS Employeur (18%): {bulletin.cnss_employeur:,.0f} GNF".replace(",", " "))
     p.drawString(6.5*cm, y, f"VF (6%): {vf:,.0f} GNF".replace(",", " "))
-    ta_fmt = f"{ta:,.0f}".replace(",", " ")
-    p.drawString(10.5*cm, y, f"TA (1,5%): {ta_fmt} GNF")
+    # TA et ONFPP mutuellement exclusifs
+    if ta > 0:
+        ta_fmt = f"{ta:,.0f}".replace(",", " ")
+        p.drawString(10.5*cm, y, f"TA (2%): {ta_fmt} GNF")
+    elif onfpp > 0:
+        onfpp_fmt = f"{onfpp:,.0f}".replace(",", " ")
+        p.drawString(10.5*cm, y, f"ONFPP (1,5%): {onfpp_fmt} GNF")
     p.setFont("Helvetica-Bold", 8)
+    y -= 0.35*cm
     p.drawString(14*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
+    
+    # === ZONE DE SIGNATURES ===
+    y -= 1.2*cm
+    p.setFont("Helvetica-Bold", 8)
+    p.drawString(2*cm, y, "L'Employeur")
+    p.drawString(12*cm, y, "L'Employé(e)")
+    y -= 0.4*cm
+    p.setFont("Helvetica", 7)
+    if entreprise:
+        p.drawString(2*cm, y, entreprise.nom_entreprise or '')
+    p.drawString(12*cm, y, f"{emp.nom} {emp.prenoms}")
+    # Lignes de signature
+    y -= 1.5*cm
+    p.setDash(3, 3)
+    p.line(2*cm, y, 7*cm, y)
+    p.line(12*cm, y, 17*cm, y)
+    p.setDash()
+    y -= 0.3*cm
+    p.setFont("Helvetica", 6)
+    p.drawCentredString(4.5*cm, y, "Date et signature")
+    p.drawCentredString(14.5*cm, y, "Lu et approuvé, date et signature")
     
     # === PIED DE PAGE ===
     p.setFont("Helvetica", 7)
@@ -1419,8 +1604,8 @@ def ajouter_element_salaire(request, employe_id):
             element = ElementSalaire.objects.create(
                 employe=employe,
                 rubrique=rubrique,
-                montant=Decimal(montant) if montant else None,
-                taux=Decimal(taux) if taux else None,
+                montant=parse_montant(montant),
+                taux=parse_montant(taux),
                 base_calcul=base_calcul,
                 date_debut=date_debut,
                 date_fin=date_fin if date_fin else None,
@@ -1469,8 +1654,8 @@ def modifier_element_salaire(request, pk):
         recurrent = request.POST.get('recurrent') == 'on'
         
         try:
-            element.montant = Decimal(montant) if montant else None
-            element.taux = Decimal(taux) if taux else None
+            element.montant = parse_montant(montant)
+            element.taux = parse_montant(taux)
             element.base_calcul = base_calcul
             element.date_debut = date_debut
             element.date_fin = date_fin if date_fin else None
@@ -1492,7 +1677,12 @@ def modifier_element_salaire(request, pk):
 @login_required
 def supprimer_element_salaire(request, pk):
     """Supprimer un élément de salaire"""
-    element = get_object_or_404(ElementSalaire, pk=pk, employe__entreprise=request.user.entreprise)
+    try:
+        element = ElementSalaire.objects.get(pk=pk, employe__entreprise=request.user.entreprise)
+    except ElementSalaire.DoesNotExist:
+        messages.warning(request, "Cet élément de salaire n'existe plus ou a déjà été supprimé.")
+        return redirect('paie:liste_elements_salaire')
+    
     employe_id = element.employe.id
     
     if request.method == 'POST':
@@ -1553,8 +1743,8 @@ def creer_rubrique(request):
                 libelle_rubrique=libelle,
                 type_rubrique=type_rub,
                 formule_calcul=formule,
-                taux_rubrique=Decimal(taux) if taux else None,
-                montant_fixe=Decimal(montant_fixe) if montant_fixe else None,
+                taux_rubrique=parse_montant(taux),
+                montant_fixe=parse_montant(montant_fixe),
                 soumis_cnss=soumis_cnss,
                 soumis_irg=soumis_irg,
                 ordre_calcul=int(ordre_calcul),
@@ -1889,27 +2079,43 @@ def simulation_paie(request):
         # Récupérer les primes/indemnités du formulaire
         prime_transport = request.POST.get('prime_transport', '0')
         prime_logement = request.POST.get('prime_logement', '0')
+        prime_cherte_vie = request.POST.get('prime_cherte_vie', '0')
         prime_panier = request.POST.get('prime_panier', '0')
         prime_anciennete = request.POST.get('prime_anciennete', '0')
         prime_responsabilite = request.POST.get('prime_responsabilite', '0')
         autres_primes = request.POST.get('autres_primes', '0')
+        rappel_salaire = request.POST.get('rappel_salaire', '0')
+        retenue_trop_percu = request.POST.get('retenue_trop_percu', '0')
         
         # Convertir en Decimal
         try:
-            salaire_base = Decimal(salaire_base.replace(' ', '').replace(',', '.'))
-            prime_transport = Decimal(prime_transport.replace(' ', '').replace(',', '.') or '0')
-            prime_logement = Decimal(prime_logement.replace(' ', '').replace(',', '.') or '0')
-            prime_panier = Decimal(prime_panier.replace(' ', '').replace(',', '.') or '0')
-            prime_anciennete = Decimal(prime_anciennete.replace(' ', '').replace(',', '.') or '0')
-            prime_responsabilite = Decimal(prime_responsabilite.replace(' ', '').replace(',', '.') or '0')
-            autres_primes = Decimal(autres_primes.replace(' ', '').replace(',', '.') or '0')
+            salaire_base = parse_montant(salaire_base) or Decimal('0')
+            prime_transport = parse_montant(prime_transport) or Decimal('0')
+            prime_logement = parse_montant(prime_logement) or Decimal('0')
+            prime_cherte_vie = parse_montant(prime_cherte_vie) or Decimal('0')
+            prime_panier = parse_montant(prime_panier) or Decimal('0')
+            prime_anciennete = parse_montant(prime_anciennete) or Decimal('0')
+            prime_responsabilite = parse_montant(prime_responsabilite) or Decimal('0')
+            autres_primes = parse_montant(autres_primes) or Decimal('0')
+            rappel_salaire = parse_montant(rappel_salaire) or Decimal('0')
+            retenue_trop_percu = parse_montant(retenue_trop_percu) or Decimal('0')
         except:
             messages.error(request, "Erreur dans les montants saisis")
             return redirect('paie:simulation_paie')
         
         # Calculer le brut
-        salaire_brut = (salaire_base + prime_transport + prime_logement + 
+        salaire_brut = (salaire_base + prime_transport + prime_logement + prime_cherte_vie +
                        prime_panier + prime_anciennete + prime_responsabilite + autres_primes)
+        
+        # Primes exonérées de CNSS 5% (transport, logement, cherté de vie)
+        primes_exonerees_cnss = prime_transport + prime_logement + prime_cherte_vie
+        base_cnss_brute = salaire_brut - primes_exonerees_cnss
+        
+        # Nombre de salariés actifs pour TA vs ONFPP
+        nb_salaries = Employe.objects.filter(
+            entreprise=entreprise,
+            statut_employe='actif'
+        ).count()
         
         # Récupérer les constantes
         plancher_cnss = Decimal('550000')
@@ -1917,7 +2123,8 @@ def simulation_paie(request):
         taux_cnss_employe = Decimal('5')
         taux_cnss_employeur = Decimal('18')
         taux_vf = Decimal('6')
-        taux_ta = Decimal('1.5')
+        taux_ta = Decimal('2')
+        taux_onfpp = Decimal('1.5')
         
         try:
             const = Constante.objects.filter(code='PLANCHER_CNSS', actif=True).first()
@@ -1928,11 +2135,11 @@ def simulation_paie(request):
             pass
         
         # Calcul CNSS avec vérification du seuil minimum
-        # Si salaire brut < 10% du plancher (55 000 GNF), pas de cotisation CNSS
+        # Base CNSS = brut - primes exonérées (transport, logement, cherté de vie)
         seuil_minimum_cnss = plancher_cnss * Decimal('0.10')
         alertes = []
         
-        if salaire_brut <= 0:
+        if base_cnss_brute <= 0:
             assiette_cnss = Decimal('0')
             cnss_employe = Decimal('0')
             cnss_employeur = Decimal('0')
@@ -1940,16 +2147,16 @@ def simulation_paie(request):
                 'type': 'critique',
                 'message': f"Salaire brut nul ou négatif ({salaire_brut:,.0f} GNF). Vérifiez les éléments de salaire."
             })
-        elif salaire_brut < seuil_minimum_cnss:
+        elif base_cnss_brute < seuil_minimum_cnss:
             assiette_cnss = Decimal('0')
             cnss_employe = Decimal('0')
             cnss_employeur = Decimal('0')
             alertes.append({
                 'type': 'avertissement',
-                'message': f"Salaire brut très faible ({salaire_brut:,.0f} GNF < {seuil_minimum_cnss:,.0f} GNF). Pas de cotisation CNSS calculée."
+                'message': f"Base CNSS très faible ({base_cnss_brute:,.0f} GNF < {seuil_minimum_cnss:,.0f} GNF). Pas de cotisation CNSS calculée."
             })
         else:
-            assiette_cnss = min(max(salaire_brut, plancher_cnss), plafond_cnss)
+            assiette_cnss = min(max(base_cnss_brute, plancher_cnss), plafond_cnss)
             cnss_employe = (assiette_cnss * taux_cnss_employe / Decimal('100')).quantize(Decimal('1'))
             cnss_employeur = (assiette_cnss * taux_cnss_employeur / Decimal('100')).quantize(Decimal('1'))
         
@@ -1967,7 +2174,7 @@ def simulation_paie(request):
         # Primes = 33.33% × Salaire de base
         # → Pour respecter le plafond 25% du brut, les primes ne doivent pas dépasser ~33% du salaire de base.
         
-        total_indemnites_forfaitaires = prime_transport + prime_logement + prime_panier
+        total_indemnites_forfaitaires = prime_transport + prime_logement + prime_cherte_vie + prime_panier
         # Plafond = 25% du salaire brut (salaire de base + indemnités)
         plafond_indemnites = (salaire_brut * Decimal('0.25')).quantize(Decimal('1'))
         exces_indemnites = max(Decimal('0'), total_indemnites_forfaitaires - plafond_indemnites)
@@ -2021,14 +2228,27 @@ def simulation_paie(request):
                     })
                 reste -= montant_tranche
         
+        # Taux effectif RTS
+        if base_imposable > 0:
+            taux_effectif_rts = (rts * Decimal('100') / base_imposable).quantize(Decimal('0.01'))
+        else:
+            taux_effectif_rts = Decimal('0')
+        
         # Charges patronales
         vf = (salaire_brut * taux_vf / Decimal('100')).quantize(Decimal('1'))
-        ta = (salaire_brut * taux_ta / Decimal('100')).quantize(Decimal('1'))
         
-        # Totaux
+        # TA et ONFPP mutuellement exclusifs selon le nombre de salariés
+        if nb_salaries < 30:
+            ta = (salaire_brut * taux_ta / Decimal('100')).quantize(Decimal('1'))
+            onfpp = Decimal('0')
+        else:
+            ta = Decimal('0')
+            onfpp = (salaire_brut * taux_onfpp / Decimal('100')).quantize(Decimal('1'))
+        
+        # Totaux (rappels et retenues trop-perçu hors base)
         total_retenues = cnss_employe + rts
-        net_a_payer = salaire_brut - total_retenues
-        total_charges_patronales = cnss_employeur + vf + ta
+        net_a_payer = salaire_brut - total_retenues + rappel_salaire - retenue_trop_percu
+        total_charges_patronales = cnss_employeur + vf + ta + onfpp
         cout_total_employeur = salaire_brut + total_charges_patronales
         retenues_excessives = Decimal('0')
         
@@ -2050,11 +2270,13 @@ def simulation_paie(request):
             'salaire_base': salaire_base,
             'prime_transport': prime_transport,
             'prime_logement': prime_logement,
+            'prime_cherte_vie': prime_cherte_vie,
             'prime_panier': prime_panier,
             'prime_anciennete': prime_anciennete,
             'prime_responsabilite': prime_responsabilite,
             'autres_primes': autres_primes,
             'salaire_brut': salaire_brut,
+            'primes_exonerees_cnss': primes_exonerees_cnss,
             'assiette_cnss': assiette_cnss,
             'cnss_employe': cnss_employe,
             'cnss_employeur': cnss_employeur,
@@ -2065,9 +2287,12 @@ def simulation_paie(request):
             'primes_max_theorique': primes_max_theorique,  # 33.33% du salaire de base
             'base_imposable': base_imposable,
             'rts': rts,
+            'taux_effectif_rts': taux_effectif_rts,
             'detail_rts': detail_rts,
             'vf': vf,
             'ta': ta,
+            'onfpp': onfpp,
+            'nb_salaries': nb_salaries,
             'total_retenues': total_retenues,
             'net_a_payer': net_a_payer,
             'total_charges_patronales': total_charges_patronales,
@@ -2076,9 +2301,12 @@ def simulation_paie(request):
             'taux_cnss_employeur': taux_cnss_employeur,
             'taux_vf': taux_vf,
             'taux_ta': taux_ta,
+            'taux_onfpp': taux_onfpp,
             'alertes': alertes,
             'seuil_minimum_cnss': seuil_minimum_cnss,
             'retenues_excessives': retenues_excessives,
+            'rappel_salaire': rappel_salaire,
+            'retenue_trop_percu': retenue_trop_percu,
         }
     
     return render(request, 'paie/simulation_paie.html', {
@@ -2227,7 +2455,8 @@ def config_paie_entreprise(request):
             
             # Charges patronales
             config.taux_versement_forfaitaire = to_decimal(request.POST.get('taux_versement_forfaitaire'), '6')
-            config.taux_taxe_apprentissage = to_decimal(request.POST.get('taux_taxe_apprentissage'), '1.5')
+            config.taux_taxe_apprentissage = to_decimal(request.POST.get('taux_taxe_apprentissage'), '2')
+            config.taux_onfpp = to_decimal(request.POST.get('taux_onfpp'), '1.5')
             
             config.modifie_par = request.user
             config.save()

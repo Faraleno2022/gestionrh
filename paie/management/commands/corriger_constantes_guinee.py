@@ -3,7 +3,7 @@ Correction des constantes de paie selon la législation guinéenne.
 
 Ce script corrige les valeurs incorrectes et ajoute les constantes manquantes :
 - Heures Supplémentaires (Code du Travail Art. 221)
-- Taxe d'Apprentissage : 1,5%
+- Taxe d'Apprentissage : 2%
 - Congés payés (1,5j/mois au lieu de 2,5j/mois)
 - Contribution ONFPP (1,5%)
 
@@ -115,17 +115,17 @@ class Command(BaseCommand):
             code='TAUX_TA',
             defaults={
                 'libelle': 'Taxe d\'Apprentissage',
-                'valeur': Decimal('1.50'),
+                'valeur': Decimal('2.00'),
                 'type_valeur': 'pourcentage',
                 'categorie': 'general',
                 'unite': '%',
-                'description': 'Taxe d\'apprentissage à charge de l\'employeur (1,5% de la masse salariale)',
+                'description': 'Taxe d\'apprentissage à charge de l\'employeur (2% de la masse salariale)',
                 'date_debut_validite': date_validite,
                 'actif': True,
             }
         )
         status = '✅ Créé' if created else '🔄 Mis à jour'
-        self.stdout.write(self.style.SUCCESS(f'  {status}: TAUX_TA = 1.5%'))
+        self.stdout.write(self.style.SUCCESS(f'  {status}: TAUX_TA = 2%'))
         
         # ============================================
         # 3. CONTRIBUTION ONFPP
@@ -274,7 +274,7 @@ class Command(BaseCommand):
         self.stdout.write('  Charges Patronales:')
         self.stdout.write('    • CNSS Employeur: 18%')
         self.stdout.write('    • Versement Forfaitaire (VF): 6%')
-        self.stdout.write('    • Taxe d\'Apprentissage (TA): 1,5%')
+        self.stdout.write('    • Taxe d\'Apprentissage (TA): 2%')
         self.stdout.write('    • Contribution ONFPP: 1,5%')
         self.stdout.write('')
         self.stdout.write('  Congés Payés:')

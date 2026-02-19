@@ -444,15 +444,15 @@ def admin_dashboard(request):
         'bulletins_mois': 0,
         'conges_en_attente': Conge.objects.filter(
             employe__entreprise=entreprise,
-            statut_demande='En attente'
+            statut_demande='en_attente'
         ).count(),
     }
     
-    # Bulletins du mois en cours
+    # Bulletins du mois en cours - inclure toutes les périodes actives
     periode_actuelle = PeriodePaie.objects.filter(
         entreprise=entreprise,
-        statut_periode='ouverte'
-    ).first()
+        statut_periode__in=['ouverte', 'calculee', 'validee', 'payee']
+    ).order_by('-annee', '-mois').first()
     if periode_actuelle:
         stats['bulletins_mois'] = BulletinPaie.objects.filter(
             periode=periode_actuelle,
@@ -790,6 +790,10 @@ def creer_service(request):
     
     etablissements = Etablissement.objects.filter(societe__entreprise=request.user.entreprise, actif=True)
     
+    if not etablissements.exists():
+        messages.error(request, "Vous devez d'abord créer un établissement avant de pouvoir créer un service.")
+        return redirect('core:gestion_structure')
+    
     if request.method == 'POST':
         code = request.POST.get('code_service')
         nom = request.POST.get('nom_service')
@@ -840,11 +844,15 @@ def supprimer_service(request, pk):
 @login_required
 def creer_poste(request):
     """Créer un poste"""
-    from .models import Service, Poste
+    from .models import Etablissement, Service, Poste
     
     if not request.user.est_admin_entreprise:
         messages.error(request, "Accès réservé aux administrateurs d'entreprise.")
         return redirect('dashboard:index')
+    
+    if not Etablissement.objects.filter(societe__entreprise=request.user.entreprise, actif=True).exists():
+        messages.error(request, "Vous devez d'abord créer un établissement avant de pouvoir créer un poste.")
+        return redirect('core:gestion_structure')
     
     services = Service.objects.filter(etablissement__societe__entreprise=request.user.entreprise, actif=True)
     

@@ -13,6 +13,9 @@ urlpatterns = [
     # Pointages
     path('pointages/', views.liste_pointages, name='pointages'),
     path('pointages/creer/', views.creer_pointage, name='creer_pointage'),
+    path('pointages/<int:pk>/', views.detail_pointage, name='detail_pointage'),
+    path('pointages/<int:pk>/modifier/', views.modifier_pointage, name='modifier_pointage'),
+    path('pointages/<int:pk>/supprimer/', views.supprimer_pointage, name='supprimer_pointage'),
     path('pointages/pointer-entree/', views.pointer_entree, name='pointer_entree'),
     path('pointages/pointer-sortie/', views.pointer_sortie, name='pointer_sortie'),
     

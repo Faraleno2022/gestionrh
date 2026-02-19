@@ -5,12 +5,16 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Q
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.http import HttpResponse, Http404
 from openpyxl import Workbook
 from datetime import datetime
 
-from .models import Employe, ContratEmploye, EvaluationEmploye, SanctionDisciplinaire, EnfantEmploye, ConjointEmploye
+from .models import (
+    Employe, ContratEmploye, EvaluationEmploye, SanctionDisciplinaire,
+    EnfantEmploye, ConjointEmploye, CarriereEmploye, DocumentEmploye,
+    AccidentTravail, VisiteMedicale
+)
 from .forms import EmployeForm, ContratForm, EvaluationEmployeForm, SanctionDisciplinaireForm
 from core.views import log_activity
 
@@ -191,7 +195,12 @@ class EmployeCreateView(LoginRequiredMixin, CreateView):
                     employe.nombre_enfants = 0
                 
                 employe.utilisateur_creation = self.request.user
-                employe.save()
+                try:
+                    employe.save()
+                except IntegrityError:
+                    # Doublon matricule rare (condition de course) - régénérer
+                    employe.matricule = self.generer_matricule_unique()
+                    employe.save()
                 
                 # Traiter les données du conjoint
                 conjoint_nom = self.request.POST.get('conjoint_nom', '').strip()
@@ -334,9 +343,8 @@ class EmployeCreateView(LoginRequiredMixin, CreateView):
         for attempt in range(max_attempts):
             # Verrouiller la table pour éviter les conditions de course
             with transaction.atomic():
-                # Récupérer le dernier matricule avec un verrou row-level
+                # Récupérer le dernier matricule globalement (contrainte unique globale)
                 dernier = Employe.objects.select_for_update().filter(
-                    entreprise=self.request.user.entreprise,
                     matricule__startswith=f'EMP{annee}'
                 ).order_by('-matricule').first()
                 
@@ -350,9 +358,8 @@ class EmployeCreateView(LoginRequiredMixin, CreateView):
                 
                 nouveau_matricule = f'EMP{annee}{numero:04d}'
                 
-                # Vérifier si le matricule existe déjà (double sécurité)
+                # Vérifier globalement si le matricule existe déjà
                 if not Employe.objects.filter(
-                    entreprise=self.request.user.entreprise,
                     matricule=nouveau_matricule
                 ).exists():
                     return nouveau_matricule
@@ -938,3 +945,147 @@ def supprimer_enfant(request, enfant_id):
     
     messages.success(request, f'Enfant {nom_enfant} supprimé avec succès')
     return redirect('employes:detail', pk=employe.id)
+
+
+# ============= VUES GLOBALES RH =============
+
+@login_required
+def liste_contrats(request):
+    """Liste globale de tous les contrats"""
+    contrats = ContratEmploye.objects.filter(
+        employe__entreprise=request.user.entreprise
+    ).select_related('employe', 'employe__service', 'employe__poste').order_by('-date_debut')
+
+    search = request.GET.get('search', '')
+    if search:
+        contrats = contrats.filter(
+            Q(num_contrat__icontains=search) |
+            Q(employe__nom__icontains=search) |
+            Q(employe__prenoms__icontains=search) |
+            Q(employe__matricule__icontains=search)
+        )
+
+    statut = request.GET.get('statut', '')
+    if statut:
+        contrats = contrats.filter(statut_contrat=statut)
+
+    type_contrat = request.GET.get('type_contrat', '')
+    if type_contrat:
+        contrats = contrats.filter(type_contrat=type_contrat)
+
+    return render(request, 'employes/contrats/liste.html', {
+        'contrats': contrats,
+        'search': search,
+        'statut_filter': statut,
+        'type_contrat_filter': type_contrat,
+        'total': contrats.count(),
+        'en_cours': contrats.filter(statut_contrat='en_cours').count(),
+    })
+
+
+@login_required
+def liste_carrieres(request):
+    """Liste globale des mouvements de carrière"""
+    carrieres = CarriereEmploye.objects.filter(
+        employe__entreprise=request.user.entreprise
+    ).select_related(
+        'employe', 'ancien_poste', 'nouveau_poste', 'ancien_service', 'nouveau_service'
+    ).order_by('-date_mouvement')
+
+    search = request.GET.get('search', '')
+    if search:
+        carrieres = carrieres.filter(
+            Q(employe__nom__icontains=search) |
+            Q(employe__prenoms__icontains=search) |
+            Q(employe__matricule__icontains=search)
+        )
+
+    type_mouvement = request.GET.get('type', '')
+    if type_mouvement:
+        carrieres = carrieres.filter(type_mouvement=type_mouvement)
+
+    return render(request, 'employes/carrieres/liste.html', {
+        'carrieres': carrieres,
+        'search': search,
+        'type_filter': type_mouvement,
+        'total': carrieres.count(),
+    })
+
+
+@login_required
+def liste_documents(request):
+    """Liste globale des documents employés"""
+    documents = DocumentEmploye.objects.filter(
+        employe__entreprise=request.user.entreprise
+    ).select_related('employe', 'ajoute_par').order_by('-date_ajout')
+
+    search = request.GET.get('search', '')
+    if search:
+        documents = documents.filter(
+            Q(titre__icontains=search) |
+            Q(employe__nom__icontains=search) |
+            Q(employe__prenoms__icontains=search) |
+            Q(employe__matricule__icontains=search)
+        )
+
+    type_doc = request.GET.get('type', '')
+    if type_doc:
+        documents = documents.filter(type_document=type_doc)
+
+    return render(request, 'employes/documents/liste.html', {
+        'documents': documents,
+        'search': search,
+        'type_filter': type_doc,
+        'types_document': DocumentEmploye.TYPES_DOCUMENT,
+        'total': documents.count(),
+    })
+
+
+@login_required
+def liste_sanctions_global(request):
+    """Liste globale des sanctions disciplinaires"""
+    sanctions = SanctionDisciplinaire.objects.filter(
+        employe__entreprise=request.user.entreprise
+    ).select_related('employe').order_by('-date_faits')
+
+    search = request.GET.get('search', '')
+    if search:
+        sanctions = sanctions.filter(
+            Q(employe__nom__icontains=search) |
+            Q(employe__prenoms__icontains=search) |
+            Q(employe__matricule__icontains=search) |
+            Q(motif__icontains=search)
+        )
+
+    type_sanction = request.GET.get('type', '')
+    if type_sanction:
+        sanctions = sanctions.filter(type_sanction=type_sanction)
+
+    return render(request, 'employes/sanctions/liste_globale.html', {
+        'sanctions': sanctions,
+        'search': search,
+        'type_filter': type_sanction,
+        'total': sanctions.count(),
+    })
+
+
+@login_required
+def liste_accidents(request):
+    """Liste globale des accidents du travail"""
+    accidents = AccidentTravail.objects.filter(
+        employe__entreprise=request.user.entreprise
+    ).select_related('employe').order_by('-date_accident')
+
+    search = request.GET.get('search', '')
+    if search:
+        accidents = accidents.filter(
+            Q(employe__nom__icontains=search) |
+            Q(employe__prenoms__icontains=search) |
+            Q(lieu_accident__icontains=search)
+        )
+
+    return render(request, 'employes/accidents/liste.html', {
+        'accidents': accidents,
+        'search': search,
+        'total': accidents.count(),
+    })

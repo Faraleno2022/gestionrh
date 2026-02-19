@@ -64,17 +64,37 @@ try:
     plan_comptable_list_view = comptabilite_views.plan_comptable_list
     plan_comptable_create_view = comptabilite_views.plan_comptable_create
     plan_comptable_detail_view = comptabilite_views.plan_comptable_detail
+    plan_comptable_update_view = comptabilite_views.plan_comptable_update
+    plan_comptable_delete_view = comptabilite_views.plan_comptable_delete
     
     # Journaux / Exercices / Règlements
     journal_list_view = comptabilite_views.journal_list
     journal_create_view = comptabilite_views.journal_create
-    journal_detail_view = getattr(comptabilite_views, 'journal_detail', TemplateView.as_view(template_name='comptabilite/coming_soon.html'))
+    journal_detail_view = comptabilite_views.journal_detail
+    journal_update_view = comptabilite_views.journal_update
+    journal_delete_view = comptabilite_views.journal_delete
     exercice_list_view = comptabilite_views.exercice_list
     exercice_create_view = comptabilite_views.exercice_create
-    exercice_detail_view = getattr(comptabilite_views, 'exercice_detail', TemplateView.as_view(template_name='comptabilite/coming_soon.html'))
+    exercice_detail_view = comptabilite_views.exercice_detail
+    exercice_update_view = comptabilite_views.exercice_update
+    exercice_delete_view = comptabilite_views.exercice_delete
     reglement_list_view = comptabilite_views.reglement_list
     reglement_create_view = comptabilite_views.reglement_create
     reglement_detail_view = comptabilite_views.reglement_detail
+    reglement_update_view = comptabilite_views.reglement_update
+    reglement_delete_view = comptabilite_views.reglement_delete
+    
+    # Écritures - vues supplémentaires
+    ecriture_delete_view = comptabilite_views.ecriture_delete
+    ecriture_valider_view = comptabilite_views.ecriture_valider
+    
+    # Tiers - vue supplémentaire
+    tiers_delete_view = comptabilite_views.tiers_delete
+    
+    # Factures - vues supplémentaires
+    facture_delete_view = comptabilite_views.facture_delete
+    facture_valider_view = comptabilite_views.facture_valider
+    facture_print_view = comptabilite_views.facture_print
 
     # États financiers
     grand_livre_view = comptabilite_views.grand_livre
@@ -415,11 +435,11 @@ except Exception as e:
                     'date_ecriture': ecriture.date_ecriture,
                     'code_journal': ecriture.journal.code if ecriture.journal else '',
                     'libelle_journal': ecriture.journal.libelle if ecriture.journal else '',
-                    'numero_ecriture': ecriture.numero,
+                    'numero_ecriture': ecriture.numero_ecriture,
                     'libelle_ecriture': ecriture.libelle,
                     'compte_numero': ligne.compte.numero_compte if ligne.compte else '',
                     'compte_intitule': ligne.compte.intitule if ligne.compte else '',
-                    'reference': ligne.reference or '',
+                    'reference': getattr(ligne, 'reference', '') or '',
                     'montant_debit': ligne.montant_debit,
                     'montant_credit': ligne.montant_credit,
                     'statut': 'Validée' if ecriture.est_validee else 'Brouillon'
@@ -1518,24 +1538,38 @@ except Exception as e:
 # Vues temporaires pour les autres éléments (seront remplacées progressivement)
 tiers_create = tiers_create_view
 tiers_detail = tiers_detail_view
-tiers_update = TemplateView.as_view(template_name='comptabilite/coming_soon.html')
-facture_create = TemplateView.as_view(template_name='comptabilite/coming_soon.html')
-facture_detail = TemplateView.as_view(template_name='comptabilite/coming_soon.html')
-facture_update = TemplateView.as_view(template_name='comptabilite/coming_soon.html')
+tiers_update = tiers_update_view
+tiers_delete = tiers_delete_view
+facture_create = facture_create_view
+facture_detail = facture_detail_view
+facture_update = facture_update_view
+facture_delete = facture_delete_view
+facture_valider = facture_valider_view
+facture_print = facture_print_view
 ecriture_list = ecriture_list_view
+ecriture_delete = ecriture_delete_view
+ecriture_valider = ecriture_valider_view
 plan_comptable_list = plan_comptable_list_view
 plan_comptable_create = plan_comptable_create_view
 plan_comptable_detail = plan_comptable_detail_view
+plan_comptable_update = plan_comptable_update_view
+plan_comptable_delete = plan_comptable_delete_view
 journal_list = journal_list_view
 journal_create = journal_create_view
 journal_detail = journal_detail_view
+journal_update = journal_update_view
+journal_delete = journal_delete_view
 exercice_list = exercice_list_view
 exercice_create = exercice_create_view
 exercice_detail = exercice_detail_view
+exercice_update = exercice_update_view
+exercice_delete = exercice_delete_view
 tiers_list = tiers_list_view
 reglement_list = reglement_list_view
 reglement_create = reglement_create_view
 reglement_detail = reglement_detail_view
+reglement_update = reglement_update_view
+reglement_delete = reglement_delete_view
 
 # Assigner les vues des comptes clients et fournisseurs
 compte_client_list_view = compte_client_list_view
@@ -1553,21 +1587,27 @@ app_name = 'comptabilite'
 plan_comptable_patterns = [
     path('plan-comptable/', plan_comptable_list, name='plan_comptable_list'),
     path('plan-comptable/nouveau/', plan_comptable_create, name='plan_comptable_create'),
-    path('plan-comptable/<uuid:pk>/', plan_comptable_detail, name='plan_comptable_detail'),
+    path('plan-comptable/<int:pk>/', plan_comptable_detail, name='plan_comptable_detail'),
+    path('plan-comptable/<int:pk>/editer/', plan_comptable_update, name='plan_comptable_update'),
+    path('plan-comptable/<int:pk>/supprimer/', plan_comptable_delete, name='plan_comptable_delete'),
 ]
 
 # Journaux URLs
 journal_patterns = [
     path('journaux/', journal_list, name='journal_list'),
     path('journaux/nouveau/', journal_create, name='journal_create'),
-    path('journaux/<uuid:pk>/editer/', journal_update, name='journal_update'),
+    path('journaux/<int:pk>/', journal_detail, name='journal_detail'),
+    path('journaux/<int:pk>/editer/', journal_update, name='journal_update'),
+    path('journaux/<int:pk>/supprimer/', journal_delete, name='journal_delete'),
 ]
 
 # Exercices URLs
 exercice_patterns = [
     path('exercices/', exercice_list, name='exercice_list'),
     path('exercices/nouveau/', exercice_create, name='exercice_create'),
-    path('exercices/<uuid:pk>/editer/', exercice_update, name='exercice_update'),
+    path('exercices/<int:pk>/', exercice_detail, name='exercice_detail'),
+    path('exercices/<int:pk>/editer/', exercice_update, name='exercice_update'),
+    path('exercices/<int:pk>/supprimer/', exercice_delete, name='exercice_delete'),
 ]
 
 # Écritures Comptables URLs
@@ -1576,6 +1616,8 @@ ecriture_patterns = [
     path('ecritures/nouveau/', ecriture_create_view, name='ecriture_create'),
     path('ecritures/<uuid:pk>/', ecriture_detail_view, name='ecriture_detail'),
     path('ecritures/<uuid:pk>/editer/', ecriture_update_view, name='ecriture_update'),
+    path('ecritures/<uuid:pk>/valider/', ecriture_valider, name='ecriture_valider'),
+    path('ecritures/<uuid:pk>/supprimer/', ecriture_delete, name='ecriture_delete'),
 ]
 
 # Tiers URLs
@@ -1584,6 +1626,7 @@ tiers_patterns = [
     path('tiers/nouveau/', tiers_create_view, name='tiers_create'),
     path('tiers/<uuid:pk>/', tiers_detail_view, name='tiers_detail'),
     path('tiers/<uuid:pk>/modifier/', tiers_update_view, name='tiers_update'),
+    path('tiers/<uuid:pk>/supprimer/', tiers_delete, name='tiers_delete'),
 ]
 
 # Factures URLs
@@ -1592,6 +1635,9 @@ facture_patterns = [
     path('factures/nouveau/', facture_create_view, name='facture_create'),
     path('factures/<uuid:pk>/', facture_detail_view, name='facture_detail'),
     path('factures/<uuid:pk>/editer/', facture_update_view, name='facture_update'),
+    path('factures/<uuid:pk>/valider/', facture_valider, name='facture_valider'),
+    path('factures/<uuid:pk>/imprimer/', facture_print, name='facture_print'),
+    path('factures/<uuid:pk>/supprimer/', facture_delete, name='facture_delete'),
 ]
 
 # Règlements URLs
@@ -1599,6 +1645,8 @@ reglement_patterns = [
     path('reglements/', reglement_list, name='reglement_list'),
     path('reglements/nouveau/', reglement_create, name='reglement_create'),
     path('reglements/<uuid:pk>/', reglement_detail, name='reglement_detail'),
+    path('reglements/<uuid:pk>/editer/', reglement_update, name='reglement_update'),
+    path('reglements/<uuid:pk>/supprimer/', reglement_delete, name='reglement_delete'),
 ]
 
 # Comptes Clients/Fournisseurs URLs

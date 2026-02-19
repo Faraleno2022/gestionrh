@@ -148,11 +148,11 @@ class Command(BaseCommand):
             {
                 'code': 'TAUX_TA',
                 'libelle': 'Taxe d\'Apprentissage',
-                'valeur': Decimal('1.5'),
+                'valeur': Decimal('2'),
                 'type_valeur': 'pourcentage',
                 'categorie': 'general',
                 'unite': '%',
-                'description': 'Taxe d\'apprentissage à charge de l\'employeur (1,5% de la masse salariale)'
+                'description': 'Taxe d\'apprentissage à charge de l\'employeur (2% de la masse salariale)'
             },
             
             # Exonération RTS stagiaires/apprentis

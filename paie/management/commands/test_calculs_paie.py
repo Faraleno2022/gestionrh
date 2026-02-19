@@ -4,7 +4,7 @@ Tests de vérification des calculs de paie selon la législation guinéenne.
 Ce script vérifie l'exactitude des calculs :
 - CNSS avec plancher (550 000 GNF) et plafond (2 500 000 GNF)
 - RTS avec le barème CGI 2022 (6 tranches, max 20%)
-- Charges patronales (CNSS 18% + VF 6% + TA 1,5%)
+- Charges patronales (CNSS 18% + VF 6% + TA 2%)
 
 Usage:
     python manage.py test_calculs_paie
@@ -129,7 +129,7 @@ class Command(BaseCommand):
         """Calcule les charges patronales complètes"""
         TAUX_CNSS_EMPLOYEUR = Decimal('18.00')
         TAUX_VF = Decimal('6.00')
-        TAUX_TA = Decimal('1.50')
+        TAUX_TA = Decimal('2.00')
         
         cnss_employeur = self._arrondir(assiette_cnss * TAUX_CNSS_EMPLOYEUR / Decimal('100'))
         vf = self._arrondir(salaire_brut * TAUX_VF / Decimal('100'))

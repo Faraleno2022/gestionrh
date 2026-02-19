@@ -175,7 +175,7 @@ def plan_comptable_create(request):
     else:
         form = PlanComptableForm(entreprise=request.user.entreprise)
     
-    return render(request, 'comptabilite/plan_comptable_form.html', {'form': form})
+    return render(request, 'comptabilite/plan_comptable/form.html', {'form': form})
 
 
 @login_required
@@ -212,6 +212,26 @@ def plan_comptable_update(request, pk):
         form = PlanComptableForm(instance=compte, entreprise=request.user.entreprise)
     
     return render(request, 'comptabilite/plan_comptable/form.html', {'form': form, 'compte': compte})
+
+
+@login_required
+@compta_required
+def plan_comptable_delete(request, pk):
+    """Supprimer un compte comptable"""
+    compte = get_object_or_404(PlanComptable, pk=pk, entreprise=request.user.entreprise)
+    if request.method == 'POST':
+        if LigneEcriture.objects.filter(compte=compte).exists():
+            messages.error(request, "Impossible de supprimer ce compte : des écritures y sont associées.")
+            return redirect('comptabilite:plan_comptable_list')
+        intitule = f"{compte.numero_compte} - {compte.intitule}"
+        compte.delete()
+        messages.success(request, f'Compte "{intitule}" supprimé avec succès.')
+        return redirect('comptabilite:plan_comptable_list')
+    return render(request, 'comptabilite/confirm_delete.html', {
+        'objet': compte,
+        'type_objet': 'compte comptable',
+        'cancel_url': 'comptabilite:plan_comptable_list',
+    })
 
 
 # ==================== JOURNAUX ====================
@@ -266,6 +286,40 @@ def journal_update(request, pk):
     return render(request, 'comptabilite/journaux/form.html', {'form': form, 'journal': journal})
 
 
+@login_required
+@compta_required
+def journal_detail(request, pk):
+    """Détail d'un journal"""
+    journal = get_object_or_404(Journal, pk=pk, entreprise=request.user.entreprise)
+    ecritures = EcritureComptable.objects.filter(
+        journal=journal, entreprise=request.user.entreprise
+    ).order_by('-date_ecriture')[:20]
+    return render(request, 'comptabilite/journaux/detail.html', {
+        'journal': journal,
+        'ecritures': ecritures,
+    })
+
+
+@login_required
+@compta_required
+def journal_delete(request, pk):
+    """Supprimer un journal"""
+    journal = get_object_or_404(Journal, pk=pk, entreprise=request.user.entreprise)
+    if request.method == 'POST':
+        if EcritureComptable.objects.filter(journal=journal).exists():
+            messages.error(request, "Impossible de supprimer ce journal : des écritures y sont associées.")
+            return redirect('comptabilite:journal_list')
+        libelle = journal.libelle
+        journal.delete()
+        messages.success(request, f'Journal "{libelle}" supprimé avec succès.')
+        return redirect('comptabilite:journal_list')
+    return render(request, 'comptabilite/confirm_delete.html', {
+        'objet': journal,
+        'type_objet': 'journal',
+        'cancel_url': 'comptabilite:journal_list',
+    })
+
+
 # ==================== EXERCICES ====================
 
 @login_required
@@ -316,6 +370,51 @@ def exercice_update(request, pk):
         form = ExerciceForm(instance=exercice)
     
     return render(request, 'comptabilite/exercices/form.html', {'form': form, 'exercice': exercice})
+
+
+@login_required
+@compta_required
+def exercice_detail(request, pk):
+    """Détail d'un exercice"""
+    exercice = get_object_or_404(ExerciceComptable, pk=pk, entreprise=request.user.entreprise)
+    ecritures = EcritureComptable.objects.filter(
+        exercice=exercice, entreprise=request.user.entreprise
+    ).select_related('journal').order_by('-date_ecriture')[:20]
+    
+    total_debit = LigneEcriture.objects.filter(
+        ecriture__exercice=exercice, ecriture__entreprise=request.user.entreprise
+    ).aggregate(total=Sum('montant_debit'))['total'] or Decimal('0')
+    total_credit = LigneEcriture.objects.filter(
+        ecriture__exercice=exercice, ecriture__entreprise=request.user.entreprise
+    ).aggregate(total=Sum('montant_credit'))['total'] or Decimal('0')
+    
+    return render(request, 'comptabilite/exercices/detail.html', {
+        'exercice': exercice,
+        'ecritures': ecritures,
+        'total_debit': total_debit,
+        'total_credit': total_credit,
+        'solde': total_debit - total_credit,
+    })
+
+
+@login_required
+@compta_required
+def exercice_delete(request, pk):
+    """Supprimer un exercice"""
+    exercice = get_object_or_404(ExerciceComptable, pk=pk, entreprise=request.user.entreprise)
+    if request.method == 'POST':
+        if EcritureComptable.objects.filter(exercice=exercice).exists():
+            messages.error(request, "Impossible de supprimer cet exercice : des écritures y sont associées.")
+            return redirect('comptabilite:exercice_list')
+        libelle = exercice.libelle
+        exercice.delete()
+        messages.success(request, f'Exercice "{libelle}" supprimé avec succès.')
+        return redirect('comptabilite:exercice_list')
+    return render(request, 'comptabilite/confirm_delete.html', {
+        'objet': exercice,
+        'type_objet': 'exercice',
+        'cancel_url': 'comptabilite:exercice_list',
+    })
 
 
 # ==================== ÉCRITURES ====================
@@ -484,6 +583,27 @@ def ecriture_valider(request, pk):
     return redirect('comptabilite:ecriture_detail', pk=pk)
 
 
+@login_required
+@compta_required
+def ecriture_delete(request, pk):
+    """Supprimer une écriture"""
+    ecriture = get_object_or_404(EcritureComptable, pk=pk, entreprise=request.user.entreprise)
+    if ecriture.est_validee:
+        messages.error(request, "Impossible de supprimer une écriture validée.")
+        return redirect('comptabilite:ecriture_detail', pk=pk)
+    if request.method == 'POST':
+        numero = ecriture.numero_ecriture
+        ecriture.lignes.all().delete()
+        ecriture.delete()
+        messages.success(request, f'Écriture "{numero}" supprimée avec succès.')
+        return redirect('comptabilite:ecriture_list')
+    return render(request, 'comptabilite/confirm_delete.html', {
+        'objet': ecriture,
+        'type_objet': 'écriture comptable',
+        'cancel_url': 'comptabilite:ecriture_list',
+    })
+
+
 # ==================== TIERS ====================
 
 @login_required
@@ -568,6 +688,26 @@ def tiers_update(request, pk):
         form = TiersForm(instance=tiers, entreprise=request.user.entreprise)
     
     return render(request, 'comptabilite/tiers/form.html', {'form': form, 'tiers': tiers})
+
+
+@login_required
+@compta_required
+def tiers_delete(request, pk):
+    """Supprimer un tiers"""
+    tiers = get_object_or_404(Tiers, pk=pk, entreprise=request.user.entreprise)
+    if request.method == 'POST':
+        if Facture.objects.filter(tiers=tiers).exists():
+            messages.error(request, "Impossible de supprimer ce tiers : des factures y sont associées.")
+            return redirect('comptabilite:tiers_list')
+        nom = tiers.raison_sociale
+        tiers.delete()
+        messages.success(request, f'Tiers "{nom}" supprimé avec succès.')
+        return redirect('comptabilite:tiers_list')
+    return render(request, 'comptabilite/confirm_delete.html', {
+        'objet': tiers,
+        'type_objet': 'tiers',
+        'cancel_url': 'comptabilite:tiers_list',
+    })
 
 
 # ==================== FACTURES ====================
@@ -711,6 +851,27 @@ def facture_print(request, pk):
     return render(request, 'comptabilite/factures/print.html', {'facture': facture})
 
 
+@login_required
+@compta_required
+def facture_delete(request, pk):
+    """Supprimer une facture"""
+    facture = get_object_or_404(Facture, pk=pk, entreprise=request.user.entreprise)
+    if facture.statut != 'brouillon':
+        messages.error(request, "Seules les factures en brouillon peuvent être supprimées.")
+        return redirect('comptabilite:facture_detail', pk=pk)
+    if request.method == 'POST':
+        numero = facture.numero
+        facture.lignes.all().delete()
+        facture.delete()
+        messages.success(request, f'Facture "{numero}" supprimée avec succès.')
+        return redirect('comptabilite:facture_list')
+    return render(request, 'comptabilite/confirm_delete.html', {
+        'objet': facture,
+        'type_objet': 'facture',
+        'cancel_url': 'comptabilite:facture_list',
+    })
+
+
 # ==================== RÈGLEMENTS ====================
 
 @login_required
@@ -794,6 +955,64 @@ def reglement_detail(request, pk):
         pk=pk, entreprise=request.user.entreprise
     )
     return render(request, 'comptabilite/reglements/detail.html', {'reglement': reglement})
+
+
+@login_required
+@compta_required
+def reglement_update(request, pk):
+    """Modifier un règlement"""
+    reglement = get_object_or_404(Reglement, pk=pk, entreprise=request.user.entreprise)
+    ancien_montant = reglement.montant
+    
+    if request.method == 'POST':
+        form = ReglementForm(request.POST, instance=reglement, entreprise=request.user.entreprise)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    nouveau_reglement = form.save()
+                    # Recalculer le montant payé sur la facture
+                    facture = nouveau_reglement.facture
+                    difference = nouveau_reglement.montant - ancien_montant
+                    facture.montant_paye += difference
+                    if facture.montant_paye >= facture.montant_ttc:
+                        facture.statut = 'payee'
+                    elif facture.statut == 'payee':
+                        facture.statut = 'validee'
+                    facture.save()
+                    messages.success(request, "Règlement modifié avec succès.")
+                    return redirect('comptabilite:reglement_detail', pk=pk)
+            except Exception as e:
+                messages.error(request, f"Erreur lors de la modification: {str(e)}")
+    else:
+        form = ReglementForm(instance=reglement, entreprise=request.user.entreprise)
+    
+    return render(request, 'comptabilite/reglements/form.html', {'form': form, 'reglement': reglement})
+
+
+@login_required
+@compta_required
+def reglement_delete(request, pk):
+    """Supprimer un règlement"""
+    reglement = get_object_or_404(Reglement, pk=pk, entreprise=request.user.entreprise)
+    if request.method == 'POST':
+        facture = reglement.facture
+        numero = reglement.numero
+        montant = reglement.montant
+        reglement.delete()
+        # Recalculer le montant payé sur la facture
+        facture.montant_paye -= montant
+        if facture.montant_paye < 0:
+            facture.montant_paye = Decimal('0')
+        if facture.statut == 'payee':
+            facture.statut = 'validee'
+        facture.save()
+        messages.success(request, f'Règlement "{numero}" supprimé avec succès.')
+        return redirect('comptabilite:reglement_list')
+    return render(request, 'comptabilite/confirm_delete.html', {
+        'objet': reglement,
+        'type_objet': 'règlement',
+        'cancel_url': 'comptabilite:reglement_list',
+    })
 
 
 # ==================== ÉTATS FINANCIERS ====================

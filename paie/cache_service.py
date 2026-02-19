@@ -108,6 +108,17 @@ class PayrollCacheService:
                     )
                 )
         
+        # Fallback ultime: barème RTS CGI 2022 codé en dur (bornes continues)
+        if not tranches:
+            tranches = [
+                {'numero_tranche': 1, 'borne_inferieure': Decimal('0'), 'borne_superieure': Decimal('1000000'), 'taux_irg': Decimal('0')},
+                {'numero_tranche': 2, 'borne_inferieure': Decimal('1000000'), 'borne_superieure': Decimal('3000000'), 'taux_irg': Decimal('5')},
+                {'numero_tranche': 3, 'borne_inferieure': Decimal('3000000'), 'borne_superieure': Decimal('5000000'), 'taux_irg': Decimal('8')},
+                {'numero_tranche': 4, 'borne_inferieure': Decimal('5000000'), 'borne_superieure': Decimal('10000000'), 'taux_irg': Decimal('10')},
+                {'numero_tranche': 5, 'borne_inferieure': Decimal('10000000'), 'borne_superieure': Decimal('20000000'), 'taux_irg': Decimal('15')},
+                {'numero_tranche': 6, 'borne_inferieure': Decimal('20000000'), 'borne_superieure': None, 'taux_irg': Decimal('20')},
+            ]
+        
         cache.set(cache_key, tranches, cls.CACHE_TIMEOUT_TRANCHES)
         return tranches
     

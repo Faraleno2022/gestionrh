@@ -5,15 +5,30 @@ Django settings for gestionnaire_rh project.
 from pathlib import Path
 from decouple import config
 import os
+import sys
+
+# Détection PyInstaller
+PYINSTALLER_MODE = getattr(sys, 'frozen', False)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+if PYINSTALLER_MODE:
+    # En mode PyInstaller, utiliser le répertoire de l'exécutable
+    BASE_DIR = Path(os.path.dirname(sys.executable))
+    # Répertoire interne de PyInstaller (_MEIPASS)
+    INTERNAL_DIR = Path(sys._MEIPASS)
+else:
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    INTERNAL_DIR = BASE_DIR
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+# En mode PyInstaller, forcer DEBUG=True pour servir les fichiers statiques
+if PYINSTALLER_MODE:
+    DEBUG = True
+else:
+    DEBUG = config('DEBUG', default=True, cast=bool)
 
 # Bloquer temporairement les inscriptions (True = inscriptions bloquées)
 REGISTRATION_DISABLED = config('REGISTRATION_DISABLED', default=True, cast=bool)
@@ -60,6 +75,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'gestionnaire_rh.static_middleware.PyInstallerStaticMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.gzip.GZipMiddleware',  # Compression GZip pour rapidité
@@ -79,6 +95,8 @@ MIDDLEWARE = [
     'core.middleware.RequestLoggingMiddleware',
     # Multi-company middleware
     'core.middleware.EntrepriseQuotaMiddleware',
+    # Licence middleware
+    'core.middleware_licence.LicenceMiddleware',
 ]
 
 ROOT_URLCONF = 'gestionnaire_rh.urls'
@@ -86,8 +104,8 @@ ROOT_URLCONF = 'gestionnaire_rh.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': DEBUG,  # Utiliser APP_DIRS seulement en dev
+        'DIRS': [INTERNAL_DIR / 'templates'] if PYINSTALLER_MODE else [BASE_DIR / 'templates'],
+        'APP_DIRS': True,  # Toujours activer pour trouver les templates des apps
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -96,12 +114,6 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.company_info',
             ],
-            **({'loaders': [
-                ('django.template.loaders.cached.Loader', [
-                    'django.template.loaders.filesystem.Loader',
-                    'django.template.loaders.app_directories.Loader',
-                ]),
-            ]} if not DEBUG else {}),
         },
     },
 ]
@@ -173,9 +185,24 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+if PYINSTALLER_MODE:
+    # En mode PyInstaller, chercher static dans plusieurs emplacements possibles
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+    _possible_static = [
+        INTERNAL_DIR / 'static',
+        BASE_DIR / '_internal' / 'static',
+        BASE_DIR / 'static',
+    ]
+    STATICFILES_DIRS = [p for p in _possible_static if p.exists()]
+    # Désactiver le manifest storage en mode PyInstaller
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+else:
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+    STATICFILES_DIRS = [BASE_DIR / 'static']
+    if DEBUG:
+        STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+    else:
+        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
 MEDIA_URL = '/media/'
@@ -259,7 +286,10 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 
 # Session Security
-SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
+if PYINSTALLER_MODE:
+    SESSION_COOKIE_SECURE = False
+else:
+    SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_AGE = 3600  # 1 hour
@@ -267,7 +297,10 @@ SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # CSRF Protection
-CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=True, cast=bool)
+if PYINSTALLER_MODE:
+    CSRF_COOKIE_SECURE = False
+else:
+    CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=True, cast=bool)
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_USE_SESSIONS = False
@@ -466,6 +499,12 @@ CSRF_TRUSTED_ORIGINS = [
     'https://www.guineerh.space',
     'https://guineerh.space',
 ]
+
+if PYINSTALLER_MODE:
+    CSRF_TRUSTED_ORIGINS += [
+        'http://127.0.0.1:8000',
+        'http://localhost:8000',
+    ]
 
 # ============================================================================
 # PERFORMANCE OPTIMIZATIONS

@@ -22,7 +22,11 @@
                     <td>{{ ex.date_fin|date:"d/m/Y" }}</td>
                     <td>{% if ex.statut == 'ouvert' %}<span class="badge bg-success">Ouvert</span>{% else %}<span class="badge bg-secondary">Clôturé</span>{% endif %}</td>
                     <td>{% if ex.est_courant %}<span class="badge bg-primary">Oui</span>{% else %}-{% endif %}</td>
-                    <td><a href="{% url 'comptabilite:exercice_update' ex.pk %}" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></a></td>
+                    <td>
+                        <a href="{% url 'comptabilite:exercice_detail' ex.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
+                        <a href="{% url 'comptabilite:exercice_update' ex.pk %}" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></a>
+                        <a href="{% url 'comptabilite:exercice_delete' ex.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr><td colspan="6" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-1 d-block mb-2"></i>Aucun exercice</td></tr>

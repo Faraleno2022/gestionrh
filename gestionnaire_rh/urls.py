@@ -2,11 +2,13 @@
 URL configuration for gestionnaire_rh project.
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
+from django.views.static import serve
 from django.http import HttpResponse
+import os
 
 def robots_txt(request):
     content = """# Robots.txt pour GuinéeRH
@@ -74,9 +76,32 @@ urlpatterns = [
     # path('api/', include('api.urls')),  # TODO: Create api app
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+# Servir les fichiers statiques et media (nécessaire pour PyInstaller)
+def serve_static(request, path):
+    import sys
+    from pathlib import Path
+    if getattr(sys, 'frozen', False):
+        # En mode PyInstaller, utiliser le dossier de l'exécutable
+        base = Path(os.path.dirname(sys.executable))
+    else:
+        base = settings.BASE_DIR
+    document_root = str(base / 'static')
+    return serve(request, path, document_root=document_root)
+
+def serve_media(request, path):
+    import sys
+    from pathlib import Path
+    if getattr(sys, 'frozen', False):
+        base = Path(os.path.dirname(sys.executable))
+    else:
+        base = settings.BASE_DIR
+    document_root = str(base / 'media')
+    return serve(request, path, document_root=document_root)
+
+urlpatterns += [
+    re_path(r'^static/(?P<path>.*)$', serve_static),
+    re_path(r'^media/(?P<path>.*)$', serve_media),
+]
 
 # Customisation de l'admin
 admin.site.site_header = "Gestionnaire RH Guinée"

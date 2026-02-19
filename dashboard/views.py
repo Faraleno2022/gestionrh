@@ -22,6 +22,23 @@ def index(request):
         return redirect('comptabilite:compte-bancaire-list')
     
     entreprise_id = request.user.entreprise_id
+    
+    # Si l'utilisateur n'a pas d'entreprise, afficher un dashboard vide avec alerte
+    if not entreprise_id:
+        context = {
+            'total_employes': 0, 'employes_hommes': 0, 'employes_femmes': 0,
+            'employes_cdi': 0, 'employes_cdd': 0, 'employes_stage': 0,
+            'conges_en_cours': 0, 'employes_en_conge': [],
+            'conges_en_attente': 0, 'bulletins_calcules': 0,
+            'bulletins_valides': 0, 'masse_salariale': 0, 'pointages_jour': 0,
+            'alertes': [{
+                'type': 'warning',
+                'icon': 'bi-exclamation-triangle',
+                'message': 'Aucune entreprise associée à votre compte. Veuillez contacter l\'administrateur.'
+            }],
+        }
+        return render(request, 'dashboard/index.html', context)
+    
     cache_key = f'dashboard_stats_{entreprise_id}'
     
     # Essayer de récupérer du cache
@@ -55,7 +72,7 @@ def index(request):
     # Congés en cours
     aujourd_hui = timezone.now().date()
     conges_en_cours = Conge.objects.filter(
-        statut_demande='Approuvé',
+        statut_demande='approuve',
         date_debut__lte=aujourd_hui,
         date_fin__gte=aujourd_hui,
         employe__entreprise=request.user.entreprise,
@@ -65,7 +82,7 @@ def index(request):
     
     # Congés en attente
     context['conges_en_attente'] = Conge.objects.filter(
-        statut_demande='En attente',
+        statut_demande='en_attente',
         employe__entreprise=request.user.entreprise,
     ).count()
     
@@ -83,8 +100,8 @@ def index(request):
             periode=periode_actuelle,
             employe__entreprise=request.user.entreprise,
         )
-        context['bulletins_calcules'] = bulletins_mois.filter(statut_bulletin='Calculé').count()
-        context['bulletins_valides'] = bulletins_mois.filter(statut_bulletin='Validé').count()
+        context['bulletins_calcules'] = bulletins_mois.filter(statut_bulletin='calcule').count()
+        context['bulletins_valides'] = bulletins_mois.filter(statut_bulletin='valide').count()
         context['masse_salariale'] = bulletins_mois.aggregate(
             total=Sum('net_a_payer')
         )['total'] or 0
@@ -141,6 +158,24 @@ def rapports(request):
     from django.db.models.functions import ExtractYear
     
     context = {}
+    
+    if not request.user.entreprise_id:
+        context['effectif_total'] = 0
+        context['recrutements'] = 0
+        context['departs'] = 0
+        context['taux_rotation'] = 0
+        context['effectif_mensuel'] = [0] * 12
+        context['mois'] = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin',
+                           'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+        context['pyramide_ages'] = {'< 25 ans': 0, '25-34 ans': 0, '35-44 ans': 0, '45-54 ans': 0, '55+ ans': 0}
+        context['age_moyen'] = 0
+        context['anciennete_moyenne'] = 0
+        context['hommes'] = 0
+        context['femmes'] = 0
+        context['services_stats'] = []
+        context['taux_absenteisme'] = 0
+        context['annee'] = timezone.now().year
+        return render(request, 'dashboard/rapports.html', context)
     
     # Statistiques annuelles
     annee = int(request.GET.get('annee', timezone.now().year))
@@ -279,6 +314,12 @@ def statistiques_paie(request):
     annee = request.GET.get('annee', timezone.now().year)
     context['annee'] = int(annee)
     
+    if not request.user.entreprise_id:
+        context['masse_mensuelle'] = [0] * 12
+        context['mois'] = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin',
+                           'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+        return render(request, 'dashboard/statistiques_paie.html', context)
+    
     # Masse salariale mensuelle
     masse_mensuelle = []
     for mois in range(1, 13):
@@ -290,7 +331,7 @@ def statistiques_paie(request):
             )
             total = BulletinPaie.objects.filter(
                 periode=periode,
-                statut_bulletin__in=['Validé', 'Payé'],
+                statut_bulletin__in=['valide', 'paye'],
                 employe__entreprise=request.user.entreprise,
             ).aggregate(total=Sum('net_a_payer'))['total'] or 0
             masse_mensuelle.append(float(total))

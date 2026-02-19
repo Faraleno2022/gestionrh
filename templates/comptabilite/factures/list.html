@@ -55,7 +55,10 @@
                     </td>
                     <td>
                         <a href="{% url 'comptabilite:facture_detail' facture.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
-                        {% if facture.statut == 'brouillon' %}<a href="{% url 'comptabilite:facture_update' facture.pk %}" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></a>{% endif %}
+                        {% if facture.statut == 'brouillon' %}
+                        <a href="{% url 'comptabilite:facture_update' facture.pk %}" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></a>
+                        <a href="{% url 'comptabilite:facture_delete' facture.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}

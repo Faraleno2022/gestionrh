@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q
+from django.db import IntegrityError
 from datetime import date, timedelta
 
 from .models import Candidature, DecisionEmbauche
@@ -396,10 +397,19 @@ def creer_employe_depuis_candidat(request, pk):
     
     if request.method == 'POST':
         try:
-            # Générer un matricule
-            import random
-            import string
-            matricule = f"EMP-{date.today().year}-{''.join(random.choices(string.digits, k=4))}"
+            # Générer un matricule unique (vérification globale)
+            annee = date.today().year
+            dernier = Employe.objects.filter(
+                matricule__startswith=f'EMP{annee}'
+            ).order_by('-matricule').first()
+            if dernier:
+                try:
+                    numero = int(dernier.matricule[-4:]) + 1
+                except (ValueError, IndexError):
+                    numero = 1
+            else:
+                numero = 1
+            matricule = f'EMP{annee}{numero:04d}'
             
             # Créer l'employé
             employe = Employe.objects.create(

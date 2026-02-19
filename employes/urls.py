@@ -85,6 +85,13 @@ urlpatterns = [
     path('reclamations/recap/', views_reclamation.recap_reclamations, name='recap_reclamations'),
     path('reclamations/categories/', views_reclamation.gestion_categories_reclamations, name='gestion_categories_reclamations'),
     
+    # Vues globales RH
+    path('contrats/', views.liste_contrats, name='liste_contrats'),
+    path('carrieres/', views.liste_carrieres, name='liste_carrieres'),
+    path('documents/', views.liste_documents, name='liste_documents_global'),
+    path('sanctions-global/', views.liste_sanctions_global, name='liste_sanctions_global'),
+    path('accidents/', views.liste_accidents, name='liste_accidents'),
+
     # Visites médicales
     path('medical/', views_medical.liste_visites_medicales, name='liste_visites_medicales'),
     path('medical/planifier/', views_medical.planifier_visite, name='planifier_visite'),

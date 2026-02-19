@@ -2,10 +2,18 @@ from django.urls import path
 from . import views
 from .views_modules import cnss, expatries, inspection
 from . import views_dashboard
+from . import views_licence
 
 app_name = 'core'
 
 urlpatterns = [
+    # Licence
+    path('licence/', views_licence.licence_statut, name='licence_statut'),
+    path('licence/activer/', views_licence.licence_activation, name='licence_activation'),
+    path('licence/renouveler/', views_licence.licence_renouveler, name='licence_renouveler'),
+    path('licence/expiree/', views_licence.licence_expiree, name='licence_expiree'),
+    path('api/licence/verifier/', views_licence.api_verifier_licence, name='api_verifier_licence'),
+    
     path('', views.index_view, name='index'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),

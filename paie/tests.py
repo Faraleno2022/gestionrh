@@ -81,7 +81,7 @@ class ChargesPatronalesTests(SimpleTestCase):
     """TU-04 et TU-05: Tests VF et TA"""
     
     TAUX_VF = Decimal('0.06')    # 6%
-    TAUX_TA = Decimal('0.015')   # 1,5%
+    TAUX_TA = Decimal('0.02')    # 2%
     
     def _calculer_vf_ta(self, salaire_brut):
         """Calcule VF et TA sur brut total"""
@@ -96,15 +96,15 @@ class ChargesPatronalesTests(SimpleTestCase):
         
         self.assertEqual(vf, Decimal('216000'))  # 3.6M × 6%
     
-    def test_tu05_ta_1_5_pourcent(self):
-        """TU-05: Taxe Apprentissage = 1,5% du brut"""
+    def test_tu05_ta_2_pourcent(self):
+        """TU-05: Taxe Apprentissage = 2% du brut"""
         salaire = Decimal('3600000')
         _, ta = self._calculer_vf_ta(salaire)
         
-        self.assertEqual(ta, Decimal('54000'))  # 3.6M × 1,5%
+        self.assertEqual(ta, Decimal('72000'))  # 3.6M × 2%
     
     def test_charges_patronales_total(self):
-        """Total charges patronales = CNSS 18% + VF 6% + TA 1,5%"""
+        """Total charges patronales = CNSS 18% + VF 6% + TA 2%"""
         salaire = Decimal('3600000')
         
         # CNSS employeur (plafonné)
@@ -113,7 +113,7 @@ class ChargesPatronalesTests(SimpleTestCase):
         vf, ta = self._calculer_vf_ta(salaire)
         total = cnss_employeur + vf + ta
         
-        self.assertEqual(total, Decimal('720000'))  # 450K + 216K + 54K
+        self.assertEqual(total, Decimal('738000'))  # 450K + 216K + 72K
 
 
 class IRGCalculTests(SimpleTestCase):

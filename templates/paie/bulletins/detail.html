@@ -204,9 +204,14 @@
                             <td class="text-end text-danger">- {{ bulletin.cnss_employe|floatformat:0|intcomma }} GNF</td>
                         </tr>
                         <tr>
-                            <td>IRG :</td>
+                            <td>RTS :</td>
                             <td class="text-end text-danger">- {{ bulletin.irg|floatformat:0|intcomma }} GNF</td>
                         </tr>
+                        {% if bulletin.base_rts %}
+                        <tr class="small text-muted">
+                            <td colspan="2">Base RTS: {{ bulletin.base_rts|floatformat:0|intcomma }} GNF | Taux eff.: {{ bulletin.taux_effectif_rts|floatformat:2 }}%</td>
+                        </tr>
+                        {% endif %}
                         <tr class="border-top">
                             <th><h4>Net à Payer :</h4></th>
                             <td class="text-end"><h4 class="text-success">{{ bulletin.net_a_payer|floatformat:0|intcomma }} GNF</h4></td>
@@ -234,10 +239,18 @@
                             <td>Versement Forfaitaire VF (6%)</td>
                             <td class="text-end"><strong>{{ bulletin.versement_forfaitaire|default:0|floatformat:0|intcomma }} GNF</strong></td>
                         </tr>
+                        {% if bulletin.taxe_apprentissage and bulletin.taxe_apprentissage > 0 %}
                         <tr>
-                            <td>Taxe d'Apprentissage TA (1,5%)</td>
-                            <td class="text-end"><strong>{{ bulletin.taxe_apprentissage|default:0|floatformat:0|intcomma }} GNF</strong></td>
+                            <td>Taxe d'Apprentissage TA (2%) <span class="badge bg-secondary">&lt;30 sal.</span></td>
+                            <td class="text-end"><strong>{{ bulletin.taxe_apprentissage|floatformat:0|intcomma }} GNF</strong></td>
                         </tr>
+                        {% endif %}
+                        {% if bulletin.contribution_onfpp and bulletin.contribution_onfpp > 0 %}
+                        <tr>
+                            <td>Contribution ONFPP (1,5%) <span class="badge bg-secondary">&ge;30 sal.</span></td>
+                            <td class="text-end"><strong>{{ bulletin.contribution_onfpp|floatformat:0|intcomma }} GNF</strong></td>
+                        </tr>
+                        {% endif %}
                         <tr class="border-top">
                             <th>Total Charges Patronales</th>
                             <th class="text-end">{{ bulletin.total_charges_patronales|floatformat:0|intcomma }} GNF</th>
@@ -305,6 +318,34 @@
         </div>
     </div>
     {% endif %}
+    
+    <!-- Zone de signatures -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <p class="fw-bold mb-4">L'Employeur</p>
+                    <div style="border-bottom: 1px dashed #999; height: 60px; margin: 0 30px;"></div>
+                    <p class="text-muted mt-2 mb-0">
+                        {% if bulletin.employe.entreprise %}
+                            {{ bulletin.employe.entreprise.nom_entreprise }}
+                        {% endif %}
+                    </p>
+                    <small class="text-muted">Date et signature</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <p class="fw-bold mb-4">L'Employé(e)</p>
+                    <div style="border-bottom: 1px dashed #999; height: 60px; margin: 0 30px;"></div>
+                    <p class="text-muted mt-2 mb-0">{{ bulletin.employe.nom }} {{ bulletin.employe.prenoms }}</p>
+                    <small class="text-muted">Lu et approuvé, date et signature</small>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 

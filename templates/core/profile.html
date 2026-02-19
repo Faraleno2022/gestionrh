@@ -234,14 +234,14 @@
 </div>
 
 <!-- Modal Modifier profil -->
-<div class="modal fade" id="editProfileModal" tabindex="-1">
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-pencil"></i> Modifier mes informations</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="editProfileModalLabel"><i class="bi bi-pencil"></i> Modifier mes informations</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
-            <form method="post" enctype="multipart/form-data">
+            <form method="post" action="{% url 'core:profile' %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="mb-3">
@@ -275,14 +275,14 @@
 </div>
 
 <!-- Modal Changer mot de passe -->
-<div class="modal fade" id="changePasswordModal" tabindex="-1">
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-key"></i> Changer mon mot de passe</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="changePasswordModalLabel"><i class="bi bi-key"></i> Changer mon mot de passe</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
-            <form method="post">
+            <form method="post" action="{% url 'core:profile' %}">
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="mb-3">
@@ -312,6 +312,22 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
+    // Fallback: si Bootstrap JS n'est pas chargé, ouvrir les modals manuellement
+    if (typeof bootstrap === 'undefined') {
+        console.warn('Bootstrap JS non chargé - activation du fallback modal');
+        $('[data-bs-toggle="modal"]').on('click', function(e) {
+            e.preventDefault();
+            var target = $(this).attr('data-bs-target');
+            $(target).addClass('show').css('display', 'block');
+            $('body').addClass('modal-open').append('<div class="modal-backdrop fade show"></div>');
+        });
+        $('[data-bs-dismiss="modal"]').on('click', function() {
+            $(this).closest('.modal').removeClass('show').css('display', 'none');
+            $('body').removeClass('modal-open');
+            $('.modal-backdrop').remove();
+        });
+    }
+
     // Validation du formulaire de changement de mot de passe
     $('form').on('submit', function(e) {
         if ($(this).find('[name="action"]').val() === 'change_password') {

@@ -436,7 +436,7 @@
                 <td class="text-right" style="color: #d62828;">- {{ bulletin.cnss_employe|floatformat:0|intcomma }} GNF</td>
             </tr>
             <tr>
-                <td>Impôt sur le Revenu (IRG)</td>
+                <td>RTS (Impôt sur le Revenu){% if bulletin.base_rts %} <small style="color: #666;">(base: {{ bulletin.base_rts|floatformat:0|intcomma }} | taux eff.: {{ bulletin.taux_effectif_rts|floatformat:2 }}%)</small>{% endif %}</td>
                 <td class="text-right" style="color: #d62828;">- {{ bulletin.irg|floatformat:0|intcomma }} GNF</td>
             </tr>
             <tr style="border-top: 2px solid #d62828;">
@@ -459,15 +459,41 @@
             <td>Versement Forfaitaire VF (6%):</td>
             <td class="text-right"><strong>{{ bulletin.versement_forfaitaire|default:0|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
+        {% if bulletin.taxe_apprentissage and bulletin.taxe_apprentissage > 0 %}
         <tr>
-            <td>Taxe d'Apprentissage TA (1,5%):</td>
-            <td class="text-right"><strong>{{ bulletin.taxe_apprentissage|default:0|floatformat:0|intcomma }} GNF</strong></td>
+            <td>Taxe d'Apprentissage TA (2%) <small>(&lt;30 sal.)</small>:</td>
+            <td class="text-right"><strong>{{ bulletin.taxe_apprentissage|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
+        {% endif %}
+        {% if bulletin.contribution_onfpp and bulletin.contribution_onfpp > 0 %}
+        <tr>
+            <td>Contribution ONFPP (1,5%) <small>(&ge;30 sal.)</small>:</td>
+            <td class="text-right"><strong>{{ bulletin.contribution_onfpp|floatformat:0|intcomma }} GNF</strong></td>
+        </tr>
+        {% endif %}
         <tr style="border-top: 1px solid #333; font-weight: bold;">
             <td>Total Charges Patronales:</td>
             <td class="text-right"><strong>{{ bulletin.total_charges_patronales|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
     </table>
+
+    <!-- Zone de signatures -->
+    <div style="display: flex; justify-content: space-between; margin-top: 30px; padding: 0 20px;">
+        <div style="width: 45%; text-align: center;">
+            <p style="font-weight: bold; margin-bottom: 40px;">L'Employeur</p>
+            <div style="border-bottom: 1px dashed #999; height: 50px;"></div>
+            <p style="color: #666; margin-top: 5px; font-size: 9pt;">
+                {% if bulletin.employe.entreprise %}{{ bulletin.employe.entreprise.nom_entreprise }}{% endif %}
+            </p>
+            <small style="color: #999;">Date et signature</small>
+        </div>
+        <div style="width: 45%; text-align: center;">
+            <p style="font-weight: bold; margin-bottom: 40px;">L'Employé(e)</p>
+            <div style="border-bottom: 1px dashed #999; height: 50px;"></div>
+            <p style="color: #666; margin-top: 5px; font-size: 9pt;">{{ bulletin.employe.nom }} {{ bulletin.employe.prenoms }}</p>
+            <small style="color: #999;">Lu et approuvé, date et signature</small>
+        </div>
+    </div>
 
     <!-- Pied de page avec informations entreprise -->
     <div class="footer">

@@ -46,7 +46,8 @@ class MoteurCalculPaie:
             'total_retenues': Decimal('0'),
             # Charges patronales supplémentaires
             'versement_forfaitaire': Decimal('0'),  # VF 6%
-            'taxe_apprentissage': Decimal('0'),     # TA 1,5%
+            'taxe_apprentissage': Decimal('0'),     # TA 2%
+            'contribution_onfpp': Decimal('0'),     # ONFPP 1,5%
             'total_charges_patronales': Decimal('0'),
             # Exonération RTS stagiaires/apprentis
             'exoneration_rts': False,
@@ -64,7 +65,18 @@ class MoteurCalculPaie:
             'jours_absence': Decimal('0'),
             'jours_conge': Decimal('0'),
             'retenue_absence': Decimal('0'),
+            # Rappels et manquements (hors base de calcul)
+            'rappel_salaire': Decimal('0'),
+            'retenue_trop_percu': Decimal('0'),
+            # RTS détail (base, taux effectif)
+            'base_rts': Decimal('0'),
+            'taux_effectif_rts': Decimal('0'),
         }
+        # Nombre de salariés actifs de l'entreprise (pour TA vs ONFPP)
+        self.nb_salaries = Employe.objects.filter(
+            entreprise=employe.entreprise,
+            statut_employe='actif'
+        ).count() if employe.entreprise else 0
         self.constantes = self._charger_constantes()
         self.tranches_irg = self._charger_tranches_irg()
         
@@ -115,6 +127,17 @@ class MoteurCalculPaie:
                     'numero_tranche', 'borne_inferieure', 
                     'borne_superieure', 'taux_irg'
                 ))
+        
+        # Fallback ultime: barème RTS CGI 2022 codé en dur (bornes continues)
+        if not tranches:
+            tranches = [
+                {'numero_tranche': 1, 'borne_inferieure': Decimal('0'), 'borne_superieure': Decimal('1000000'), 'taux_irg': Decimal('0')},
+                {'numero_tranche': 2, 'borne_inferieure': Decimal('1000000'), 'borne_superieure': Decimal('3000000'), 'taux_irg': Decimal('5')},
+                {'numero_tranche': 3, 'borne_inferieure': Decimal('3000000'), 'borne_superieure': Decimal('5000000'), 'taux_irg': Decimal('8')},
+                {'numero_tranche': 4, 'borne_inferieure': Decimal('5000000'), 'borne_superieure': Decimal('10000000'), 'taux_irg': Decimal('10')},
+                {'numero_tranche': 5, 'borne_inferieure': Decimal('10000000'), 'borne_superieure': Decimal('20000000'), 'taux_irg': Decimal('15')},
+                {'numero_tranche': 6, 'borne_inferieure': Decimal('20000000'), 'borne_superieure': None, 'taux_irg': Decimal('20')},
+            ]
         
         return tranches
     
@@ -185,8 +208,11 @@ class MoteurCalculPaie:
         # 6. Calculer les autres retenues
         self._calculer_autres_retenues()
         
-        # 7. Calculer le net
-        net_calcule = self.montants['brut'] - self.montants['total_retenues']
+        # 6.1 Appliquer les rappels et manquements (hors base)
+        self._appliquer_rappels_manquements()
+        
+        # 7. Calculer le net (rappels et retenues trop-perçu inclus)
+        net_calcule = self.montants['brut'] - self.montants['total_retenues'] + self.montants['rappel_salaire'] - self.montants['retenue_trop_percu']
         
         # 7.1 Protection: Empêcher le net négatif
         # Si les retenues dépassent le brut, on plafonne les retenues au brut
@@ -339,8 +365,22 @@ class MoteurCalculPaie:
             models.Q(date_fin__gte=debut_mois)
         ).select_related('rubrique')
         
+        # Codes hors base (rappels/compléments traités séparément)
+        codes_hors_base = ['RAPPEL_SALAIRE', 'COMPLEMENT_SALAIRE', 'RETENUE_TROP_PERCU', 'MANQUEMENT_SALAIRE']
+        
+        # Primes exonérées de CNSS 5% (transport, logement, cherté de vie)
+        CODES_EXONERES_CNSS = [
+            'PRIME_TRANSPORT', 'ALLOC_TRANSPORT', 'TRANSPORT',
+            'ALLOC_LOGEMENT', 'IND_LOGEMENT', 'LOGEMENT',
+            'CHERTE_VIE', 'PRIME_CHERTE_VIE', 'IND_CHERTE_VIE',
+        ]
+        
         for element in elements:
             if element.rubrique.type_rubrique == 'gain':
+                # Exclure les rappels/compléments qui sont traités hors base
+                if element.rubrique.code_rubrique in codes_hors_base:
+                    continue
+                
                 montant = self._calculer_element(element)
                 
                 self.lignes.append({
@@ -354,8 +394,12 @@ class MoteurCalculPaie:
                 
                 self.montants['total_gains'] += montant
                 
+                # Vérifier si la prime est exonérée de CNSS
+                code_upper = (element.rubrique.code_rubrique or '').upper()
+                est_exoneree_cnss = any(c in code_upper for c in CODES_EXONERES_CNSS)
+                
                 # Calculer les assiettes
-                if element.rubrique.soumis_cnss:
+                if element.rubrique.soumis_cnss and not est_exoneree_cnss:
                     self.montants['cnss_base'] += montant
                 if element.rubrique.soumis_irg:
                     self.montants['imposable'] += montant
@@ -671,23 +715,52 @@ class MoteurCalculPaie:
             base_cnss_plafonnee * taux_cnss_pat / Decimal('100')
         )
         
-        # Versement Forfaitaire (VF) - 6% de la masse salariale (charge patronale)
+        # Base VF/TA = salaire brut total (en GNF si devise étrangère)
+        base_vf_ta = self.montants['brut']
+        if self.devise_employe != self.devise_base:
+            base_vf_ta = DeviseService.convertir_vers_gnf(
+                self.montants['brut'],
+                self.devise_employe,
+                self.date_conversion
+            )
+        
+        # Versement Forfaitaire (VF) - charge patronale
+        # Déduction = min(Salaire, Seuil) × 6%, puis VF = (Salaire - Déduction) × 6%
+        # Pour salaire >= 2 500 000: déduction = 2 500 000 × 6% = 150 000 (plafonnée)
+        # Pour salaire <  2 500 000: déduction = salaire × 6% (proportionnelle)
         taux_vf = self.constantes.get('TAUX_VF', Decimal('6.00'))
+        seuil_vf = self.constantes.get('SEUIL_VF', Decimal('2500000'))
+        
+        base_deduction_vf = min(base_vf_ta, seuil_vf)
+        deduction_vf = self._arrondir(base_deduction_vf * taux_vf / Decimal('100'))
+        base_vf_nette = base_vf_ta - deduction_vf
+        
         self.montants['versement_forfaitaire'] = self._arrondir(
-            self.montants['brut'] * taux_vf / Decimal('100')
+            base_vf_nette * taux_vf / Decimal('100')
         )
         
-        # Taxe d'Apprentissage - 1,5% de la masse salariale (charge patronale)
-        taux_ta = self.constantes.get('TAUX_TA', Decimal('1.50'))
-        self.montants['taxe_apprentissage'] = self._arrondir(
-            self.montants['brut'] * taux_ta / Decimal('100')
-        )
+        # TA et ONFPP sont mutuellement exclusifs selon le nombre de salariés:
+        # - Moins de 30 salariés: TA (2%)
+        # - 30 salariés ou plus: ONFPP (1,5%)
+        if self.nb_salaries < 30:
+            taux_ta = self.constantes.get('TAUX_TA', Decimal('2.00'))
+            self.montants['taxe_apprentissage'] = self._arrondir(
+                base_vf_ta * taux_ta / Decimal('100')
+            )
+            self.montants['contribution_onfpp'] = Decimal('0')
+        else:
+            self.montants['taxe_apprentissage'] = Decimal('0')
+            taux_onfpp = self.constantes.get('TAUX_ONFPP', Decimal('1.50'))
+            self.montants['contribution_onfpp'] = self._arrondir(
+                base_vf_ta * taux_onfpp / Decimal('100')
+            )
         
         # Total charges patronales
         self.montants['total_charges_patronales'] = (
             self.montants['cnss_employeur'] +
             self.montants['versement_forfaitaire'] +
-            self.montants['taxe_apprentissage']
+            self.montants['taxe_apprentissage'] +
+            self.montants['contribution_onfpp']
         )
         
         # Autres cotisations (mutuelle, retraite complémentaire, etc.)
@@ -740,18 +813,14 @@ class MoteurCalculPaie:
         if exoneration_rts:
             # Stagiaire/apprenti exonéré de RTS
             self.montants['irg'] = Decimal('0')
+            self.montants['base_rts'] = base_imposable
+            self.montants['taux_effectif_rts'] = Decimal('0')
             self.montants['exoneration_rts'] = True
             self.montants['raison_exoneration_rts'] = raison_exoneration
         else:
-            # Appliquer déductions familiales
-            deductions = self._calculer_deductions_familiales()
-            base_imposable -= deductions
-            
-            # Appliquer abattements professionnels
-            abattement = self._calculer_abattement_professionnel(base_imposable)
-            base_imposable -= abattement
-            
-            # Calculer RTS progressif
+            # RTS Guinée (Retenue à la Source) = barème progressif sur (Imposable - CNSS)
+            # Pas de déductions familiales ni d'abattement professionnel pour la RTS
+            # (ces déductions s'appliquent uniquement à l'IGR annuel)
             irg_brut = self._calculer_irg_progressif(base_imposable)
             
             # Appliquer crédits d'impôt
@@ -759,6 +828,14 @@ class MoteurCalculPaie:
             irg_net = max(Decimal('0'), irg_brut - credits)
             
             self.montants['irg'] = self._arrondir(irg_net)
+            self.montants['base_rts'] = base_imposable
+            # Taux effectif RTS = montant RTS / base imposable × 100
+            if base_imposable > 0:
+                self.montants['taux_effectif_rts'] = self._arrondir(
+                    self.montants['irg'] * Decimal('100') / base_imposable
+                )
+            else:
+                self.montants['taux_effectif_rts'] = Decimal('0')
             self.montants['exoneration_rts'] = False
         self.montants['total_retenues'] += self.montants['irg']
         
@@ -862,25 +939,26 @@ class MoteurCalculPaie:
         """
         Calculer l'RTS selon le barème progressif CGI 2022.
         
-        Barème RTS Guinée (6 tranches):
+        Barème RTS Guinée (6 tranches continues):
         - 0 - 1 000 000 GNF: 0%
-        - 1 000 001 - 3 000 000 GNF: 5%
-        - 3 000 001 - 5 000 000 GNF: 8%
-        - 5 000 001 - 10 000 000 GNF: 10%
-        - 10 000 001 - 20 000 000 GNF: 15%
+        - 1 000 000 - 3 000 000 GNF: 5%
+        - 3 000 000 - 5 000 000 GNF: 8%
+        - 5 000 000 - 10 000 000 GNF: 10%
+        - 10 000 000 - 20 000 000 GNF: 15%
         - Au-delà 20 000 000 GNF: 20%
+        
+        Utilise des comparaisons absolues sur les bornes pour éviter
+        les erreurs d'arrondi liées aux gaps entre tranches (1000001 vs 1000000).
         """
         if base_imposable <= 0:
             return Decimal('0')
         
         irg_total = Decimal('0')
-        reste = base_imposable
         
-        for tranche in self.tranches_irg:
-            if reste <= 0:
-                break
-            
-            # Support pour dict (cache) ou objet (QuerySet)
+        # Construire les seuils continus à partir des tranches
+        # On normalise les bornes pour éliminer les gaps de 1 GNF
+        seuils = []
+        for i, tranche in enumerate(self.tranches_irg):
             if isinstance(tranche, dict):
                 borne_inf = Decimal(str(tranche['borne_inferieure']))
                 borne_sup = tranche.get('borne_superieure')
@@ -890,18 +968,29 @@ class MoteurCalculPaie:
                 borne_sup = tranche.borne_superieure
                 taux = tranche.taux_irg
             
-            # Montant de la tranche
-            if borne_sup:
+            # Normaliser: si borne_inf = borne_sup précédente + 1, utiliser borne_sup précédente
+            if i > 0 and seuils:
+                prev_sup = seuils[-1][1]
+                if prev_sup is not None and borne_inf > prev_sup and borne_inf <= prev_sup + 2:
+                    borne_inf = prev_sup
+            
+            if borne_sup is not None:
                 borne_sup = Decimal(str(borne_sup))
-                montant_tranche = min(reste, borne_sup - borne_inf)
+            
+            seuils.append((borne_inf, borne_sup, taux))
+        
+        # Calcul progressif par tranche avec bornes absolues
+        for borne_inf, borne_sup, taux in seuils:
+            if base_imposable <= borne_inf:
+                break
+            
+            if borne_sup is not None:
+                montant_tranche = min(base_imposable, borne_sup) - borne_inf
             else:
-                montant_tranche = reste
+                montant_tranche = base_imposable - borne_inf
             
-            # RTS de la tranche
-            irg_tranche = montant_tranche * taux / Decimal('100')
-            irg_total += irg_tranche
-            
-            reste -= montant_tranche
+            if montant_tranche > 0:
+                irg_total += montant_tranche * taux / Decimal('100')
         
         return self._arrondir(irg_total)
     
@@ -941,6 +1030,52 @@ class MoteurCalculPaie:
             
             self.montants['total_retenues'] += montant
     
+    def _appliquer_rappels_manquements(self):
+        """
+        Appliquer les rappels de salaire (compléments) et retenues pour trop-perçu
+        du mois précédent. Ces montants ne sont PAS inclus dans la base de calcul
+        (CNSS, RTS, VF, TA, ONFPP) — ils affectent uniquement le net à payer.
+        """
+        elements_rappels = ElementSalaire.objects.filter(
+            employe=self.employe,
+            rubrique__type_rubrique='gain',
+            rubrique__code_rubrique__in=['RAPPEL_SALAIRE', 'COMPLEMENT_SALAIRE'],
+            actif=True
+        ).select_related('rubrique')
+        
+        for element in elements_rappels:
+            montant = element.montant or Decimal('0')
+            if montant > 0:
+                self.montants['rappel_salaire'] += montant
+                self.lignes.append({
+                    'rubrique': element.rubrique,
+                    'base': montant,
+                    'taux': None,
+                    'nombre': Decimal('1'),
+                    'montant': montant,
+                    'ordre': element.rubrique.ordre_affichage
+                })
+        
+        elements_trop_percu = ElementSalaire.objects.filter(
+            employe=self.employe,
+            rubrique__type_rubrique='retenue',
+            rubrique__code_rubrique__in=['RETENUE_TROP_PERCU', 'MANQUEMENT_SALAIRE'],
+            actif=True
+        ).select_related('rubrique')
+        
+        for element in elements_trop_percu:
+            montant = element.montant or Decimal('0')
+            if montant > 0:
+                self.montants['retenue_trop_percu'] += montant
+                self.lignes.append({
+                    'rubrique': element.rubrique,
+                    'base': montant,
+                    'taux': None,
+                    'nombre': Decimal('1'),
+                    'montant': montant,
+                    'ordre': element.rubrique.ordre_affichage
+                })
+    
     @transaction.atomic
     def generer_bulletin(self, utilisateur=None):
         """Générer le bulletin de paie dans la base de données"""
@@ -967,9 +1102,18 @@ class MoteurCalculPaie:
             'date_calcul': timezone.now()
         }
         
-        # Ajouter VF et TA (charges patronales)
+        # Rappels et manquements (hors base)
+        bulletin_data['rappel_salaire'] = self.montants.get('rappel_salaire', Decimal('0'))
+        bulletin_data['retenue_trop_percu'] = self.montants.get('retenue_trop_percu', Decimal('0'))
+        
+        # RTS détail (base, taux effectif)
+        bulletin_data['base_rts'] = self.montants.get('base_rts', Decimal('0'))
+        bulletin_data['taux_effectif_rts'] = self.montants.get('taux_effectif_rts', Decimal('0'))
+        
+        # Ajouter VF, TA et ONFPP (charges patronales)
         bulletin_data['versement_forfaitaire'] = self.montants.get('versement_forfaitaire', Decimal('0'))
         bulletin_data['taxe_apprentissage'] = self.montants.get('taxe_apprentissage', Decimal('0'))
+        bulletin_data['contribution_onfpp'] = self.montants.get('contribution_onfpp', Decimal('0'))
         
         bulletin = BulletinPaie.objects.create(**bulletin_data)
         

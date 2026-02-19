@@ -4,7 +4,7 @@
 {% block title %}Calendrier des Absences{% endblock %}
 
 {% block extra_css %}
-<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<link rel='stylesheet' href="{% static 'css/fullcalendar.min.css' %}" />
 {% endblock %}
 
 {% block content %}
@@ -45,8 +45,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/fr.js'></script>
+<script src="{% static 'js/fullcalendar.min.js' %}"></script>
+<script src="{% static 'js/fullcalendar-fr.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');

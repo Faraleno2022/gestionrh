@@ -70,7 +70,7 @@ def get_declarations_data(entreprise, annee, mois=None):
     taux_cnss_employe = get_constante('TAUX_CNSS_EMPLOYE', 5)
     taux_cnss_employeur = get_constante('TAUX_CNSS_EMPLOYEUR', 18)
     taux_vf = get_constante('TAUX_VF', 6)
-    taux_ta = get_constante('TAUX_TA', 1.5)
+    taux_ta = get_constante('TAUX_TA', 2)
     
     # Calculer les totaux
     totaux = bulletins.aggregate(

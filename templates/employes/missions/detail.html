@@ -238,8 +238,8 @@
                     <form method="post" action="{% url 'employes:accorder_avance' mission.pk %}">
                         {% csrf_token %}
                         <div class="input-group">
-                            <input type="number" class="form-control" name="montant_avance" 
-                                   value="{{ mission.avance_accordee|floatformat:0 }}" min="0">
+                            <input type="text" class="form-control" name="montant_avance" inputmode="decimal"
+                                   value="{{ mission.avance_accordee|floatformat:0 }}">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save"></i>
                             </button>
@@ -296,7 +296,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Montant (GNF) *</label>
-                        <input type="number" class="form-control" name="montant" required min="1">
+                        <input type="text" class="form-control" name="montant" inputmode="decimal" required placeholder="Ex: 150 000">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Justificatif</label>

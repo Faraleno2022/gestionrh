@@ -63,7 +63,10 @@ class DecimalMoneyField(forms.DecimalField):
     def prepare_value(self, value):
         if value is None:
             return None
-        return f"{value:.2f}"
+        try:
+            return f"{Decimal(str(value)):.2f}"
+        except Exception:
+            return value
 
 
 class CompteBancaireForm(ComptaBaseForm):

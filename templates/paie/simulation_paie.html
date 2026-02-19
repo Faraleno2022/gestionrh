@@ -53,7 +53,7 @@
                         
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="prime_transport" class="form-label">Prime transport</label>
+                                <label for="prime_transport" class="form-label">Prime transport <span class="badge bg-info">Exon. CNSS</span></label>
                                 <div class="input-group input-group-sm">
                                     <input type="text" class="form-control" id="prime_transport" name="prime_transport" 
                                            value="{{ resultat.prime_transport|default:'0' }}">
@@ -61,7 +61,7 @@
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="prime_logement" class="form-label">Allocation logement</label>
+                                <label for="prime_logement" class="form-label">Allocation logement <span class="badge bg-info">Exon. CNSS</span></label>
                                 <div class="input-group input-group-sm">
                                     <input type="text" class="form-control" id="prime_logement" name="prime_logement" 
                                            value="{{ resultat.prime_logement|default:'0' }}">
@@ -71,6 +71,14 @@
                         </div>
                         
                         <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="prime_cherte_vie" class="form-label">Cherté de vie <span class="badge bg-info">Exon. CNSS</span></label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control" id="prime_cherte_vie" name="prime_cherte_vie" 
+                                           value="{{ resultat.prime_cherte_vie|default:'0' }}">
+                                    <span class="input-group-text">GNF</span>
+                                </div>
+                            </div>
                             <div class="col-md-6 mb-3">
                                 <label for="prime_panier" class="form-label">Prime panier/repas</label>
                                 <div class="input-group input-group-sm">
@@ -107,6 +115,31 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <hr class="my-3">
+                        <h6 class="text-muted"><i class="fas fa-exchange-alt me-2"></i>Rappels / Manquements (hors base)</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="rappel_salaire" class="form-label">Rappel/Complément salaire</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text text-success">+</span>
+                                    <input type="text" class="form-control" id="rappel_salaire" name="rappel_salaire" 
+                                           value="{{ resultat.rappel_salaire|default:'0' }}">
+                                    <span class="input-group-text">GNF</span>
+                                </div>
+                                <small class="text-muted">Non soumis aux charges sociales</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="retenue_trop_percu" class="form-label">Retenue trop-perçu</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text text-danger">-</span>
+                                    <input type="text" class="form-control" id="retenue_trop_percu" name="retenue_trop_percu" 
+                                           value="{{ resultat.retenue_trop_percu|default:'0' }}">
+                                    <span class="input-group-text">GNF</span>
+                                </div>
+                                <small class="text-muted">Non soumis aux charges sociales</small>
+                            </div>
+                        </div>
 
                         <div class="d-grid gap-2 mt-4">
                             <button type="submit" class="btn btn-primary btn-lg">
@@ -130,8 +163,10 @@
                         <li><strong>CNSS:</strong> 5% employé, 18% employeur (plancher 550K, plafond 2,5M)</li>
                         <li><strong>RTS:</strong> Barème progressif (0% à 20%)</li>
                         <li><strong>VF:</strong> 6% du brut</li>
-                        <li><strong>TA:</strong> 1,5% du brut</li>
+                        <li><strong>TA/ONFPP:</strong> Mutuellement exclusifs (&lt;30 salariés = TA 2%, &ge;30 = ONFPP 1,5%)</li>
+                        <li><strong>Primes exonérées CNSS:</strong> Transport, logement, cherté de vie</li>
                         <li><strong>Indemnités:</strong> Plafond 25% du brut</li>
+                        <li><strong>Rappels/Manquements:</strong> Hors base (non soumis CNSS, RTS, VF, TA, ONFPP)</li>
                     </ul>
                 </div>
             </div>
@@ -189,10 +224,21 @@
                                 <td class="text-end">{{ resultat.prime_responsabilite|floatformat:0|intcomma }} GNF</td>
                             </tr>
                             {% endif %}
+                            {% if resultat.prime_cherte_vie > 0 %}
+                            <tr>
+                                <td>Cherté de vie <span class="badge bg-info">Exon. CNSS</span></td>
+                                <td class="text-end">{{ resultat.prime_cherte_vie|floatformat:0|intcomma }} GNF</td>
+                            </tr>
+                            {% endif %}
                             {% if resultat.autres_primes > 0 %}
                             <tr>
                                 <td>Autres primes</td>
                                 <td class="text-end">{{ resultat.autres_primes|floatformat:0|intcomma }} GNF</td>
+                            </tr>
+                            {% endif %}
+                            {% if resultat.primes_exonerees_cnss > 0 %}
+                            <tr class="small text-info">
+                                <td colspan="2"><i class="fas fa-info-circle me-1"></i>Primes exonérées CNSS (transport, logement, cherté de vie): {{ resultat.primes_exonerees_cnss|floatformat:0|intcomma }} GNF</td>
                             </tr>
                             {% endif %}
                             <tr class="table-success fw-bold">
@@ -217,6 +263,11 @@
                                 <td>RTS (Impôt sur salaire)</td>
                                 <td class="text-end text-danger">- {{ resultat.rts|floatformat:0|intcomma }} GNF</td>
                             </tr>
+                            <tr class="small text-muted">
+                                <td colspan="2">
+                                    Base RTS: {{ resultat.base_imposable|floatformat:0|intcomma }} GNF | Taux effectif: {{ resultat.taux_effectif_rts|floatformat:2 }}%
+                                </td>
+                            </tr>
                             {% if resultat.detail_rts %}
                             <tr class="small text-muted">
                                 <td colspan="2">
@@ -234,11 +285,35 @@
                         </tbody>
                     </table>
 
+                    <!-- Rappels / Manquements hors base -->
+                    {% if resultat.rappel_salaire > 0 or resultat.retenue_trop_percu > 0 %}
+                    <h6 class="border-bottom pb-2 text-info mt-4"><i class="fas fa-exchange-alt me-2"></i>RAPPELS / MANQUEMENTS (hors base)</h6>
+                    <table class="table table-sm">
+                        <tbody>
+                            {% if resultat.rappel_salaire > 0 %}
+                            <tr>
+                                <td>Rappel/Complément salaire précédent</td>
+                                <td class="text-end text-success">+ {{ resultat.rappel_salaire|floatformat:0|intcomma }} GNF</td>
+                            </tr>
+                            {% endif %}
+                            {% if resultat.retenue_trop_percu > 0 %}
+                            <tr>
+                                <td>Retenue trop-perçu salaire précédent</td>
+                                <td class="text-end text-danger">- {{ resultat.retenue_trop_percu|floatformat:0|intcomma }} GNF</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                    {% endif %}
+
                     <!-- Net à payer -->
                     <div class="alert alert-success mt-4">
                         <div class="row align-items-center">
                             <div class="col">
                                 <h5 class="mb-0">NET À PAYER</h5>
+                                {% if resultat.rappel_salaire > 0 or resultat.retenue_trop_percu > 0 %}
+                                <small class="text-muted">Incluant rappels/manquements hors base</small>
+                                {% endif %}
                             </div>
                             <div class="col-auto">
                                 <h3 class="mb-0">{{ resultat.net_a_payer|floatformat:0|intcomma }} GNF</h3>
@@ -266,10 +341,18 @@
                                 <td>Versement Forfaitaire ({{ resultat.taux_vf }}%)</td>
                                 <td class="text-end">{{ resultat.vf|floatformat:0|intcomma }} GNF</td>
                             </tr>
+                            {% if resultat.ta > 0 %}
                             <tr>
-                                <td>Taxe d'Apprentissage ({{ resultat.taux_ta }}%)</td>
+                                <td>Taxe d'Apprentissage TA ({{ resultat.taux_ta }}%) <span class="badge bg-secondary">&lt;30 salariés</span></td>
                                 <td class="text-end">{{ resultat.ta|floatformat:0|intcomma }} GNF</td>
                             </tr>
+                            {% endif %}
+                            {% if resultat.onfpp > 0 %}
+                            <tr>
+                                <td>Contribution ONFPP ({{ resultat.taux_onfpp }}%) <span class="badge bg-secondary">&ge;30 salariés</span></td>
+                                <td class="text-end">{{ resultat.onfpp|floatformat:0|intcomma }} GNF</td>
+                            </tr>
+                            {% endif %}
                             <tr class="table-primary fw-bold">
                                 <td>TOTAL CHARGES PATRONALES</td>
                                 <td class="text-end">{{ resultat.total_charges_patronales|floatformat:0|intcomma }} GNF</td>

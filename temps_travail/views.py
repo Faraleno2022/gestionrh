@@ -199,6 +199,83 @@ def creer_pointage(request):
 
 @login_required
 @entreprise_active_required
+def detail_pointage(request, pk):
+    """Détail d'un pointage"""
+    pointage = get_object_or_404(
+        Pointage, pk=pk, employe__entreprise=request.user.entreprise
+    )
+    return render(request, 'temps_travail/pointages/detail.html', {
+        'pointage': pointage,
+    })
+
+
+@login_required
+@entreprise_active_required
+def modifier_pointage(request, pk):
+    """Modifier un pointage"""
+    pointage = get_object_or_404(
+        Pointage, pk=pk, employe__entreprise=request.user.entreprise
+    )
+    
+    if request.method == 'POST':
+        try:
+            heure_entree = request.POST.get('heure_entree')
+            heure_sortie = request.POST.get('heure_sortie')
+            statut = request.POST.get('statut', pointage.statut_pointage)
+            observations = request.POST.get('observations', '')
+            
+            pointage.heure_entree = heure_entree if heure_entree else None
+            pointage.heure_sortie = heure_sortie if heure_sortie else None
+            pointage.statut_pointage = statut
+            pointage.observations = observations
+            
+            # Recalculer les heures travaillées
+            if heure_entree and heure_sortie:
+                entree = datetime.strptime(heure_entree, '%H:%M').time()
+                sortie = datetime.strptime(heure_sortie, '%H:%M').time()
+                debut = datetime.combine(date.today(), entree)
+                fin = datetime.combine(date.today(), sortie)
+                duree = (fin - debut).total_seconds() / 3600
+                pointage.heures_travaillees = Decimal(str(round(duree, 2)))
+                pointage.heures_supplementaires = max(Decimal('0'), pointage.heures_travaillees - Decimal('8'))
+            else:
+                pointage.heures_travaillees = None
+                pointage.heures_supplementaires = Decimal('0')
+            
+            pointage.save()
+            messages.success(request, 'Pointage modifié avec succès.')
+            return redirect('temps_travail:pointages')
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la modification : {str(e)}')
+    
+    return render(request, 'temps_travail/pointages/modifier.html', {
+        'pointage': pointage,
+    })
+
+
+@login_required
+@entreprise_active_required
+def supprimer_pointage(request, pk):
+    """Supprimer un pointage"""
+    pointage = get_object_or_404(
+        Pointage, pk=pk, employe__entreprise=request.user.entreprise
+    )
+    
+    if request.method == 'POST':
+        date_p = pointage.date_pointage
+        nom = pointage.employe.nom_complet
+        pointage.delete()
+        messages.success(request, f'Pointage de {nom} du {date_p.strftime("%d/%m/%Y")} supprimé.')
+        return redirect('temps_travail:pointages')
+    
+    return render(request, 'temps_travail/pointages/supprimer.html', {
+        'pointage': pointage,
+    })
+
+
+@login_required
+@entreprise_active_required
 def pointer_entree(request):
     """Pointer l'entrée d'un employé"""
     if request.method == 'POST':

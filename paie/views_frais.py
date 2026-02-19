@@ -10,6 +10,7 @@ from django.utils import timezone
 from datetime import date
 from decimal import Decimal
 
+from .views import parse_montant
 from employes.models import Employe
 from .models_frais import CategoriesFrais, NoteFrais, LigneFrais, BaremeFrais
 
@@ -154,7 +155,7 @@ def ajouter_ligne_frais(request, pk):
             categorie=categorie,
             date_depense=date_depense,
             description=description,
-            montant=Decimal(montant),
+            montant=parse_montant(montant) or Decimal('0'),
             numero_facture=numero_facture,
             justificatif=justificatif,
         )
