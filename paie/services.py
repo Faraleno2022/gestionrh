@@ -372,13 +372,6 @@ class MoteurCalculPaie:
         # Codes hors base (rappels/compléments traités séparément)
         codes_hors_base = ['RAPPEL_SALAIRE', 'COMPLEMENT_SALAIRE', 'RETENUE_TROP_PERCU', 'MANQUEMENT_SALAIRE']
         
-        # Primes exonérées de CNSS 5% (transport, logement, cherté de vie)
-        CODES_EXONERES_CNSS = [
-            'PRIME_TRANSPORT', 'ALLOC_TRANSPORT', 'TRANSPORT',
-            'ALLOC_LOGEMENT', 'IND_LOGEMENT', 'LOGEMENT',
-            'CHERTE_VIE', 'PRIME_CHERTE_VIE', 'IND_CHERTE_VIE',
-        ]
-        
         for element in elements:
             if element.rubrique.type_rubrique == 'gain':
                 # Exclure les rappels/compléments qui sont traités hors base
@@ -398,12 +391,8 @@ class MoteurCalculPaie:
                 
                 self.montants['total_gains'] += montant
                 
-                # Vérifier si la prime est exonérée de CNSS
-                code_upper = (element.rubrique.code_rubrique or '').upper()
-                est_exoneree_cnss = any(c in code_upper for c in CODES_EXONERES_CNSS)
-                
-                # Calculer les assiettes
-                if element.rubrique.soumis_cnss and not est_exoneree_cnss:
+                # Calculer les assiettes (le flag soumis_cnss de la rubrique détermine l'inclusion)
+                if element.rubrique.soumis_cnss:
                     self.montants['cnss_base'] += montant
                 if element.rubrique.soumis_irg:
                     self.montants['imposable'] += montant
