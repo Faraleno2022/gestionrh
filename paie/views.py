@@ -696,20 +696,21 @@ def telecharger_bulletin_pdf(request, pk):
     ta = getattr(bulletin, 'taxe_apprentissage', 0) or 0
     onfpp = getattr(bulletin, 'contribution_onfpp', 0) or 0
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
+    base_cnss_pat = min(bulletin.salaire_brut, Decimal('2500000'))
+    base_vf_display = (vf / Decimal('0.06')).quantize(Decimal('1')) if vf > 0 else Decimal('0')
     y -= 0.35*cm
-    p.setFont("Helvetica", 8)
-    p.drawString(1.5*cm, y, f"CNSS Employeur (18%): {bulletin.cnss_employeur:,.0f} GNF".replace(",", " "))
-    p.drawString(6.5*cm, y, f"VF (6%): {vf:,.0f} GNF".replace(",", " "))
-    # TA et ONFPP mutuellement exclusifs
+    p.setFont("Helvetica", 7)
+    p.drawString(1.5*cm, y, f"CNSS Employeur (18% de {base_cnss_pat:,.0f}): {bulletin.cnss_employeur:,.0f} GNF".replace(",", " "))
+    y -= 0.3*cm
+    p.drawString(1.5*cm, y, f"VF (6% de {base_vf_display:,.0f}): {vf:,.0f} GNF".replace(",", " "))
     if ta > 0:
-        ta_fmt = f"{ta:,.0f}".replace(",", " ")
-        p.drawString(10.5*cm, y, f"TA (2%): {ta_fmt} GNF")
+        taux_ta_calc = (ta * 100 / bulletin.salaire_brut).quantize(Decimal('0.01')) if bulletin.salaire_brut > 0 else Decimal('0')
+        p.drawString(10*cm, y, f"TA ({taux_ta_calc}% de {bulletin.salaire_brut:,.0f}): {ta:,.0f} GNF".replace(",", " "))
     elif onfpp > 0:
-        onfpp_fmt = f"{onfpp:,.0f}".replace(",", " ")
-        p.drawString(10.5*cm, y, f"ONFPP (1,5%): {onfpp_fmt} GNF")
+        p.drawString(10*cm, y, f"ONFPP (1,5% de {bulletin.salaire_brut:,.0f}): {onfpp:,.0f} GNF".replace(",", " "))
     p.setFont("Helvetica-Bold", 8)
     y -= 0.35*cm
-    p.drawString(14*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
+    p.drawRightString(width - 1.5*cm, y, f"Total charges patronales: {total_charges:,.0f} GNF".replace(",", " "))
     
     # === ZONE DE SIGNATURES ===
     y -= 1.2*cm
@@ -1038,20 +1039,21 @@ def telecharger_bulletin_public(request, token):
     ta = getattr(bulletin, 'taxe_apprentissage', 0) or 0
     onfpp = getattr(bulletin, 'contribution_onfpp', 0) or 0
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
+    base_cnss_pat = min(bulletin.salaire_brut, Decimal('2500000'))
+    base_vf_display = (vf / Decimal('0.06')).quantize(Decimal('1')) if vf > 0 else Decimal('0')
     y -= 0.35*cm
-    p.setFont("Helvetica", 8)
-    p.drawString(1.5*cm, y, f"CNSS Employeur (18%): {bulletin.cnss_employeur:,.0f} GNF".replace(",", " "))
-    p.drawString(6.5*cm, y, f"VF (6%): {vf:,.0f} GNF".replace(",", " "))
-    # TA et ONFPP mutuellement exclusifs
+    p.setFont("Helvetica", 7)
+    p.drawString(1.5*cm, y, f"CNSS Employeur (18% de {base_cnss_pat:,.0f}): {bulletin.cnss_employeur:,.0f} GNF".replace(",", " "))
+    y -= 0.3*cm
+    p.drawString(1.5*cm, y, f"VF (6% de {base_vf_display:,.0f}): {vf:,.0f} GNF".replace(",", " "))
     if ta > 0:
-        ta_fmt = f"{ta:,.0f}".replace(",", " ")
-        p.drawString(10.5*cm, y, f"TA (2%): {ta_fmt} GNF")
+        taux_ta_calc = (ta * 100 / bulletin.salaire_brut).quantize(Decimal('0.01')) if bulletin.salaire_brut > 0 else Decimal('0')
+        p.drawString(10*cm, y, f"TA ({taux_ta_calc}% de {bulletin.salaire_brut:,.0f}): {ta:,.0f} GNF".replace(",", " "))
     elif onfpp > 0:
-        onfpp_fmt = f"{onfpp:,.0f}".replace(",", " ")
-        p.drawString(10.5*cm, y, f"ONFPP (1,5%): {onfpp_fmt} GNF")
+        p.drawString(10*cm, y, f"ONFPP (1,5% de {bulletin.salaire_brut:,.0f}): {onfpp:,.0f} GNF".replace(",", " "))
     p.setFont("Helvetica-Bold", 8)
     y -= 0.35*cm
-    p.drawString(14*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
+    p.drawRightString(width - 1.5*cm, y, f"Total charges patronales: {total_charges:,.0f} GNF".replace(",", " "))
     
     # === ZONE DE SIGNATURES ===
     y -= 1.2*cm

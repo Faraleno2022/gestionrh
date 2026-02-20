@@ -81,7 +81,7 @@ class ArchivageService:
         Returns:
             dict: Statistiques d'archivage
         """
-        from .utils_pdf import generer_bulletin_pdf
+        from .utils import generer_bulletin_pdf
         
         bulletins = BulletinPaie.objects.filter(
             periode=periode,
