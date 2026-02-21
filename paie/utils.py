@@ -249,7 +249,7 @@ def generer_bulletin_pdf(bulletin):
     has_rappel = rappel > 0
     has_trop_percu = trop_percu > 0
     extra_lines = (1 if has_rappel else 0) + (1 if has_trop_percu else 0)
-    recap_height = 2.5*cm + extra_lines * 0.4*cm
+    recap_height = 2.1*cm + extra_lines * 0.4*cm
     p.setStrokeColor(colors.HexColor("#ce1126"))
     p.setLineWidth(2)
     p.rect(1.5*cm, y - recap_height, width - 3*cm, recap_height, stroke=1, fill=0)
@@ -259,14 +259,15 @@ def generer_bulletin_pdf(bulletin):
     p.drawString(2*cm, y - 0.5*cm, "SALAIRE BRUT:")
     p.drawRightString(width - 2*cm, y - 0.5*cm, f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " "))
     
-    p.setFont("Helvetica", 9)
+    # CNSS et RTS alignés sur la même ligne
+    p.setFont("Helvetica", 8)
     p.setFillColor(colors.HexColor("#dc3545"))
-    p.drawString(2*cm, y - 1*cm, "Cotisation CNSS (5%):")
-    p.drawRightString(width - 2*cm, y - 1*cm, f"- {bulletin.cnss_employe:,.0f} GNF".replace(",", " "))
-    p.drawString(2*cm, y - 1.4*cm, f"RTS (base: {base_rts_val:,.0f} | taux eff.: {taux_eff_rts_val:.2f}%):")
-    p.drawRightString(width - 2*cm, y - 1.4*cm, f"- {bulletin.irg:,.0f} GNF".replace(",", " "))
+    mid_x = width / 2
+    p.drawString(2*cm, y - 1*cm, f"CNSS (5%): -{bulletin.cnss_employe:,.0f}".replace(",", " "))
+    p.drawString(mid_x, y - 1*cm, f"RTS ({taux_eff_rts_val:.2f}%): -{bulletin.irg:,.0f}".replace(",", " "))
+    p.drawRightString(width - 2*cm, y - 1*cm, f"Total retenues: -{bulletin.cnss_employe + bulletin.irg:,.0f} GNF".replace(",", " "))
     
-    offset_y = 1.4*cm
+    offset_y = 1*cm
     if has_rappel:
         offset_y += 0.4*cm
         p.setFillColor(colors.HexColor("#007bff"))
@@ -287,27 +288,32 @@ def generer_bulletin_pdf(bulletin):
     y -= recap_height + 0.5*cm
     
     # === CHARGES PATRONALES ===
-    p.setFont("Helvetica-Bold", 8)
-    p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     vf = getattr(bulletin, 'versement_forfaitaire', 0) or 0
     ta = getattr(bulletin, 'taxe_apprentissage', 0) or 0
     onfpp = getattr(bulletin, 'contribution_onfpp', 0) or 0
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
-    base_cnss_pat = min(bulletin.salaire_brut, Decimal('2500000'))
-    base_vf_display = (vf / Decimal('0.06')).quantize(Decimal('1')) if vf > 0 else Decimal('0')
+    
+    # Ligne titre + détail alignés sur une seule ligne
+    p.setFont("Helvetica-Bold", 8)
+    p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     y -= 0.35*cm
     p.setFont("Helvetica", 7)
-    p.drawString(1.5*cm, y, f"CNSS Employeur (18% de {base_cnss_pat:,.0f}): {bulletin.cnss_employeur:,.0f} GNF".replace(",", " "))
-    y -= 0.3*cm
-    p.drawString(1.5*cm, y, f"VF (6% de {base_vf_display:,.0f}): {vf:,.0f} GNF".replace(",", " "))
+    # Toutes les cotisations patronales sur la même ligne
+    col1 = f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " ")
+    col2 = f"VF 6%: {vf:,.0f}".replace(",", " ")
     if ta > 0:
-        taux_ta_calc = (ta * 100 / bulletin.salaire_brut).quantize(Decimal('0.01')) if bulletin.salaire_brut > 0 else Decimal('0')
-        p.drawString(10*cm, y, f"TA ({taux_ta_calc}% de {bulletin.salaire_brut:,.0f}): {ta:,.0f} GNF".replace(",", " "))
+        col3 = f"TA 1,5%: {ta:,.0f}".replace(",", " ")
     elif onfpp > 0:
-        p.drawString(10*cm, y, f"ONFPP (1,5% de {bulletin.salaire_brut:,.0f}): {onfpp:,.0f} GNF".replace(",", " "))
+        col3 = f"ONFPP 1,5%: {onfpp:,.0f}".replace(",", " ")
+    else:
+        col3 = ""
+    p.drawString(1.5*cm, y, col1)
+    p.drawString(6.5*cm, y, col2)
+    if col3:
+        p.drawString(11*cm, y, col3)
     p.setFont("Helvetica-Bold", 8)
-    y -= 0.35*cm
-    p.drawRightString(width - 1.5*cm, y, f"Total charges patronales: {total_charges:,.0f} GNF".replace(",", " "))
+    p.drawRightString(width - 1.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
+    y -= 0.3*cm
     
     # === ZONE DE SIGNATURES ===
     y -= 1.2*cm
