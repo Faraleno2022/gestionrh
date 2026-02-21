@@ -27,6 +27,40 @@ from core.models import Devise
 import calendar
 
 
+# ============================================================================
+# DÉTECTION INTELLIGENTE DES INDEMNITÉS FORFAITAIRES EXONÉRÉES DE RTS
+# Législation guinéenne: les indemnités forfaitaires (transport, logement,
+# panier, cherté de vie, etc.) sont exonérées de RTS dans la limite de
+# 25% du salaire brut. Au-delà, l'excédent est réintégré dans la base RTS.
+# ============================================================================
+
+# Patterns de codes de rubriques forfaitaires (match par inclusion, insensible à la casse)
+# NB: pas de codes courts ici (risque de faux positifs). Les codes courts sont dans CODES_EXACTS.
+PATTERNS_CODES_FORFAITAIRES = [
+    'TRANSPORT', 'LOGEMENT', 'REPAS', 'PANIER', 'CHERTE',
+    'DEPLACEMENT', 'SALISSURE', 'OUTILLAGE', 'VESTIMENTAIRE',
+    'HABILLEMENT', 'HEBERGEMENT',
+]
+
+# Mots-clés dans le libellé de la rubrique (match par inclusion, insensible à la casse)
+MOTS_CLES_LIBELLE_FORFAITAIRES = [
+    'transport', 'logement', 'hébergement', 'hebergement',
+    'repas', 'panier', 'nourriture', 'restauration',
+    'cherté', 'cherte', 'vie chère', 'vie chere',
+    'déplacement', 'deplacement',
+    'vestimentaire', 'habillement',
+    'salissure', 'outillage',
+    'indemnité forfaitaire', 'indemnite forfaitaire',
+    'prime de logement', 'prime de transport',
+    'allocation logement', 'allocation transport',
+]
+
+# Codes courts exacts (match exact du code, insensible à la casse)
+CODES_EXACTS_FORFAITAIRES = {
+    'PT', 'PL', 'PCV',
+}
+
+
 class MoteurCalculPaie:
     """Moteur de calcul automatique de la paie"""
     
@@ -372,6 +406,9 @@ class MoteurCalculPaie:
         # Codes hors base (rappels/compléments traités séparément)
         codes_hors_base = ['RAPPEL_SALAIRE', 'COMPLEMENT_SALAIRE', 'RETENUE_TROP_PERCU', 'MANQUEMENT_SALAIRE']
         
+        # Accumulateurs pour la détection intelligente
+        self._indemnites_detectees = []  # Liste des (rubrique, montant, raison_detection)
+        
         for element in elements:
             if element.rubrique.type_rubrique == 'gain':
                 # Exclure les rappels/compléments qui sont traités hors base
@@ -391,17 +428,24 @@ class MoteurCalculPaie:
                 
                 self.montants['total_gains'] += montant
                 
-                # Calculer les assiettes (le flag soumis_cnss de la rubrique détermine l'inclusion)
+                # CNSS: le flag soumis_cnss de la rubrique détermine l'inclusion
                 if element.rubrique.soumis_cnss:
                     self.montants['cnss_base'] += montant
-                if element.rubrique.soumis_irg:
+                
+                # RTS: détection intelligente des indemnités forfaitaires
+                est_forfaitaire, raison = self._est_indemnite_forfaitaire(element.rubrique)
+                if est_forfaitaire:
+                    # Indemnité forfaitaire détectée → exonérée de RTS (plafond vérifié après)
+                    self._indemnites_detectees.append((element.rubrique, montant, raison))
+                else:
+                    # Élément de rémunération classique → imposable RTS
                     self.montants['imposable'] += montant
         
         # Ajouter les heures supplémentaires si présentes
         self._calculer_heures_supplementaires()
         
-        # Vérifier le plafond 25% des indemnités forfaitaires
-        self._verifier_plafond_indemnites_forfaitaires()
+        # Appliquer l'exonération RTS avec plafond 25% du brut
+        self._appliquer_exoneration_indemnites_forfaitaires()
     
     def _calculer_element(self, element):
         """Calculer le montant d'un élément"""
@@ -535,76 +579,76 @@ class MoteurCalculPaie:
                     'ordre': rubrique_hs.ordre_affichage
                 })
     
-    def _verifier_plafond_indemnites_forfaitaires(self):
+    @staticmethod
+    def _est_indemnite_forfaitaire(rubrique):
         """
-        Vérifie le plafond de 25% pour les indemnités forfaitaires exonérées.
+        Détection intelligente des indemnités forfaitaires exonérées de RTS.
         
-        Selon la législation guinéenne, les indemnités forfaitaires (logement, transport, panier)
-        sont exonérées de RTS dans la limite de 25% du salaire brut.
-        Au-delà, l'excédent est réintégré dans la base imposable RTS.
+        Utilise 3 niveaux de détection (par priorité décroissante):
+        1. Code exact (PT, PL, PCV, etc.)
+        2. Pattern dans le code (TRANSPORT, LOGEMENT, CHERTE, etc.)
+        3. Mots-clés dans le libellé (transport, logement, cherté de vie, etc.)
         
-        FORMULE CORRECTE:
-        -----------------
-        Salaire brut = Salaire de base + Primes/Indemnités
-        Plafond exonéré = 25% × Salaire brut
-        Si Primes > Plafond → Excédent réintégré dans base RTS
-        
-        VÉRIFICATION MATHÉMATIQUE:
-        Pour que les primes soient exactement au plafond:
-        Primes = 25% × (Salaire de base + Primes)
-        Primes = 0.25 × Salaire de base + 0.25 × Primes
-        0.75 × Primes = 0.25 × Salaire de base
-        Primes = 33.33% × Salaire de base
-        → Pour respecter le plafond 25% du brut, les primes ne doivent pas dépasser ~33% du salaire de base.
-        
-        Rubriques concernées:
-        - PRIME_TRANSPORT, ALLOC_TRANSPORT
-        - ALLOC_LOGEMENT, IND_LOGEMENT
-        - IND_REPAS, IND_REPAS_JOUR, PRIME_PANIER
+        Returns:
+            tuple(bool, str): (est_forfaitaire, raison_detection)
         """
-        # Codes des rubriques d'indemnités forfaitaires exonérées
-        CODES_INDEMNITES_FORFAITAIRES = [
-            'PRIME_TRANSPORT', 'ALLOC_TRANSPORT', 'TRANSPORT',
-            'ALLOC_LOGEMENT', 'IND_LOGEMENT', 'LOGEMENT',
-            'IND_REPAS', 'IND_REPAS_JOUR', 'PRIME_PANIER', 'PANIER', 'REPAS',
-        ]
+        code = (rubrique.code_rubrique or '').strip().upper()
+        libelle = (rubrique.libelle_rubrique or '').strip().lower()
         
-        # Taux plafond (25% du brut)
-        TAUX_PLAFOND = self.constantes.get('PLAFOND_INDEMNITES_PCT', Decimal('25'))
+        # Niveau 1: Code exact
+        if code in CODES_EXACTS_FORFAITAIRES:
+            return True, f"code exact '{code}'"
         
-        # Calculer le salaire de base (éléments non forfaitaires)
-        salaire_base = Decimal('0')
-        total_indemnites = Decimal('0')
+        # Niveau 2: Pattern dans le code
+        for pattern in PATTERNS_CODES_FORFAITAIRES:
+            if pattern in code:
+                return True, f"pattern code '{pattern}' dans '{code}'"
         
-        for ligne in self.lignes:
-            code = ligne['rubrique'].code_rubrique.upper() if ligne['rubrique'].code_rubrique else ''
-            # Vérifier si c'est une indemnité forfaitaire
-            est_indemnite_forfaitaire = any(ind in code for ind in CODES_INDEMNITES_FORFAITAIRES)
-            
-            if est_indemnite_forfaitaire:
-                total_indemnites += ligne['montant']
-            else:
-                # C'est un élément de salaire de base ou autre prime non forfaitaire
-                if ligne['rubrique'].type_rubrique == 'gain':
-                    salaire_base += ligne['montant']
+        # Niveau 3: Mots-clés dans le libellé
+        for mot in MOTS_CLES_LIBELLE_FORFAITAIRES:
+            if mot in libelle:
+                return True, f"mot-clé '{mot}' dans libellé '{rubrique.libelle_rubrique}'"
+        
+        return False, ''
+    
+    def _appliquer_exoneration_indemnites_forfaitaires(self):
+        """
+        Applique l'exonération RTS des indemnités forfaitaires avec plafond 25%.
+        
+        Législation guinéenne:
+        - Les indemnités forfaitaires (transport, logement, panier, cherté de vie)
+          sont exonérées de RTS dans la limite de 25% du salaire brut.
+        - Au-delà du plafond, l'excédent est réintégré dans la base imposable RTS.
+        
+        Détection: utilise _est_indemnite_forfaitaire() pour classifier
+        automatiquement les rubriques par code et libellé.
+        """
+        # Totaliser les indemnités forfaitaires détectées
+        total_indemnites = sum(montant for _, montant, _ in self._indemnites_detectees)
+        salaire_base = self.montants['imposable']  # gains non-forfaitaires déjà accumulés
+        salaire_brut = self.montants['total_gains']
         
         self.montants['indemnites_forfaitaires'] = total_indemnites
         self.montants['salaire_base_hors_indemnites'] = salaire_base
         
-        # Salaire brut = Salaire de base + Indemnités forfaitaires
-        salaire_brut = salaire_base + total_indemnites
-        
-        # Plafond exonéré = 25% × Salaire brut
+        # Taux plafond (25% du brut par défaut)
+        TAUX_PLAFOND = self.constantes.get('PLAFOND_INDEMNITES_PCT', Decimal('25'))
         plafond = self._arrondir(salaire_brut * TAUX_PLAFOND / Decimal('100'))
         self.montants['plafond_indemnites'] = plafond
         
-        # Calcul du ratio pour information
-        # Pour info: primes max = 33.33% du salaire de base pour respecter le plafond
-        ratio_max_base = Decimal('33.33')  # 25% / 75% = 33.33%
+        # Ratio max pour information (primes max ≈ 33.33% du salaire de base)
+        ratio_max_base = Decimal('33.33')
         primes_max_theorique = self._arrondir(salaire_base * ratio_max_base / Decimal('100'))
         self.montants['primes_max_theorique'] = primes_max_theorique
         
-        # Vérifier le dépassement
+        # Stocker le détail des détections pour traçabilité
+        self.montants['detail_indemnites_detectees'] = [
+            {'code': r.code_rubrique, 'libelle': r.libelle_rubrique,
+             'montant': m, 'raison': raison}
+            for r, m, raison in self._indemnites_detectees
+        ]
+        
+        # Vérifier le dépassement du plafond 25%
         if total_indemnites > plafond:
             depassement = total_indemnites - plafond
             self.montants['depassement_plafond_indemnites'] = depassement
@@ -613,19 +657,18 @@ class MoteurCalculPaie:
             self.montants['reintegration_base_imposable'] = depassement
             self.montants['imposable'] += depassement
             
-            # Ajouter une alerte dans les montants
+            # Alerte
             self.montants['alerte_plafond_indemnites'] = (
-                f"⚠️ Indemnités forfaitaires ({total_indemnites:,.0f} GNF) dépassent le plafond 25% "
-                f"du brut ({plafond:,.0f} GNF). Excédent de {depassement:,.0f} GNF réintégré dans la base imposable RTS."
+                f"Indemnités forfaitaires ({total_indemnites:,.0f} GNF) dépassent le plafond "
+                f"{TAUX_PLAFOND}% du brut ({plafond:,.0f} GNF). "
+                f"Excédent de {depassement:,.0f} GNF réintégré dans la base imposable RTS."
             )
             
-            # Ajouter à la liste des alertes du bulletin
             if 'alertes' not in self.montants:
                 self.montants['alertes'] = []
             self.montants['alertes'].append({
                 'type': 'avertissement',
-                'message': f"Plafond 25% indemnités forfaitaires dépassé: {total_indemnites:,.0f} GNF > {plafond:,.0f} GNF. "
-                           f"Excédent {depassement:,.0f} GNF réintégré dans base RTS."
+                'message': self.montants['alerte_plafond_indemnites']
             })
         else:
             self.montants['depassement_plafond_indemnites'] = Decimal('0')
