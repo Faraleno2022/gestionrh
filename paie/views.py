@@ -699,20 +699,12 @@ def telecharger_bulletin_pdf(request, pk):
     p.setFont("Helvetica-Bold", 8)
     p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     y -= 0.35*cm
-    p.setFont("Helvetica", 7)
-    col1 = f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " ")
-    col2 = f"VF 6%: {vf:,.0f}".replace(",", " ")
-    if ta > 0:
-        col3 = f"TA 1,5%: {ta:,.0f}".replace(",", " ")
-    elif onfpp > 0:
-        col3 = f"ONFPP 1,5%: {onfpp:,.0f}".replace(",", " ")
-    else:
-        col3 = ""
-    p.drawString(1.5*cm, y, col1)
-    p.drawString(6.5*cm, y, col2)
-    if col3:
-        p.drawString(11*cm, y, col3)
-    p.setFont("Helvetica-Bold", 8)
+    p.setFont("Helvetica", 6.5)
+    p.drawString(1.5*cm, y, f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " "))
+    p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
+    p.drawString(9*cm, y, f"TA 1,5%: {ta:,.0f}".replace(",", " "))
+    p.drawString(12.5*cm, y, f"ONFPP 1,5%: {onfpp:,.0f}".replace(",", " "))
+    p.setFont("Helvetica-Bold", 7)
     p.drawRightString(width - 1.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     y -= 0.3*cm
     
@@ -1046,20 +1038,12 @@ def telecharger_bulletin_public(request, token):
     p.setFont("Helvetica-Bold", 8)
     p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     y -= 0.35*cm
-    p.setFont("Helvetica", 7)
-    col1 = f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " ")
-    col2 = f"VF 6%: {vf:,.0f}".replace(",", " ")
-    if ta > 0:
-        col3 = f"TA 1,5%: {ta:,.0f}".replace(",", " ")
-    elif onfpp > 0:
-        col3 = f"ONFPP 1,5%: {onfpp:,.0f}".replace(",", " ")
-    else:
-        col3 = ""
-    p.drawString(1.5*cm, y, col1)
-    p.drawString(6.5*cm, y, col2)
-    if col3:
-        p.drawString(11*cm, y, col3)
-    p.setFont("Helvetica-Bold", 8)
+    p.setFont("Helvetica", 6.5)
+    p.drawString(1.5*cm, y, f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " "))
+    p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
+    p.drawString(9*cm, y, f"TA 1,5%: {ta:,.0f}".replace(",", " "))
+    p.drawString(12.5*cm, y, f"ONFPP 1,5%: {onfpp:,.0f}".replace(",", " "))
+    p.setFont("Helvetica-Bold", 7)
     p.drawRightString(width - 1.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     y -= 0.3*cm
     
