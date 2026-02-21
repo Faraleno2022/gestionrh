@@ -12,6 +12,92 @@ from reportlab.platypus import Table, TableStyle
 from django.utils import timezone
 
 
+def calculer_detail_tranches_rts(base_rts):
+    """
+    Calcule le détail progressif RTS par tranche à partir de la base imposable.
+    Barème CGI 2022 (6 tranches).
+    
+    Returns:
+        list of dict avec clés: borne_inf, borne_sup, taux, base_tranche, impot_tranche
+    """
+    from decimal import ROUND_HALF_UP
+    
+    base_rts = Decimal(str(base_rts or 0))
+    if base_rts <= 0:
+        return []
+    
+    # Charger les tranches depuis la BDD si possible
+    tranches_db = []
+    try:
+        from .models import TrancheRTS
+        annee = timezone.now().year
+        tranches_db = list(TrancheRTS.objects.filter(
+            annee_validite=annee, actif=True
+        ).order_by('numero_tranche').values(
+            'borne_inferieure', 'borne_superieure', 'taux_irg'
+        ))
+        if not tranches_db:
+            tranches_db = list(TrancheRTS.objects.filter(
+                actif=True
+            ).order_by('-annee_validite', 'numero_tranche'))
+            if tranches_db:
+                annee_found = tranches_db[0].get('annee_validite') if isinstance(tranches_db[0], dict) else tranches_db[0].annee_validite
+                tranches_db = list(TrancheRTS.objects.filter(
+                    annee_validite=annee_found, actif=True
+                ).order_by('numero_tranche').values(
+                    'borne_inferieure', 'borne_superieure', 'taux_irg'
+                ))
+    except Exception:
+        tranches_db = []
+    
+    # Fallback: barème CGI 2022
+    if not tranches_db:
+        tranches_db = [
+            {'borne_inferieure': Decimal('0'), 'borne_superieure': Decimal('1000000'), 'taux_irg': Decimal('0')},
+            {'borne_inferieure': Decimal('1000000'), 'borne_superieure': Decimal('3000000'), 'taux_irg': Decimal('5')},
+            {'borne_inferieure': Decimal('3000000'), 'borne_superieure': Decimal('5000000'), 'taux_irg': Decimal('8')},
+            {'borne_inferieure': Decimal('5000000'), 'borne_superieure': Decimal('10000000'), 'taux_irg': Decimal('10')},
+            {'borne_inferieure': Decimal('10000000'), 'borne_superieure': Decimal('20000000'), 'taux_irg': Decimal('15')},
+            {'borne_inferieure': Decimal('20000000'), 'borne_superieure': None, 'taux_irg': Decimal('20')},
+        ]
+    
+    # Normaliser les bornes (éliminer les gaps de 1 GNF)
+    seuils = []
+    for i, t in enumerate(tranches_db):
+        b_inf = Decimal(str(t['borne_inferieure']))
+        b_sup = t.get('borne_superieure')
+        taux = Decimal(str(t['taux_irg']))
+        if i > 0 and seuils:
+            prev_sup = seuils[-1][1]
+            if prev_sup is not None and b_inf > prev_sup and b_inf <= prev_sup + 2:
+                b_inf = prev_sup
+        if b_sup is not None:
+            b_sup = Decimal(str(b_sup))
+        seuils.append((b_inf, b_sup, taux))
+    
+    # Calcul progressif
+    detail = []
+    for b_inf, b_sup, taux in seuils:
+        if base_rts <= b_inf:
+            break
+        if b_sup is not None:
+            base_tranche = min(base_rts, b_sup) - b_inf
+        else:
+            base_tranche = base_rts - b_inf
+        if base_tranche <= 0:
+            continue
+        impot = (base_tranche * taux / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        detail.append({
+            'borne_inf': b_inf,
+            'borne_sup': b_sup,
+            'taux': taux,
+            'base_tranche': base_tranche,
+            'impot_tranche': impot,
+        })
+    
+    return detail
+
+
 def generer_bulletin_pdf(bulletin):
     """
     Génère le PDF d'un bulletin de paie et retourne les bytes du PDF.
@@ -241,7 +327,51 @@ def generer_bulletin_pdf(bulletin):
     table_height = len(retenues_data) * row_height
     retenues_table.wrapOn(p, width, height)
     retenues_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.6*cm
+    y -= table_height + 0.4*cm
+    
+    # === DÉTAIL CALCUL RTS (barème progressif) ===
+    detail_rts = calculer_detail_tranches_rts(base_rts_val)
+    if detail_rts:
+        p.setFont("Helvetica-Bold", 7)
+        p.setFillColor(colors.HexColor("#6c757d"))
+        p.drawString(1.5*cm, y, f"DÉTAIL RTS — Barème progressif sur base imposable: {base_rts_val:,.0f} GNF".replace(",", " "))
+        p.setFillColor(colors.black)
+        y -= 0.25*cm
+        
+        rts_detail_data = [["Tranche", "Taux", "Base tranche", "Impôt"]]
+        cumul_impot = Decimal('0')
+        for t in detail_rts:
+            b_sup_str = f"{t['borne_sup']:,.0f}".replace(",", " ") if t['borne_sup'] else "∞"
+            rts_detail_data.append([
+                f"{t['borne_inf']:,.0f} - {b_sup_str}".replace(",", " "),
+                f"{t['taux']:g}%",
+                f"{t['base_tranche']:,.0f}".replace(",", " "),
+                f"{t['impot_tranche']:,.0f}".replace(",", " "),
+            ])
+            cumul_impot += t['impot_tranche']
+        rts_detail_data.append(["", "", "Total RTS:", f"{cumul_impot:,.0f} GNF".replace(",", " ")])
+        
+        rts_row_h = 12
+        rts_table = Table(rts_detail_data, colWidths=[5.5*cm, 1.5*cm, 5*cm, 5*cm], rowHeights=rts_row_h)
+        nb_rows = len(rts_detail_data)
+        rts_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 7),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#dee2e6")),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f9fa")),
+        ]))
+        
+        rts_table_h = nb_rows * rts_row_h
+        rts_table.wrapOn(p, width, height)
+        rts_table.drawOn(p, 1.5*cm, y - rts_table_h)
+        y -= rts_table_h + 0.4*cm
+    else:
+        y -= 0.2*cm
     
     # === RÉCAPITULATIF ===
     rappel = getattr(bulletin, 'rappel_salaire', 0) or 0

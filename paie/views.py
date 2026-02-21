@@ -644,7 +644,52 @@ def telecharger_bulletin_pdf(request, pk):
     table_height = len(retenues_data) * row_height
     retenues_table.wrapOn(p, width, height)
     retenues_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.6*cm
+    y -= table_height + 0.4*cm
+    
+    # === DÉTAIL CALCUL RTS (barème progressif) ===
+    from paie.utils import calculer_detail_tranches_rts
+    detail_rts = calculer_detail_tranches_rts(base_rts_val)
+    if detail_rts:
+        p.setFont("Helvetica-Bold", 7)
+        p.setFillColor(colors.HexColor("#6c757d"))
+        p.drawString(1.5*cm, y, f"DÉTAIL RTS — Barème progressif sur base imposable: {base_rts_val:,.0f} GNF".replace(",", " "))
+        p.setFillColor(colors.black)
+        y -= 0.25*cm
+        
+        rts_detail_data = [["Tranche", "Taux", "Base tranche", "Impôt"]]
+        cumul_impot = Decimal('0')
+        for t in detail_rts:
+            b_sup_str = f"{t['borne_sup']:,.0f}".replace(",", " ") if t['borne_sup'] else "∞"
+            rts_detail_data.append([
+                f"{t['borne_inf']:,.0f} - {b_sup_str}".replace(",", " "),
+                f"{t['taux']:g}%",
+                f"{t['base_tranche']:,.0f}".replace(",", " "),
+                f"{t['impot_tranche']:,.0f}".replace(",", " "),
+            ])
+            cumul_impot += t['impot_tranche']
+        rts_detail_data.append(["", "", "Total RTS:", f"{cumul_impot:,.0f} GNF".replace(",", " ")])
+        
+        rts_row_h = 12
+        rts_table = Table(rts_detail_data, colWidths=[5.5*cm, 1.5*cm, 5*cm, 5*cm], rowHeights=rts_row_h)
+        nb_rows = len(rts_detail_data)
+        rts_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 7),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#dee2e6")),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f9fa")),
+        ]))
+        
+        rts_table_h = nb_rows * rts_row_h
+        rts_table.wrapOn(p, width, height)
+        rts_table.drawOn(p, 1.5*cm, y - rts_table_h)
+        y -= rts_table_h + 0.4*cm
+    else:
+        y -= 0.2*cm
     
     # === RÉCAPITULATIF ===
     rappel = getattr(bulletin, 'rappel_salaire', 0) or 0
@@ -983,7 +1028,52 @@ def telecharger_bulletin_public(request, token):
     table_height = len(retenues_data) * row_height
     retenues_table.wrapOn(p, width, height)
     retenues_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.6*cm
+    y -= table_height + 0.4*cm
+    
+    # === DÉTAIL CALCUL RTS (barème progressif) ===
+    from paie.utils import calculer_detail_tranches_rts
+    detail_rts = calculer_detail_tranches_rts(base_rts_val)
+    if detail_rts:
+        p.setFont("Helvetica-Bold", 7)
+        p.setFillColor(colors.HexColor("#6c757d"))
+        p.drawString(1.5*cm, y, f"DÉTAIL RTS — Barème progressif sur base imposable: {base_rts_val:,.0f} GNF".replace(",", " "))
+        p.setFillColor(colors.black)
+        y -= 0.25*cm
+        
+        rts_detail_data = [["Tranche", "Taux", "Base tranche", "Impôt"]]
+        cumul_impot = Decimal('0')
+        for t in detail_rts:
+            b_sup_str = f"{t['borne_sup']:,.0f}".replace(",", " ") if t['borne_sup'] else "∞"
+            rts_detail_data.append([
+                f"{t['borne_inf']:,.0f} - {b_sup_str}".replace(",", " "),
+                f"{t['taux']:g}%",
+                f"{t['base_tranche']:,.0f}".replace(",", " "),
+                f"{t['impot_tranche']:,.0f}".replace(",", " "),
+            ])
+            cumul_impot += t['impot_tranche']
+        rts_detail_data.append(["", "", "Total RTS:", f"{cumul_impot:,.0f} GNF".replace(",", " ")])
+        
+        rts_row_h = 12
+        rts_table = Table(rts_detail_data, colWidths=[5.5*cm, 1.5*cm, 5*cm, 5*cm], rowHeights=rts_row_h)
+        nb_rows = len(rts_detail_data)
+        rts_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 7),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#dee2e6")),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f9fa")),
+        ]))
+        
+        rts_table_h = nb_rows * rts_row_h
+        rts_table.wrapOn(p, width, height)
+        rts_table.drawOn(p, 1.5*cm, y - rts_table_h)
+        y -= rts_table_h + 0.4*cm
+    else:
+        y -= 0.2*cm
     
     # === RÉCAPITULATIF ===
     rappel = getattr(bulletin, 'rappel_salaire', 0) or 0
