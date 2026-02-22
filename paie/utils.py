@@ -134,28 +134,6 @@ def generer_bulletin_pdf(bulletin):
         except:
             pass
     
-    # Drapeau de la Guinée à droite (Rouge - Jaune - Vert)
-    flag_width = 1.5*cm
-    flag_height = 1*cm
-    flag_x = width - 1.5*cm - flag_width
-    flag_y = y - 1.5*cm
-    stripe_width = flag_width / 3
-    
-    # Bande rouge
-    p.setFillColor(colors.HexColor("#ce1126"))
-    p.rect(flag_x, flag_y, stripe_width, flag_height, stroke=0, fill=1)
-    # Bande jaune
-    p.setFillColor(colors.HexColor("#fcd116"))
-    p.rect(flag_x + stripe_width, flag_y, stripe_width, flag_height, stroke=0, fill=1)
-    # Bande verte
-    p.setFillColor(colors.HexColor("#009460"))
-    p.rect(flag_x + 2*stripe_width, flag_y, stripe_width, flag_height, stroke=0, fill=1)
-    # Bordure du drapeau
-    p.setStrokeColor(colors.black)
-    p.setLineWidth(0.5)
-    p.rect(flag_x, flag_y, flag_width, flag_height, stroke=1, fill=0)
-    p.setFillColor(colors.black)
-    
     # Titre centré
     p.setFont("Helvetica-Bold", 11)
     p.drawCentredString(width/2, y, "RÉPUBLIQUE DE GUINÉE")
