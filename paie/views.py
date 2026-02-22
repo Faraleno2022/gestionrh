@@ -566,19 +566,21 @@ def telecharger_bulletin_pdf(request, pk):
     p.setFillColor(colors.black)
     y -= 0.3*cm
     
-    # Tableau des gains
-    gains_data = [["Libellé", "Base", "Taux", "Montant"]]
+    # Tableau des gains (5 colonnes avec Nbre pour les heures)
+    gains_data = [["Libellé", "Nbre", "Base", "Taux", "Montant"]]
     for g in gains:
+        nbre_str = f"{g.nombre:g}" if g.nombre and g.nombre != 1 else ""
         gains_data.append([
             g.rubrique.libelle_rubrique[:35],
+            nbre_str,
             f"{g.base:,.0f}".replace(",", " ") if g.base else "-",
             f"{g.taux}%" if g.taux else "-",
             f"{g.montant:,.0f}".replace(",", " ")
         ])
-    gains_data.append(["TOTAL BRUT", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " ")])
+    gains_data.append(["TOTAL BRUT", "", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " ")])
     
     row_height = 14
-    gains_table = Table(gains_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
+    gains_table = Table(gains_data, colWidths=[6.5*cm, 1.5*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     gains_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#28a745")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -594,7 +596,59 @@ def telecharger_bulletin_pdf(request, pk):
     table_height = len(gains_data) * row_height
     gains_table.wrapOn(p, width, height)
     gains_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.5*cm
+    y -= table_height + 0.15*cm
+    
+    # === DÉTAIL HEURES SUPPLÉMENTAIRES ===
+    hs_30 = getattr(bulletin, 'heures_supplementaires_30', 0) or 0
+    hs_60 = getattr(bulletin, 'heures_supplementaires_60', 0) or 0
+    hs_nuit = getattr(bulletin, 'heures_nuit', 0) or 0
+    hs_feries = getattr(bulletin, 'heures_feries', 0) or 0
+    prime_hs = getattr(bulletin, 'prime_heures_sup', 0) or 0
+    prime_nuit = getattr(bulletin, 'prime_nuit', 0) or 0
+    prime_feries = getattr(bulletin, 'prime_feries', 0) or 0
+    total_hs_heures = float(hs_30) + float(hs_60) + float(hs_nuit) + float(hs_feries)
+    
+    if total_hs_heures > 0 or float(prime_hs) > 0:
+        p.setFont("Helvetica-Bold", 7)
+        p.setFillColor(colors.HexColor("#6c757d"))
+        p.drawString(1.5*cm, y, "DÉTAIL HEURES SUPPLÉMENTAIRES (Code du Travail Art. 221)")
+        p.setFillColor(colors.black)
+        y -= 0.25*cm
+        
+        hs_detail_data = [["Type", "Heures", "Majoration", "Montant"]]
+        if float(hs_30) > 0:
+            hs_detail_data.append(["4 prem. HS/sem.", f"{hs_30:g}h", "+30% (130%)", f"{prime_hs:,.0f}".replace(",", " ") if float(hs_60) == 0 else "-"])
+        if float(hs_60) > 0:
+            hs_detail_data.append(["Au-delà 4 HS/sem.", f"{hs_60:g}h", "+60% (160%)", "-"])
+        if float(hs_nuit) > 0:
+            hs_detail_data.append(["Heures de nuit (20h-6h)", f"{hs_nuit:g}h", "+20% (120%)", f"{prime_nuit:,.0f}".replace(",", " ")])
+        if float(hs_feries) > 0:
+            hs_detail_data.append(["Jours fériés", f"{hs_feries:g}h", "+60/100%", f"{prime_feries:,.0f}".replace(",", " ")])
+        
+        total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries)
+        hs_detail_data.append(["", f"{total_hs_heures:g}h", "Total HS:", f"{total_prime:,.0f} GNF".replace(",", " ")])
+        
+        hs_row_h = 12
+        hs_table = Table(hs_detail_data, colWidths=[5.5*cm, 2*cm, 4.5*cm, 5*cm], rowHeights=hs_row_h)
+        nb_hs_rows = len(hs_detail_data)
+        hs_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 7),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#dee2e6")),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f9fa")),
+        ]))
+        
+        hs_table_h = nb_hs_rows * hs_row_h
+        hs_table.wrapOn(p, width, height)
+        hs_table.drawOn(p, 1.5*cm, y - hs_table_h)
+        y -= hs_table_h + 0.35*cm
+    else:
+        y += 0.35*cm
     
     # === RETENUES ===
     # Titre RETENUES
@@ -951,19 +1005,21 @@ def telecharger_bulletin_public(request, token):
     p.setFillColor(colors.black)
     y -= 0.3*cm
     
-    # Tableau des gains
-    gains_data = [["Libellé", "Base", "Taux", "Montant"]]
+    # Tableau des gains (5 colonnes avec Nbre pour les heures)
+    gains_data = [["Libellé", "Nbre", "Base", "Taux", "Montant"]]
     for g in gains:
+        nbre_str = f"{g.nombre:g}" if g.nombre and g.nombre != 1 else ""
         gains_data.append([
             g.rubrique.libelle_rubrique[:35],
+            nbre_str,
             f"{g.base:,.0f}".replace(",", " ") if g.base else "-",
             f"{g.taux}%" if g.taux else "-",
             f"{g.montant:,.0f}".replace(",", " ")
         ])
-    gains_data.append(["TOTAL BRUT", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " ")])
+    gains_data.append(["TOTAL BRUT", "", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " ")])
     
     row_height = 14
-    gains_table = Table(gains_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
+    gains_table = Table(gains_data, colWidths=[6.5*cm, 1.5*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     gains_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#28a745")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -979,7 +1035,59 @@ def telecharger_bulletin_public(request, token):
     table_height = len(gains_data) * row_height
     gains_table.wrapOn(p, width, height)
     gains_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.5*cm
+    y -= table_height + 0.15*cm
+    
+    # === DÉTAIL HEURES SUPPLÉMENTAIRES ===
+    hs_30 = getattr(bulletin, 'heures_supplementaires_30', 0) or 0
+    hs_60 = getattr(bulletin, 'heures_supplementaires_60', 0) or 0
+    hs_nuit = getattr(bulletin, 'heures_nuit', 0) or 0
+    hs_feries = getattr(bulletin, 'heures_feries', 0) or 0
+    prime_hs = getattr(bulletin, 'prime_heures_sup', 0) or 0
+    prime_nuit = getattr(bulletin, 'prime_nuit', 0) or 0
+    prime_feries = getattr(bulletin, 'prime_feries', 0) or 0
+    total_hs_heures = float(hs_30) + float(hs_60) + float(hs_nuit) + float(hs_feries)
+    
+    if total_hs_heures > 0 or float(prime_hs) > 0:
+        p.setFont("Helvetica-Bold", 7)
+        p.setFillColor(colors.HexColor("#6c757d"))
+        p.drawString(1.5*cm, y, "DÉTAIL HEURES SUPPLÉMENTAIRES (Code du Travail Art. 221)")
+        p.setFillColor(colors.black)
+        y -= 0.25*cm
+        
+        hs_detail_data = [["Type", "Heures", "Majoration", "Montant"]]
+        if float(hs_30) > 0:
+            hs_detail_data.append(["4 prem. HS/sem.", f"{hs_30:g}h", "+30% (130%)", f"{prime_hs:,.0f}".replace(",", " ") if float(hs_60) == 0 else "-"])
+        if float(hs_60) > 0:
+            hs_detail_data.append(["Au-delà 4 HS/sem.", f"{hs_60:g}h", "+60% (160%)", "-"])
+        if float(hs_nuit) > 0:
+            hs_detail_data.append(["Heures de nuit (20h-6h)", f"{hs_nuit:g}h", "+20% (120%)", f"{prime_nuit:,.0f}".replace(",", " ")])
+        if float(hs_feries) > 0:
+            hs_detail_data.append(["Jours fériés", f"{hs_feries:g}h", "+60/100%", f"{prime_feries:,.0f}".replace(",", " ")])
+        
+        total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries)
+        hs_detail_data.append(["", f"{total_hs_heures:g}h", "Total HS:", f"{total_prime:,.0f} GNF".replace(",", " ")])
+        
+        hs_row_h = 12
+        hs_table = Table(hs_detail_data, colWidths=[5.5*cm, 2*cm, 4.5*cm, 5*cm], rowHeights=hs_row_h)
+        nb_hs_rows = len(hs_detail_data)
+        hs_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 7),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#dee2e6")),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f9fa")),
+        ]))
+        
+        hs_table_h = nb_hs_rows * hs_row_h
+        hs_table.wrapOn(p, width, height)
+        hs_table.drawOn(p, 1.5*cm, y - hs_table_h)
+        y -= hs_table_h + 0.35*cm
+    else:
+        y += 0.35*cm
     
     # === RETENUES ===
     p.setFillColor(colors.HexColor("#dc3545"))

@@ -1155,6 +1155,16 @@ class MoteurCalculPaie:
         bulletin_data['taxe_apprentissage'] = self.montants.get('taxe_apprentissage', Decimal('0'))
         bulletin_data['contribution_onfpp'] = self.montants.get('contribution_onfpp', Decimal('0'))
         
+        # Heures de travail et primes HS
+        bulletin_data['heures_normales'] = self.montants.get('heures_travaillees', Decimal('0'))
+        bulletin_data['heures_supplementaires_30'] = self.montants.get('heures_sup_30', Decimal('0'))
+        bulletin_data['heures_supplementaires_60'] = self.montants.get('heures_sup_60', Decimal('0'))
+        bulletin_data['heures_nuit'] = self.montants.get('heures_sup_nuit', Decimal('0'))
+        bulletin_data['heures_feries'] = self.montants.get('heures_sup_ferie_jour', Decimal('0')) + self.montants.get('heures_sup_ferie_nuit', Decimal('0'))
+        bulletin_data['prime_heures_sup'] = self.montants.get('montant_heures_sup', Decimal('0'))
+        bulletin_data['prime_nuit'] = self.montants.get('montant_hs_nuit', Decimal('0'))
+        bulletin_data['prime_feries'] = self.montants.get('montant_hs_ferie_jour', Decimal('0')) + self.montants.get('montant_hs_ferie_nuit', Decimal('0'))
+        
         bulletin = BulletinPaie.objects.create(**bulletin_data)
         
         # Créer les lignes
