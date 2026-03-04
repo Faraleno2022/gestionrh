@@ -1183,6 +1183,10 @@ class MoteurCalculPaie:
         bulletin_data['base_vf'] = self.montants.get('base_vf', Decimal('0'))
         bulletin_data['nombre_salaries'] = self.nb_salaries
         
+        # ✨ NOUVEAU: Calculer et créer automatiquement les congés acquis
+        # Cela crée/met à jour le SoldeConge avec ancienneté-based calculation
+        self._calculer_conges_acquis()
+        
         bulletin = BulletinPaie.objects.create(**bulletin_data)
         
         # Créer les lignes
@@ -1249,6 +1253,119 @@ class MoteurCalculPaie:
         cumul.cumul_irg += bulletin.irg
         cumul.nombre_bulletins += 1
         cumul.save()
+    
+    def _calculer_anciennete_mois(self, date_embauche, date_ref=None):
+        """
+        Calcule l'ancienneté en mois
+        Formule: (années_diff × 12) + mois_diff + ajustement_jour
+        
+        Args:
+            date_embauche: Date d'embauche de l'employé
+            date_ref: Date de référence (par défaut: date actuelle)
+        
+        Returns:
+            Decimal: Nombre de mois d'ancienneté (0+)
+        """
+        if date_ref is None:
+            date_ref = date.today()
+        
+        if not date_embauche or date_embauche > date_ref:
+            return Decimal('0')
+        
+        # Calculer la différence d'années et de mois
+        years_diff = date_ref.year - date_embauche.year
+        months_diff = date_ref.month - date_embauche.month
+        
+        # Ancienneté en mois
+        anciennete = (years_diff * 12) + months_diff
+        
+        # Ajustement si le jour du mois n'est pas encore atteint
+        if date_ref.day < date_embauche.day:
+            anciennete -= 1
+        
+        return max(Decimal('0'), Decimal(str(anciennete)))
+    
+    def _calculer_conges_acquis(self):
+        """
+        Calcule automatiquement les congés acquis selon la règle guinéenne
+        et crée/met à jour le SoldeConge de l'employé
+        
+        Règle: 2.5 jours par mois d'ancienneté (Code du Travail Guinée)
+        Bonus ancienneté: +2 jours par 5 ans (configurable via ConfigPaieEntreprise)
+        Maximum: 30 jours par an
+        
+        Returns:
+            Decimal: Nombre de congés acquis
+        """
+        from temps_travail.models import SoldeConge
+        
+        try:
+            emp = self.employe
+            
+            # Vérifier que l'employé a une date d'embauche
+            if not emp.date_embauche:
+                return Decimal('0')
+            
+            # Calculer l'ancienneté en mois à la fin du mois actuel
+            dernier_jour = date(
+                self.periode.annee, 
+                self.periode.mois, 
+                calendar.monthrange(self.periode.annee, self.periode.mois)[1]
+            )
+            anciennete_mois = self._calculer_anciennete_mois(emp.date_embauche, dernier_jour)
+            
+            # Récupérer la configuration de paie (jours/mois)
+            try:
+                config_paie = self.config_paie
+            except:
+                # Fallback si config_paie n'existe pas: charger depuis l'entreprise
+                config_paie = emp.entreprise.configpaieentreprise_set.first() if emp.entreprise else None
+            
+            # Déterminer le nombre de jours par mois
+            if config_paie:
+                jours_par_mois = config_paie.jours_conges_par_mois or Decimal('2.50')
+            else:
+                # Par défaut: 2.5 jours/mois (Code du Travail Guinée)
+                jours_par_mois = Decimal('2.50')
+            
+            # Calculer les congés acquis
+            conges_acquis = anciennete_mois * jours_par_mois
+            
+            # Ajouter bonus ancienneté si applicable
+            if config_paie and hasattr(config_paie, 'jours_conges_anciennete') and config_paie.jours_conges_anciennete:
+                # Bonus: ajout de jours selon tranches d'ancienneté
+                # Ex: +2 jours tous les 5 ans
+                if hasattr(config_paie, 'tranche_anciennete_annees') and config_paie.tranche_anciennete_annees:
+                    anciennete_ans = int(anciennete_mois / 12)
+                    bonus = (anciennete_ans // config_paie.tranche_anciennete_annees) * config_paie.jours_conges_anciennete
+                    conges_acquis += Decimal(str(bonus))
+            
+            # Limiter à 30 jours par an maximum
+            conges_acquis = min(conges_acquis, Decimal('30'))
+            
+            # Créer ou mettre à jour le SoldeConge
+            solde_conge, created = SoldeConge.objects.get_or_create(
+                employe=emp,
+                annee=self.periode.annee,
+                defaults={
+                    'conges_acquis': Decimal('0'),
+                    'conges_pris': Decimal('0'),
+                }
+            )
+            
+            # Mettre à jour les congés acquis si le record vient d'être créé ou si vide
+            if created or solde_conge.conges_acquis == 0:
+                solde_conge.conges_acquis = conges_acquis
+                if not solde_conge.conges_pris:
+                    solde_conge.conges_pris = Decimal('0')
+                solde_conge.save()
+            
+            return solde_conge.conges_acquis
+        
+        except Exception as e:
+            # En cas d'erreur, retourner 0 sans bloquer le bulletin
+            print(f"⚠️  Erreur calcul congés ({self.employe}): {str(e)}")
+            return Decimal('0')
 
 
 # Import manquant
