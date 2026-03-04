@@ -605,7 +605,7 @@ def telecharger_bulletin_pdf(request, pk):
     table_height = len(gains_data) * row_height
     gains_table.wrapOn(p, width, height)
     gains_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.5*cm
+    y -= table_height + 0.8*cm
     
     # === DÉTAIL HEURES SUPPLÉMENTAIRES ===
     hs_30 = getattr(bulletin, 'heures_supplementaires_30', 0) or 0
@@ -655,9 +655,9 @@ def telecharger_bulletin_pdf(request, pk):
         hs_table_h = nb_hs_rows * hs_row_h
         hs_table.wrapOn(p, width, height)
         hs_table.drawOn(p, 1.5*cm, y - hs_table_h)
-        y -= hs_table_h + 0.35*cm
+        y -= hs_table_h + 0.8*cm
     else:
-        y += 0.35*cm
+        y -= 0.8*cm
     
     # === RETENUES ===
     # Titre RETENUES
@@ -1022,7 +1022,7 @@ def telecharger_bulletin_public(request, token):
     table_height = len(gains_data) * row_height
     gains_table.wrapOn(p, width, height)
     gains_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.5*cm
+    y -= table_height + 0.8*cm
     
     # === DÉTAIL HEURES SUPPLÉMENTAIRES ===
     hs_30 = getattr(bulletin, 'heures_supplementaires_30', 0) or 0
@@ -1072,9 +1072,9 @@ def telecharger_bulletin_public(request, token):
         hs_table_h = nb_hs_rows * hs_row_h
         hs_table.wrapOn(p, width, height)
         hs_table.drawOn(p, 1.5*cm, y - hs_table_h)
-        y -= hs_table_h + 0.35*cm
+        y -= hs_table_h + 0.8*cm
     else:
-        y += 0.35*cm
+        y -= 0.8*cm
     
     # === RETENUES ===
     p.setFillColor(colors.HexColor("#dc3545"))
