@@ -28,8 +28,8 @@
             </div>
             <div class="card-body">
                 <!-- Gains -->
-                <h6 class="text-success border-bottom pb-2"><i class="fas fa-plus-circle me-2"></i>GAINS</h6>
-                <table class="table table-sm">
+                <h6 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-plus-circle me-2"></i>GAINS</h6>
+                <table class="table table-sm mb-4">
                     <tbody>
                         {% for ligne in bulletin.lignes.all %}
                         {% if ligne.montant > 0 and ligne.rubrique.type_rubrique == 'gain' %}
@@ -47,8 +47,8 @@
                 </table>
 
                 <!-- Retenues -->
-                <h6 class="text-danger border-bottom pb-2 mt-4"><i class="fas fa-minus-circle me-2"></i>RETENUES</h6>
-                <table class="table table-sm">
+                <h6 class="text-danger border-bottom pb-2 mb-3 mt-5"><i class="fas fa-minus-circle me-2"></i>RETENUES</h6>
+                <table class="table table-sm mb-4">
                     <tbody>
                         <tr>
                             <td>CNSS Employé (5%)</td>
