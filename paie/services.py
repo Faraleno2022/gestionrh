@@ -568,12 +568,20 @@ class MoteurCalculPaie:
             
             if rubrique_hs:
                 # Ligne récapitulative des heures supplémentaires
-                taux_moyen = (montant_hs_total / (salaire_horaire * heures_total) * Decimal('100')) if heures_total > 0 else Decimal('0')
+                # Calculer le taux de majoration moyen (en pourcentage de majoration, pas le coefficient appliqué)
+                # Formule: (montant_hs_total / (salaire_horaire * heures_total)) * 100 - 100
+                # Ou: ((taux_moyen_coeff - 1) * 100)
+                if heures_total > 0:
+                    coeff_moyen = montant_hs_total / (salaire_horaire * heures_total)
+                    # Convertir le coefficient en pourcentage de majoration (ex: 1.60 → 60%)
+                    taux_majoration = (coeff_moyen - Decimal('1')) * Decimal('100')
+                else:
+                    taux_majoration = Decimal('0')
                 
                 self.lignes.append({
                     'rubrique': rubrique_hs,
                     'base': salaire_horaire,
-                    'taux': self._arrondir(taux_moyen),
+                    'taux': self._arrondir(taux_majoration),
                     'nombre': heures_total,
                     'montant': montant_hs_total,
                     'ordre': rubrique_hs.ordre_affichage
