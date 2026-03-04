@@ -574,7 +574,7 @@ def telecharger_bulletin_pdf(request, pk):
     table_height = len(gains_data) * row_height
     gains_table.wrapOn(p, width, height)
     gains_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.15*cm
+    y -= table_height + 0.5*cm
     
     # === DÉTAIL HEURES SUPPLÉMENTAIRES ===
     hs_30 = getattr(bulletin, 'heures_supplementaires_30', 0) or 0
@@ -634,7 +634,7 @@ def telecharger_bulletin_pdf(request, pk):
     p.setFont("Helvetica-Bold", 9)
     p.drawString(1.5*cm, y, "RETENUES ET COTISATIONS")
     p.setFillColor(colors.black)
-    y -= 0.3*cm
+    y -= 0.4*cm
     
     retenues_data = [["Libellé", "Base", "Taux", "Montant"]]
     # Filtrer les doublons CNSS et IRG (déjà dans les lignes du bulletin)
@@ -991,7 +991,7 @@ def telecharger_bulletin_public(request, token):
     table_height = len(gains_data) * row_height
     gains_table.wrapOn(p, width, height)
     gains_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.15*cm
+    y -= table_height + 0.5*cm
     
     # === DÉTAIL HEURES SUPPLÉMENTAIRES ===
     hs_30 = getattr(bulletin, 'heures_supplementaires_30', 0) or 0
@@ -1050,7 +1050,7 @@ def telecharger_bulletin_public(request, token):
     p.setFont("Helvetica-Bold", 9)
     p.drawString(1.5*cm, y, "RETENUES ET COTISATIONS")
     p.setFillColor(colors.black)
-    y -= 0.3*cm
+    y -= 0.4*cm
     
     retenues_data = [["Libellé", "Base", "Taux", "Montant"]]
     # Filtrer les doublons CNSS et IRG (déjà dans les lignes du bulletin)

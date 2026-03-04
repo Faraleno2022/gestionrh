@@ -261,7 +261,7 @@ def generer_bulletin_pdf(bulletin):
     table_height = len(gains_data) * row_height
     gains_table.wrapOn(p, width, height)
     gains_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.15*cm
+    y -= table_height + 0.5*cm
     
     # === DÉTAIL HEURES SUPPLÉMENTAIRES ===
     hs_30 = getattr(bulletin, 'heures_supplementaires_30', 0) or 0
@@ -320,7 +320,7 @@ def generer_bulletin_pdf(bulletin):
     p.setFont("Helvetica-Bold", 9)
     p.drawString(1.5*cm, y, "RETENUES ET COTISATIONS")
     p.setFillColor(colors.black)
-    y -= 0.3*cm
+    y -= 0.4*cm
     
     retenues_data = [["Libellé", "Base", "Taux", "Montant"]]
     cnss_irg_codes = ['CNSS', 'IRG', 'RTS', 'IRS', 'IRPP']
@@ -359,7 +359,7 @@ def generer_bulletin_pdf(bulletin):
     table_height = len(retenues_data) * row_height
     retenues_table.wrapOn(p, width, height)
     retenues_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.4*cm
+    y -= table_height + 0.5*cm
     
     # === DÉTAIL CALCUL RTS (barème progressif) ===
     detail_rts = calculer_detail_tranches_rts(base_rts_val)
