@@ -847,6 +847,10 @@ class MoteurCalculPaie:
         # Base imposable = imposable - CNSS - autres déductions
         base_imposable = self.montants['imposable'] - self.montants['cnss_employe']
         
+        # Calculer l'abattement forfaitaire 25% (documenter cette déduction)
+        abattement_brut = self.montants['brut'] * Decimal('0.25')
+        self.montants['abattement_forfaitaire'] = self._arrondir(abattement_brut)
+        
         # Convertir en GNF si nécessaire (la RTS est toujours calculée en GNF)
         if self.devise_employe != self.devise_base:
             base_imposable = DeviseService.convertir_vers_gnf(
@@ -867,6 +871,7 @@ class MoteurCalculPaie:
             self.montants['raison_exoneration_rts'] = raison_exoneration
         else:
             # RTS Guinée (Retenue à la Source) = barème progressif sur (Imposable - CNSS)
+            # Base RTS = (Brut - 25% abattement forfaitaire) - CNSS
             # Pas de déductions familiales ni d'abattement professionnel pour la RTS
             # (ces déductions s'appliquent uniquement à l'IGR annuel)
             irg_brut = self._calculer_irg_progressif(base_imposable)
@@ -1172,6 +1177,11 @@ class MoteurCalculPaie:
         bulletin_data['prime_heures_sup'] = self.montants.get('montant_heures_sup', Decimal('0'))
         bulletin_data['prime_nuit'] = self.montants.get('montant_hs_nuit', Decimal('0'))
         bulletin_data['prime_feries'] = self.montants.get('montant_hs_ferie_jour', Decimal('0')) + self.montants.get('montant_hs_ferie_nuit', Decimal('0'))
+        
+        # Champs de transparence/conformité
+        bulletin_data['abattement_forfaitaire'] = self.montants.get('abattement_forfaitaire', Decimal('0'))
+        bulletin_data['base_vf'] = self.montants.get('base_vf', Decimal('0'))
+        bulletin_data['nombre_salaries'] = self.nb_salaries
         
         bulletin = BulletinPaie.objects.create(**bulletin_data)
         

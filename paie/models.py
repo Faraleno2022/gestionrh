@@ -130,6 +130,7 @@ class BulletinPaie(models.Model):
     # Champ historique IRG – alias RTS utilisé côté métier (Option C)
     irg = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     base_rts = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='Base imposable RTS')
+    abattement_forfaitaire = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='Abattement forfaitaire 25% sur base RTS')
     taux_effectif_rts = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text='Taux effectif RTS en %')
     net_a_payer = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     
@@ -138,9 +139,11 @@ class BulletinPaie(models.Model):
     retenue_trop_percu = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='Retenue trop-perçu mois précédent (hors base)')
     
     # Charges patronales
+    base_vf = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='Base de calcul du VF (brut - déduction)')
     versement_forfaitaire = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='VF 6% sur brut total')
     taxe_apprentissage = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='TA 2% sur brut total')
     contribution_onfpp = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='ONFPP 1,5% sur brut total')
+    nombre_salaries = models.IntegerField(default=1, help_text='Nombre de salariés pour déterminer TA vs ONFPP')
     
     # Devise du bulletin
     devise_bulletin = models.ForeignKey(Devise, on_delete=models.SET_NULL, null=True, blank=True,

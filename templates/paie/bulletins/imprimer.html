@@ -455,6 +455,12 @@
                 <td>RTS (Impôt sur le Revenu){% if bulletin.base_rts %} <small style="color: #666;">(base: {{ bulletin.base_rts|floatformat:0|intcomma }} | taux eff.: {{ bulletin.taux_effectif_rts|floatformat:2 }}%)</small>{% endif %}</td>
                 <td class="text-right" style="color: #d62828;">- {{ bulletin.irg|floatformat:0|intcomma }} GNF</td>
             </tr>
+            {% if bulletin.abattement_forfaitaire %}
+            <tr style="background-color: #f9f9f9; font-size: 11pt;">
+                <td style="padding-left: 40px;"><em>dont abattement forfaitaire 25%</em></td>
+                <td class="text-right">{{ bulletin.abattement_forfaitaire|floatformat:0|intcomma }} GNF</td>
+            </tr>
+            {% endif %}
             <tr style="border-top: 2px solid #d62828;">
                 <td style="font-size: 14pt; padding-top: 10px;"><strong>NET À PAYER</strong></td>
                 <td class="text-right" style="font-size: 14pt; color: #28a745; padding-top: 10px;">
@@ -475,15 +481,21 @@
             <td>Versement Forfaitaire VF (6%):</td>
             <td class="text-right"><strong>{{ bulletin.versement_forfaitaire|default:0|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
+        {% if bulletin.base_vf %}
+        <tr style="background-color: #f9f9f9; font-size: 11pt;">
+            <td style="padding-left: 40px;"><em>(base de calcul)</em></td>
+            <td class="text-right">{{ bulletin.base_vf|floatformat:0|intcomma }} GNF</td>
+        </tr>
+        {% endif %}
         {% if bulletin.taxe_apprentissage and bulletin.taxe_apprentissage > 0 %}
         <tr>
-            <td>Taxe d'Apprentissage TA (2%) <small>(&lt;30 sal.)</small>:</td>
+            <td>Taxe d'Apprentissage TA (2%) <small>{% if bulletin.nombre_salaries %}(effectif: {{ bulletin.nombre_salaries }} &lt;30){% endif %}</small>:</td>
             <td class="text-right"><strong>{{ bulletin.taxe_apprentissage|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
         {% endif %}
         {% if bulletin.contribution_onfpp and bulletin.contribution_onfpp > 0 %}
         <tr>
-            <td>Contribution ONFPP (1,5%) <small>(&ge;30 sal.)</small>:</td>
+            <td>Contribution ONFPP (1,5%) <small>{% if bulletin.nombre_salaries %}(effectif: {{ bulletin.nombre_salaries }} &ge;30){% endif %}</small>:</td>
             <td class="text-right"><strong>{{ bulletin.contribution_onfpp|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
         {% endif %}
