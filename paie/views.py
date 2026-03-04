@@ -380,6 +380,8 @@ def detail_bulletin(request, pk):
 @reauth_required
 def imprimer_bulletin(request, pk):
     """Imprimer un bulletin de paie"""
+    from decimal import Decimal
+    
     bulletin = get_object_or_404(
         BulletinPaie,
         pk=pk,
@@ -397,11 +399,40 @@ def imprimer_bulletin(request, pk):
     gains = lignes.filter(rubrique__type_rubrique='gain')
     retenues = lignes.filter(rubrique__type_rubrique__in=['retenue', 'cotisation'])
     
+    # Calculer les détails des heures supplémentaires
+    heures_supp_details = []
+    heures_mensuelles = Decimal('173.33')
+    
+    if bulletin.salaire_base and bulletin.salaire_base > 0:
+        taux_horaire = bulletin.salaire_base / heures_mensuelles
+        
+        # Détails des heures supplémentaires avec leurs montants
+        types_hs = [
+            ('heures_supplementaires_30', 'Heures supplémentaires (1ère catégorie +30%)', Decimal('1.30'), 30),
+            ('heures_supplementaires_60', 'Heures supplémentaires (2ème catégorie +60%)', Decimal('1.60'), 60),
+            ('heures_nuit', 'Heures de nuit (+20%)', Decimal('1.20'), 20),
+            ('heures_feries', 'Heures jours fériés (+60%)', Decimal('1.60'), 60),
+        ]
+        
+        for champ, libelle, taux_majoration, majoration_pct in types_hs:
+            heures = getattr(bulletin, champ, Decimal('0'))
+            if heures and heures > 0:
+                montant = taux_horaire * heures * taux_majoration
+                heures_supp_details.append({
+                    'libelle': libelle,
+                    'heures': heures,
+                    'taux_horaire': taux_horaire,
+                    'taux_majoration': taux_majoration,
+                    'majoration_pct': majoration_pct,
+                    'montant': montant
+                })
+    
     return render(request, 'paie/bulletins/imprimer.html', {
         'bulletin': bulletin,
         'gains': gains,
         'retenues': retenues,
-        'params': params
+        'params': params,
+        'heures_supp_details': heures_supp_details
     })
 
 

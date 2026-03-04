@@ -160,7 +160,7 @@
             background-color: #f0f0f0;
             padding: 8px;
             font-weight: bold;
-            margin-top: 15px;
+            margin-top: 25px;
             margin-bottom: 10px;
             border-left: 4px solid #ce1126;
         }
@@ -168,7 +168,8 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 25px;
+            page-break-inside: avoid;
         }
         
         table.info-table td {
@@ -183,6 +184,7 @@
         
         table.detail-table {
             border: 1px solid #ddd;
+            page-break-inside: avoid;
         }
         
         table.detail-table th {
@@ -386,6 +388,17 @@
             </tr>
         </thead>
         <tbody>
+            <!-- Heures supplémentaires détaillées -->
+            {% for hs in heures_supp_details %}
+            <tr>
+                <td>{{ hs.libelle }}</td>
+                <td class="text-right">{{ hs.heures|floatformat:2|intcomma }} h à {{ hs.taux_horaire|floatformat:0|intcomma }} GNF/h</td>
+                <td class="text-center">+{{ hs.majoration_pct }}%</td>
+                <td class="text-right">{{ hs.montant|floatformat:0|intcomma }}</td>
+            </tr>
+            {% endfor %}
+            
+            <!-- Autres gains -->
             {% for ligne in gains %}
             <tr>
                 <td>{{ ligne.rubrique.libelle_rubrique }}</td>
