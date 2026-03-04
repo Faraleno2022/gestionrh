@@ -759,8 +759,10 @@ def telecharger_bulletin_pdf(request, pk):
     trop_percu = getattr(bulletin, 'retenue_trop_percu', 0) or 0
     has_rappel = rappel > 0
     has_trop_percu = trop_percu > 0
-    extra_lines = (1 if has_rappel else 0) + (1 if has_trop_percu else 0)
-    recap_height = 2.1*cm + extra_lines * 0.4*cm
+    abatt_forfait = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
+    has_abatt = abatt_forfait > 0
+    extra_lines = (1 if has_rappel else 0) + (1 if has_trop_percu else 0) + (1 if has_abatt else 0)
+    recap_height = 2.1*cm + extra_lines * 0.35*cm
     p.setStrokeColor(colors.HexColor("#ce1126"))
     p.setLineWidth(2)
     p.rect(1.5*cm, y - recap_height, width - 3*cm, recap_height, stroke=1, fill=0)
@@ -802,6 +804,8 @@ def telecharger_bulletin_pdf(request, pk):
     vf = getattr(bulletin, 'versement_forfaitaire', 0) or 0
     ta = getattr(bulletin, 'taxe_apprentissage', 0) or 0
     onfpp = getattr(bulletin, 'contribution_onfpp', 0) or 0
+    base_vf = getattr(bulletin, 'base_vf', 0) or 0
+    nb_sal = getattr(bulletin, 'nombre_salaries', 0) or 0
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
     
     p.setFont("Helvetica-Bold", 8)
@@ -810,11 +814,21 @@ def telecharger_bulletin_pdf(request, pk):
     p.setFont("Helvetica", 6.5)
     p.drawString(1.5*cm, y, f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " "))
     p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
-    p.drawString(9*cm, y, f"TA 1,5%: {ta:,.0f}".replace(",", " "))
-    p.drawString(12.5*cm, y, f"ONFPP 1,5%: {onfpp:,.0f}".replace(",", " "))
+    # TA ou ONFPP selon effectif
+    if ta > 0:
+        p.drawString(9*cm, y, f"TA 2% (eff: {nb_sal} <30): {ta:,.0f}".replace(",", " "))
+    elif onfpp > 0:
+        p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} ≥30): {onfpp:,.0f}".replace(",", " "))
     p.setFont("Helvetica-Bold", 7)
     p.drawRightString(width - 1.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     y -= 0.3*cm
+    # Base de calcul VF si présente
+    if base_vf > 0:
+        p.setFont("Helvetica", 6)
+        p.setFillColor(colors.HexColor("#666666"))
+        p.drawString(1.5*cm, y, f"└─ base calc VF: {base_vf:,.0f}".replace(",", " "))
+        y -= 0.25*cm
+    p.setFillColor(colors.black)
     
     # === ZONE DE SIGNATURES ===
     y -= 1.2*cm
@@ -1195,14 +1209,24 @@ def telecharger_bulletin_public(request, token):
     p.drawRightString(width - 2*cm, y - 1*cm, f"Total retenues: -{bulletin.cnss_employe + bulletin.irg:,.0f} GNF".replace(",", " "))
     
     offset_y = 1*cm
+    
+    # Afficher l'abattement forfaitaire si présent (détail RTS)
+    if has_abatt:
+        offset_y += 0.35*cm
+        p.setFont("Helvetica", 7)
+        p.setFillColor(colors.HexColor("#666666"))
+        p.drawString(2.3*cm, y - offset_y, f"└─ abattement 25%: {abatt_forfait:,.0f}".replace(",", " "))
+    
     if has_rappel:
-        offset_y += 0.4*cm
+        offset_y += 0.35*cm
         p.setFillColor(colors.HexColor("#007bff"))
+        p.setFont("Helvetica", 8)
         p.drawString(2*cm, y - offset_y, "Rappel/Complément salaire précédent:")
         p.drawRightString(width - 2*cm, y - offset_y, f"+ {rappel:,.0f} GNF".replace(",", " "))
     if has_trop_percu:
-        offset_y += 0.4*cm
+        offset_y += 0.35*cm
         p.setFillColor(colors.HexColor("#dc3545"))
+        p.setFont("Helvetica", 8)
         p.drawString(2*cm, y - offset_y, "Retenue trop-perçu salaire précédent:")
         p.drawRightString(width - 2*cm, y - offset_y, f"- {trop_percu:,.0f} GNF".replace(",", " "))
     
@@ -1218,6 +1242,8 @@ def telecharger_bulletin_public(request, token):
     vf = getattr(bulletin, 'versement_forfaitaire', 0) or 0
     ta = getattr(bulletin, 'taxe_apprentissage', 0) or 0
     onfpp = getattr(bulletin, 'contribution_onfpp', 0) or 0
+    base_vf = getattr(bulletin, 'base_vf', 0) or 0
+    nb_sal = getattr(bulletin, 'nombre_salaries', 0) or 0
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
     
     p.setFont("Helvetica-Bold", 8)
@@ -1226,11 +1252,21 @@ def telecharger_bulletin_public(request, token):
     p.setFont("Helvetica", 6.5)
     p.drawString(1.5*cm, y, f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " "))
     p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
-    p.drawString(9*cm, y, f"TA 1,5%: {ta:,.0f}".replace(",", " "))
-    p.drawString(12.5*cm, y, f"ONFPP 1,5%: {onfpp:,.0f}".replace(",", " "))
+    # TA ou ONFPP selon effectif
+    if ta > 0:
+        p.drawString(9*cm, y, f"TA 2% (eff: {nb_sal} <30): {ta:,.0f}".replace(",", " "))
+    elif onfpp > 0:
+        p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} ≥30): {onfpp:,.0f}".replace(",", " "))
     p.setFont("Helvetica-Bold", 7)
     p.drawRightString(width - 1.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     y -= 0.3*cm
+    # Base de calcul VF si présente
+    if base_vf > 0:
+        p.setFont("Helvetica", 6)
+        p.setFillColor(colors.HexColor("#666666"))
+        p.drawString(1.5*cm, y, f"└─ base calc VF: {base_vf:,.0f}".replace(",", " "))
+        y -= 0.25*cm
+    p.setFillColor(colors.black)
     
     # === ZONE DE SIGNATURES ===
     y -= 1.2*cm
