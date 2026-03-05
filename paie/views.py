@@ -105,10 +105,27 @@ def liste_periodes(request):
 @reauth_required
 def creer_periode(request):
     """Créer une nouvelle période de paie"""
+    from datetime import date
+    from calendar import monthrange
+    
     if request.method == 'POST':
         try:
             annee = int(request.POST.get('annee'))
             mois = int(request.POST.get('mois'))
+            
+            # Vérifier que la période est antérieure (pas le mois courant ni mois futurs)
+            today = date.today()
+            
+            if annee > today.year or (annee == today.year and mois >= today.month):
+                messages.error(
+                    request,
+                    f"❌ Impossible de créer une période pour {mois:02d}/{annee}. "
+                    f"Nous sommes en {today.month:02d}/{today.year}. "
+                    f"Vous pouvez créer uniquement des périodes antérieures au mois courant."
+                )
+                return render(request, 'paie/periodes/creer.html')
+            
+            nb_jours = monthrange(annee, mois)[1]
             
             # Vérifier si la période existe déjà
             if PeriodePaie.objects.filter(
@@ -120,8 +137,6 @@ def creer_periode(request):
                 return redirect('paie:liste_periodes')
             
             # Calculer les dates
-            from calendar import monthrange
-            nb_jours = monthrange(annee, mois)[1]
             date_debut = date(annee, mois, 1)
             date_fin = date(annee, mois, nb_jours)
             
@@ -138,6 +153,8 @@ def creer_periode(request):
             messages.success(request, f'Période {periode} créée avec succès.')
             return redirect('paie:detail_periode', pk=periode.pk)
             
+        except ValueError:
+            messages.error(request, 'Erreur : année et mois doivent être des nombres entiers.')
         except Exception as e:
             messages.error(request, f'Erreur lors de la création : {str(e)}')
     
@@ -180,6 +197,18 @@ def calculer_periode(request, pk):
     
     if periode.statut_periode not in ['ouverte', 'calculee']:
         messages.error(request, 'Cette période ne peut plus être calculée.')
+        return redirect('paie:detail_periode', pk=pk)
+    
+    # Vérifier que la période n'est pas ultérieure
+    from datetime import date
+    today = date.today()
+    if periode.date_fin > today:
+        messages.error(
+            request,
+            f"❌ Impossible de calculer les bulletins pour une période ultérieure ({periode}). "
+            f"La date actuelle est le {today.strftime('%d/%m/%Y')}. "
+            f"Seules les périodes écoulées ou du mois courant peuvent être calculées."
+        )
         return redirect('paie:detail_periode', pk=pk)
     
     if request.method == 'POST':
@@ -524,18 +553,19 @@ def telecharger_bulletin_pdf(request, pk):
     
     emp = bulletin.employe
     
-    # Calcul de l'ancienneté
+    # Calcul de l'ancienneté (précis avec dateutil.relativedelta)
     anciennete_str = "-"
     if emp.date_embauche:
         from datetime import date as date_cls
+        from dateutil.relativedelta import relativedelta
         ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie, 1)
-        delta = ref_date - emp.date_embauche
-        annees_anc = delta.days // 365
-        mois_anc = (delta.days % 365) // 30
-        if annees_anc > 0:
-            anciennete_str = f"{annees_anc} an{'s' if annees_anc > 1 else ''} {mois_anc} mois"
+        rd = relativedelta(ref_date, emp.date_embauche)
+        if rd.years > 0:
+            anciennete_str = f"{rd.years} an{'s' if rd.years > 1 else ''} {rd.months} mois"
+        elif rd.months > 0:
+            anciennete_str = f"{rd.months} mois"
         else:
-            anciennete_str = f"{mois_anc} mois"
+            anciennete_str = f"{rd.days} jour{'s' if rd.days > 1 else ''}"
     
     # Récupération des congés
     from temps_travail.models import SoldeConge
@@ -717,7 +747,7 @@ def telecharger_bulletin_pdf(request, pk):
     table_height = len(retenues_data) * row_height
     retenues_table.wrapOn(p, width, height)
     retenues_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.4*cm
+    y -= table_height + 0.5*cm
     
     # === DÉTAIL CALCUL RTS (barème progressif) ===
     from paie.utils import calculer_detail_tranches_rts
@@ -966,18 +996,19 @@ def telecharger_bulletin_public(request, token):
     
     emp = bulletin.employe
     
-    # Calcul de l'ancienneté
+    # Calcul de l'ancienneté (précis avec dateutil.relativedelta)
     anciennete_str = "-"
     if emp.date_embauche:
         from datetime import date as date_cls
+        from dateutil.relativedelta import relativedelta
         ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie, 1)
-        delta = ref_date - emp.date_embauche
-        annees_anc = delta.days // 365
-        mois_anc = (delta.days % 365) // 30
-        if annees_anc > 0:
-            anciennete_str = f"{annees_anc} an{'s' if annees_anc > 1 else ''} {mois_anc} mois"
+        rd = relativedelta(ref_date, emp.date_embauche)
+        if rd.years > 0:
+            anciennete_str = f"{rd.years} an{'s' if rd.years > 1 else ''} {rd.months} mois"
+        elif rd.months > 0:
+            anciennete_str = f"{rd.months} mois"
         else:
-            anciennete_str = f"{mois_anc} mois"
+            anciennete_str = f"{rd.days} jour{'s' if rd.days > 1 else ''}"
     
     # Récupération des congés
     from temps_travail.models import SoldeConge
@@ -1157,7 +1188,7 @@ def telecharger_bulletin_public(request, token):
     table_height = len(retenues_data) * row_height
     retenues_table.wrapOn(p, width, height)
     retenues_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.4*cm
+    y -= table_height + 0.5*cm
     
     # === DÉTAIL CALCUL RTS (barème progressif) ===
     from paie.utils import calculer_detail_tranches_rts
