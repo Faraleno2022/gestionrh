@@ -1196,6 +1196,7 @@ class MoteurCalculPaie:
         # Ajouter VF, TA et ONFPP (charges patronales)
         bulletin_data['versement_forfaitaire'] = self.montants.get('versement_forfaitaire', Decimal('0'))
         bulletin_data['taxe_apprentissage'] = self.montants.get('taxe_apprentissage', Decimal('0'))
+        bulletin_data['taux_ta'] = self.montants.get('taux_ta', Decimal('0'))
         bulletin_data['contribution_onfpp'] = self.montants.get('contribution_onfpp', Decimal('0'))
         
         # Heures de travail et primes HS

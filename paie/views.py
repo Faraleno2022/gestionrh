@@ -811,10 +811,12 @@ def telecharger_bulletin_pdf(request, pk):
     # === CHARGES PATRONALES ===
     vf = getattr(bulletin, 'versement_forfaitaire', 0) or 0
     ta = getattr(bulletin, 'taxe_apprentissage', 0) or 0
+    taux_ta = getattr(bulletin, 'taux_ta', 0) or 0
     onfpp = getattr(bulletin, 'contribution_onfpp', 0) or 0
     base_vf = getattr(bulletin, 'base_vf', 0) or 0
     nb_sal = getattr(bulletin, 'nombre_salaries', 0) or 0
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
+    taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '1,5'
     
     p.setFont("Helvetica-Bold", 8)
     p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
@@ -824,7 +826,7 @@ def telecharger_bulletin_pdf(request, pk):
     p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
     # TA ou ONFPP selon effectif
     if ta > 0:
-        p.drawString(9*cm, y, f"TA 2% (eff: {nb_sal} <30): {ta:,.0f}".replace(",", " "))
+        p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta:,.0f}".replace(",", " "))
     elif onfpp > 0:
         p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} ≥30): {onfpp:,.0f}".replace(",", " "))
     p.setFont("Helvetica-Bold", 7)
@@ -1257,10 +1259,12 @@ def telecharger_bulletin_public(request, token):
     # === CHARGES PATRONALES ===
     vf = getattr(bulletin, 'versement_forfaitaire', 0) or 0
     ta = getattr(bulletin, 'taxe_apprentissage', 0) or 0
+    taux_ta = getattr(bulletin, 'taux_ta', 0) or 0
     onfpp = getattr(bulletin, 'contribution_onfpp', 0) or 0
     base_vf = getattr(bulletin, 'base_vf', 0) or 0
     nb_sal = getattr(bulletin, 'nombre_salaries', 0) or 0
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
+    taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '1,5'
     
     p.setFont("Helvetica-Bold", 8)
     p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
@@ -1270,7 +1274,7 @@ def telecharger_bulletin_public(request, token):
     p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
     # TA ou ONFPP selon effectif
     if ta > 0:
-        p.drawString(9*cm, y, f"TA 2% (eff: {nb_sal} <30): {ta:,.0f}".replace(",", " "))
+        p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta:,.0f}".replace(",", " "))
     elif onfpp > 0:
         p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} ≥30): {onfpp:,.0f}".replace(",", " "))
     p.setFont("Helvetica-Bold", 7)
