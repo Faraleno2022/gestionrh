@@ -64,7 +64,8 @@ class RubriquePaie(models.Model):
         ('information', 'Information'),
     )
     
-    code_rubrique = models.CharField(max_length=20, unique=True)
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name='rubriques_paie')
+    code_rubrique = models.CharField(max_length=20)
     libelle_rubrique = models.CharField(max_length=200)
     type_rubrique = models.CharField(max_length=20, choices=TYPES)
     formule_calcul = models.TextField(blank=True, null=True)
@@ -83,6 +84,7 @@ class RubriquePaie(models.Model):
         verbose_name = 'Rubrique de paie'
         verbose_name_plural = 'Rubriques de paie'
         ordering = ['ordre_calcul']
+        unique_together = ['entreprise', 'code_rubrique']
     
     def __str__(self):
         return f"{self.code_rubrique} - {self.libelle_rubrique}"
@@ -210,6 +212,8 @@ class ParametrePaie(models.Model):
         ('espece', 'Espèces'),
         ('mobile_money', 'Mobile Money'),
     )
+    
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name='parametres_paie')
     
     # Période en cours
     mois_en_cours = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])

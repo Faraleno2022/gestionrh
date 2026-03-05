@@ -392,7 +392,7 @@ def imprimer_bulletin(request, pk):
     
     # Récupérer les paramètres de l'entreprise
     try:
-        params = ParametrePaie.objects.first()
+        params = ParametrePaie.objects.filter(entreprise=request.user.entreprise).first()
     except:
         params = None
     
@@ -1815,7 +1815,10 @@ def ajouter_element_salaire(request, employe_id):
         recurrent = request.POST.get('recurrent') == 'on'
         
         try:
-            rubrique = RubriquePaie.objects.get(pk=rubrique_id)
+            rubrique = RubriquePaie.objects.get(
+                pk=rubrique_id,
+                entreprise=request.user.entreprise
+            )
             
             # Vérifier si un élément actif existe déjà pour cette rubrique
             element_existant = ElementSalaire.objects.filter(
@@ -1855,7 +1858,8 @@ def ajouter_element_salaire(request, employe_id):
     
     # Rubriques disponibles (exclure celles calculées automatiquement: IRG, CNSS)
     rubriques = RubriquePaie.objects.filter(
-        actif=True
+        actif=True,
+        entreprise=request.user.entreprise
     ).exclude(
         code_rubrique__in=['RTS', 'IRG', 'IRPP', 'CNSS_EMP', 'CNSS_PAT']
     ).exclude(
@@ -1932,7 +1936,7 @@ def liste_rubriques(request):
     """Liste des rubriques de paie"""
     type_rubrique = request.GET.get('type')
     
-    rubriques = RubriquePaie.objects.all()
+    rubriques = RubriquePaie.objects.filter(entreprise=request.user.entreprise)
     
     if type_rubrique:
         rubriques = rubriques.filter(type_rubrique=type_rubrique)
@@ -1968,12 +1972,13 @@ def creer_rubrique(request):
         affichage_bulletin = request.POST.get('affichage_bulletin') == 'on'
         actif = request.POST.get('actif') == 'on'
         
-        if RubriquePaie.objects.filter(code_rubrique=code).exists():
+        if RubriquePaie.objects.filter(code_rubrique=code, entreprise=request.user.entreprise).exists():
             messages.error(request, f'Une rubrique avec le code "{code}" existe déjà. Veuillez choisir un autre code.')
             return render(request, 'paie/rubriques/creer.html')
         
         try:
             rubrique = RubriquePaie.objects.create(
+                entreprise=request.user.entreprise,
                 code_rubrique=code,
                 libelle_rubrique=libelle,
                 type_rubrique=type_rub,
@@ -2000,7 +2005,7 @@ def creer_rubrique(request):
 @login_required
 def detail_rubrique(request, pk):
     """Détail d'une rubrique de paie"""
-    rubrique = get_object_or_404(RubriquePaie, pk=pk)
+    rubrique = get_object_or_404(RubriquePaie, pk=pk, entreprise=request.user.entreprise)
     
     # Nombre d'employés utilisant cette rubrique
     nb_employes = ElementSalaire.objects.filter(
