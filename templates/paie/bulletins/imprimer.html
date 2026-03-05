@@ -489,7 +489,7 @@
         {% endif %}
         {% if bulletin.taxe_apprentissage and bulletin.taxe_apprentissage > 0 %}
         <tr>
-            <td>Taxe d'Apprentissage TA (2%) <small>{% if bulletin.nombre_salaries %}(effectif: {{ bulletin.nombre_salaries }} &lt;30){% endif %}</small>:</td>
+            <td>Taxe d'Apprentissage TA ({{ bulletin.taux_ta|default:"1.5" }}%) <small>{% if bulletin.nombre_salaries %}(effectif: {{ bulletin.nombre_salaries }} &lt;30){% endif %}</small>:</td>
             <td class="text-right"><strong>{{ bulletin.taxe_apprentissage|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
         {% endif %}
