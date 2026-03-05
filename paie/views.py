@@ -719,21 +719,19 @@ def telecharger_bulletin_pdf(request, pk):
         p.setFillColor(colors.black)
         y -= 0.25*cm
         
-        rts_detail_data = [["Tranche", "Taux", "Base tranche", "Impôt"]]
+        rts_detail_data = [["Tranche", "Taux", "Impôt"]]
         cumul_impot = Decimal('0')
-        for t in detail_rts:
-            b_sup_str = f"{t['borne_sup']:,.0f}".replace(",", " ") if t['borne_sup'] else "∞"
+        for i, t in enumerate(detail_rts, start=1):
             rts_detail_data.append([
-                f"{t['borne_inf']:,.0f} - {b_sup_str}".replace(",", " "),
+                f"RTS {i}",
                 f"{t['taux']:g}%",
-                f"{t['base_tranche']:,.0f}".replace(",", " "),
                 f"{t['impot_tranche']:,.0f}".replace(",", " "),
             ])
             cumul_impot += t['impot_tranche']
-        rts_detail_data.append(["", "", "Total RTS:", f"{cumul_impot:,.0f} GNF".replace(",", " ")])
-        
+        rts_detail_data.append(["", "Total RTS:", f"{cumul_impot:,.0f} GNF".replace(",", " ")])
+
         rts_row_h = 12
-        rts_table = Table(rts_detail_data, colWidths=[5.5*cm, 1.5*cm, 5*cm, 5*cm], rowHeights=rts_row_h)
+        rts_table = Table(rts_detail_data, colWidths=[3*cm, 3*cm, 11*cm], rowHeights=rts_row_h)
         nb_rows = len(rts_detail_data)
         rts_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
@@ -1149,21 +1147,19 @@ def telecharger_bulletin_public(request, token):
         p.setFillColor(colors.black)
         y -= 0.25*cm
         
-        rts_detail_data = [["Tranche", "Taux", "Base tranche", "Impôt"]]
+        rts_detail_data = [["Tranche", "Taux", "Impôt"]]
         cumul_impot = Decimal('0')
-        for t in detail_rts:
-            b_sup_str = f"{t['borne_sup']:,.0f}".replace(",", " ") if t['borne_sup'] else "∞"
+        for i, t in enumerate(detail_rts, start=1):
             rts_detail_data.append([
-                f"{t['borne_inf']:,.0f} - {b_sup_str}".replace(",", " "),
+                f"RTS {i}",
                 f"{t['taux']:g}%",
-                f"{t['base_tranche']:,.0f}".replace(",", " "),
                 f"{t['impot_tranche']:,.0f}".replace(",", " "),
             ])
             cumul_impot += t['impot_tranche']
-        rts_detail_data.append(["", "", "Total RTS:", f"{cumul_impot:,.0f} GNF".replace(",", " ")])
-        
+        rts_detail_data.append(["", "Total RTS:", f"{cumul_impot:,.0f} GNF".replace(",", " ")])
+
         rts_row_h = 12
-        rts_table = Table(rts_detail_data, colWidths=[5.5*cm, 1.5*cm, 5*cm, 5*cm], rowHeights=rts_row_h)
+        rts_table = Table(rts_detail_data, colWidths=[3*cm, 3*cm, 11*cm], rowHeights=rts_row_h)
         nb_rows = len(rts_detail_data)
         rts_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),

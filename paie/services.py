@@ -274,34 +274,43 @@ class MoteurCalculPaie:
         # Dates de la période
         premier_jour = date(self.periode.annee, self.periode.mois, 1)
         dernier_jour = date(
-            self.periode.annee, 
-            self.periode.mois, 
+            self.periode.annee,
+            self.periode.mois,
             calendar.monthrange(self.periode.annee, self.periode.mois)[1]
         )
-        
-        # Calculer les jours ouvrables du mois (lundi-vendredi)
+
+        # Prendre en compte la date d'embauche : si l'employé a été embauché
+        # en cours de mois, les jours ouvrables et les pointages partent de
+        # cette date (pas du 1er du mois).
+        date_embauche = getattr(self.employe, 'date_embauche', None)
+        if date_embauche and premier_jour <= date_embauche <= dernier_jour:
+            debut_effectif = date_embauche
+        else:
+            debut_effectif = premier_jour
+
+        # Calculer les jours ouvrables à partir de la date d'entrée effective
         jours_ouvrables = 0
-        current = premier_jour
+        current = debut_effectif
         while current <= dernier_jour:
             if current.weekday() < 5:  # Lundi=0, Vendredi=4
                 jours_ouvrables += 1
             current += timedelta(days=1)
-        
+
         self.montants['jours_ouvrables'] = Decimal(str(jours_ouvrables))
-        
-        # Récupérer les pointages du mois
+
+        # Récupérer les pointages à partir de la date d'entrée effective
         pointages = Pointage.objects.filter(
             employe=self.employe,
-            date_pointage__gte=premier_jour,
+            date_pointage__gte=debut_effectif,
             date_pointage__lte=dernier_jour
         )
-        
+
         # Compter les jours travaillés
         jours_presents = pointages.filter(statut_pointage='present').count()
         jours_retard = pointages.filter(statut_pointage='retard').count()
         self.montants['jours_travailles'] = Decimal(str(jours_presents + jours_retard))
-        
-        # Heures travaillées et supplémentaires
+
+        # Heures travaillées et supplémentaires (total)
         from django.db.models import Sum
         heures = pointages.aggregate(
             heures_travaillees=Sum('heures_travaillees'),
@@ -309,6 +318,27 @@ class MoteurCalculPaie:
         )
         self.montants['heures_travaillees'] = heures['heures_travaillees'] or Decimal('0')
         self.montants['heures_supplementaires'] = heures['heures_sup'] or Decimal('0')
+
+        # Répartition hebdomadaire des HS : 4 premières h/semaine à +30%,
+        # au-delà à +60% (Code du Travail guinéen Art. 221).
+        # On groupe les pointages par semaine (lundi → dimanche) pour
+        # respecter le plafond de 4 h hebdomadaires.
+        hs_30 = Decimal('0')
+        hs_60 = Decimal('0')
+        semaine_map = {}
+        for p in pointages.order_by('date_pointage'):
+            if not p.heures_supplementaires:
+                continue
+            # Numéro ISO de la semaine (année, semaine) pour le regroupement
+            iso = p.date_pointage.isocalendar()
+            cle_semaine = (iso[0], iso[1])
+            semaine_map.setdefault(cle_semaine, Decimal('0'))
+            semaine_map[cle_semaine] += Decimal(str(p.heures_supplementaires))
+        for total_hs_semaine in semaine_map.values():
+            hs_30 += min(total_hs_semaine, Decimal('4'))
+            hs_60 += max(Decimal('0'), total_hs_semaine - Decimal('4'))
+        self.montants['heures_sup_30'] = hs_30
+        self.montants['heures_sup_60'] = hs_60
         
         # Récupérer les absences du mois
         absences = Absence.objects.filter(
