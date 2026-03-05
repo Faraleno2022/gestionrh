@@ -1642,33 +1642,24 @@
                 <h2>Offres d'Emploi</h2>
                 <p>Découvrez les opportunités de carrière disponibles auprès de nos entreprises partenaires</p>
             </div>
-            <div class="row g-4">
+            <div class="row g-2">
                 {% for offre in offres_emploi %}
-                <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
-                    <div class="job-card">
+                <div class="col-6 col-md-4 col-lg-3" data-aos="fade-up">
+                    <div class="job-card" style="padding:0.75rem;">
                         {% if offre.image %}
-                        <div class="job-image" style="height: 160px; overflow: hidden; border-radius: 0.5rem 0.5rem 0 0; margin: -1rem -1rem 1rem -1rem;">
-                            <img src="{{ offre.image.url }}" alt="{{ offre.intitule_poste }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        <div class="job-image" style="height:100px;overflow:hidden;border-radius:0.4rem 0.4rem 0 0;margin:-0.75rem -0.75rem 0.6rem -0.75rem;">
+                            <img src="{{ offre.image.url }}" alt="{{ offre.intitule_poste }}" style="width:100%;height:100%;object-fit:cover;">
                         </div>
                         {% endif %}
-                        <div class="job-header">
-                            <div class="job-company">
+                        <div class="job-header" style="margin-bottom:0.3rem;">
+                            <div class="job-company" style="font-size:0.75rem;">
                                 <i class="bi bi-building"></i>
-                                <span>{{ offre.entreprise.nom_entreprise|default:"Entreprise" }}</span>
+                                <span>{{ offre.entreprise.nom_entreprise|default:"Entreprise"|truncatechars:20 }}</span>
                             </div>
-                            <span class="job-badge">{{ offre.get_type_contrat_display|default:offre.type_contrat|default:"CDI" }}</span>
+                            <span class="job-badge" style="font-size:0.7rem;padding:0.15rem 0.4rem;">{{ offre.get_type_contrat_display|default:offre.type_contrat|default:"CDI" }}</span>
                         </div>
-                        <h4 class="job-title">{{ offre.intitule_poste }}</h4>
-                        <div class="job-reference">
-                            <small class="text-muted"><i class="bi bi-hash me-1"></i>Réf: {{ offre.reference_poste|default:offre.reference_offre }}</small>
-                        </div>
-                        <div class="job-details">
-                            {% if offre.service %}
-                            <div class="job-detail">
-                                <i class="bi bi-diagram-3"></i>
-                                <span>{{ offre.service.nom_service }}</span>
-                            </div>
-                            {% endif %}
+                        <h6 class="job-title" style="font-size:0.88rem;margin-bottom:0.3rem;">{{ offre.intitule_poste|truncatechars:40 }}</h6>
+                        <div class="job-details" style="font-size:0.75rem;margin-bottom:0.3rem;">
                             <div class="job-detail">
                                 <i class="bi bi-people"></i>
                                 <span>{{ offre.nombre_postes }} poste{{ offre.nombre_postes|pluralize }}</span>
@@ -1676,41 +1667,32 @@
                             {% if offre.date_limite_candidature %}
                             <div class="job-detail">
                                 <i class="bi bi-calendar-event"></i>
-                                <span>Limite: {{ offre.date_limite_candidature|date:"d/m/Y" }}</span>
+                                <span>{{ offre.date_limite_candidature|date:"d/m/Y" }}</span>
                             </div>
                             {% endif %}
                         </div>
-                        {% if offre.description_poste %}
-                        <p class="job-description">{{ offre.description_poste|truncatewords:25 }}</p>
-                        {% endif %}
-                        <div class="job-footer d-flex justify-content-between align-items-center">
-                            <span class="job-date">
+                        <div class="job-footer d-flex justify-content-between align-items-center" style="gap:0.25rem;">
+                            <span class="job-date" style="font-size:0.7rem;">
                                 <i class="bi bi-clock"></i> {{ offre.date_publication|date:"d/m/Y" }}
                             </span>
                             <div class="d-flex gap-1">
-                                <a href="https://wa.me/?text={{ offre.intitule_poste|urlencode }}%20-%20{{ offre.entreprise.nom_entreprise|urlencode }}%20https://www.guineerh.space{% url 'recrutement:offre_public' offre.pk %}" 
-                                   target="_blank" class="btn btn-sm btn-outline-success" title="Partager sur WhatsApp">
-                                    <i class="bi bi-whatsapp"></i>
-                                </a>
-                                <a href="{% url 'recrutement:offre_public' offre.pk %}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye me-1"></i>Détails
+                                <a href="{% url 'recrutement:offre_public' offre.pk %}" class="btn btn-sm btn-outline-primary" style="padding:0.2rem 0.45rem;font-size:0.75rem;">
+                                    <i class="bi bi-eye"></i>
                                 </a>
                                 {% if offre.date_limite_candidature and offre.date_limite_candidature < today %}
-                                <span class="btn btn-sm btn-danger disabled" style="cursor: not-allowed;">
-                                    <i class="bi bi-x-circle me-1"></i>Expiré
+                                <span class="btn btn-sm btn-danger disabled" style="padding:0.2rem 0.45rem;font-size:0.75rem;cursor:not-allowed;">
+                                    <i class="bi bi-x-circle"></i>
                                 </span>
                                 {% else %}
-                                <a href="{% url 'recrutement:postuler' offre.pk %}" class="btn btn-sm btn-success">
-                                    <i class="bi bi-send me-1"></i>Postuler
+                                <a href="{% url 'recrutement:postuler' offre.pk %}" class="btn btn-sm btn-success" style="padding:0.2rem 0.45rem;font-size:0.75rem;">
+                                    <i class="bi bi-send"></i>
                                 </a>
                                 {% endif %}
                             </div>
                         </div>
                         {% if offre.date_limite_candidature and offre.date_limite_candidature < today %}
-                        <div class="mt-2 text-center">
-                            <span class="badge bg-danger" style="font-size: 0.85rem;">
-                                <i class="bi bi-exclamation-triangle me-1"></i>Offre expirée
-                            </span>
+                        <div class="text-center mt-1">
+                            <span class="badge bg-danger" style="font-size:0.7rem;"><i class="bi bi-exclamation-triangle me-1"></i>Expiré</span>
                         </div>
                         {% endif %}
                     </div>
@@ -1736,67 +1718,51 @@
                 <h2>Formations Disponibles</h2>
                 <p>Développez vos compétences avec nos formations professionnelles</p>
             </div>
-            <div class="row g-4">
+            <div class="row g-2">
                 {% for formation in formations %}
-                <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
-                    <div class="job-card">
+                <div class="col-6 col-md-4 col-lg-3" data-aos="fade-up">
+                    <div class="job-card" style="padding:0.75rem;">
                         {% if formation.image %}
-                        <div class="job-image" style="height: 160px; overflow: hidden; border-radius: 0.5rem 0.5rem 0 0; margin: -1rem -1rem 1rem -1rem;">
-                            <img src="{{ formation.image.url }}" alt="{{ formation.intitule }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        <div class="job-image" style="height:100px;overflow:hidden;border-radius:0.4rem 0.4rem 0 0;margin:-0.75rem -0.75rem 0.6rem -0.75rem;">
+                            <img src="{{ formation.image.url }}" alt="{{ formation.intitule }}" style="width:100%;height:100%;object-fit:cover;">
                         </div>
                         {% endif %}
-                        <div class="job-header">
-                            <div class="job-company">
+                        <div class="job-header" style="margin-bottom:0.3rem;">
+                            <div class="job-company" style="font-size:0.75rem;">
                                 <i class="bi bi-building"></i>
-                                <span>{{ formation.entreprise.nom_entreprise|default:"Organisme" }}</span>
+                                <span>{{ formation.entreprise.nom_entreprise|default:"Organisme"|truncatechars:20 }}</span>
                             </div>
-                            <span class="job-badge">{{ formation.get_type_formation_display }}</span>
+                            <span class="job-badge" style="font-size:0.7rem;padding:0.15rem 0.4rem;">{{ formation.get_type_formation_display|truncatechars:12 }}</span>
                         </div>
-                        <h4 class="job-title">{{ formation.intitule }}</h4>
-                        <div class="job-details">
-                            <div class="job-detail">
-                                <i class="bi bi-folder2"></i>
-                                <span>{{ formation.get_domaine_display }}</span>
-                            </div>
+                        <h6 class="job-title" style="font-size:0.88rem;margin-bottom:0.3rem;">{{ formation.intitule|truncatechars:40 }}</h6>
+                        <div class="job-details" style="font-size:0.75rem;margin-bottom:0.3rem;">
                             <div class="job-detail">
                                 <i class="bi bi-clock"></i>
-                                <span>{{ formation.duree_jours }} jour{{ formation.duree_jours|pluralize }} ({{ formation.duree_heures }}h)</span>
+                                <span>{{ formation.duree_jours }}j / {{ formation.duree_heures }}h</span>
                             </div>
                             {% if formation.organisme_formateur %}
                             <div class="job-detail">
                                 <i class="bi bi-person-badge"></i>
-                                <span>{{ formation.organisme_formateur|truncatewords:3 }}</span>
+                                <span>{{ formation.organisme_formateur|truncatechars:18 }}</span>
                             </div>
                             {% endif %}
                         </div>
-                        {% if formation.description %}
-                        <p class="job-description">{{ formation.description|truncatewords:25 }}</p>
-                        {% endif %}
-                        {% if formation.objectifs %}
-                        <div class="mb-2">
-                            <small class="text-muted"><strong>Objectifs:</strong> {{ formation.objectifs|truncatewords:15 }}</small>
-                        </div>
-                        {% endif %}
-                        <div class="job-footer d-flex justify-content-between align-items-center">
+                        <div class="job-footer d-flex justify-content-between align-items-center" style="gap:0.25rem;">
                             {% if formation.cout_unitaire %}
-                            <span class="job-date">
+                            <span class="job-date" style="font-size:0.7rem;">
                                 <i class="bi bi-cash"></i> {{ formation.cout_unitaire|floatformat:0 }} GNF
                             </span>
                             {% else %}
-                            <span class="job-date text-success">
+                            <span class="job-date text-success" style="font-size:0.7rem;">
                                 <i class="bi bi-gift"></i> Gratuit
                             </span>
                             {% endif %}
                             <div class="d-flex gap-1">
-                                <a href="https://wa.me/?text={{ formation.intitule|urlencode }}%20-%20Formation%20{{ formation.get_type_formation_display|urlencode }}" 
-                                   target="_blank" class="btn btn-sm btn-outline-success" title="Partager sur WhatsApp">
-                                    <i class="bi bi-whatsapp"></i>
+                                <a href="{% url 'formation:formation_public' formation.pk %}" class="btn btn-sm btn-outline-primary" style="padding:0.2rem 0.45rem;font-size:0.75rem;">
+                                    <i class="bi bi-eye"></i>
                                 </a>
-                                <a href="{% url 'formation:formation_public' formation.pk %}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye me-1"></i>Détails
-                                </a>
-                                <a href="{% url 'formation:inscription_formation_public' formation.pk %}" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-mortarboard me-1"></i>S'inscrire
+                                <a href="{% url 'formation:inscription_formation_public' formation.pk %}" class="btn btn-sm btn-primary" style="padding:0.2rem 0.45rem;font-size:0.75rem;">
+                                    <i class="bi bi-mortarboard"></i>
                                 </a>
                             </div>
                         </div>
