@@ -1722,51 +1722,58 @@
                 <h2>Formations Disponibles</h2>
                 <p>Développez vos compétences avec nos formations professionnelles</p>
             </div>
-            <div class="row g-2">
+            <div class="row g-3">
                 {% for formation in formations %}
-                <div class="col-6 col-md-4 col-lg-3" data-aos="fade-up">
-                    <div class="job-card" style="padding:0.75rem;">
+                <div class="col-12 col-md-6 col-lg-4" data-aos="fade-up">
+                    <div class="job-card" style="padding:0.9rem;">
                         {% if formation.image %}
-                        <div class="job-image" style="height:100px;overflow:hidden;border-radius:0.4rem 0.4rem 0 0;margin:-0.75rem -0.75rem 0.6rem -0.75rem;">
+                        <div class="job-image" style="height:130px;overflow:hidden;border-radius:0.5rem 0.5rem 0 0;margin:-0.9rem -0.9rem 0.75rem -0.9rem;">
                             <img src="{{ formation.image.url }}" alt="{{ formation.intitule }}" style="width:100%;height:100%;object-fit:cover;">
                         </div>
                         {% endif %}
-                        <div class="job-header" style="margin-bottom:0.3rem;">
-                            <div class="job-company" style="font-size:0.75rem;">
+                        <div class="job-header" style="margin-bottom:0.4rem;">
+                            <div class="job-company" style="font-size:0.8rem;">
                                 <i class="bi bi-building"></i>
-                                <span>{{ formation.entreprise.nom_entreprise|default:"Organisme"|truncatechars:20 }}</span>
+                                <span>{{ formation.entreprise.nom_entreprise|default:"Organisme"|truncatechars:25 }}</span>
                             </div>
-                            <span class="job-badge" style="font-size:0.7rem;padding:0.15rem 0.4rem;">{{ formation.get_type_formation_display|truncatechars:12 }}</span>
+                            <span class="job-badge" style="font-size:0.72rem;padding:0.2rem 0.5rem;">{{ formation.get_type_formation_display|truncatechars:14 }}</span>
                         </div>
-                        <h6 class="job-title" style="font-size:0.88rem;margin-bottom:0.3rem;">{{ formation.intitule|truncatechars:40 }}</h6>
-                        <div class="job-details" style="font-size:0.75rem;margin-bottom:0.3rem;">
+                        <h6 class="job-title" style="font-size:0.95rem;margin-bottom:0.35rem;">{{ formation.intitule|truncatechars:50 }}</h6>
+                        <div class="job-details" style="font-size:0.8rem;margin-bottom:0.4rem;">
+                            <div class="job-detail">
+                                <i class="bi bi-folder2"></i>
+                                <span>{{ formation.get_domaine_display|truncatechars:22 }}</span>
+                            </div>
                             <div class="job-detail">
                                 <i class="bi bi-clock"></i>
-                                <span>{{ formation.duree_jours }}j / {{ formation.duree_heures }}h</span>
+                                <span>{{ formation.duree_jours }} jour{{ formation.duree_jours|pluralize }} ({{ formation.duree_heures }}h)</span>
                             </div>
                             {% if formation.organisme_formateur %}
                             <div class="job-detail">
                                 <i class="bi bi-person-badge"></i>
-                                <span>{{ formation.organisme_formateur|truncatechars:18 }}</span>
+                                <span>{{ formation.organisme_formateur|truncatechars:22 }}</span>
                             </div>
                             {% endif %}
                         </div>
-                        <div class="job-footer d-flex justify-content-between align-items-center" style="gap:0.25rem;">
+                        {% if formation.description %}
+                        <p class="job-description" style="font-size:0.8rem;margin-bottom:0.4rem;">{{ formation.description|truncatewords:18 }}</p>
+                        {% endif %}
+                        <div class="job-footer d-flex justify-content-between align-items-center">
                             {% if formation.cout_unitaire %}
-                            <span class="job-date" style="font-size:0.7rem;">
+                            <span class="job-date" style="font-size:0.75rem;">
                                 <i class="bi bi-cash"></i> {{ formation.cout_unitaire|floatformat:0 }} GNF
                             </span>
                             {% else %}
-                            <span class="job-date text-success" style="font-size:0.7rem;">
+                            <span class="job-date text-success" style="font-size:0.75rem;">
                                 <i class="bi bi-gift"></i> Gratuit
                             </span>
                             {% endif %}
                             <div class="d-flex gap-1">
-                                <a href="{% url 'formation:formation_public' formation.pk %}" class="btn btn-sm btn-outline-primary" style="padding:0.2rem 0.45rem;font-size:0.75rem;">
-                                    <i class="bi bi-eye"></i>
+                                <a href="{% url 'formation:formation_public' formation.pk %}" class="btn btn-sm btn-outline-primary" style="font-size:0.78rem;">
+                                    <i class="bi bi-eye me-1"></i>Voir
                                 </a>
-                                <a href="{% url 'formation:inscription_formation_public' formation.pk %}" class="btn btn-sm btn-primary" style="padding:0.2rem 0.45rem;font-size:0.75rem;">
-                                    <i class="bi bi-mortarboard"></i>
+                                <a href="{% url 'formation:inscription_formation_public' formation.pk %}" class="btn btn-sm btn-primary" style="font-size:0.78rem;">
+                                    <i class="bi bi-mortarboard me-1"></i>S'inscrire
                                 </a>
                             </div>
                         </div>
