@@ -1642,24 +1642,30 @@
                 <h2>Offres d'Emploi</h2>
                 <p>Découvrez les opportunités de carrière disponibles auprès de nos entreprises partenaires</p>
             </div>
-            <div class="row g-2">
+            <div class="row g-3">
                 {% for offre in offres_emploi %}
-                <div class="col-6 col-md-4 col-lg-3" data-aos="fade-up">
-                    <div class="job-card" style="padding:0.75rem;">
+                <div class="col-12 col-md-6 col-lg-4" data-aos="fade-up">
+                    <div class="job-card" style="padding:0.9rem;">
                         {% if offre.image %}
-                        <div class="job-image" style="height:100px;overflow:hidden;border-radius:0.4rem 0.4rem 0 0;margin:-0.75rem -0.75rem 0.6rem -0.75rem;">
+                        <div class="job-image" style="height:130px;overflow:hidden;border-radius:0.5rem 0.5rem 0 0;margin:-0.9rem -0.9rem 0.75rem -0.9rem;">
                             <img src="{{ offre.image.url }}" alt="{{ offre.intitule_poste }}" style="width:100%;height:100%;object-fit:cover;">
                         </div>
                         {% endif %}
-                        <div class="job-header" style="margin-bottom:0.3rem;">
-                            <div class="job-company" style="font-size:0.75rem;">
+                        <div class="job-header" style="margin-bottom:0.4rem;">
+                            <div class="job-company" style="font-size:0.8rem;">
                                 <i class="bi bi-building"></i>
-                                <span>{{ offre.entreprise.nom_entreprise|default:"Entreprise"|truncatechars:20 }}</span>
+                                <span>{{ offre.entreprise.nom_entreprise|default:"Entreprise"|truncatechars:25 }}</span>
                             </div>
-                            <span class="job-badge" style="font-size:0.7rem;padding:0.15rem 0.4rem;">{{ offre.get_type_contrat_display|default:offre.type_contrat|default:"CDI" }}</span>
+                            <span class="job-badge" style="font-size:0.72rem;padding:0.2rem 0.5rem;">{{ offre.get_type_contrat_display|default:offre.type_contrat|default:"CDI" }}</span>
                         </div>
-                        <h6 class="job-title" style="font-size:0.88rem;margin-bottom:0.3rem;">{{ offre.intitule_poste|truncatechars:40 }}</h6>
-                        <div class="job-details" style="font-size:0.75rem;margin-bottom:0.3rem;">
+                        <h6 class="job-title" style="font-size:0.95rem;margin-bottom:0.35rem;">{{ offre.intitule_poste|truncatechars:50 }}</h6>
+                        <div class="job-details" style="font-size:0.8rem;margin-bottom:0.4rem;">
+                            {% if offre.service %}
+                            <div class="job-detail">
+                                <i class="bi bi-diagram-3"></i>
+                                <span>{{ offre.service.nom_service|truncatechars:22 }}</span>
+                            </div>
+                            {% endif %}
                             <div class="job-detail">
                                 <i class="bi bi-people"></i>
                                 <span>{{ offre.nombre_postes }} poste{{ offre.nombre_postes|pluralize }}</span>
@@ -1667,34 +1673,32 @@
                             {% if offre.date_limite_candidature %}
                             <div class="job-detail">
                                 <i class="bi bi-calendar-event"></i>
-                                <span>{{ offre.date_limite_candidature|date:"d/m/Y" }}</span>
+                                <span>Limite : {{ offre.date_limite_candidature|date:"d/m/Y" }}</span>
                             </div>
                             {% endif %}
                         </div>
-                        <div class="job-footer d-flex justify-content-between align-items-center" style="gap:0.25rem;">
-                            <span class="job-date" style="font-size:0.7rem;">
+                        {% if offre.description_poste %}
+                        <p class="job-description" style="font-size:0.8rem;margin-bottom:0.4rem;">{{ offre.description_poste|truncatewords:18 }}</p>
+                        {% endif %}
+                        <div class="job-footer d-flex justify-content-between align-items-center">
+                            <span class="job-date" style="font-size:0.75rem;">
                                 <i class="bi bi-clock"></i> {{ offre.date_publication|date:"d/m/Y" }}
                             </span>
                             <div class="d-flex gap-1">
-                                <a href="{% url 'recrutement:offre_public' offre.pk %}" class="btn btn-sm btn-outline-primary" style="padding:0.2rem 0.45rem;font-size:0.75rem;">
-                                    <i class="bi bi-eye"></i>
+                                <a href="{% url 'recrutement:offre_public' offre.pk %}" class="btn btn-sm btn-outline-primary" style="font-size:0.78rem;">
+                                    <i class="bi bi-eye me-1"></i>Voir
                                 </a>
                                 {% if offre.date_limite_candidature and offre.date_limite_candidature < today %}
-                                <span class="btn btn-sm btn-danger disabled" style="padding:0.2rem 0.45rem;font-size:0.75rem;cursor:not-allowed;">
-                                    <i class="bi bi-x-circle"></i>
+                                <span class="btn btn-sm btn-danger disabled" style="font-size:0.78rem;cursor:not-allowed;">
+                                    <i class="bi bi-x-circle me-1"></i>Expiré
                                 </span>
                                 {% else %}
-                                <a href="{% url 'recrutement:postuler' offre.pk %}" class="btn btn-sm btn-success" style="padding:0.2rem 0.45rem;font-size:0.75rem;">
-                                    <i class="bi bi-send"></i>
+                                <a href="{% url 'recrutement:postuler' offre.pk %}" class="btn btn-sm btn-success" style="font-size:0.78rem;">
+                                    <i class="bi bi-send me-1"></i>Postuler
                                 </a>
                                 {% endif %}
                             </div>
                         </div>
-                        {% if offre.date_limite_candidature and offre.date_limite_candidature < today %}
-                        <div class="text-center mt-1">
-                            <span class="badge bg-danger" style="font-size:0.7rem;"><i class="bi bi-exclamation-triangle me-1"></i>Expiré</span>
-                        </div>
-                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}
