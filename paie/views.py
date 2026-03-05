@@ -624,18 +624,28 @@ def telecharger_bulletin_pdf(request, pk):
         p.setFillColor(colors.black)
         y -= 0.25*cm
         
+        # Calcul des montants individuels (salaire_base / 173,33 × h × coefficient)
+        _sal_h = Decimal(str(bulletin.salaire_base or 0)) / Decimal('173.33')
+        _montant_30 = int(_sal_h * Decimal(str(hs_30)) * Decimal('1.30'))
+        _montant_60 = int(_sal_h * Decimal(str(hs_60)) * Decimal('1.60'))
+
         hs_detail_data = [["Type", "Heures", "Majoration", "Montant"]]
         if float(hs_30) > 0:
-            hs_detail_data.append(["4 prem. HS/sem.", f"{hs_30:g}h", "+30% (130%)", f"{prime_hs:,.0f}".replace(",", " ") if float(hs_60) == 0 else "-"])
+            hs_detail_data.append(["4 prem. HS/sem.", f"{hs_30:g}h", "+30% (130%)",
+                                    f"{_montant_30:,.0f}".replace(",", " ")])
         if float(hs_60) > 0:
-            hs_detail_data.append(["Au-delà 4 HS/sem.", f"{hs_60:g}h", "+60% (160%)", "-"])
+            hs_detail_data.append(["Au-delà 4 HS/sem.", f"{hs_60:g}h", "+60% (160%)",
+                                    f"{_montant_60:,.0f}".replace(",", " ")])
         if float(hs_nuit) > 0:
-            hs_detail_data.append(["Heures de nuit (20h-6h)", f"{hs_nuit:g}h", "+20% (120%)", f"{prime_nuit:,.0f}".replace(",", " ")])
+            hs_detail_data.append(["Heures de nuit (20h-6h)", f"{hs_nuit:g}h", "+20% (120%)",
+                                    f"{prime_nuit:,.0f}".replace(",", " ")])
         if float(hs_feries) > 0:
-            hs_detail_data.append(["Jours fériés", f"{hs_feries:g}h", "+60/100%", f"{prime_feries:,.0f}".replace(",", " ")])
-        
+            hs_detail_data.append(["Jours fériés", f"{hs_feries:g}h", "+60/100%",
+                                    f"{prime_feries:,.0f}".replace(",", " ")])
+
         total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries)
-        hs_detail_data.append(["", f"{total_hs_heures:g}h", "Total HS:", f"{total_prime:,.0f} GNF".replace(",", " ")])
+        hs_detail_data.append(["", f"{total_hs_heures:g}h", "Total HS:",
+                                f"{total_prime:,.0f} GNF".replace(",", " ")])
         
         hs_row_h = 12
         hs_table = Table(hs_detail_data, colWidths=[5.5*cm, 2*cm, 4.5*cm, 5*cm], rowHeights=hs_row_h)
@@ -1053,18 +1063,28 @@ def telecharger_bulletin_public(request, token):
         p.setFillColor(colors.black)
         y -= 0.25*cm
         
+        # Calcul des montants individuels (salaire_base / 173,33 × h × coefficient)
+        _sal_h = Decimal(str(bulletin.salaire_base or 0)) / Decimal('173.33')
+        _montant_30 = int(_sal_h * Decimal(str(hs_30)) * Decimal('1.30'))
+        _montant_60 = int(_sal_h * Decimal(str(hs_60)) * Decimal('1.60'))
+
         hs_detail_data = [["Type", "Heures", "Majoration", "Montant"]]
         if float(hs_30) > 0:
-            hs_detail_data.append(["4 prem. HS/sem.", f"{hs_30:g}h", "+30% (130%)", f"{prime_hs:,.0f}".replace(",", " ") if float(hs_60) == 0 else "-"])
+            hs_detail_data.append(["4 prem. HS/sem.", f"{hs_30:g}h", "+30% (130%)",
+                                    f"{_montant_30:,.0f}".replace(",", " ")])
         if float(hs_60) > 0:
-            hs_detail_data.append(["Au-delà 4 HS/sem.", f"{hs_60:g}h", "+60% (160%)", "-"])
+            hs_detail_data.append(["Au-delà 4 HS/sem.", f"{hs_60:g}h", "+60% (160%)",
+                                    f"{_montant_60:,.0f}".replace(",", " ")])
         if float(hs_nuit) > 0:
-            hs_detail_data.append(["Heures de nuit (20h-6h)", f"{hs_nuit:g}h", "+20% (120%)", f"{prime_nuit:,.0f}".replace(",", " ")])
+            hs_detail_data.append(["Heures de nuit (20h-6h)", f"{hs_nuit:g}h", "+20% (120%)",
+                                    f"{prime_nuit:,.0f}".replace(",", " ")])
         if float(hs_feries) > 0:
-            hs_detail_data.append(["Jours fériés", f"{hs_feries:g}h", "+60/100%", f"{prime_feries:,.0f}".replace(",", " ")])
-        
+            hs_detail_data.append(["Jours fériés", f"{hs_feries:g}h", "+60/100%",
+                                    f"{prime_feries:,.0f}".replace(",", " ")])
+
         total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries)
-        hs_detail_data.append(["", f"{total_hs_heures:g}h", "Total HS:", f"{total_prime:,.0f} GNF".replace(",", " ")])
+        hs_detail_data.append(["", f"{total_hs_heures:g}h", "Total HS:",
+                                f"{total_prime:,.0f} GNF".replace(",", " ")])
         
         hs_row_h = 12
         hs_table = Table(hs_detail_data, colWidths=[5.5*cm, 2*cm, 4.5*cm, 5*cm], rowHeights=hs_row_h)
