@@ -1253,13 +1253,24 @@ class MoteurCalculPaie:
         return bulletin
     
     def _generer_numero_bulletin(self):
-        """Générer un numéro unique de bulletin"""
+        """Générer un numéro unique de bulletin — basé sur max id, jamais sur count()"""
         prefix = f"BUL-{self.periode.annee}-{self.periode.mois:02d}"
-        count = BulletinPaie.objects.filter(
-            annee_paie=self.periode.annee,
-            mois_paie=self.periode.mois
-        ).count() + 1
-        return f"{prefix}-{count:04d}"
+        # Utiliser le dernier numéro existant pour ce préfixe, pas count()
+        # count() provoque des collisions si un bulletin a été supprimé
+        last = BulletinPaie.objects.filter(
+            numero_bulletin__startswith=prefix
+        ).order_by('-numero_bulletin').first()
+        if last:
+            try:
+                last_num = int(last.numero_bulletin.split('-')[-1])
+            except (ValueError, IndexError):
+                last_num = BulletinPaie.objects.filter(
+                    annee_paie=self.periode.annee,
+                    mois_paie=self.periode.mois
+                ).count()
+        else:
+            last_num = 0
+        return f"{prefix}-{last_num + 1:04d}"
     
     def _mettre_a_jour_cumuls(self, bulletin):
         """Mettre à jour les cumuls annuels"""
@@ -1287,35 +1298,27 @@ class MoteurCalculPaie:
     
     def _calculer_anciennete_mois(self, date_embauche, date_ref=None):
         """
-        Calcule l'ancienneté en mois
-        Formule: (années_diff × 12) + mois_diff + ajustement_jour
-        
-        Args:
-            date_embauche: Date d'embauche de l'employé
-            date_ref: Date de référence (par défaut: date actuelle)
-        
-        Returns:
-            Decimal: Nombre de mois d'ancienneté (0+)
+        Calcule l'ancienneté en mois entre date_embauche et date_ref.
+        Règle : un mois est compté si l'employé a travaillé au moins un jour dans ce mois.
+        Ex : embauché 01/02/2026, période février 2026 → 1 mois
+        Ex : embauché 15/02/2026, période février 2026 → 1 mois
+        Ex : embauché 01/01/2026, période février 2026 → 2 mois
         """
+        from datetime import date as date_cls
         if date_ref is None:
-            date_ref = date.today()
-        
-        if not date_embauche or date_embauche > date_ref:
+            date_ref = date_cls.today()
+
+        if not date_embauche:
             return Decimal('0')
-        
-        # Calculer la différence d'années et de mois
+
+        # Nombre de mois entre le mois d'embauche et le mois de référence (inclus)
+        # Un mois partiel compte comme 1 mois complet (pro-rata géré ailleurs)
         years_diff = date_ref.year - date_embauche.year
         months_diff = date_ref.month - date_embauche.month
-        
-        # Ancienneté en mois
-        anciennete = (years_diff * 12) + months_diff
-        
-        # Ajustement si le jour du mois n'est pas encore atteint
-        if date_ref.day < date_embauche.day:
-            anciennete -= 1
-        
+        anciennete = (years_diff * 12) + months_diff + 1  # +1 : mois d'embauche compte
+
         return max(Decimal('0'), Decimal(str(anciennete)))
-    
+
     def _calculer_conges_acquis(self):
         """
         Calcule automatiquement les congés acquis selon la règle guinéenne
@@ -1346,11 +1349,22 @@ class MoteurCalculPaie:
             anciennete_mois = self._calculer_anciennete_mois(emp.date_embauche, dernier_jour)
             
             # Récupérer la configuration de paie (jours/mois)
+            # Initialiser config_paie à None avant toute tentative
+            config_paie = None
             try:
                 config_paie = self.config_paie
-            except:
-                # Fallback si config_paie n'existe pas: charger depuis l'entreprise
-                config_paie = emp.entreprise.config_paie.first() if emp.entreprise else None
+            except Exception:
+                pass
+            # Fallback robuste: chercher par entreprise directement dans le modèle
+            if not config_paie and emp.entreprise:
+                from paie.models import ConfigurationPaieEntreprise
+                config_paie = ConfigurationPaieEntreprise.objects.filter(
+                    entreprise=emp.entreprise
+                ).first()
+            # Fallback final: première config disponible
+            if not config_paie:
+                from paie.models import ConfigurationPaieEntreprise
+                config_paie = ConfigurationPaieEntreprise.objects.first()
             
             # Déterminer le nombre de jours par mois
             if config_paie:
@@ -1384,18 +1398,17 @@ class MoteurCalculPaie:
                 }
             )
             
-            # Mettre à jour les congés acquis si le record vient d'être créé ou si vide
-            if created or solde_conge.conges_acquis == 0:
-                solde_conge.conges_acquis = conges_acquis
-                if not solde_conge.conges_pris:
-                    solde_conge.conges_pris = Decimal('0')
-                # Recalculer conges_restants = acquis + reports - pris
-                solde_conge.conges_restants = (
-                    conges_acquis +
-                    (solde_conge.conges_reports or Decimal('0')) -
-                    (solde_conge.conges_pris or Decimal('0'))
-                )
-                solde_conge.save()
+            # Toujours mettre à jour les congés acquis
+            # (recalcul à chaque génération de bulletin)
+            if not solde_conge.conges_pris:
+                solde_conge.conges_pris = Decimal('0')
+            solde_conge.conges_acquis = conges_acquis
+            solde_conge.conges_restants = (
+                conges_acquis
+                + (solde_conge.conges_reports or Decimal('0'))
+                - (solde_conge.conges_pris or Decimal('0'))
+            )
+            solde_conge.save()
             
             return solde_conge.conges_acquis
         

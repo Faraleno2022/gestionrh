@@ -856,7 +856,8 @@ def telecharger_bulletin_pdf(request, pk):
     p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
     # TA ou ONFPP selon effectif
     if ta > 0:
-        p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta:,.0f}".replace(",", " "))
+        ta_str = f"{ta:,.0f}".replace(",", " ")
+        p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta_str}")
     elif onfpp > 0:
         p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} ≥30): {onfpp:,.0f}".replace(",", " "))
     p.setFont("Helvetica-Bold", 7)
@@ -1305,7 +1306,8 @@ def telecharger_bulletin_public(request, token):
     p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
     # TA ou ONFPP selon effectif
     if ta > 0:
-        p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta:,.0f}".replace(",", " "))
+        ta_str = f"{ta:,.0f}".replace(",", " ")
+        p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta_str}")
     elif onfpp > 0:
         p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} ≥30): {onfpp:,.0f}".replace(",", " "))
     p.setFont("Helvetica-Bold", 7)
