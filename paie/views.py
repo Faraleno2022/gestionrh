@@ -116,7 +116,7 @@ def creer_periode(request):
             # Vérifier que la période est antérieure (pas le mois courant ni mois futurs)
             today = date.today()
             
-            if annee > today.year or (annee == today.year and mois >= today.month):
+            if annee > today.year or (annee == today.year and mois > today.month):
                 messages.error(
                     request,
                     f"❌ Impossible de créer une période pour {mois:02d}/{annee}. "
@@ -2465,43 +2465,45 @@ def simulation_paie(request):
                            f"Excédent {exces_indemnites:,.0f} GNF réintégré dans base RTS."
             })
         
-        # Base imposable RTS = Brut - CNSS + Excédent indemnités
-        base_imposable = salaire_brut - cnss_employe + exces_indemnites
+        # Base imposable RTS = Imposable (soumis_irg=True) - CNSS + excédent indemnités
+        # PAS d'abattement pour la RTS mensuelle (abattement réservé à l'IGR annuel)
+        # Imposable = gains soumis_irg=True uniquement (pas le brut total)
+        imposable_irg = salaire_brut - total_indemnites_forfaitaires + exces_indemnites
+        base_imposable = imposable_irg - cnss_employe
         
         # Calcul RTS par tranches (CGI 2022 - 6 tranches)
+        # Barème RTS CGI 2022 — bornes continues (sans gaps de 1 GNF)
         tranches_rts = [
-            (Decimal('0'), Decimal('1000000'), Decimal('0')),
-            (Decimal('1000001'), Decimal('3000000'), Decimal('5')),
-            (Decimal('3000001'), Decimal('5000000'), Decimal('8')),
-            (Decimal('5000001'), Decimal('10000000'), Decimal('10')),
-            (Decimal('10000001'), Decimal('20000000'), Decimal('15')),
-            (Decimal('20000001'), None, Decimal('20')),
+            (Decimal('0'),        Decimal('1000000'),  Decimal('0')),
+            (Decimal('1000000'),  Decimal('3000000'),  Decimal('5')),
+            (Decimal('3000000'),  Decimal('5000000'),  Decimal('8')),
+            (Decimal('5000000'),  Decimal('10000000'), Decimal('10')),
+            (Decimal('10000000'), Decimal('20000000'), Decimal('15')),
+            (Decimal('20000000'), None,                Decimal('20')),
         ]
         
         rts = Decimal('0')
         detail_rts = []
         reste = base_imposable
         
+        # Calcul progressif par bornes absolues (même logique que services.py)
         for borne_inf, borne_sup, taux in tranches_rts:
-            if reste <= 0:
+            if base_imposable <= borne_inf:
                 break
-            if borne_sup:
-                montant_tranche = min(reste, borne_sup - borne_inf + 1)
+            if borne_sup is not None:
+                montant_tranche = min(base_imposable, borne_sup) - borne_inf
             else:
-                montant_tranche = reste
-            
-            if base_imposable >= borne_inf:
+                montant_tranche = base_imposable - borne_inf
+            if montant_tranche > 0:
                 impot_tranche = (montant_tranche * taux / Decimal('100')).quantize(Decimal('1'))
                 rts += impot_tranche
-                if montant_tranche > 0:
-                    detail_rts.append({
-                        'borne_inf': borne_inf,
-                        'borne_sup': borne_sup,
-                        'taux': taux,
-                        'montant': montant_tranche,
-                        'impot': impot_tranche,
-                    })
-                reste -= montant_tranche
+                detail_rts.append({
+                    'borne_inf': borne_inf,
+                    'borne_sup': borne_sup,
+                    'taux': taux,
+                    'montant': montant_tranche,
+                    'impot': impot_tranche,
+                })
         
         # Taux effectif RTS
         if base_imposable > 0:
@@ -2510,7 +2512,12 @@ def simulation_paie(request):
             taux_effectif_rts = Decimal('0')
         
         # Charges patronales
-        vf = (salaire_brut * taux_vf / Decimal('100')).quantize(Decimal('1'))
+        # VF biétagé: Déduction = min(Brut, Seuil) × 6%, VF = (Brut - Déduction) × 6%
+        seuil_vf = constantes.get('SEUIL_VF', Decimal('2500000'))
+        base_deduction_vf = min(salaire_brut, seuil_vf)
+        deduction_vf = (base_deduction_vf * taux_vf / Decimal('100')).quantize(Decimal('1'))
+        base_vf_nette = salaire_brut - deduction_vf
+        vf = (base_vf_nette * taux_vf / Decimal('100')).quantize(Decimal('1'))
         
         # TA et ONFPP mutuellement exclusifs selon le nombre de salariés
         if nb_salaries < 30:
