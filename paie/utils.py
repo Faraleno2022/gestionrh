@@ -1,5 +1,5 @@
-"""
-Utilitaires de paie - Génération PDF de bulletins
+﻿"""
+Utilitaires de paie - GÃ©nÃ©ration PDF de bulletins
 """
 import io
 import os
@@ -14,11 +14,11 @@ from django.utils import timezone
 
 def calculer_detail_tranches_rts(base_rts):
     """
-    Calcule le détail progressif RTS par tranche à partir de la base imposable.
-    Barème CGI 2022 (6 tranches).
+    Calcule le dÃ©tail progressif RTS par tranche Ã  partir de la base imposable.
+    BarÃ¨me CGI 2022 (6 tranches).
     
     Returns:
-        list of dict avec clés: borne_inf, borne_sup, taux, base_tranche, impot_tranche
+        list of dict avec clÃ©s: borne_inf, borne_sup, taux, base_tranche, impot_tranche
     """
     from decimal import ROUND_HALF_UP
     
@@ -50,7 +50,7 @@ def calculer_detail_tranches_rts(base_rts):
     except Exception:
         tranches_db = []
     
-    # Fallback: barème CGI 2022
+    # Fallback: barÃ¨me CGI 2022
     if not tranches_db:
         tranches_db = [
             {'borne_inferieure': Decimal('0'), 'borne_superieure': Decimal('1000000'), 'taux_irg': Decimal('0')},
@@ -61,7 +61,7 @@ def calculer_detail_tranches_rts(base_rts):
             {'borne_inferieure': Decimal('20000000'), 'borne_superieure': None, 'taux_irg': Decimal('20')},
         ]
     
-    # Normaliser les bornes (éliminer les gaps de 1 GNF)
+    # Normaliser les bornes (Ã©liminer les gaps de 1 GNF)
     seuils = []
     for i, t in enumerate(tranches_db):
         b_inf = Decimal(str(t['borne_inferieure']))
@@ -98,9 +98,31 @@ def calculer_detail_tranches_rts(base_rts):
     return detail
 
 
+def _enregistrer_polices():
+    """Enregistrer les polices TTF pour support des accents"""
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        import os
+        # Polices Windows
+        windir = os.environ.get("WINDIR", "C:\\Windows")
+        fonts = {
+            "Arial": os.path.join(windir, "Fonts", "arial.ttf"),
+            "Arial-Bold": os.path.join(windir, "Fonts", "arialbd.ttf"),
+            "Arial-Italic": os.path.join(windir, "Fonts", "ariali.ttf"),
+        }
+        for name, path in fonts.items():
+            if os.path.exists(path):
+                pdfmetrics.registerFont(TTFont(name, path))
+        return True
+    except:
+        return False
+
+_POLICES_OK = _enregistrer_polices()
+
 def generer_bulletin_pdf(bulletin):
     """
-    Génère le PDF d'un bulletin de paie et retourne les bytes du PDF.
+    GÃ©nÃ¨re le PDF d'un bulletin de paie et retourne les bytes du PDF.
     
     Args:
         bulletin: Instance BulletinPaie
@@ -114,7 +136,7 @@ def generer_bulletin_pdf(bulletin):
     gains = lignes.filter(rubrique__type_rubrique='gain')
     retenues = lignes.filter(rubrique__type_rubrique__in=['retenue', 'cotisation'])
     
-    # Créer le buffer PDF
+    # CrÃ©er le buffer PDF
     buffer = io.BytesIO()
     p = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -122,10 +144,10 @@ def generer_bulletin_pdf(bulletin):
     # Variables de position
     y = height - 1*cm
     
-    # === EN-TÊTE ===
+    # === EN-TÃŠTE ===
     entreprise = bulletin.employe.entreprise
     
-    # Logo entreprise à gauche
+    # Logo entreprise Ã  gauche
     if entreprise and entreprise.logo:
         try:
             logo_path = entreprise.logo.path
@@ -134,54 +156,54 @@ def generer_bulletin_pdf(bulletin):
         except:
             pass
     
-    # Titre centré
-    p.setFont("Helvetica-Bold", 11)
-    p.drawCentredString(width/2, y, "RÉPUBLIQUE DE GUINÉE")
+    # Titre centrÃ©
+    p.setFont("Arial-Bold", 11)
+    p.drawCentredString(width/2, y, "RÃ‰PUBLIQUE DE GUINÃ‰E")
     y -= 0.4*cm
-    p.setFont("Helvetica-Oblique", 8)
-    p.drawCentredString(width/2, y, "Travail - Justice - Solidarité")
+    p.setFont("Arial-Italic", 8)
+    p.drawCentredString(width/2, y, "Travail - Justice - SolidaritÃ©")
     y -= 0.5*cm
     
     # Nom entreprise
-    p.setFont("Helvetica-Bold", 12)
+    p.setFont("Arial-Bold", 12)
     nom_entreprise = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
     p.drawCentredString(width/2, y, nom_entreprise)
     y -= 0.6*cm
     
     # Titre bulletin
-    p.setFont("Helvetica-Bold", 14)
+    p.setFont("Arial-Bold", 14)
     p.drawCentredString(width/2, y, "BULLETIN DE PAIE")
     y -= 0.4*cm
     
-    # Ligne de séparation
+    # Ligne de sÃ©paration
     p.setStrokeColor(colors.HexColor("#ce1126"))
     p.setLineWidth(2)
     p.line(1.5*cm, y, width - 1.5*cm, y)
     y -= 0.6*cm
     
     # Infos bulletin sur une ligne
-    p.setFont("Helvetica", 9)
+    p.setFont("Arial", 9)
     p.setFillColor(colors.black)
-    p.drawString(1.5*cm, y, f"N°: {bulletin.numero_bulletin}")
-    p.drawCentredString(width/2, y, f"Période: {bulletin.periode}")
+    p.drawString(1.5*cm, y, f"NÂ°: {bulletin.numero_bulletin}")
+    p.drawCentredString(width/2, y, f"PÃ©riode: {bulletin.periode}")
     p.drawRightString(width - 1.5*cm, y, f"Date: {bulletin.date_calcul.strftime('%d/%m/%Y') if bulletin.date_calcul else '-'}")
     y -= 0.35*cm
-    # Dates de la période
-    p.setFont("Helvetica", 8)
+    # Dates de la pÃ©riode
+    p.setFont("Arial", 8)
     periode_detail = f"Du {bulletin.periode.date_debut.strftime('%d/%m/%Y')} au {bulletin.periode.date_fin.strftime('%d/%m/%Y')}" if bulletin.periode.date_debut and bulletin.periode.date_fin else ""
     p.drawCentredString(width/2, y, periode_detail)
     y -= 0.6*cm
     
-    # === INFORMATIONS EMPLOYÉ ===
+    # === INFORMATIONS EMPLOYÃ‰ ===
     p.setFillColor(colors.HexColor("#ce1126"))
-    p.setFont("Helvetica-Bold", 9)
-    p.drawString(1.5*cm, y, "INFORMATIONS EMPLOYÉ")
+    p.setFont("Arial-Bold", 9)
+    p.drawString(1.5*cm, y, "INFORMATIONS EMPLOYÃ‰")
     p.setFillColor(colors.black)
     y -= 0.5*cm
     
     emp = bulletin.employe
     
-    # Calcul de l'ancienneté
+    # Calcul de l'anciennetÃ©
     anciennete_str = "-"
     if emp.date_embauche:
         from datetime import date as date_cls
@@ -194,7 +216,7 @@ def generer_bulletin_pdf(bulletin):
         else:
             anciennete_str = f"{mois_anc} mois"
     
-    # Récupération des congés
+    # RÃ©cupÃ©ration des congÃ©s
     from temps_travail.models import SoldeConge
     solde_conge = SoldeConge.objects.filter(employe=emp, annee=bulletin.annee_paie).first()
     conges_acquis = solde_conge.conges_acquis if solde_conge else Decimal('0')
@@ -202,23 +224,23 @@ def generer_bulletin_pdf(bulletin):
     conges_restants = solde_conge.conges_restants if solde_conge else Decimal('0')
     
     infos_emp = [
-        ["Matricule:", emp.matricule or "-", "N° CNSS:", emp.num_cnss_individuel or "-"],
-        ["Nom et Prénoms:", f"{emp.nom} {emp.prenoms}", "Ancienneté:", anciennete_str],
+        ["Matricule:", emp.matricule or "-", "NÂ° CNSS:", emp.num_cnss_individuel or "-"],
+        ["Nom et PrÃ©noms:", f"{emp.nom} {emp.prenoms}", "AnciennetÃ©:", anciennete_str],
         ["Poste:", str(emp.poste or "-"), "Service:", str(emp.service or "-")],
         ["Date embauche:", emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else "-", "Mode paiement:", emp.mode_paiement or "-"],
-        ["Congés acquis:", f"{conges_acquis:g} j", "Congés pris:", f"{conges_pris:g} j"],
-        ["Solde congés:", f"{conges_restants:g} j", "", ""],
+        ["CongÃ©s acquis:", f"{conges_acquis:g} j", "CongÃ©s pris:", f"{conges_pris:g} j"],
+        ["Solde congÃ©s:", f"{conges_restants:g} j", "", ""],
     ]
     
     for row in infos_emp:
-        p.setFont("Helvetica-Bold", 8)
+        p.setFont("Arial-Bold", 8)
         p.drawString(1.5*cm, y, row[0])
-        p.setFont("Helvetica", 8)
+        p.setFont("Arial", 8)
         p.drawString(4*cm, y, str(row[1]))
         if row[2]:
-            p.setFont("Helvetica-Bold", 8)
+            p.setFont("Arial-Bold", 8)
             p.drawString(11*cm, y, row[2])
-            p.setFont("Helvetica", 8)
+            p.setFont("Arial", 8)
             p.drawString(14*cm, y, str(row[3]))
         y -= 0.4*cm
     
@@ -226,13 +248,13 @@ def generer_bulletin_pdf(bulletin):
     
     # === GAINS ===
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont("Helvetica-Bold", 9)
-    p.drawString(1.5*cm, y, "GAINS ET RÉMUNÉRATIONS")
+    p.setFont("Arial-Bold", 9)
+    p.drawString(1.5*cm, y, "GAINS ET RÃ‰MUNÃ‰RATIONS")
     p.setFillColor(colors.black)
     y -= 0.3*cm
     
     # Tableau des gains (5 colonnes avec Nbre pour les heures)
-    gains_data = [["Libellé", "Nbre", "Base", "Taux", "Montant"]]
+    gains_data = [["LibellÃ©", "Nbre", "Base", "Taux", "Montant"]]
     for g in gains:
         nbre_str = f"{g.nombre:g}" if g.nombre and g.nombre != 1 else ""
         gains_data.append([
@@ -263,7 +285,7 @@ def generer_bulletin_pdf(bulletin):
     gains_table.drawOn(p, 1.5*cm, y - table_height)
     y -= table_height + 0.5*cm
     
-    # === DÉTAIL HEURES SUPPLÉMENTAIRES ===
+    # === DÃ‰TAIL HEURES SUPPLÃ‰MENTAIRES ===
     hs_30 = getattr(bulletin, 'heures_supplementaires_30', 0) or 0
     hs_60 = getattr(bulletin, 'heures_supplementaires_60', 0) or 0
     hs_nuit = getattr(bulletin, 'heures_nuit', 0) or 0
@@ -274,13 +296,13 @@ def generer_bulletin_pdf(bulletin):
     total_hs_heures = float(hs_30) + float(hs_60) + float(hs_nuit) + float(hs_feries)
     
     if total_hs_heures > 0 or float(prime_hs) > 0:
-        p.setFont("Helvetica-Bold", 7)
+        p.setFont("Arial-Bold", 7)
         p.setFillColor(colors.HexColor("#6c757d"))
-        p.drawString(1.5*cm, y, "DÉTAIL HEURES SUPPLÉMENTAIRES (Code du Travail Art. 221)")
+        p.drawString(1.5*cm, y, "DÃ‰TAIL HEURES SUPPLÃ‰MENTAIRES (Code du Travail Art. 221)")
         p.setFillColor(colors.black)
         y -= 0.25*cm
         
-        # Calcul des montants individuels (salaire_base / 173,33 × h × coefficient)
+        # Calcul des montants individuels (salaire_base / 173,33 Ã— h Ã— coefficient)
         _sal_h = Decimal(str(bulletin.salaire_base or 0)) / Decimal('173.33')
         _montant_30 = int(_sal_h * Decimal(str(hs_30)) * Decimal('1.30'))
         _montant_60 = int(_sal_h * Decimal(str(hs_60)) * Decimal('1.60'))
@@ -290,13 +312,13 @@ def generer_bulletin_pdf(bulletin):
             hs_detail_data.append(["4 prem. HS/sem.", f"{hs_30:g}h", "+30% (130%)",
                                     f"{_montant_30:,.0f}".replace(",", " ")])
         if float(hs_60) > 0:
-            hs_detail_data.append(["Au-delà 4 HS/sem.", f"{hs_60:g}h", "+60% (160%)",
+            hs_detail_data.append(["Au-delÃ  4 HS/sem.", f"{hs_60:g}h", "+60% (160%)",
                                     f"{_montant_60:,.0f}".replace(",", " ")])
         if float(hs_nuit) > 0:
             hs_detail_data.append(["Heures de nuit (20h-6h)", f"{hs_nuit:g}h", "+20% (120%)",
                                     f"{prime_nuit:,.0f}".replace(",", " ")])
         if float(hs_feries) > 0:
-            hs_detail_data.append(["Jours fériés", f"{hs_feries:g}h", "+60/100%",
+            hs_detail_data.append(["Jours fÃ©riÃ©s", f"{hs_feries:g}h", "+60/100%",
                                     f"{prime_feries:,.0f}".replace(",", " ")])
 
         total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries)
@@ -327,12 +349,12 @@ def generer_bulletin_pdf(bulletin):
     
     # === RETENUES ===
     p.setFillColor(colors.HexColor("#dc3545"))
-    p.setFont("Helvetica-Bold", 9)
+    p.setFont("Arial-Bold", 9)
     p.drawString(1.5*cm, y, "RETENUES ET COTISATIONS")
     p.setFillColor(colors.black)
     y -= 0.4*cm
     
-    retenues_data = [["Libellé", "Base", "Taux", "Montant"]]
+    retenues_data = [["LibellÃ©", "Base", "Taux", "Montant"]]
     cnss_irg_codes = ['CNSS', 'IRG', 'RTS', 'IRS', 'IRPP']
     for r in retenues:
         code = r.rubrique.code_rubrique.upper() if r.rubrique.code_rubrique else ''
@@ -348,12 +370,12 @@ def generer_bulletin_pdf(bulletin):
     
     # Ajouter CNSS et RTS
     base_cnss = min(bulletin.salaire_brut, 2500000)
-    retenues_data.append(["CNSS Employé (5%)", f"{base_cnss:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
+    retenues_data.append(["CNSS EmployÃ© (5%)", f"{base_cnss:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
     base_rts_val = getattr(bulletin, 'base_rts', 0) or 0
     taux_eff_rts_val = getattr(bulletin, 'taux_effectif_rts', 0) or 0
     rts_base_str = f"{base_rts_val:,.0f}".replace(",", " ") if base_rts_val else "-"
     rts_taux_str = f"{taux_eff_rts_val:.2f}%" if taux_eff_rts_val else "-"
-    retenues_data.append(["RTS (Impôt sur le Revenu)", rts_base_str, rts_taux_str, f"{bulletin.irg:,.0f}".replace(",", " ")])
+    retenues_data.append(["RTS (ImpÃ´t sur le Revenu)", rts_base_str, rts_taux_str, f"{bulletin.irg:,.0f}".replace(",", " ")])
     
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
@@ -371,16 +393,16 @@ def generer_bulletin_pdf(bulletin):
     retenues_table.drawOn(p, 1.5*cm, y - table_height)
     y -= table_height + 0.5*cm
     
-    # === DÉTAIL CALCUL RTS (barème progressif) ===
+    # === DÃ‰TAIL CALCUL RTS (barÃ¨me progressif) ===
     detail_rts = calculer_detail_tranches_rts(base_rts_val)
     if detail_rts:
-        p.setFont("Helvetica-Bold", 7)
+        p.setFont("Arial-Bold", 7)
         p.setFillColor(colors.HexColor("#6c757d"))
-        p.drawString(1.5*cm, y, f"DÉTAIL RTS — Barème progressif sur base imposable: {base_rts_val:,.0f} GNF".replace(",", " "))
+        p.drawString(1.5*cm, y, f"DÃ‰TAIL RTS â€” BarÃ¨me progressif sur base imposable: {base_rts_val:,.0f} GNF".replace(",", " "))
         p.setFillColor(colors.black)
         y -= 0.25*cm
         
-        rts_detail_data = [["Tranche", "Taux", "Impôt"]]
+        rts_detail_data = [["Tranche", "Taux", "ImpÃ´t"]]
         cumul_impot = Decimal('0')
         for i, t in enumerate(detail_rts, start=1):
             rts_detail_data.append([
@@ -413,7 +435,7 @@ def generer_bulletin_pdf(bulletin):
     else:
         y -= 0.2*cm
     
-    # === RÉCAPITULATIF ===
+    # === RÃ‰CAPITULATIF ===
     rappel = getattr(bulletin, 'rappel_salaire', 0) or 0
     trop_percu = getattr(bulletin, 'retenue_trop_percu', 0) or 0
     has_rappel = rappel > 0
@@ -424,13 +446,13 @@ def generer_bulletin_pdf(bulletin):
     p.setLineWidth(2)
     p.rect(1.5*cm, y - recap_height, width - 3*cm, recap_height, stroke=1, fill=0)
     
-    p.setFont("Helvetica-Bold", 10)
+    p.setFont("Arial-Bold", 10)
     p.setFillColor(colors.black)
     p.drawString(2*cm, y - 0.5*cm, "SALAIRE BRUT:")
     p.drawRightString(width - 2*cm, y - 0.5*cm, f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " "))
     
-    # CNSS et RTS alignés sur la même ligne
-    p.setFont("Helvetica", 8)
+    # CNSS et RTS alignÃ©s sur la mÃªme ligne
+    p.setFont("Arial", 8)
     p.setFillColor(colors.HexColor("#dc3545"))
     mid_x = width / 2
     p.drawString(2*cm, y - 1*cm, f"CNSS (5%): -{bulletin.cnss_employe:,.0f}".replace(",", " "))
@@ -441,17 +463,17 @@ def generer_bulletin_pdf(bulletin):
     if has_rappel:
         offset_y += 0.4*cm
         p.setFillColor(colors.HexColor("#007bff"))
-        p.drawString(2*cm, y - offset_y, "Rappel/Complément salaire précédent:")
+        p.drawString(2*cm, y - offset_y, "Rappel/ComplÃ©ment salaire prÃ©cÃ©dent:")
         p.drawRightString(width - 2*cm, y - offset_y, f"+ {rappel:,.0f} GNF".replace(",", " "))
     if has_trop_percu:
         offset_y += 0.4*cm
         p.setFillColor(colors.HexColor("#dc3545"))
-        p.drawString(2*cm, y - offset_y, "Retenue trop-perçu salaire précédent:")
+        p.drawString(2*cm, y - offset_y, "Retenue trop-perÃ§u salaire prÃ©cÃ©dent:")
         p.drawRightString(width - 2*cm, y - offset_y, f"- {trop_percu:,.0f} GNF".replace(",", " "))
     
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont("Helvetica-Bold", 11)
-    p.drawString(2*cm, y - offset_y - 0.7*cm, "NET À PAYER:")
+    p.setFont("Arial-Bold", 11)
+    p.drawString(2*cm, y - offset_y - 0.7*cm, "NET Ã€ PAYER:")
     p.drawRightString(width - 2*cm, y - offset_y - 0.7*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
     p.setFillColor(colors.black)
     
@@ -463,25 +485,25 @@ def generer_bulletin_pdf(bulletin):
     onfpp = getattr(bulletin, 'contribution_onfpp', 0) or 0
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
     
-    p.setFont("Helvetica-Bold", 8)
+    p.setFont("Arial-Bold", 8)
     p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     y -= 0.35*cm
-    p.setFont("Helvetica", 6.5)
+    p.setFont("Arial", 6.5)
     p.drawString(1.5*cm, y, f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " "))
     p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
     p.drawString(9*cm, y, f"TA 1,5%: {ta:,.0f}".replace(",", " "))
     p.drawString(12.5*cm, y, f"ONFPP 1,5%: {onfpp:,.0f}".replace(",", " "))
-    p.setFont("Helvetica-Bold", 7)
+    p.setFont("Arial-Bold", 7)
     p.drawRightString(width - 1.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     y -= 0.3*cm
     
     # === ZONE DE SIGNATURES ===
     y -= 1.2*cm
-    p.setFont("Helvetica-Bold", 8)
+    p.setFont("Arial-Bold", 8)
     p.drawString(2*cm, y, "L'Employeur")
-    p.drawString(12*cm, y, "L'Employé(e)")
+    p.drawString(12*cm, y, "L'EmployÃ©(e)")
     y -= 0.4*cm
-    p.setFont("Helvetica", 7)
+    p.setFont("Arial", 7)
     if entreprise:
         p.drawString(2*cm, y, entreprise.nom_entreprise or '')
     p.drawString(12*cm, y, f"{emp.nom} {emp.prenoms}")
@@ -492,18 +514,18 @@ def generer_bulletin_pdf(bulletin):
     p.line(12*cm, y, 17*cm, y)
     p.setDash()
     y -= 0.3*cm
-    p.setFont("Helvetica", 6)
+    p.setFont("Arial", 6)
     p.drawCentredString(4.5*cm, y, "Date et signature")
-    p.drawCentredString(14.5*cm, y, "Lu et approuvé, date et signature")
+    p.drawCentredString(14.5*cm, y, "Lu et approuvÃ©, date et signature")
     
     # === PIED DE PAGE ===
-    p.setFont("Helvetica", 7)
-    p.drawCentredString(width/2, 2.2*cm, "Ce bulletin est conforme à la législation guinéenne en vigueur.")
+    p.setFont("Arial", 7)
+    p.drawCentredString(width/2, 2.2*cm, "Ce bulletin est conforme Ã  la lÃ©gislation guinÃ©enne en vigueur.")
     if entreprise:
-        p.drawCentredString(width/2, 1.7*cm, f"{entreprise.nom_entreprise} - {entreprise.adresse or ''} - Tél: {entreprise.telephone or ''}")
+        p.drawCentredString(width/2, 1.7*cm, f"{entreprise.nom_entreprise} - {entreprise.adresse or ''} - TÃ©l: {entreprise.telephone or ''}")
         p.drawCentredString(width/2, 1.3*cm, f"NIF: {entreprise.nif or '-'} - CNSS: {entreprise.num_cnss or '-'}")
     
-    p.drawCentredString(width/2, 0.8*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
+    p.drawCentredString(width/2, 0.8*cm, f"Document gÃ©nÃ©rÃ© le {timezone.now().strftime('%d/%m/%Y Ã  %H:%M')}")
     
     # Finaliser le PDF
     p.showPage()
@@ -511,3 +533,5 @@ def generer_bulletin_pdf(bulletin):
     
     buffer.seek(0)
     return buffer.read()
+
+

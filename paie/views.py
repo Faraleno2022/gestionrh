@@ -472,6 +472,14 @@ def telecharger_bulletin_pdf(request, pk):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import cm, mm
     from reportlab.pdfgen import canvas
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import os as _os
+    for _fname, _ffile in {"Arial": "arial.ttf", "Arial-Bold": "arialbd.ttf", "Arial-Italic": "ariali.ttf"}.items():
+        _fpath = _os.path.join(_os.environ.get("WINDIR","C:\\Windows"), "Fonts", _ffile)
+        if _os.path.exists(_fpath):
+            try: pdfmetrics.registerFont(TTFont(_fname, _fpath))
+            except: pass
     from reportlab.lib import colors
     from reportlab.platypus import Table, TableStyle
     import io
@@ -507,21 +515,21 @@ def telecharger_bulletin_pdf(request, pk):
             pass
     
     # Titre centrÃ©
-    p.setFont("Helvetica-Bold", 11)
+    p.setFont("Arial-Bold", 11)
     p.drawCentredString(width/2, y, "RÃ‰PUBLIQUE DE GUINÃ‰E")
     y -= 0.4*cm
-    p.setFont("Helvetica-Oblique", 8)
+    p.setFont("Arial-Italic", 8)
     p.drawCentredString(width/2, y, "Travail - Justice - SolidaritÃ©")
     y -= 0.5*cm
     
     # Nom entreprise
-    p.setFont("Helvetica-Bold", 12)
+    p.setFont("Arial-Bold", 12)
     nom_entreprise = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
     p.drawCentredString(width/2, y, nom_entreprise)
     y -= 0.6*cm
     
     # Titre bulletin
-    p.setFont("Helvetica-Bold", 14)
+    p.setFont("Arial-Bold", 14)
     p.drawCentredString(width/2, y, "BULLETIN DE PAIE")
     y -= 0.4*cm
     
@@ -532,21 +540,21 @@ def telecharger_bulletin_pdf(request, pk):
     y -= 0.6*cm
     
     # Infos bulletin sur une ligne
-    p.setFont("Helvetica", 9)
+    p.setFont("Arial", 9)
     p.setFillColor(colors.black)
     p.drawString(1.5*cm, y, f"NÂ°: {bulletin.numero_bulletin}")
     p.drawCentredString(width/2, y, f"PÃ©riode: {bulletin.periode}")
     p.drawRightString(width - 1.5*cm, y, f"Date: {bulletin.date_calcul.strftime('%d/%m/%Y') if bulletin.date_calcul else '-'}")
     y -= 0.35*cm
     # Dates de la pÃ©riode
-    p.setFont("Helvetica", 8)
+    p.setFont("Arial", 8)
     periode_detail = f"Du {bulletin.periode.date_debut.strftime('%d/%m/%Y')} au {bulletin.periode.date_fin.strftime('%d/%m/%Y')}" if bulletin.periode.date_debut and bulletin.periode.date_fin else ""
     p.drawCentredString(width/2, y, periode_detail)
     y -= 0.6*cm
     
     # === INFORMATIONS EMPLOYÃ‰ ===
     p.setFillColor(colors.HexColor("#ce1126"))
-    p.setFont("Helvetica-Bold", 9)
+    p.setFont("Arial-Bold", 9)
     p.drawString(1.5*cm, y, "INFORMATIONS EMPLOYÃ‰")
     p.setFillColor(colors.black)
     y -= 0.5*cm
@@ -584,14 +592,14 @@ def telecharger_bulletin_pdf(request, pk):
     ]
     
     for row in infos_emp:
-        p.setFont("Helvetica-Bold", 8)
+        p.setFont("Arial-Bold", 8)
         p.drawString(1.5*cm, y, row[0])
-        p.setFont("Helvetica", 8)
+        p.setFont("Arial", 8)
         p.drawString(4*cm, y, str(row[1]))
         if row[2]:
-            p.setFont("Helvetica-Bold", 8)
+            p.setFont("Arial-Bold", 8)
             p.drawString(11*cm, y, row[2])
-            p.setFont("Helvetica", 8)
+            p.setFont("Arial", 8)
             p.drawString(14*cm, y, str(row[3]))
         y -= 0.4*cm
     
@@ -600,7 +608,7 @@ def telecharger_bulletin_pdf(request, pk):
     # === GAINS ===
     # Titre GAINS
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont("Helvetica-Bold", 9)
+    p.setFont("Arial-Bold", 9)
     p.drawString(1.5*cm, y, "GAINS ET RÃ‰MUNÃ‰RATIONS")
     p.setFillColor(colors.black)
     y -= 0.3*cm
@@ -623,12 +631,12 @@ def telecharger_bulletin_pdf(request, pk):
     gains_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#28a745")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#d4edda")),
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     
@@ -648,7 +656,7 @@ def telecharger_bulletin_pdf(request, pk):
     total_hs_heures = float(hs_30) + float(hs_60) + float(hs_nuit) + float(hs_feries)
     
     if total_hs_heures > 0 or float(prime_hs) > 0:
-        p.setFont("Helvetica-Bold", 7)
+        p.setFont("Arial-Bold", 7)
         p.setFillColor(colors.HexColor("#6c757d"))
         p.drawString(1.5*cm, y, "DÃ‰TAIL HEURES SUPPLÃ‰MENTAIRES (Code du Travail Art. 221)")
         p.setFillColor(colors.black)
@@ -683,12 +691,12 @@ def telecharger_bulletin_pdf(request, pk):
         hs_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 7),
             ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
             ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#dee2e6")),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
             ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f9fa")),
         ]))
         
@@ -702,7 +710,7 @@ def telecharger_bulletin_pdf(request, pk):
     # === RETENUES ===
     # Titre RETENUES
     p.setFillColor(colors.HexColor("#dc3545"))
-    p.setFont("Helvetica-Bold", 9)
+    p.setFont("Arial-Bold", 9)
     p.drawString(1.5*cm, y, "RETENUES ET COTISATIONS")
     p.setFillColor(colors.black)
     y -= 0.4*cm
@@ -737,7 +745,7 @@ def telecharger_bulletin_pdf(request, pk):
     retenues_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#dc3545")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
@@ -753,7 +761,7 @@ def telecharger_bulletin_pdf(request, pk):
     from paie.utils import calculer_detail_tranches_rts
     detail_rts = calculer_detail_tranches_rts(base_rts_val)
     if detail_rts:
-        p.setFont("Helvetica-Bold", 7)
+        p.setFont("Arial-Bold", 7)
         p.setFillColor(colors.HexColor("#6c757d"))
         p.drawString(1.5*cm, y, f"DÃ‰TAIL RTS â€” BarÃ¨me progressif sur base imposable: {base_rts_val:,.0f} GNF".replace(",", " "))
         p.setFillColor(colors.black)
@@ -776,12 +784,12 @@ def telecharger_bulletin_pdf(request, pk):
         rts_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 7),
             ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
             ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#dee2e6")),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
             ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f9fa")),
         ]))
         
@@ -805,13 +813,13 @@ def telecharger_bulletin_pdf(request, pk):
     p.setLineWidth(2)
     p.rect(1.5*cm, y - recap_height, width - 3*cm, recap_height, stroke=1, fill=0)
     
-    p.setFont("Helvetica-Bold", 10)
+    p.setFont("Arial-Bold", 10)
     p.setFillColor(colors.black)
     p.drawString(2*cm, y - 0.5*cm, "SALAIRE BRUT:")
     p.drawRightString(width - 2*cm, y - 0.5*cm, f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " "))
     
     # CNSS et RTS alignÃ©s sur la mÃªme ligne
-    p.setFont("Helvetica", 8)
+    p.setFont("Arial", 8)
     p.setFillColor(colors.HexColor("#dc3545"))
     mid_x = width / 2
     p.drawString(2*cm, y - 1*cm, f"CNSS (5%): -{bulletin.cnss_employe:,.0f}".replace(",", " "))
@@ -831,7 +839,7 @@ def telecharger_bulletin_pdf(request, pk):
         p.drawRightString(width - 2*cm, y - offset_y, f"- {trop_percu:,.0f} GNF".replace(",", " "))
     
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont("Helvetica-Bold", 11)
+    p.setFont("Arial-Bold", 11)
     p.drawString(2*cm, y - offset_y - 0.7*cm, "NET Ã€ PAYER:")
     p.drawRightString(width - 2*cm, y - offset_y - 0.7*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
     p.setFillColor(colors.black)
@@ -848,10 +856,10 @@ def telecharger_bulletin_pdf(request, pk):
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
     taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '1,5'
     
-    p.setFont("Helvetica-Bold", 8)
+    p.setFont("Arial-Bold", 8)
     p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     y -= 0.35*cm
-    p.setFont("Helvetica", 6.5)
+    p.setFont("Arial", 6.5)
     p.drawString(1.5*cm, y, f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " "))
     p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
     # TA ou ONFPP selon effectif
@@ -860,12 +868,12 @@ def telecharger_bulletin_pdf(request, pk):
         p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta_str}")
     elif onfpp > 0:
         p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} â‰¥30): {onfpp:,.0f}".replace(",", " "))
-    p.setFont("Helvetica-Bold", 7)
+    p.setFont("Arial-Bold", 7)
     p.drawRightString(width - 1.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     y -= 0.3*cm
     # Base de calcul VF si prÃ©sente
     if base_vf > 0:
-        p.setFont("Helvetica", 6)
+        p.setFont("Arial", 6)
         p.setFillColor(colors.HexColor("#666666"))
         p.drawString(1.5*cm, y, f"â””â”€ base calc VF: {base_vf:,.0f}".replace(",", " "))
         y -= 0.25*cm
@@ -873,11 +881,11 @@ def telecharger_bulletin_pdf(request, pk):
     
     # === ZONE DE SIGNATURES ===
     y -= 1.2*cm
-    p.setFont("Helvetica-Bold", 8)
+    p.setFont("Arial-Bold", 8)
     p.drawString(2*cm, y, "L'Employeur")
     p.drawString(12*cm, y, "L'EmployÃ©(e)")
     y -= 0.4*cm
-    p.setFont("Helvetica", 7)
+    p.setFont("Arial", 7)
     if entreprise:
         p.drawString(2*cm, y, entreprise.nom_entreprise or '')
     p.drawString(12*cm, y, f"{emp.nom} {emp.prenoms}")
@@ -888,12 +896,12 @@ def telecharger_bulletin_pdf(request, pk):
     p.line(12*cm, y, 17*cm, y)
     p.setDash()
     y -= 0.3*cm
-    p.setFont("Helvetica", 6)
+    p.setFont("Arial", 6)
     p.drawCentredString(4.5*cm, y, "Date et signature")
     p.drawCentredString(14.5*cm, y, "Lu et approuvÃ©, date et signature")
     
     # === PIED DE PAGE ===
-    p.setFont("Helvetica", 7)
+    p.setFont("Arial", 7)
     p.drawCentredString(width/2, 2.2*cm, "Ce bulletin est conforme Ã  la lÃ©gislation guinÃ©enne en vigueur.")
     if entreprise:
         p.drawCentredString(width/2, 1.7*cm, f"{entreprise.nom_entreprise} - {entreprise.adresse or ''} - TÃ©l: {entreprise.telephone or ''}")
@@ -918,6 +926,14 @@ def telecharger_bulletin_public(request, token):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import cm, mm
     from reportlab.pdfgen import canvas
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import os as _os
+    for _fname, _ffile in {"Arial": "arial.ttf", "Arial-Bold": "arialbd.ttf", "Arial-Italic": "ariali.ttf"}.items():
+        _fpath = _os.path.join(_os.environ.get("WINDIR","C:\\Windows"), "Fonts", _ffile)
+        if _os.path.exists(_fpath):
+            try: pdfmetrics.registerFont(TTFont(_fname, _fpath))
+            except: pass
     from reportlab.lib import colors
     from reportlab.platypus import Table, TableStyle
     import io
@@ -951,21 +967,21 @@ def telecharger_bulletin_public(request, token):
             pass
     
     # Titre centrÃ©
-    p.setFont("Helvetica-Bold", 11)
+    p.setFont("Arial-Bold", 11)
     p.drawCentredString(width/2, y, "RÃ‰PUBLIQUE DE GUINÃ‰E")
     y -= 0.4*cm
-    p.setFont("Helvetica-Oblique", 8)
+    p.setFont("Arial-Italic", 8)
     p.drawCentredString(width/2, y, "Travail - Justice - SolidaritÃ©")
     y -= 0.5*cm
     
     # Nom entreprise
-    p.setFont("Helvetica-Bold", 12)
+    p.setFont("Arial-Bold", 12)
     nom_entreprise = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
     p.drawCentredString(width/2, y, nom_entreprise)
     y -= 0.6*cm
     
     # Titre bulletin
-    p.setFont("Helvetica-Bold", 14)
+    p.setFont("Arial-Bold", 14)
     p.drawCentredString(width/2, y, "BULLETIN DE PAIE")
     y -= 0.4*cm
     
@@ -976,21 +992,21 @@ def telecharger_bulletin_public(request, token):
     y -= 0.6*cm
     
     # Infos bulletin sur une ligne
-    p.setFont("Helvetica", 9)
+    p.setFont("Arial", 9)
     p.setFillColor(colors.black)
     p.drawString(1.5*cm, y, f"NÂ°: {bulletin.numero_bulletin}")
     p.drawCentredString(width/2, y, f"PÃ©riode: {bulletin.periode}")
     p.drawRightString(width - 1.5*cm, y, f"Date: {bulletin.date_calcul.strftime('%d/%m/%Y') if bulletin.date_calcul else '-'}")
     y -= 0.35*cm
     # Dates de la pÃ©riode
-    p.setFont("Helvetica", 8)
+    p.setFont("Arial", 8)
     periode_detail = f"Du {bulletin.periode.date_debut.strftime('%d/%m/%Y')} au {bulletin.periode.date_fin.strftime('%d/%m/%Y')}" if bulletin.periode.date_debut and bulletin.periode.date_fin else ""
     p.drawCentredString(width/2, y, periode_detail)
     y -= 0.6*cm
     
     # === INFORMATIONS EMPLOYÃ‰ ===
     p.setFillColor(colors.HexColor("#ce1126"))
-    p.setFont("Helvetica-Bold", 9)
+    p.setFont("Arial-Bold", 9)
     p.drawString(1.5*cm, y, "INFORMATIONS EMPLOYÃ‰")
     p.setFillColor(colors.black)
     y -= 0.5*cm
@@ -1028,14 +1044,14 @@ def telecharger_bulletin_public(request, token):
     ]
     
     for row in infos_emp:
-        p.setFont("Helvetica-Bold", 8)
+        p.setFont("Arial-Bold", 8)
         p.drawString(1.5*cm, y, row[0])
-        p.setFont("Helvetica", 8)
+        p.setFont("Arial", 8)
         p.drawString(4*cm, y, str(row[1]))
         if row[2]:
-            p.setFont("Helvetica-Bold", 8)
+            p.setFont("Arial-Bold", 8)
             p.drawString(11*cm, y, row[2])
-            p.setFont("Helvetica", 8)
+            p.setFont("Arial", 8)
             p.drawString(14*cm, y, str(row[3]))
         y -= 0.4*cm
     
@@ -1043,7 +1059,7 @@ def telecharger_bulletin_public(request, token):
     
     # === GAINS ===
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont("Helvetica-Bold", 9)
+    p.setFont("Arial-Bold", 9)
     p.drawString(1.5*cm, y, "GAINS ET RÃ‰MUNÃ‰RATIONS")
     p.setFillColor(colors.black)
     y -= 0.3*cm
@@ -1066,12 +1082,12 @@ def telecharger_bulletin_public(request, token):
     gains_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#28a745")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#d4edda")),
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     
@@ -1091,7 +1107,7 @@ def telecharger_bulletin_public(request, token):
     total_hs_heures = float(hs_30) + float(hs_60) + float(hs_nuit) + float(hs_feries)
     
     if total_hs_heures > 0 or float(prime_hs) > 0:
-        p.setFont("Helvetica-Bold", 7)
+        p.setFont("Arial-Bold", 7)
         p.setFillColor(colors.HexColor("#6c757d"))
         p.drawString(1.5*cm, y, "DÃ‰TAIL HEURES SUPPLÃ‰MENTAIRES (Code du Travail Art. 221)")
         p.setFillColor(colors.black)
@@ -1126,12 +1142,12 @@ def telecharger_bulletin_public(request, token):
         hs_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 7),
             ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
             ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#dee2e6")),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
             ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f9fa")),
         ]))
         
@@ -1144,7 +1160,7 @@ def telecharger_bulletin_public(request, token):
     
     # === RETENUES ===
     p.setFillColor(colors.HexColor("#dc3545"))
-    p.setFont("Helvetica-Bold", 9)
+    p.setFont("Arial-Bold", 9)
     p.drawString(1.5*cm, y, "RETENUES ET COTISATIONS")
     p.setFillColor(colors.black)
     y -= 0.4*cm
@@ -1179,7 +1195,7 @@ def telecharger_bulletin_public(request, token):
     retenues_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#dc3545")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
@@ -1195,7 +1211,7 @@ def telecharger_bulletin_public(request, token):
     from paie.utils import calculer_detail_tranches_rts
     detail_rts = calculer_detail_tranches_rts(base_rts_val)
     if detail_rts:
-        p.setFont("Helvetica-Bold", 7)
+        p.setFont("Arial-Bold", 7)
         p.setFillColor(colors.HexColor("#6c757d"))
         p.drawString(1.5*cm, y, f"DÃ‰TAIL RTS â€” BarÃ¨me progressif sur base imposable: {base_rts_val:,.0f} GNF".replace(",", " "))
         p.setFillColor(colors.black)
@@ -1218,12 +1234,12 @@ def telecharger_bulletin_public(request, token):
         rts_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 7),
             ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
             ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#dee2e6")),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
             ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f9fa")),
         ]))
         
@@ -1245,13 +1261,13 @@ def telecharger_bulletin_public(request, token):
     p.setLineWidth(2)
     p.rect(1.5*cm, y - recap_height, width - 3*cm, recap_height, stroke=1, fill=0)
     
-    p.setFont("Helvetica-Bold", 10)
+    p.setFont("Arial-Bold", 10)
     p.setFillColor(colors.black)
     p.drawString(2*cm, y - 0.5*cm, "SALAIRE BRUT:")
     p.drawRightString(width - 2*cm, y - 0.5*cm, f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " "))
     
     # CNSS et RTS alignÃ©s sur la mÃªme ligne
-    p.setFont("Helvetica", 8)
+    p.setFont("Arial", 8)
     p.setFillColor(colors.HexColor("#dc3545"))
     mid_x = width / 2
     p.drawString(2*cm, y - 1*cm, f"CNSS (5%): -{bulletin.cnss_employe:,.0f}".replace(",", " "))
@@ -1263,25 +1279,25 @@ def telecharger_bulletin_public(request, token):
     # Afficher l'abattement forfaitaire si prÃ©sent (dÃ©tail RTS)
     if has_abatt:
         offset_y += 0.35*cm
-        p.setFont("Helvetica", 7)
+        p.setFont("Arial", 7)
         p.setFillColor(colors.HexColor("#666666"))
         p.drawString(2.3*cm, y - offset_y, f"â””â”€ abattement 25%: {abatt_forfait:,.0f}".replace(",", " "))
     
     if has_rappel:
         offset_y += 0.35*cm
         p.setFillColor(colors.HexColor("#007bff"))
-        p.setFont("Helvetica", 8)
+        p.setFont("Arial", 8)
         p.drawString(2*cm, y - offset_y, "Rappel/ComplÃ©ment salaire prÃ©cÃ©dent:")
         p.drawRightString(width - 2*cm, y - offset_y, f"+ {rappel:,.0f} GNF".replace(",", " "))
     if has_trop_percu:
         offset_y += 0.35*cm
         p.setFillColor(colors.HexColor("#dc3545"))
-        p.setFont("Helvetica", 8)
+        p.setFont("Arial", 8)
         p.drawString(2*cm, y - offset_y, "Retenue trop-perÃ§u salaire prÃ©cÃ©dent:")
         p.drawRightString(width - 2*cm, y - offset_y, f"- {trop_percu:,.0f} GNF".replace(",", " "))
     
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont("Helvetica-Bold", 11)
+    p.setFont("Arial-Bold", 11)
     p.drawString(2*cm, y - offset_y - 0.7*cm, "NET Ã€ PAYER:")
     p.drawRightString(width - 2*cm, y - offset_y - 0.7*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
     p.setFillColor(colors.black)
@@ -1298,10 +1314,10 @@ def telecharger_bulletin_public(request, token):
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
     taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '1,5'
     
-    p.setFont("Helvetica-Bold", 8)
+    p.setFont("Arial-Bold", 8)
     p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     y -= 0.35*cm
-    p.setFont("Helvetica", 6.5)
+    p.setFont("Arial", 6.5)
     p.drawString(1.5*cm, y, f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " "))
     p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
     # TA ou ONFPP selon effectif
@@ -1310,12 +1326,12 @@ def telecharger_bulletin_public(request, token):
         p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta_str}")
     elif onfpp > 0:
         p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} â‰¥30): {onfpp:,.0f}".replace(",", " "))
-    p.setFont("Helvetica-Bold", 7)
+    p.setFont("Arial-Bold", 7)
     p.drawRightString(width - 1.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     y -= 0.3*cm
     # Base de calcul VF si prÃ©sente
     if base_vf > 0:
-        p.setFont("Helvetica", 6)
+        p.setFont("Arial", 6)
         p.setFillColor(colors.HexColor("#666666"))
         p.drawString(1.5*cm, y, f"â””â”€ base calc VF: {base_vf:,.0f}".replace(",", " "))
         y -= 0.25*cm
@@ -1323,11 +1339,11 @@ def telecharger_bulletin_public(request, token):
     
     # === ZONE DE SIGNATURES ===
     y -= 1.2*cm
-    p.setFont("Helvetica-Bold", 8)
+    p.setFont("Arial-Bold", 8)
     p.drawString(2*cm, y, "L'Employeur")
     p.drawString(12*cm, y, "L'EmployÃ©(e)")
     y -= 0.4*cm
-    p.setFont("Helvetica", 7)
+    p.setFont("Arial", 7)
     if entreprise:
         p.drawString(2*cm, y, entreprise.nom_entreprise or '')
     p.drawString(12*cm, y, f"{emp.nom} {emp.prenoms}")
@@ -1338,12 +1354,12 @@ def telecharger_bulletin_public(request, token):
     p.line(12*cm, y, 17*cm, y)
     p.setDash()
     y -= 0.3*cm
-    p.setFont("Helvetica", 6)
+    p.setFont("Arial", 6)
     p.drawCentredString(4.5*cm, y, "Date et signature")
     p.drawCentredString(14.5*cm, y, "Lu et approuvÃ©, date et signature")
     
     # === PIED DE PAGE ===
-    p.setFont("Helvetica", 7)
+    p.setFont("Arial", 7)
     p.drawCentredString(width/2, 2.2*cm, "Ce bulletin est conforme Ã  la lÃ©gislation guinÃ©enne en vigueur.")
     if entreprise:
         p.drawCentredString(width/2, 1.7*cm, f"{entreprise.nom_entreprise} - {entreprise.adresse or ''} - TÃ©l: {entreprise.telephone or ''}")
@@ -1417,6 +1433,14 @@ def telecharger_livre_paie_pdf(request):
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.units import cm
     from reportlab.pdfgen import canvas
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import os as _os
+    for _fname, _ffile in {"Arial": "arial.ttf", "Arial-Bold": "arialbd.ttf", "Arial-Italic": "ariali.ttf"}.items():
+        _fpath = _os.path.join(_os.environ.get("WINDIR","C:\\Windows"), "Fonts", _ffile)
+        if _os.path.exists(_fpath):
+            try: pdfmetrics.registerFont(TTFont(_fname, _fpath))
+            except: pass
     from reportlab.lib import colors
     from reportlab.platypus import Table, TableStyle
     from django.db.models import F
@@ -1461,7 +1485,7 @@ def telecharger_livre_paie_pdf(request):
     width, height = page_size
 
     y = height - 1.2 * cm
-    p.setFont('Helvetica-Bold', 12)
+    p.setFont('Arial-Bold', 12)
     titre = f"Livre de Paie - AnnÃ©e {int(annee)}"
     if mois:
         titre += f" - Mois {int(mois)}"
@@ -1473,7 +1497,7 @@ def telecharger_livre_paie_pdf(request):
     p.line(1.2 * cm, y, width - 1.2 * cm, y)
     y -= 0.7 * cm
 
-    p.setFont('Helvetica', 8)
+    p.setFont('Arial', 8)
     tot_line = (
         f"Brut: {fmt(totaux.get('total_brut'))} GNF   "
         f"CNSS EmployÃ©: {fmt(totaux.get('total_cnss_employe'))}   "
@@ -1525,14 +1549,14 @@ def telecharger_livre_paie_pdf(request):
     ]
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
-        ('FONT', (0, 0), (-1, -1), 'Helvetica', 6),
-        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 6),
+        ('FONT', (0, 0), (-1, -1), 'Arial', 6),
+        ('FONT', (0, 0), (-1, 0), 'Arial-Bold', 6),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e9ecef')),
         ('ALIGN', (4, 1), (-1, -1), 'RIGHT'),
         ('ALIGN', (0, 0), (3, -1), 'LEFT'),
         ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f8f9fa')),
-        ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 6),
+        ('FONT', (0, -1), (-1, -1), 'Arial-Bold', 6),
         ('LINEABOVE', (0, -1), (-1, -1), 0.8, colors.black),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('LEFTPADDING', (0, 0), (-1, -1), 3),
@@ -1727,10 +1751,10 @@ def declarations_sociales_pdf(request):
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EF7707')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f5f5f5')),
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
     ]))
     elements.append(cnss_table)
     elements.append(Spacer(1, 0.5*cm))
@@ -1747,7 +1771,7 @@ def declarations_sociales_pdf(request):
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EF7707')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
     ]))
     elements.append(irg_table)
@@ -2753,6 +2777,9 @@ def config_paie_entreprise(request):
         'modes_hs': ConfigurationPaieEntreprise.MODES_HS,
         'modes_conges': ConfigurationPaieEntreprise.MODES_CONGES,
     })
+
+
+
 
 
 
