@@ -1350,7 +1350,7 @@ class MoteurCalculPaie:
                 config_paie = self.config_paie
             except:
                 # Fallback si config_paie n'existe pas: charger depuis l'entreprise
-                config_paie = emp.entreprise.configpaieentreprise_set.first() if emp.entreprise else None
+                config_paie = emp.entreprise.config_paie.first() if emp.entreprise else None
             
             # Déterminer le nombre de jours par mois
             if config_paie:
@@ -1389,6 +1389,12 @@ class MoteurCalculPaie:
                 solde_conge.conges_acquis = conges_acquis
                 if not solde_conge.conges_pris:
                     solde_conge.conges_pris = Decimal('0')
+                # Recalculer conges_restants = acquis + reports - pris
+                solde_conge.conges_restants = (
+                    conges_acquis +
+                    (solde_conge.conges_reports or Decimal('0')) -
+                    (solde_conge.conges_pris or Decimal('0'))
+                )
                 solde_conge.save()
             
             return solde_conge.conges_acquis
