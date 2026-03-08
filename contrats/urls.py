@@ -20,6 +20,7 @@ urlpatterns = [
     path('<uuid:pk>/terminer/', views.terminer_contrat, name='terminer'),
     path('<uuid:pk>/renouveler/', views.renouveler_contrat, name='renouveler'),
     path('<uuid:pk>/imprimer/', views.imprimer_contrat, name='imprimer'),
+    path('<uuid:pk>/solde-tout-compte/', views.solde_tout_compte, name='solde_tout_compte'),
     
     # Alertes
     path('alertes/', views.liste_alertes, name='alertes'),

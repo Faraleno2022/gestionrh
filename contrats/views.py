@@ -599,3 +599,36 @@ def imprimer_contrat(request, pk):
     }
     
     return render(request, 'contrats/imprimer.html', context)
+
+
+@login_required
+@entreprise_active_required
+def solde_tout_compte(request, pk):
+    """Calcul et affichage du Solde de Tout Compte pour fin de CDD"""
+    contrat = get_object_or_404(
+        Contrat,
+        pk=pk,
+        employe__entreprise=request.user.entreprise
+    )
+
+    from .services_stc import calculer_solde_tout_compte
+    from datetime import datetime
+
+    # Date de fin personnalisée (paramètre GET optionnel)
+    date_fin_str = request.GET.get('date_fin')
+    date_fin = None
+    if date_fin_str:
+        try:
+            date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    calcul = calculer_solde_tout_compte(contrat, date_fin)
+
+    context = {
+        'contrat': contrat,
+        'calcul': calcul,
+        'entreprise': request.user.entreprise,
+        'date_fin_str': (date_fin or calcul['date_fin']).strftime('%Y-%m-%d'),
+    }
+    return render(request, 'contrats/solde_tout_compte.html', context)
