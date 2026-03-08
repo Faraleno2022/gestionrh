@@ -93,3 +93,20 @@ credentials/
 node_modules/
 staticfiles/
 fix_settings.py
+
+# Scripts temporaires de diagnostic
+check*.py
+creer_*.py
+run_*.py
+fix_*.py
+find.py
+test_conges.py
+
+# Fichiers de backup
+backup_*.json
+
+# Base de données locale
+db.sqlite3
+
+# PDFs de test
+test_*.pdf

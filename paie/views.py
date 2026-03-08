@@ -11,29 +11,29 @@ import json
 
 
 def parse_montant(valeur):
-    """Convertir un montant saisi (format franÃ§ais ou anglais) en Decimal.
+    """Convertir un montant saisi (format français ou anglais) en Decimal.
     Supporte: 1 500,50 / 1500,50 / 1500.50 / 1,500.50
     Retourne None si la valeur est vide ou invalide."""
     if not valeur:
         return None
     valeur = str(valeur).strip().replace('\xa0', '').replace(' ', '')
-    # Si contient Ã  la fois . et , dÃ©terminer le sÃ©parateur dÃ©cimal
+    # Si contient à la fois . et , déterminer le séparateur décimal
     if ',' in valeur and '.' in valeur:
-        # 1.500,50 â†’ franÃ§ais ou 1,500.50 â†’ anglais
+        # 1.500,50 → français ou 1,500.50 → anglais
         if valeur.rindex(',') > valeur.rindex('.'):
-            # virgule aprÃ¨s point â†’ format franÃ§ais: 1.500,50
+            # virgule après point → format français: 1.500,50
             valeur = valeur.replace('.', '').replace(',', '.')
         else:
-            # point aprÃ¨s virgule â†’ format anglais: 1,500.50
+            # point après virgule → format anglais: 1,500.50
             valeur = valeur.replace(',', '')
     elif ',' in valeur:
         # Seulement virgule: 1500,50 ou 1,500
         parts = valeur.split(',')
         if len(parts) == 2 and len(parts[1]) <= 2:
-            # DÃ©cimale: 1500,50
+            # Décimale: 1500,50
             valeur = valeur.replace(',', '.')
         else:
-            # SÃ©parateur milliers: 1,500,000
+            # Séparateur milliers: 1,500,000
             valeur = valeur.replace(',', '')
     try:
         return Decimal(valeur)
@@ -55,7 +55,7 @@ from core.decorators import reauth_required, entreprise_active_required
 @reauth_required
 def paie_home(request):
     """Vue d'accueil du module paie"""
-    # Statistiques gÃ©nÃ©rales - chercher la pÃ©riode la plus rÃ©cente (ouverte, calculÃ©e ou validÃ©e)
+    # Statistiques générales - chercher la période la plus récente (ouverte, calculée ou validée)
     periode_actuelle = PeriodePaie.objects.filter(
         entreprise=request.user.entreprise,
         statut_periode__in=['ouverte', 'calculee', 'validee', 'payee']
@@ -88,7 +88,7 @@ def paie_home(request):
 @entreprise_active_required
 @reauth_required
 def liste_periodes(request):
-    """Liste des pÃ©riodes de paie"""
+    """Liste des périodes de paie"""
     periodes = PeriodePaie.objects.filter(
         entreprise=request.user.entreprise
     ).annotate(
@@ -104,7 +104,7 @@ def liste_periodes(request):
 @entreprise_active_required
 @reauth_required
 def creer_periode(request):
-    """CrÃ©er une nouvelle pÃ©riode de paie"""
+    """Créer une nouvelle période de paie"""
     from datetime import date
     from calendar import monthrange
     
@@ -113,34 +113,34 @@ def creer_periode(request):
             annee = int(request.POST.get('annee'))
             mois = int(request.POST.get('mois'))
             
-            # VÃ©rifier que la pÃ©riode est antÃ©rieure (pas le mois courant ni mois futurs)
+            # Vérifier que la période est antérieure (pas le mois courant ni mois futurs)
             today = date.today()
             
-            if annee > today.year or (annee == today.year and mois > today.month + 1):
+            if annee > today.year or (annee == today.year and mois >= today.month):
                 messages.error(
                     request,
-                    f"âŒ Impossible de crÃ©er une pÃ©riode pour {mois:02d}/{annee}. "
+                    f"❌ Impossible de créer une période pour {mois:02d}/{annee}. "
                     f"Nous sommes en {today.month:02d}/{today.year}. "
-                    f"Vous pouvez crÃ©er uniquement des pÃ©riodes antÃ©rieures au mois courant."
+                    f"Vous pouvez créer uniquement des périodes antérieures au mois courant."
                 )
                 return render(request, 'paie/periodes/creer.html')
             
             nb_jours = monthrange(annee, mois)[1]
             
-            # VÃ©rifier si la pÃ©riode existe dÃ©jÃ 
+            # Vérifier si la période existe déjà
             if PeriodePaie.objects.filter(
                 entreprise=request.user.entreprise,
                 annee=annee,
                 mois=mois
             ).exists():
-                messages.error(request, 'Cette pÃ©riode existe dÃ©jÃ .')
+                messages.error(request, 'Cette période existe déjà.')
                 return redirect('paie:liste_periodes')
             
             # Calculer les dates
             date_debut = date(annee, mois, 1)
             date_fin = date(annee, mois, nb_jours)
             
-            # CrÃ©er la pÃ©riode
+            # Créer la période
             periode = PeriodePaie.objects.create(
                 entreprise=request.user.entreprise,
                 annee=annee,
@@ -150,13 +150,13 @@ def creer_periode(request):
                 statut_periode='ouverte'
             )
             
-            messages.success(request, f'PÃ©riode {periode} crÃ©Ã©e avec succÃ¨s.')
+            messages.success(request, f'Période {periode} créée avec succès.')
             return redirect('paie:detail_periode', pk=periode.pk)
             
         except ValueError:
-            messages.error(request, 'Erreur : annÃ©e et mois doivent Ãªtre des nombres entiers.')
+            messages.error(request, 'Erreur : année et mois doivent être des nombres entiers.')
         except Exception as e:
-            messages.error(request, f'Erreur lors de la crÃ©ation : {str(e)}')
+            messages.error(request, f'Erreur lors de la création : {str(e)}')
     
     return render(request, 'paie/periodes/creer.html')
 
@@ -165,14 +165,14 @@ def creer_periode(request):
 @entreprise_active_required
 @reauth_required
 def detail_periode(request, pk):
-    """DÃ©tail d'une pÃ©riode de paie"""
+    """Détail d'une période de paie"""
     periode = get_object_or_404(PeriodePaie, pk=pk, entreprise=request.user.entreprise)
     bulletins = BulletinPaie.objects.filter(
         periode=periode,
         employe__entreprise=request.user.entreprise,
     ).select_related('employe')
     
-    # Statistiques de la pÃ©riode
+    # Statistiques de la période
     stats = bulletins.aggregate(
         total_brut=Sum('salaire_brut'),
         total_net=Sum('net_a_payer'),
@@ -192,48 +192,48 @@ def detail_periode(request, pk):
 @entreprise_active_required
 @reauth_required
 def calculer_periode(request, pk):
-    """Calculer tous les bulletins d'une pÃ©riode (OPTIMISÃ‰)"""
+    """Calculer tous les bulletins d'une période (OPTIMISÉ)"""
     periode = get_object_or_404(PeriodePaie, pk=pk, entreprise=request.user.entreprise)
     
     if periode.statut_periode not in ['ouverte', 'calculee']:
-        messages.error(request, 'Cette pÃ©riode ne peut plus Ãªtre calculÃ©e.')
+        messages.error(request, 'Cette période ne peut plus être calculée.')
         return redirect('paie:detail_periode', pk=pk)
     
-    # VÃ©rifier que la pÃ©riode n'est pas ultÃ©rieure
+    # Vérifier que la période n'est pas ultérieure
     from datetime import date
     today = date.today()
-    if (periode.annee > today.year) or (periode.annee == today.year and periode.mois > today.month):
+    if periode.date_fin > today:
         messages.error(
             request,
-            f"âŒ Impossible de calculer les bulletins pour une pÃ©riode ultÃ©rieure ({periode}). "
+            f"❌ Impossible de calculer les bulletins pour une période ultérieure ({periode}). "
             f"La date actuelle est le {today.strftime('%d/%m/%Y')}. "
-            f"Seules les pÃ©riodes Ã©coulÃ©es ou du mois courant peuvent Ãªtre calculÃ©es."
+            f"Seules les périodes écoulées ou du mois courant peuvent être calculées."
         )
         return redirect('paie:detail_periode', pk=pk)
     
     if request.method == 'POST':
         try:
-            # Utiliser le service bulk optimisÃ©
+            # Utiliser le service bulk optimisé
             from .services_bulk import BulkPayrollService
             
             bulk_service = BulkPayrollService(periode, request.user.entreprise)
             result = bulk_service.calculer_tous_bulletins(utilisateur=request.user)
             
-            # Mettre Ã  jour le statut de la pÃ©riode
+            # Mettre à jour le statut de la période
             periode.statut_periode = 'calculee'
             periode.save()
             
             if result['erreurs']:
                 messages.warning(
                     request,
-                    f"{result['bulletins_crees']} bulletins crÃ©Ã©s en {result['temps_execution']}s. "
+                    f"{result['bulletins_crees']} bulletins créés en {result['temps_execution']}s. "
                     f"Erreurs: {', '.join(result['erreurs'][:5])}"
                     f"{'...' if len(result['erreurs']) > 5 else ''}"
                 )
             else:
                 messages.success(
                     request,
-                    f"{result['bulletins_crees']} bulletins calculÃ©s en {result['temps_execution']}s."
+                    f"{result['bulletins_crees']} bulletins calculés en {result['temps_execution']}s."
                 )
                 
         except Exception as e:
@@ -256,11 +256,11 @@ def calculer_periode(request, pk):
 @entreprise_active_required
 @reauth_required
 def valider_periode(request, pk):
-    """Valider une pÃ©riode de paie"""
+    """Valider une période de paie"""
     periode = get_object_or_404(PeriodePaie, pk=pk, entreprise=request.user.entreprise)
     
     if periode.statut_periode != 'calculee':
-        messages.error(request, 'La pÃ©riode doit Ãªtre calculÃ©e avant validation.')
+        messages.error(request, 'La période doit être calculée avant validation.')
         return redirect('paie:detail_periode', pk=pk)
     
     if request.method == 'POST':
@@ -273,20 +273,20 @@ def valider_periode(request, pk):
                 statut_bulletin='valide'
             )
             
-            # Mettre Ã  jour la pÃ©riode
+            # Mettre à jour la période
             periode.statut_periode = 'validee'
             periode.save()
             
-            # Archiver les bulletins pour traÃ§abilitÃ©
+            # Archiver les bulletins pour traçabilité
             try:
                 from .services_archive import ArchivageService
                 stats = ArchivageService.archiver_periode(periode)
-                if stats['archivÃ©s'] > 0:
-                    messages.info(request, f"{stats['archivÃ©s']} bulletin(s) archivÃ©(s) pour traÃ§abilitÃ©.")
+                if stats['archivés'] > 0:
+                    messages.info(request, f"{stats['archivés']} bulletin(s) archivé(s) pour traçabilité.")
             except Exception as e:
                 messages.warning(request, f"Archivage partiel: {e}")
             
-            messages.success(request, 'PÃ©riode validÃ©e avec succÃ¨s.')
+            messages.success(request, 'Période validée avec succès.')
         
         return redirect('paie:detail_periode', pk=pk)
     
@@ -297,11 +297,11 @@ def valider_periode(request, pk):
 @entreprise_active_required
 @reauth_required
 def cloturer_periode(request, pk):
-    """ClÃ´turer une pÃ©riode de paie"""
+    """Clôturer une période de paie"""
     periode = get_object_or_404(PeriodePaie, pk=pk, entreprise=request.user.entreprise)
     
     if periode.statut_periode != 'validee':
-        messages.error(request, 'La pÃ©riode doit Ãªtre validÃ©e avant clÃ´ture.')
+        messages.error(request, 'La période doit être validée avant clôture.')
         return redirect('paie:detail_periode', pk=pk)
     
     if request.method == 'POST':
@@ -311,7 +311,7 @@ def cloturer_periode(request, pk):
             periode.utilisateur_cloture = request.user
             periode.save()
             
-            messages.success(request, 'PÃ©riode clÃ´turÃ©e avec succÃ¨s.')
+            messages.success(request, 'Période clôturée avec succès.')
         
         return redirect('paie:detail_periode', pk=pk)
     
@@ -322,7 +322,7 @@ def cloturer_periode(request, pk):
 @entreprise_active_required
 @reauth_required
 def liste_bulletins(request):
-    """Liste de tous les bulletins de paie (y compris pÃ©riodes clÃ´turÃ©es)"""
+    """Liste de tous les bulletins de paie (y compris périodes clôturées)"""
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
     
     bulletins = BulletinPaie.objects.filter(
@@ -355,17 +355,17 @@ def liste_bulletins(request):
     except EmptyPage:
         bulletins_page = paginator.page(paginator.num_pages)
     
-    # Toutes les pÃ©riodes (y compris clÃ´turÃ©es) pour le filtre
+    # Toutes les périodes (y compris clôturées) pour le filtre
     periodes = PeriodePaie.objects.filter(
         entreprise=request.user.entreprise
     ).order_by('-annee', '-mois')
     
-    # Tous les employÃ©s (actifs et inactifs) pour pouvoir consulter les anciens bulletins
+    # Tous les employés (actifs et inactifs) pour pouvoir consulter les anciens bulletins
     employes = Employe.objects.filter(
         entreprise=request.user.entreprise
     ).order_by('nom', 'prenoms')
     
-    # Liste des annÃ©es disponibles
+    # Liste des années disponibles
     annees_disponibles = PeriodePaie.objects.filter(
         entreprise=request.user.entreprise
     ).values_list('annee', flat=True).distinct().order_by('-annee')
@@ -384,7 +384,7 @@ def liste_bulletins(request):
 @entreprise_active_required
 @reauth_required
 def detail_bulletin(request, pk):
-    """DÃ©tail d'un bulletin de paie"""
+    """Détail d'un bulletin de paie"""
     bulletin = get_object_or_404(
         BulletinPaie,
         pk=pk,
@@ -393,7 +393,7 @@ def detail_bulletin(request, pk):
     )
     lignes = LigneBulletin.objects.filter(bulletin=bulletin).select_related('rubrique')
     
-    # SÃ©parer les gains et retenues
+    # Séparer les gains et retenues
     gains = lignes.filter(rubrique__type_rubrique='gain')
     retenues = lignes.filter(rubrique__type_rubrique__in=['retenue', 'cotisation'])
     
@@ -419,7 +419,7 @@ def imprimer_bulletin(request, pk):
     )
     lignes = LigneBulletin.objects.filter(bulletin=bulletin).select_related('rubrique')
     
-    # RÃ©cupÃ©rer les paramÃ¨tres de l'entreprise
+    # Récupérer les paramètres de l'entreprise
     try:
         params = ParametrePaie.objects.filter(entreprise=request.user.entreprise).first()
     except:
@@ -428,19 +428,19 @@ def imprimer_bulletin(request, pk):
     gains = lignes.filter(rubrique__type_rubrique='gain')
     retenues = lignes.filter(rubrique__type_rubrique__in=['retenue', 'cotisation'])
     
-    # Calculer les dÃ©tails des heures supplÃ©mentaires
+    # Calculer les détails des heures supplémentaires
     heures_supp_details = []
     heures_mensuelles = Decimal('173.33')
     
     if bulletin.salaire_base and bulletin.salaire_base > 0:
         taux_horaire = bulletin.salaire_base / heures_mensuelles
         
-        # DÃ©tails des heures supplÃ©mentaires avec leurs montants
+        # Détails des heures supplémentaires avec leurs montants
         types_hs = [
-            ('heures_supplementaires_30', 'Heures supplÃ©mentaires (1Ã¨re catÃ©gorie +30%)', Decimal('1.30'), 30),
-            ('heures_supplementaires_60', 'Heures supplÃ©mentaires (2Ã¨me catÃ©gorie +60%)', Decimal('1.60'), 60),
+            ('heures_supplementaires_30', 'Heures supplémentaires (1ère catégorie +30%)', Decimal('1.30'), 30),
+            ('heures_supplementaires_60', 'Heures supplémentaires (2ème catégorie +60%)', Decimal('1.60'), 60),
             ('heures_nuit', 'Heures de nuit (+20%)', Decimal('1.20'), 20),
-            ('heures_feries', 'Heures jours fÃ©riÃ©s (+60%)', Decimal('1.60'), 60),
+            ('heures_feries', 'Heures jours fériés (+60%)', Decimal('1.60'), 60),
         ]
         
         for champ, libelle, taux_majoration, majoration_pct in types_hs:
@@ -468,22 +468,24 @@ def imprimer_bulletin(request, pk):
 @login_required
 @entreprise_active_required
 def telecharger_bulletin_pdf(request, pk):
-    """TÃ©lÃ©charger un bulletin de paie en PDF avec ReportLab"""
+    """Télécharger un bulletin de paie en PDF avec ReportLab"""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import cm, mm
     from reportlab.pdfgen import canvas
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    import os as _os
-    for _fname, _ffile in {"Arial": "arial.ttf", "Arial-Bold": "arialbd.ttf", "Arial-Italic": "ariali.ttf"}.items():
-        _fpath = _os.path.join(_os.environ.get("WINDIR","C:\\Windows"), "Fonts", _ffile)
-        if _os.path.exists(_fpath):
-            try: pdfmetrics.registerFont(TTFont(_fname, _fpath))
-            except: pass
     from reportlab.lib import colors
     from reportlab.platypus import Table, TableStyle
     import io
     import os
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    _font_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'fonts')
+    try:
+        pdfmetrics.registerFont(TTFont('Arial', os.path.join(_font_dir, 'Arial.ttf')))
+        pdfmetrics.registerFont(TTFont('Arial-Bold', os.path.join(_font_dir, 'Arial-Bold.ttf')))
+        pdfmetrics.registerFont(TTFont('Arial-Italic', os.path.join(_font_dir, 'Arial-Italic.ttf')))
+        _FN = 'Arial'; _FB = 'Arial-Bold'; _FI = 'Arial-Italic'
+    except Exception:
+        _FN = _FN; _FB = _FB; _FI = 'Helvetica-Oblique'
     
     bulletin = get_object_or_404(
         BulletinPaie,
@@ -494,7 +496,7 @@ def telecharger_bulletin_pdf(request, pk):
     gains = lignes.filter(rubrique__type_rubrique='gain')
     retenues = lignes.filter(rubrique__type_rubrique__in=['retenue', 'cotisation'])
     
-    # CrÃ©er le buffer PDF
+    # Créer le buffer PDF
     buffer = io.BytesIO()
     p = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -502,10 +504,10 @@ def telecharger_bulletin_pdf(request, pk):
     # Variables de position
     y = height - 1*cm
     
-    # === EN-TÃŠTE ===
+    # === EN-TÊTE ===
     entreprise = bulletin.employe.entreprise
     
-    # Logo entreprise Ã  gauche
+    # Logo entreprise à gauche
     if entreprise and entreprise.logo:
         try:
             logo_path = entreprise.logo.path
@@ -514,54 +516,54 @@ def telecharger_bulletin_pdf(request, pk):
         except:
             pass
     
-    # Titre centrÃ©
-    p.setFont("Arial-Bold", 11)
-    p.drawCentredString(width/2, y, "RÃ‰PUBLIQUE DE GUINÃ‰E")
+    # Titre centré
+    p.setFont(_FB, 11)
+    p.drawCentredString(width/2, y, "RÉPUBLIQUE DE GUINÉE")
     y -= 0.4*cm
-    p.setFont("Arial-Italic", 8)
-    p.drawCentredString(width/2, y, "Travail - Justice - SolidaritÃ©")
+    p.setFont(_FI, 8)
+    p.drawCentredString(width/2, y, "Travail - Justice - Solidarité")
     y -= 0.5*cm
     
     # Nom entreprise
-    p.setFont("Arial-Bold", 12)
+    p.setFont(_FB, 12)
     nom_entreprise = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
     p.drawCentredString(width/2, y, nom_entreprise)
     y -= 0.6*cm
     
     # Titre bulletin
-    p.setFont("Arial-Bold", 14)
+    p.setFont(_FB, 14)
     p.drawCentredString(width/2, y, "BULLETIN DE PAIE")
     y -= 0.4*cm
     
-    # Ligne de sÃ©paration
+    # Ligne de séparation
     p.setStrokeColor(colors.HexColor("#ce1126"))
     p.setLineWidth(2)
     p.line(1.5*cm, y, width - 1.5*cm, y)
     y -= 0.6*cm
     
     # Infos bulletin sur une ligne
-    p.setFont("Arial", 9)
+    p.setFont(_FN, 9)
     p.setFillColor(colors.black)
-    p.drawString(1.5*cm, y, f"NÂ°: {bulletin.numero_bulletin}")
-    p.drawCentredString(width/2, y, f"PÃ©riode: {bulletin.periode}")
+    p.drawString(1.5*cm, y, f"N°: {bulletin.numero_bulletin}")
+    p.drawCentredString(width/2, y, f"Période: {bulletin.periode}")
     p.drawRightString(width - 1.5*cm, y, f"Date: {bulletin.date_calcul.strftime('%d/%m/%Y') if bulletin.date_calcul else '-'}")
     y -= 0.35*cm
-    # Dates de la pÃ©riode
-    p.setFont("Arial", 8)
+    # Dates de la période
+    p.setFont(_FN, 8)
     periode_detail = f"Du {bulletin.periode.date_debut.strftime('%d/%m/%Y')} au {bulletin.periode.date_fin.strftime('%d/%m/%Y')}" if bulletin.periode.date_debut and bulletin.periode.date_fin else ""
     p.drawCentredString(width/2, y, periode_detail)
     y -= 0.6*cm
     
-    # === INFORMATIONS EMPLOYÃ‰ ===
+    # === INFORMATIONS EMPLOYÉ ===
     p.setFillColor(colors.HexColor("#ce1126"))
-    p.setFont("Arial-Bold", 9)
-    p.drawString(1.5*cm, y, "INFORMATIONS EMPLOYÃ‰")
+    p.setFont(_FB, 9)
+    p.drawString(1.5*cm, y, "INFORMATIONS EMPLOYÉ")
     p.setFillColor(colors.black)
     y -= 0.5*cm
     
     emp = bulletin.employe
     
-    # Calcul de l'anciennetÃ© (prÃ©cis avec dateutil.relativedelta)
+    # Calcul de l'ancienneté (précis avec dateutil.relativedelta)
     anciennete_str = "-"
     if emp.date_embauche:
         from datetime import date as date_cls
@@ -575,7 +577,7 @@ def telecharger_bulletin_pdf(request, pk):
         else:
             anciennete_str = f"{rd.days} jour{'s' if rd.days > 1 else ''}"
     
-    # RÃ©cupÃ©ration des congÃ©s
+    # Récupération des congés
     from temps_travail.models import SoldeConge
     solde_conge = SoldeConge.objects.filter(employe=emp, annee=bulletin.annee_paie).first()
     conges_acquis = solde_conge.conges_acquis if solde_conge else Decimal('0')
@@ -583,23 +585,23 @@ def telecharger_bulletin_pdf(request, pk):
     conges_restants = solde_conge.conges_restants if solde_conge else Decimal('0')
     
     infos_emp = [
-        ["Matricule:", emp.matricule or "-", "NÂ° CNSS:", emp.num_cnss_individuel or "-"],
-        ["Nom et PrÃ©noms:", f"{emp.nom} {emp.prenoms}", "AnciennetÃ©:", anciennete_str],
+        ["Matricule:", emp.matricule or "-", "N° CNSS:", emp.num_cnss_individuel or "-"],
+        ["Nom et Prénoms:", f"{emp.nom} {emp.prenoms}", "Ancienneté:", anciennete_str],
         ["Poste:", str(emp.poste or "-"), "Service:", str(emp.service or "-")],
         ["Date embauche:", emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else "-", "Mode paiement:", emp.mode_paiement or "-"],
-        ["CongÃ©s acquis:", f"{conges_acquis:g} j", "CongÃ©s pris:", f"{conges_pris:g} j"],
-        ["Solde congÃ©s:", f"{conges_restants:g} j", "", ""],
+        ["Congés acquis:", f"{conges_acquis:g} j", "Congés pris:", f"{conges_pris:g} j"],
+        ["Solde congés:", f"{conges_restants:g} j", "", ""],
     ]
     
     for row in infos_emp:
-        p.setFont("Arial-Bold", 8)
+        p.setFont(_FB, 8)
         p.drawString(1.5*cm, y, row[0])
-        p.setFont("Arial", 8)
+        p.setFont(_FN, 8)
         p.drawString(4*cm, y, str(row[1]))
         if row[2]:
-            p.setFont("Arial-Bold", 8)
+            p.setFont(_FB, 8)
             p.drawString(11*cm, y, row[2])
-            p.setFont("Arial", 8)
+            p.setFont(_FN, 8)
             p.drawString(14*cm, y, str(row[3]))
         y -= 0.4*cm
     
@@ -608,13 +610,13 @@ def telecharger_bulletin_pdf(request, pk):
     # === GAINS ===
     # Titre GAINS
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont("Arial-Bold", 9)
-    p.drawString(1.5*cm, y, "GAINS ET RÃ‰MUNÃ‰RATIONS")
+    p.setFont(_FB, 9)
+    p.drawString(1.5*cm, y, "GAINS ET RÉMUNÉRATIONS")
     p.setFillColor(colors.black)
     y -= 0.3*cm
     
     # Tableau des gains (5 colonnes avec Nbre pour les heures)
-    gains_data = [["LibellÃ©", "Nbre", "Base", "Taux", "Montant"]]
+    gains_data = [["Libellé", "Nbre", "Base", "Taux", "Montant"]]
     for g in gains:
         nbre_str = f"{g.nombre:g}" if g.nombre and g.nombre != 1 else ""
         gains_data.append([
@@ -631,12 +633,12 @@ def telecharger_bulletin_pdf(request, pk):
     gains_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#28a745")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), _FB),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#d4edda")),
-        ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
+        ('FONTNAME', (0, -1), (-1, -1), _FB),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     
@@ -645,7 +647,7 @@ def telecharger_bulletin_pdf(request, pk):
     gains_table.drawOn(p, 1.5*cm, y - table_height)
     y -= table_height + 0.8*cm
     
-    # === DÃ‰TAIL HEURES SUPPLÃ‰MENTAIRES ===
+    # === DÉTAIL HEURES SUPPLÉMENTAIRES ===
     hs_30 = getattr(bulletin, 'heures_supplementaires_30', 0) or 0
     hs_60 = getattr(bulletin, 'heures_supplementaires_60', 0) or 0
     hs_nuit = getattr(bulletin, 'heures_nuit', 0) or 0
@@ -656,13 +658,13 @@ def telecharger_bulletin_pdf(request, pk):
     total_hs_heures = float(hs_30) + float(hs_60) + float(hs_nuit) + float(hs_feries)
     
     if total_hs_heures > 0 or float(prime_hs) > 0:
-        p.setFont("Arial-Bold", 7)
+        p.setFont(_FB, 7)
         p.setFillColor(colors.HexColor("#6c757d"))
-        p.drawString(1.5*cm, y, "DÃ‰TAIL HEURES SUPPLÃ‰MENTAIRES (Code du Travail Art. 221)")
+        p.drawString(1.5*cm, y, "DÉTAIL HEURES SUPPLÉMENTAIRES (Code du Travail Art. 221)")
         p.setFillColor(colors.black)
         y -= 0.25*cm
         
-        # Calcul des montants individuels (salaire_base / 173,33 Ã— h Ã— coefficient)
+        # Calcul des montants individuels (salaire_base / 173,33 × h × coefficient)
         _sal_h = Decimal(str(bulletin.salaire_base or 0)) / Decimal('173.33')
         _montant_30 = int(_sal_h * Decimal(str(hs_30)) * Decimal('1.30'))
         _montant_60 = int(_sal_h * Decimal(str(hs_60)) * Decimal('1.60'))
@@ -672,13 +674,13 @@ def telecharger_bulletin_pdf(request, pk):
             hs_detail_data.append(["4 prem. HS/sem.", f"{hs_30:g}h", "+30% (130%)",
                                     f"{_montant_30:,.0f}".replace(",", " ")])
         if float(hs_60) > 0:
-            hs_detail_data.append(["Au-delÃ  4 HS/sem.", f"{hs_60:g}h", "+60% (160%)",
+            hs_detail_data.append(["Au-delà 4 HS/sem.", f"{hs_60:g}h", "+60% (160%)",
                                     f"{_montant_60:,.0f}".replace(",", " ")])
         if float(hs_nuit) > 0:
             hs_detail_data.append(["Heures de nuit (20h-6h)", f"{hs_nuit:g}h", "+20% (120%)",
                                     f"{prime_nuit:,.0f}".replace(",", " ")])
         if float(hs_feries) > 0:
-            hs_detail_data.append(["Jours fÃ©riÃ©s", f"{hs_feries:g}h", "+60/100%",
+            hs_detail_data.append(["Jours fériés", f"{hs_feries:g}h", "+60/100%",
                                     f"{prime_feries:,.0f}".replace(",", " ")])
 
         total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries)
@@ -691,12 +693,12 @@ def telecharger_bulletin_pdf(request, pk):
         hs_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
+            ('FONTNAME', (0, 0), (-1, 0), _FB),
             ('FONTSIZE', (0, 0), (-1, -1), 7),
             ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
             ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#dee2e6")),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
+            ('FONTNAME', (0, -1), (-1, -1), _FB),
             ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f9fa")),
         ]))
         
@@ -710,16 +712,16 @@ def telecharger_bulletin_pdf(request, pk):
     # === RETENUES ===
     # Titre RETENUES
     p.setFillColor(colors.HexColor("#dc3545"))
-    p.setFont("Arial-Bold", 9)
+    p.setFont(_FB, 9)
     p.drawString(1.5*cm, y, "RETENUES ET COTISATIONS")
     p.setFillColor(colors.black)
     y -= 0.4*cm
     
-    retenues_data = [["LibellÃ©", "Base", "Taux", "Montant"]]
-    # Filtrer les doublons CNSS et IRG (dÃ©jÃ  dans les lignes du bulletin)
+    retenues_data = [["Libellé", "Base", "Taux", "Montant"]]
+    # Filtrer les doublons CNSS et IRG (déjà dans les lignes du bulletin)
     cnss_irg_codes = ['CNSS', 'IRG', 'RTS', 'IRS', 'IRPP']
     for r in retenues:
-        # Ã‰viter les doublons - ne pas rÃ©afficher si dÃ©jÃ  traitÃ©
+        # Éviter les doublons - ne pas réafficher si déjà traité
         code = r.rubrique.code_rubrique.upper() if r.rubrique.code_rubrique else ''
         libelle = r.rubrique.libelle_rubrique.upper() if r.rubrique.libelle_rubrique else ''
         is_cnss_irg = any(c in code or c in libelle for c in cnss_irg_codes)
@@ -731,21 +733,21 @@ def telecharger_bulletin_pdf(request, pk):
                 f"{r.montant:,.0f}".replace(",", " ")
             ])
     
-    # Ajouter CNSS (base plafonnÃ©e) et RTS avec dÃ©tail
+    # Ajouter CNSS (base plafonnée) et RTS avec détail
     base_cnss = min(bulletin.salaire_brut, 2500000)
-    retenues_data.append(["CNSS EmployÃ© (5%)", f"{base_cnss:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
+    retenues_data.append(["CNSS Employé (5%)", f"{base_cnss:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
     # RTS avec base, taux effectif et montant
     base_rts_val = getattr(bulletin, 'base_rts', 0) or 0
     taux_eff_rts_val = getattr(bulletin, 'taux_effectif_rts', 0) or 0
     rts_base_str = f"{base_rts_val:,.0f}".replace(",", " ") if base_rts_val else "-"
     rts_taux_str = f"{taux_eff_rts_val:.2f}%" if taux_eff_rts_val else "-"
-    retenues_data.append(["RTS (ImpÃ´t sur le Revenu)", rts_base_str, rts_taux_str, f"{bulletin.irg:,.0f}".replace(",", " ")])
+    retenues_data.append(["RTS (Impôt sur le Revenu)", rts_base_str, rts_taux_str, f"{bulletin.irg:,.0f}".replace(",", " ")])
     
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#dc3545")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), _FB),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
@@ -757,17 +759,17 @@ def telecharger_bulletin_pdf(request, pk):
     retenues_table.drawOn(p, 1.5*cm, y - table_height)
     y -= table_height + 0.5*cm
     
-    # === DÃ‰TAIL CALCUL RTS (barÃ¨me progressif) ===
+    # === DÉTAIL CALCUL RTS (barème progressif) ===
     from paie.utils import calculer_detail_tranches_rts
     detail_rts = calculer_detail_tranches_rts(base_rts_val)
     if detail_rts:
-        p.setFont("Arial-Bold", 7)
+        p.setFont(_FB, 7)
         p.setFillColor(colors.HexColor("#6c757d"))
-        p.drawString(1.5*cm, y, f"DÃ‰TAIL RTS â€” BarÃ¨me progressif sur base imposable: {base_rts_val:,.0f} GNF".replace(",", " "))
+        p.drawString(1.5*cm, y, f"DÉTAIL RTS — Barème progressif sur base imposable: {base_rts_val:,.0f} GNF".replace(",", " "))
         p.setFillColor(colors.black)
         y -= 0.25*cm
         
-        rts_detail_data = [["Tranche", "Taux", "ImpÃ´t"]]
+        rts_detail_data = [["Tranche", "Taux", "Impôt"]]
         cumul_impot = Decimal('0')
         for i, t in enumerate(detail_rts, start=1):
             rts_detail_data.append([
@@ -784,12 +786,12 @@ def telecharger_bulletin_pdf(request, pk):
         rts_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
+            ('FONTNAME', (0, 0), (-1, 0), _FB),
             ('FONTSIZE', (0, 0), (-1, -1), 7),
             ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
             ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#dee2e6")),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
+            ('FONTNAME', (0, -1), (-1, -1), _FB),
             ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f9fa")),
         ]))
         
@@ -800,7 +802,7 @@ def telecharger_bulletin_pdf(request, pk):
     else:
         y -= 0.2*cm
     
-    # === RÃ‰CAPITULATIF ===
+    # === RÉCAPITULATIF ===
     rappel = getattr(bulletin, 'rappel_salaire', 0) or 0
     trop_percu = getattr(bulletin, 'retenue_trop_percu', 0) or 0
     has_rappel = rappel > 0
@@ -813,13 +815,13 @@ def telecharger_bulletin_pdf(request, pk):
     p.setLineWidth(2)
     p.rect(1.5*cm, y - recap_height, width - 3*cm, recap_height, stroke=1, fill=0)
     
-    p.setFont("Arial-Bold", 10)
+    p.setFont(_FB, 10)
     p.setFillColor(colors.black)
     p.drawString(2*cm, y - 0.5*cm, "SALAIRE BRUT:")
     p.drawRightString(width - 2*cm, y - 0.5*cm, f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " "))
     
-    # CNSS et RTS alignÃ©s sur la mÃªme ligne
-    p.setFont("Arial", 8)
+    # CNSS et RTS alignés sur la même ligne
+    p.setFont(_FN, 8)
     p.setFillColor(colors.HexColor("#dc3545"))
     mid_x = width / 2
     p.drawString(2*cm, y - 1*cm, f"CNSS (5%): -{bulletin.cnss_employe:,.0f}".replace(",", " "))
@@ -830,17 +832,17 @@ def telecharger_bulletin_pdf(request, pk):
     if has_rappel:
         offset_y += 0.4*cm
         p.setFillColor(colors.HexColor("#007bff"))
-        p.drawString(2*cm, y - offset_y, "Rappel/ComplÃ©ment salaire prÃ©cÃ©dent:")
+        p.drawString(2*cm, y - offset_y, "Rappel/Complément salaire précédent:")
         p.drawRightString(width - 2*cm, y - offset_y, f"+ {rappel:,.0f} GNF".replace(",", " "))
     if has_trop_percu:
         offset_y += 0.4*cm
         p.setFillColor(colors.HexColor("#dc3545"))
-        p.drawString(2*cm, y - offset_y, "Retenue trop-perÃ§u salaire prÃ©cÃ©dent:")
+        p.drawString(2*cm, y - offset_y, "Retenue trop-perçu salaire précédent:")
         p.drawRightString(width - 2*cm, y - offset_y, f"- {trop_percu:,.0f} GNF".replace(",", " "))
     
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont("Arial-Bold", 11)
-    p.drawString(2*cm, y - offset_y - 0.7*cm, "NET Ã€ PAYER:")
+    p.setFont(_FB, 11)
+    p.drawString(2*cm, y - offset_y - 0.7*cm, "NET À PAYER:")
     p.drawRightString(width - 2*cm, y - offset_y - 0.7*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
     p.setFillColor(colors.black)
     
@@ -856,36 +858,35 @@ def telecharger_bulletin_pdf(request, pk):
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
     taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '1,5'
     
-    p.setFont("Arial-Bold", 8)
+    p.setFont(_FB, 8)
     p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     y -= 0.35*cm
-    p.setFont("Arial", 6.5)
+    p.setFont(_FN, 6.5)
     p.drawString(1.5*cm, y, f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " "))
     p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
     # TA ou ONFPP selon effectif
     if ta > 0:
-        ta_str = f"{ta:,.0f}".replace(",", " ")
-        p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta_str}")
+        p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta:,.0f}".replace(",", " "))
     elif onfpp > 0:
-        p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} â‰¥30): {onfpp:,.0f}".replace(",", " "))
-    p.setFont("Arial-Bold", 7)
+        p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} ≥30): {onfpp:,.0f}".replace(",", " "))
+    p.setFont(_FB, 7)
     p.drawRightString(width - 1.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     y -= 0.3*cm
-    # Base de calcul VF si prÃ©sente
+    # Base de calcul VF si présente
     if base_vf > 0:
-        p.setFont("Arial", 6)
+        p.setFont(_FN, 6)
         p.setFillColor(colors.HexColor("#666666"))
-        p.drawString(1.5*cm, y, f"â””â”€ base calc VF: {base_vf:,.0f}".replace(",", " "))
+        p.drawString(1.5*cm, y, f"└─ base calc VF: {base_vf:,.0f}".replace(",", " "))
         y -= 0.25*cm
     p.setFillColor(colors.black)
     
     # === ZONE DE SIGNATURES ===
     y -= 1.2*cm
-    p.setFont("Arial-Bold", 8)
+    p.setFont(_FB, 8)
     p.drawString(2*cm, y, "L'Employeur")
-    p.drawString(12*cm, y, "L'EmployÃ©(e)")
+    p.drawString(12*cm, y, "L'Employé(e)")
     y -= 0.4*cm
-    p.setFont("Arial", 7)
+    p.setFont(_FN, 7)
     if entreprise:
         p.drawString(2*cm, y, entreprise.nom_entreprise or '')
     p.drawString(12*cm, y, f"{emp.nom} {emp.prenoms}")
@@ -896,18 +897,18 @@ def telecharger_bulletin_pdf(request, pk):
     p.line(12*cm, y, 17*cm, y)
     p.setDash()
     y -= 0.3*cm
-    p.setFont("Arial", 6)
+    p.setFont(_FN, 6)
     p.drawCentredString(4.5*cm, y, "Date et signature")
-    p.drawCentredString(14.5*cm, y, "Lu et approuvÃ©, date et signature")
+    p.drawCentredString(14.5*cm, y, "Lu et approuvé, date et signature")
     
     # === PIED DE PAGE ===
-    p.setFont("Arial", 7)
-    p.drawCentredString(width/2, 2.2*cm, "Ce bulletin est conforme Ã  la lÃ©gislation guinÃ©enne en vigueur.")
+    p.setFont(_FN, 7)
+    p.drawCentredString(width/2, 2.2*cm, "Ce bulletin est conforme à la législation guinéenne en vigueur.")
     if entreprise:
-        p.drawCentredString(width/2, 1.7*cm, f"{entreprise.nom_entreprise} - {entreprise.adresse or ''} - TÃ©l: {entreprise.telephone or ''}")
+        p.drawCentredString(width/2, 1.7*cm, f"{entreprise.nom_entreprise} - {entreprise.adresse or ''} - Tél: {entreprise.telephone or ''}")
         p.drawCentredString(width/2, 1.3*cm, f"NIF: {entreprise.nif or '-'} - CNSS: {entreprise.num_cnss or '-'}")
     
-    p.drawCentredString(width/2, 0.8*cm, f"Document gÃ©nÃ©rÃ© le {timezone.now().strftime('%d/%m/%Y Ã  %H:%M')}")
+    p.drawCentredString(width/2, 0.8*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
     
     # Finaliser le PDF
     p.showPage()
@@ -922,31 +923,33 @@ def telecharger_bulletin_pdf(request, pk):
 
 
 def telecharger_bulletin_public(request, token):
-    """TÃ©lÃ©charger un bulletin de paie en PDF via lien public (sans authentification)"""
+    """Télécharger un bulletin de paie en PDF via lien public (sans authentification)"""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import cm, mm
     from reportlab.pdfgen import canvas
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    import os as _os
-    for _fname, _ffile in {"Arial": "arial.ttf", "Arial-Bold": "arialbd.ttf", "Arial-Italic": "ariali.ttf"}.items():
-        _fpath = _os.path.join(_os.environ.get("WINDIR","C:\\Windows"), "Fonts", _ffile)
-        if _os.path.exists(_fpath):
-            try: pdfmetrics.registerFont(TTFont(_fname, _fpath))
-            except: pass
     from reportlab.lib import colors
     from reportlab.platypus import Table, TableStyle
     import io
     import os
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    _font_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'fonts')
+    try:
+        pdfmetrics.registerFont(TTFont('Arial', os.path.join(_font_dir, 'Arial.ttf')))
+        pdfmetrics.registerFont(TTFont('Arial-Bold', os.path.join(_font_dir, 'Arial-Bold.ttf')))
+        pdfmetrics.registerFont(TTFont('Arial-Italic', os.path.join(_font_dir, 'Arial-Italic.ttf')))
+        _FN = 'Arial'; _FB = 'Arial-Bold'; _FI = 'Arial-Italic'
+    except Exception:
+        _FN = _FN; _FB = _FB; _FI = 'Helvetica-Oblique'
     
-    # RÃ©cupÃ©rer le bulletin par son token
+    # Récupérer le bulletin par son token
     bulletin = get_object_or_404(BulletinPaie, token_public=token)
     
     lignes = LigneBulletin.objects.filter(bulletin=bulletin).select_related('rubrique')
     gains = lignes.filter(rubrique__type_rubrique='gain')
     retenues = lignes.filter(rubrique__type_rubrique__in=['retenue', 'cotisation'])
     
-    # CrÃ©er le buffer PDF
+    # Créer le buffer PDF
     buffer = io.BytesIO()
     p = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -954,10 +957,10 @@ def telecharger_bulletin_public(request, token):
     # Variables de position
     y = height - 1*cm
     
-    # === EN-TÃŠTE ===
+    # === EN-TÊTE ===
     entreprise = bulletin.employe.entreprise
     
-    # Logo entreprise Ã  gauche
+    # Logo entreprise à gauche
     if entreprise and entreprise.logo:
         try:
             logo_path = entreprise.logo.path
@@ -966,54 +969,54 @@ def telecharger_bulletin_public(request, token):
         except:
             pass
     
-    # Titre centrÃ©
-    p.setFont("Arial-Bold", 11)
-    p.drawCentredString(width/2, y, "RÃ‰PUBLIQUE DE GUINÃ‰E")
+    # Titre centré
+    p.setFont(_FB, 11)
+    p.drawCentredString(width/2, y, "RÉPUBLIQUE DE GUINÉE")
     y -= 0.4*cm
-    p.setFont("Arial-Italic", 8)
-    p.drawCentredString(width/2, y, "Travail - Justice - SolidaritÃ©")
+    p.setFont(_FI, 8)
+    p.drawCentredString(width/2, y, "Travail - Justice - Solidarité")
     y -= 0.5*cm
     
     # Nom entreprise
-    p.setFont("Arial-Bold", 12)
+    p.setFont(_FB, 12)
     nom_entreprise = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
     p.drawCentredString(width/2, y, nom_entreprise)
     y -= 0.6*cm
     
     # Titre bulletin
-    p.setFont("Arial-Bold", 14)
+    p.setFont(_FB, 14)
     p.drawCentredString(width/2, y, "BULLETIN DE PAIE")
     y -= 0.4*cm
     
-    # Ligne de sÃ©paration
+    # Ligne de séparation
     p.setStrokeColor(colors.HexColor("#ce1126"))
     p.setLineWidth(2)
     p.line(1.5*cm, y, width - 1.5*cm, y)
     y -= 0.6*cm
     
     # Infos bulletin sur une ligne
-    p.setFont("Arial", 9)
+    p.setFont(_FN, 9)
     p.setFillColor(colors.black)
-    p.drawString(1.5*cm, y, f"NÂ°: {bulletin.numero_bulletin}")
-    p.drawCentredString(width/2, y, f"PÃ©riode: {bulletin.periode}")
+    p.drawString(1.5*cm, y, f"N°: {bulletin.numero_bulletin}")
+    p.drawCentredString(width/2, y, f"Période: {bulletin.periode}")
     p.drawRightString(width - 1.5*cm, y, f"Date: {bulletin.date_calcul.strftime('%d/%m/%Y') if bulletin.date_calcul else '-'}")
     y -= 0.35*cm
-    # Dates de la pÃ©riode
-    p.setFont("Arial", 8)
+    # Dates de la période
+    p.setFont(_FN, 8)
     periode_detail = f"Du {bulletin.periode.date_debut.strftime('%d/%m/%Y')} au {bulletin.periode.date_fin.strftime('%d/%m/%Y')}" if bulletin.periode.date_debut and bulletin.periode.date_fin else ""
     p.drawCentredString(width/2, y, periode_detail)
     y -= 0.6*cm
     
-    # === INFORMATIONS EMPLOYÃ‰ ===
+    # === INFORMATIONS EMPLOYÉ ===
     p.setFillColor(colors.HexColor("#ce1126"))
-    p.setFont("Arial-Bold", 9)
-    p.drawString(1.5*cm, y, "INFORMATIONS EMPLOYÃ‰")
+    p.setFont(_FB, 9)
+    p.drawString(1.5*cm, y, "INFORMATIONS EMPLOYÉ")
     p.setFillColor(colors.black)
     y -= 0.5*cm
     
     emp = bulletin.employe
     
-    # Calcul de l'anciennetÃ© (prÃ©cis avec dateutil.relativedelta)
+    # Calcul de l'ancienneté (précis avec dateutil.relativedelta)
     anciennete_str = "-"
     if emp.date_embauche:
         from datetime import date as date_cls
@@ -1027,7 +1030,7 @@ def telecharger_bulletin_public(request, token):
         else:
             anciennete_str = f"{rd.days} jour{'s' if rd.days > 1 else ''}"
     
-    # RÃ©cupÃ©ration des congÃ©s
+    # Récupération des congés
     from temps_travail.models import SoldeConge
     solde_conge = SoldeConge.objects.filter(employe=emp, annee=bulletin.annee_paie).first()
     conges_acquis = solde_conge.conges_acquis if solde_conge else Decimal('0')
@@ -1035,23 +1038,23 @@ def telecharger_bulletin_public(request, token):
     conges_restants = solde_conge.conges_restants if solde_conge else Decimal('0')
     
     infos_emp = [
-        ["Matricule:", emp.matricule or "-", "NÂ° CNSS:", emp.num_cnss_individuel or "-"],
-        ["Nom et PrÃ©noms:", f"{emp.nom} {emp.prenoms}", "AnciennetÃ©:", anciennete_str],
+        ["Matricule:", emp.matricule or "-", "N° CNSS:", emp.num_cnss_individuel or "-"],
+        ["Nom et Prénoms:", f"{emp.nom} {emp.prenoms}", "Ancienneté:", anciennete_str],
         ["Poste:", str(emp.poste or "-"), "Service:", str(emp.service or "-")],
         ["Date embauche:", emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else "-", "Mode paiement:", emp.mode_paiement or "-"],
-        ["CongÃ©s acquis:", f"{conges_acquis:g} j", "CongÃ©s pris:", f"{conges_pris:g} j"],
-        ["Solde congÃ©s:", f"{conges_restants:g} j", "", ""],
+        ["Congés acquis:", f"{conges_acquis:g} j", "Congés pris:", f"{conges_pris:g} j"],
+        ["Solde congés:", f"{conges_restants:g} j", "", ""],
     ]
     
     for row in infos_emp:
-        p.setFont("Arial-Bold", 8)
+        p.setFont(_FB, 8)
         p.drawString(1.5*cm, y, row[0])
-        p.setFont("Arial", 8)
+        p.setFont(_FN, 8)
         p.drawString(4*cm, y, str(row[1]))
         if row[2]:
-            p.setFont("Arial-Bold", 8)
+            p.setFont(_FB, 8)
             p.drawString(11*cm, y, row[2])
-            p.setFont("Arial", 8)
+            p.setFont(_FN, 8)
             p.drawString(14*cm, y, str(row[3]))
         y -= 0.4*cm
     
@@ -1059,13 +1062,13 @@ def telecharger_bulletin_public(request, token):
     
     # === GAINS ===
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont("Arial-Bold", 9)
-    p.drawString(1.5*cm, y, "GAINS ET RÃ‰MUNÃ‰RATIONS")
+    p.setFont(_FB, 9)
+    p.drawString(1.5*cm, y, "GAINS ET RÉMUNÉRATIONS")
     p.setFillColor(colors.black)
     y -= 0.3*cm
     
     # Tableau des gains (5 colonnes avec Nbre pour les heures)
-    gains_data = [["LibellÃ©", "Nbre", "Base", "Taux", "Montant"]]
+    gains_data = [["Libellé", "Nbre", "Base", "Taux", "Montant"]]
     for g in gains:
         nbre_str = f"{g.nombre:g}" if g.nombre and g.nombre != 1 else ""
         gains_data.append([
@@ -1082,12 +1085,12 @@ def telecharger_bulletin_public(request, token):
     gains_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#28a745")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), _FB),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#d4edda")),
-        ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
+        ('FONTNAME', (0, -1), (-1, -1), _FB),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     
@@ -1096,7 +1099,7 @@ def telecharger_bulletin_public(request, token):
     gains_table.drawOn(p, 1.5*cm, y - table_height)
     y -= table_height + 0.8*cm
     
-    # === DÃ‰TAIL HEURES SUPPLÃ‰MENTAIRES ===
+    # === DÉTAIL HEURES SUPPLÉMENTAIRES ===
     hs_30 = getattr(bulletin, 'heures_supplementaires_30', 0) or 0
     hs_60 = getattr(bulletin, 'heures_supplementaires_60', 0) or 0
     hs_nuit = getattr(bulletin, 'heures_nuit', 0) or 0
@@ -1107,13 +1110,13 @@ def telecharger_bulletin_public(request, token):
     total_hs_heures = float(hs_30) + float(hs_60) + float(hs_nuit) + float(hs_feries)
     
     if total_hs_heures > 0 or float(prime_hs) > 0:
-        p.setFont("Arial-Bold", 7)
+        p.setFont(_FB, 7)
         p.setFillColor(colors.HexColor("#6c757d"))
-        p.drawString(1.5*cm, y, "DÃ‰TAIL HEURES SUPPLÃ‰MENTAIRES (Code du Travail Art. 221)")
+        p.drawString(1.5*cm, y, "DÉTAIL HEURES SUPPLÉMENTAIRES (Code du Travail Art. 221)")
         p.setFillColor(colors.black)
         y -= 0.25*cm
         
-        # Calcul des montants individuels (salaire_base / 173,33 Ã— h Ã— coefficient)
+        # Calcul des montants individuels (salaire_base / 173,33 × h × coefficient)
         _sal_h = Decimal(str(bulletin.salaire_base or 0)) / Decimal('173.33')
         _montant_30 = int(_sal_h * Decimal(str(hs_30)) * Decimal('1.30'))
         _montant_60 = int(_sal_h * Decimal(str(hs_60)) * Decimal('1.60'))
@@ -1123,13 +1126,13 @@ def telecharger_bulletin_public(request, token):
             hs_detail_data.append(["4 prem. HS/sem.", f"{hs_30:g}h", "+30% (130%)",
                                     f"{_montant_30:,.0f}".replace(",", " ")])
         if float(hs_60) > 0:
-            hs_detail_data.append(["Au-delÃ  4 HS/sem.", f"{hs_60:g}h", "+60% (160%)",
+            hs_detail_data.append(["Au-delà 4 HS/sem.", f"{hs_60:g}h", "+60% (160%)",
                                     f"{_montant_60:,.0f}".replace(",", " ")])
         if float(hs_nuit) > 0:
             hs_detail_data.append(["Heures de nuit (20h-6h)", f"{hs_nuit:g}h", "+20% (120%)",
                                     f"{prime_nuit:,.0f}".replace(",", " ")])
         if float(hs_feries) > 0:
-            hs_detail_data.append(["Jours fÃ©riÃ©s", f"{hs_feries:g}h", "+60/100%",
+            hs_detail_data.append(["Jours fériés", f"{hs_feries:g}h", "+60/100%",
                                     f"{prime_feries:,.0f}".replace(",", " ")])
 
         total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries)
@@ -1142,12 +1145,12 @@ def telecharger_bulletin_public(request, token):
         hs_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
+            ('FONTNAME', (0, 0), (-1, 0), _FB),
             ('FONTSIZE', (0, 0), (-1, -1), 7),
             ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
             ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#dee2e6")),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
+            ('FONTNAME', (0, -1), (-1, -1), _FB),
             ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f9fa")),
         ]))
         
@@ -1160,16 +1163,16 @@ def telecharger_bulletin_public(request, token):
     
     # === RETENUES ===
     p.setFillColor(colors.HexColor("#dc3545"))
-    p.setFont("Arial-Bold", 9)
+    p.setFont(_FB, 9)
     p.drawString(1.5*cm, y, "RETENUES ET COTISATIONS")
     p.setFillColor(colors.black)
     y -= 0.4*cm
     
-    retenues_data = [["LibellÃ©", "Base", "Taux", "Montant"]]
-    # Filtrer les doublons CNSS et IRG (dÃ©jÃ  dans les lignes du bulletin)
+    retenues_data = [["Libellé", "Base", "Taux", "Montant"]]
+    # Filtrer les doublons CNSS et IRG (déjà dans les lignes du bulletin)
     cnss_irg_codes = ['CNSS', 'IRG', 'RTS', 'IRS', 'IRPP']
     for r in retenues:
-        # Ã‰viter les doublons - ne pas rÃ©afficher si dÃ©jÃ  traitÃ©
+        # Éviter les doublons - ne pas réafficher si déjà traité
         code = r.rubrique.code_rubrique.upper() if r.rubrique.code_rubrique else ''
         libelle = r.rubrique.libelle_rubrique.upper() if r.rubrique.libelle_rubrique else ''
         is_cnss_irg = any(c in code or c in libelle for c in cnss_irg_codes)
@@ -1181,21 +1184,21 @@ def telecharger_bulletin_public(request, token):
                 f"{r.montant:,.0f}".replace(",", " ")
             ])
     
-    # Ajouter CNSS (base plafonnÃ©e) et RTS avec dÃ©tail
+    # Ajouter CNSS (base plafonnée) et RTS avec détail
     base_cnss = min(bulletin.salaire_brut, 2500000)
-    retenues_data.append(["CNSS EmployÃ© (5%)", f"{base_cnss:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
+    retenues_data.append(["CNSS Employé (5%)", f"{base_cnss:,.0f}".replace(",", " "), "5%", f"{bulletin.cnss_employe:,.0f}".replace(",", " ")])
     # RTS avec base, taux effectif et montant
     base_rts_val = getattr(bulletin, 'base_rts', 0) or 0
     taux_eff_rts_val = getattr(bulletin, 'taux_effectif_rts', 0) or 0
     rts_base_str = f"{base_rts_val:,.0f}".replace(",", " ") if base_rts_val else "-"
     rts_taux_str = f"{taux_eff_rts_val:.2f}%" if taux_eff_rts_val else "-"
-    retenues_data.append(["RTS (ImpÃ´t sur le Revenu)", rts_base_str, rts_taux_str, f"{bulletin.irg:,.0f}".replace(",", " ")])
+    retenues_data.append(["RTS (Impôt sur le Revenu)", rts_base_str, rts_taux_str, f"{bulletin.irg:,.0f}".replace(",", " ")])
     
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#dc3545")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), _FB),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
@@ -1207,17 +1210,17 @@ def telecharger_bulletin_public(request, token):
     retenues_table.drawOn(p, 1.5*cm, y - table_height)
     y -= table_height + 0.5*cm
     
-    # === DÃ‰TAIL CALCUL RTS (barÃ¨me progressif) ===
+    # === DÉTAIL CALCUL RTS (barème progressif) ===
     from paie.utils import calculer_detail_tranches_rts
     detail_rts = calculer_detail_tranches_rts(base_rts_val)
     if detail_rts:
-        p.setFont("Arial-Bold", 7)
+        p.setFont(_FB, 7)
         p.setFillColor(colors.HexColor("#6c757d"))
-        p.drawString(1.5*cm, y, f"DÃ‰TAIL RTS â€” BarÃ¨me progressif sur base imposable: {base_rts_val:,.0f} GNF".replace(",", " "))
+        p.drawString(1.5*cm, y, f"DÉTAIL RTS — Barème progressif sur base imposable: {base_rts_val:,.0f} GNF".replace(",", " "))
         p.setFillColor(colors.black)
         y -= 0.25*cm
         
-        rts_detail_data = [["Tranche", "Taux", "ImpÃ´t"]]
+        rts_detail_data = [["Tranche", "Taux", "Impôt"]]
         cumul_impot = Decimal('0')
         for i, t in enumerate(detail_rts, start=1):
             rts_detail_data.append([
@@ -1234,12 +1237,12 @@ def telecharger_bulletin_public(request, token):
         rts_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
+            ('FONTNAME', (0, 0), (-1, 0), _FB),
             ('FONTSIZE', (0, 0), (-1, -1), 7),
             ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
             ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#dee2e6")),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
+            ('FONTNAME', (0, -1), (-1, -1), _FB),
             ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f9fa")),
         ]))
         
@@ -1250,7 +1253,7 @@ def telecharger_bulletin_public(request, token):
     else:
         y -= 0.2*cm
     
-    # === RÃ‰CAPITULATIF ===
+    # === RÉCAPITULATIF ===
     rappel = getattr(bulletin, 'rappel_salaire', 0) or 0
     trop_percu = getattr(bulletin, 'retenue_trop_percu', 0) or 0
     has_rappel = rappel > 0
@@ -1261,13 +1264,13 @@ def telecharger_bulletin_public(request, token):
     p.setLineWidth(2)
     p.rect(1.5*cm, y - recap_height, width - 3*cm, recap_height, stroke=1, fill=0)
     
-    p.setFont("Arial-Bold", 10)
+    p.setFont(_FB, 10)
     p.setFillColor(colors.black)
     p.drawString(2*cm, y - 0.5*cm, "SALAIRE BRUT:")
     p.drawRightString(width - 2*cm, y - 0.5*cm, f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " "))
     
-    # CNSS et RTS alignÃ©s sur la mÃªme ligne
-    p.setFont("Arial", 8)
+    # CNSS et RTS alignés sur la même ligne
+    p.setFont(_FN, 8)
     p.setFillColor(colors.HexColor("#dc3545"))
     mid_x = width / 2
     p.drawString(2*cm, y - 1*cm, f"CNSS (5%): -{bulletin.cnss_employe:,.0f}".replace(",", " "))
@@ -1276,29 +1279,29 @@ def telecharger_bulletin_public(request, token):
     
     offset_y = 1*cm
     
-    # Afficher l'abattement forfaitaire si prÃ©sent (dÃ©tail RTS)
+    # Afficher l'abattement forfaitaire si présent (détail RTS)
     if has_abatt:
         offset_y += 0.35*cm
-        p.setFont("Arial", 7)
+        p.setFont(_FN, 7)
         p.setFillColor(colors.HexColor("#666666"))
-        p.drawString(2.3*cm, y - offset_y, f"â””â”€ abattement 25%: {abatt_forfait:,.0f}".replace(",", " "))
+        p.drawString(2.3*cm, y - offset_y, f"└─ abattement 25%: {abatt_forfait:,.0f}".replace(",", " "))
     
     if has_rappel:
         offset_y += 0.35*cm
         p.setFillColor(colors.HexColor("#007bff"))
-        p.setFont("Arial", 8)
-        p.drawString(2*cm, y - offset_y, "Rappel/ComplÃ©ment salaire prÃ©cÃ©dent:")
+        p.setFont(_FN, 8)
+        p.drawString(2*cm, y - offset_y, "Rappel/Complément salaire précédent:")
         p.drawRightString(width - 2*cm, y - offset_y, f"+ {rappel:,.0f} GNF".replace(",", " "))
     if has_trop_percu:
         offset_y += 0.35*cm
         p.setFillColor(colors.HexColor("#dc3545"))
-        p.setFont("Arial", 8)
-        p.drawString(2*cm, y - offset_y, "Retenue trop-perÃ§u salaire prÃ©cÃ©dent:")
+        p.setFont(_FN, 8)
+        p.drawString(2*cm, y - offset_y, "Retenue trop-perçu salaire précédent:")
         p.drawRightString(width - 2*cm, y - offset_y, f"- {trop_percu:,.0f} GNF".replace(",", " "))
     
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont("Arial-Bold", 11)
-    p.drawString(2*cm, y - offset_y - 0.7*cm, "NET Ã€ PAYER:")
+    p.setFont(_FB, 11)
+    p.drawString(2*cm, y - offset_y - 0.7*cm, "NET À PAYER:")
     p.drawRightString(width - 2*cm, y - offset_y - 0.7*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
     p.setFillColor(colors.black)
     
@@ -1314,36 +1317,35 @@ def telecharger_bulletin_public(request, token):
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
     taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '1,5'
     
-    p.setFont("Arial-Bold", 8)
+    p.setFont(_FB, 8)
     p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     y -= 0.35*cm
-    p.setFont("Arial", 6.5)
+    p.setFont(_FN, 6.5)
     p.drawString(1.5*cm, y, f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " "))
     p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
     # TA ou ONFPP selon effectif
     if ta > 0:
-        ta_str = f"{ta:,.0f}".replace(",", " ")
-        p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta_str}")
+        p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta:,.0f}".replace(",", " "))
     elif onfpp > 0:
-        p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} â‰¥30): {onfpp:,.0f}".replace(",", " "))
-    p.setFont("Arial-Bold", 7)
+        p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} ≥30): {onfpp:,.0f}".replace(",", " "))
+    p.setFont(_FB, 7)
     p.drawRightString(width - 1.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     y -= 0.3*cm
-    # Base de calcul VF si prÃ©sente
+    # Base de calcul VF si présente
     if base_vf > 0:
-        p.setFont("Arial", 6)
+        p.setFont(_FN, 6)
         p.setFillColor(colors.HexColor("#666666"))
-        p.drawString(1.5*cm, y, f"â””â”€ base calc VF: {base_vf:,.0f}".replace(",", " "))
+        p.drawString(1.5*cm, y, f"└─ base calc VF: {base_vf:,.0f}".replace(",", " "))
         y -= 0.25*cm
     p.setFillColor(colors.black)
     
     # === ZONE DE SIGNATURES ===
     y -= 1.2*cm
-    p.setFont("Arial-Bold", 8)
+    p.setFont(_FB, 8)
     p.drawString(2*cm, y, "L'Employeur")
-    p.drawString(12*cm, y, "L'EmployÃ©(e)")
+    p.drawString(12*cm, y, "L'Employé(e)")
     y -= 0.4*cm
-    p.setFont("Arial", 7)
+    p.setFont(_FN, 7)
     if entreprise:
         p.drawString(2*cm, y, entreprise.nom_entreprise or '')
     p.drawString(12*cm, y, f"{emp.nom} {emp.prenoms}")
@@ -1354,18 +1356,18 @@ def telecharger_bulletin_public(request, token):
     p.line(12*cm, y, 17*cm, y)
     p.setDash()
     y -= 0.3*cm
-    p.setFont("Arial", 6)
+    p.setFont(_FN, 6)
     p.drawCentredString(4.5*cm, y, "Date et signature")
-    p.drawCentredString(14.5*cm, y, "Lu et approuvÃ©, date et signature")
+    p.drawCentredString(14.5*cm, y, "Lu et approuvé, date et signature")
     
     # === PIED DE PAGE ===
-    p.setFont("Arial", 7)
-    p.drawCentredString(width/2, 2.2*cm, "Ce bulletin est conforme Ã  la lÃ©gislation guinÃ©enne en vigueur.")
+    p.setFont(_FN, 7)
+    p.drawCentredString(width/2, 2.2*cm, "Ce bulletin est conforme à la législation guinéenne en vigueur.")
     if entreprise:
-        p.drawCentredString(width/2, 1.7*cm, f"{entreprise.nom_entreprise} - {entreprise.adresse or ''} - TÃ©l: {entreprise.telephone or ''}")
+        p.drawCentredString(width/2, 1.7*cm, f"{entreprise.nom_entreprise} - {entreprise.adresse or ''} - Tél: {entreprise.telephone or ''}")
         p.drawCentredString(width/2, 1.3*cm, f"NIF: {entreprise.nif or '-'} - CNSS: {entreprise.num_cnss or '-'}")
     
-    p.drawCentredString(width/2, 0.8*cm, f"Document gÃ©nÃ©rÃ© le {timezone.now().strftime('%d/%m/%Y Ã  %H:%M')}")
+    p.drawCentredString(width/2, 0.8*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
     
     # Finaliser le PDF
     p.showPage()
@@ -1393,7 +1395,7 @@ def livre_paie(request):
     if mois:
         periodes = periodes.filter(mois=mois)
     
-    # RÃ©cupÃ©rer tous les bulletins des pÃ©riodes avec total_retenues calculÃ©
+    # Récupérer tous les bulletins des périodes avec total_retenues calculé
     from django.db.models import F
     bulletins = BulletinPaie.objects.filter(
         periode__in=periodes,
@@ -1412,7 +1414,7 @@ def livre_paie(request):
         total_retenues=Sum(F('cnss_employe') + F('irg'))
     )
     
-    # AnnÃ©es disponibles
+    # Années disponibles
     annees = PeriodePaie.objects.filter(
         entreprise=request.user.entreprise
     ).values_list('annee', flat=True).distinct().order_by('-annee')
@@ -1429,18 +1431,10 @@ def livre_paie(request):
 @login_required
 @entreprise_active_required
 def telecharger_livre_paie_pdf(request):
-    """TÃ©lÃ©charger le livre de paie en PDF"""
+    """Télécharger le livre de paie en PDF"""
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.units import cm
     from reportlab.pdfgen import canvas
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    import os as _os
-    for _fname, _ffile in {"Arial": "arial.ttf", "Arial-Bold": "arialbd.ttf", "Arial-Italic": "ariali.ttf"}.items():
-        _fpath = _os.path.join(_os.environ.get("WINDIR","C:\\Windows"), "Fonts", _ffile)
-        if _os.path.exists(_fpath):
-            try: pdfmetrics.registerFont(TTFont(_fname, _fpath))
-            except: pass
     from reportlab.lib import colors
     from reportlab.platypus import Table, TableStyle
     from django.db.models import F
@@ -1485,8 +1479,8 @@ def telecharger_livre_paie_pdf(request):
     width, height = page_size
 
     y = height - 1.2 * cm
-    p.setFont('Arial-Bold', 12)
-    titre = f"Livre de Paie - AnnÃ©e {int(annee)}"
+    p.setFont(_FB, 12)
+    titre = f"Livre de Paie - Année {int(annee)}"
     if mois:
         titre += f" - Mois {int(mois)}"
     p.drawCentredString(width / 2, y, titre)
@@ -1497,10 +1491,10 @@ def telecharger_livre_paie_pdf(request):
     p.line(1.2 * cm, y, width - 1.2 * cm, y)
     y -= 0.7 * cm
 
-    p.setFont('Arial', 8)
+    p.setFont(_FN, 8)
     tot_line = (
         f"Brut: {fmt(totaux.get('total_brut'))} GNF   "
-        f"CNSS EmployÃ©: {fmt(totaux.get('total_cnss_employe'))}   "
+        f"CNSS Employé: {fmt(totaux.get('total_cnss_employe'))}   "
         f"CNSS Employeur: {fmt(totaux.get('total_cnss_employeur'))}   "
         f"RTS: {fmt(totaux.get('total_irg'))}   "
         f"Net: {fmt(totaux.get('total_net'))}"
@@ -1509,7 +1503,7 @@ def telecharger_livre_paie_pdf(request):
     y -= 0.6 * cm
 
     data = [[
-        'PÃ©riode', 'Matr.', 'Nom et PrÃ©noms', 'Fonction',
+        'Période', 'Matr.', 'Nom et Prénoms', 'Fonction',
         'Brut', 'CNSS', 'RTS', 'Retenues', 'Net'
     ]]
 
@@ -1549,14 +1543,14 @@ def telecharger_livre_paie_pdf(request):
     ]
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
-        ('FONT', (0, 0), (-1, -1), 'Arial', 6),
-        ('FONT', (0, 0), (-1, 0), 'Arial-Bold', 6),
+        ('FONT', (0, 0), (-1, -1), _FN, 6),
+        ('FONT', (0, 0), (-1, 0), _FB, 6),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e9ecef')),
         ('ALIGN', (4, 1), (-1, -1), 'RIGHT'),
         ('ALIGN', (0, 0), (3, -1), 'LEFT'),
         ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f8f9fa')),
-        ('FONT', (0, -1), (-1, -1), 'Arial-Bold', 6),
+        ('FONT', (0, -1), (-1, -1), _FB, 6),
         ('LINEABOVE', (0, -1), (-1, -1), 0.8, colors.black),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('LEFTPADDING', (0, 0), (-1, -1), 3),
@@ -1583,7 +1577,7 @@ def telecharger_livre_paie_pdf(request):
 
 @login_required
 def declarations_sociales(request):
-    """DÃ©clarations sociales (CNSS, RTS, INAM)"""
+    """Déclarations sociales (CNSS, RTS, INAM)"""
     # Filtres
     annee = request.GET.get('annee', timezone.now().year)
     mois = request.GET.get('mois')
@@ -1595,14 +1589,14 @@ def declarations_sociales(request):
     if mois:
         periodes = periodes.filter(mois=mois)
     
-    # Inclure tous les bulletins calculÃ©s, validÃ©s ou payÃ©s
+    # Inclure tous les bulletins calculés, validés ou payés
     bulletins = BulletinPaie.objects.filter(
         periode__in=periodes,
         statut_bulletin__in=['calcule', 'valide', 'paye'],
         employe__entreprise=request.user.entreprise,
     ).select_related('employe', 'periode')
     
-    # RÃ©cupÃ©rer les constantes CNSS (plancher et plafond)
+    # Récupérer les constantes CNSS (plancher et plafond)
     from .models import Constante
     plancher_cnss = Constante.objects.filter(code='PLANCHER_CNSS', actif=True).first()
     plafond_cnss = Constante.objects.filter(code='PLAFOND_CNSS', actif=True).first()
@@ -1640,14 +1634,14 @@ def declarations_sociales(request):
         'montant': (declaration_cnss['masse_salariale'] * taux_inam / Decimal('100')).quantize(Decimal('0.01'))
     }
     
-    # Total gÃ©nÃ©ral des charges
+    # Total général des charges
     total_general = (
         declaration_cnss['total_cotisation'] +
         declaration_irg['total_irg'] +
         declaration_inam['montant']
     )
     
-    # DÃ©tail par employÃ©
+    # Détail par employé
     detail_employes = []
     for bulletin in bulletins:
         detail_employes.append({
@@ -1680,7 +1674,7 @@ def declarations_sociales(request):
 
 @login_required
 def declarations_sociales_pdf(request):
-    """GÃ©nÃ©rer le PDF des dÃ©clarations sociales"""
+    """Générer le PDF des déclarations sociales"""
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -1693,7 +1687,7 @@ def declarations_sociales_pdf(request):
     
     entreprise = request.user.entreprise
     if not entreprise:
-        return HttpResponse("Aucune entreprise associÃ©e.", status=400)
+        return HttpResponse("Aucune entreprise associée.", status=400)
     
     periodes = PeriodePaie.objects.filter(
         entreprise=entreprise,
@@ -1723,26 +1717,26 @@ def declarations_sociales_pdf(request):
         'total_irg': bulletins.aggregate(Sum('irg'))['irg__sum'] or 0,
     }
     
-    # CrÃ©er le PDF
+    # Créer le PDF
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=1*cm, bottomMargin=1*cm)
     elements = []
     styles = getSampleStyleSheet()
     
     title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, alignment=1)
-    periode_str = f"Mois {mois}/{annee}" if mois else f"AnnÃ©e {annee}"
-    elements.append(Paragraph(f"DÃ©clarations Sociales - {periode_str}", title_style))
+    periode_str = f"Mois {mois}/{annee}" if mois else f"Année {annee}"
+    elements.append(Paragraph(f"Déclarations Sociales - {periode_str}", title_style))
     elements.append(Spacer(1, 0.3*cm))
     elements.append(Paragraph(f"Entreprise: {entreprise.nom_entreprise}", styles['Normal']))
     elements.append(Spacer(1, 0.5*cm))
     
     # CNSS
-    elements.append(Paragraph("CNSS - Caisse Nationale de SÃ©curitÃ© Sociale", styles['Heading2']))
+    elements.append(Paragraph("CNSS - Caisse Nationale de Sécurité Sociale", styles['Heading2']))
     cnss_data = [
-        ['LibellÃ©', 'Montant (GNF)'],
-        ['Nombre de salariÃ©s', str(declaration_cnss['total_salaries'])],
+        ['Libellé', 'Montant (GNF)'],
+        ['Nombre de salariés', str(declaration_cnss['total_salaries'])],
         ['Masse salariale', f"{declaration_cnss['masse_salariale']:,.0f}"],
-        ['Cotisation employÃ© (5%)', f"{declaration_cnss['cotisation_employe']:,.0f}"],
+        ['Cotisation employé (5%)', f"{declaration_cnss['cotisation_employe']:,.0f}"],
         ['Cotisation employeur (18%)', f"{declaration_cnss['cotisation_employeur']:,.0f}"],
         ['Total cotisations', f"{declaration_cnss['total_cotisation']:,.0f}"],
     ]
@@ -1751,10 +1745,10 @@ def declarations_sociales_pdf(request):
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EF7707')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), _FB),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f5f5f5')),
-        ('FONTNAME', (0, -1), (-1, -1), 'Arial-Bold'),
+        ('FONTNAME', (0, -1), (-1, -1), _FB),
     ]))
     elements.append(cnss_table)
     elements.append(Spacer(1, 0.5*cm))
@@ -1762,8 +1756,8 @@ def declarations_sociales_pdf(request):
     # RTS/RTS
     elements.append(Paragraph("RTS/RTS - Retenue sur Traitements et Salaires", styles['Heading2']))
     irg_data = [
-        ['LibellÃ©', 'Montant (GNF)'],
-        ['Nombre de salariÃ©s', str(declaration_irg['total_salaries'])],
+        ['Libellé', 'Montant (GNF)'],
+        ['Nombre de salariés', str(declaration_irg['total_salaries'])],
         ['Total RTS retenu', f"{declaration_irg['total_irg']:,.0f}"],
     ]
     irg_table = Table(irg_data, colWidths=[10*cm, 6*cm])
@@ -1771,7 +1765,7 @@ def declarations_sociales_pdf(request):
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EF7707')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Arial-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), _FB),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
     ]))
     elements.append(irg_table)
@@ -1790,7 +1784,7 @@ def declarations_sociales_pdf(request):
 
 @login_required
 def liste_elements_salaire(request):
-    """Liste tous les Ã©lÃ©ments de salaire"""
+    """Liste tous les éléments de salaire"""
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
     
     # Filtres
@@ -1819,7 +1813,7 @@ def liste_elements_salaire(request):
     except EmptyPage:
         elements_page = paginator.page(paginator.num_pages)
     
-    # Liste des employÃ©s pour le filtre
+    # Liste des employés pour le filtre
     employes = Employe.objects.filter(
         entreprise=request.user.entreprise,
         statut_employe='actif'
@@ -1834,14 +1828,14 @@ def liste_elements_salaire(request):
 
 @login_required
 def elements_salaire_employe(request, employe_id):
-    """Ã‰lÃ©ments de salaire d'un employÃ© spÃ©cifique"""
+    """Éléments de salaire d'un employé spécifique"""
     employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
     
     elements = ElementSalaire.objects.filter(
         employe=employe
     ).select_related('rubrique').order_by('rubrique__ordre_calcul')
     
-    # SÃ©parer gains et retenues
+    # Séparer gains et retenues
     gains = elements.filter(rubrique__type_rubrique='gain')
     retenues = elements.filter(rubrique__type_rubrique='retenue')
     
@@ -1862,7 +1856,7 @@ def elements_salaire_employe(request, employe_id):
 
 @login_required
 def ajouter_element_salaire(request, employe_id):
-    """Ajouter un Ã©lÃ©ment de salaire Ã  un employÃ©"""
+    """Ajouter un élément de salaire à un employé"""
     employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
     
     if request.method == 'POST':
@@ -1881,7 +1875,7 @@ def ajouter_element_salaire(request, employe_id):
                 entreprise=request.user.entreprise
             )
             
-            # VÃ©rifier si un Ã©lÃ©ment actif existe dÃ©jÃ  pour cette rubrique
+            # Vérifier si un élément actif existe déjà pour cette rubrique
             element_existant = ElementSalaire.objects.filter(
                 employe=employe,
                 rubrique=rubrique,
@@ -1891,8 +1885,8 @@ def ajouter_element_salaire(request, employe_id):
             if element_existant:
                 messages.error(
                     request,
-                    f'Un Ã©lÃ©ment "{rubrique.libelle_rubrique}" actif existe dÃ©jÃ  pour {employe.nom_complet}. '
-                    f'Veuillez le modifier ou le dÃ©sactiver avant d\'en ajouter un nouveau.'
+                    f'Un élément "{rubrique.libelle_rubrique}" actif existe déjà pour {employe.nom_complet}. '
+                    f'Veuillez le modifier ou le désactiver avant d\'en ajouter un nouveau.'
                 )
                 return redirect('paie:elements_salaire_employe', employe_id=employe.id)
             
@@ -1910,14 +1904,14 @@ def ajouter_element_salaire(request, employe_id):
             
             messages.success(
                 request,
-                f'Ã‰lÃ©ment "{rubrique.libelle_rubrique}" ajoutÃ© avec succÃ¨s pour {employe.nom_complet}'
+                f'Élément "{rubrique.libelle_rubrique}" ajouté avec succès pour {employe.nom_complet}'
             )
             return redirect('paie:elements_salaire_employe', employe_id=employe.id)
             
         except Exception as e:
             messages.error(request, f'Erreur lors de l\'ajout : {str(e)}')
     
-    # Rubriques disponibles (exclure celles calculÃ©es automatiquement: IRG, CNSS)
+    # Rubriques disponibles (exclure celles calculées automatiquement: IRG, CNSS)
     rubriques = RubriquePaie.objects.filter(
         actif=True,
         entreprise=request.user.entreprise
@@ -1926,7 +1920,7 @@ def ajouter_element_salaire(request, employe_id):
     ).exclude(
         code_rubrique__icontains='CNSS'
     ).exclude(
-        libelle_rubrique__icontains='ImpÃ´t sur le Revenu'
+        libelle_rubrique__icontains='Impôt sur le Revenu'
     ).order_by('type_rubrique', 'libelle_rubrique')
     
     return render(request, 'paie/elements_salaire/ajouter.html', {
@@ -1937,7 +1931,7 @@ def ajouter_element_salaire(request, employe_id):
 
 @login_required
 def modifier_element_salaire(request, pk):
-    """Modifier un Ã©lÃ©ment de salaire"""
+    """Modifier un élément de salaire"""
     element = get_object_or_404(ElementSalaire, pk=pk, employe__entreprise=request.user.entreprise)
     
     if request.method == 'POST':
@@ -1959,7 +1953,7 @@ def modifier_element_salaire(request, pk):
             element.recurrent = recurrent
             element.save()
             
-            messages.success(request, 'Ã‰lÃ©ment modifiÃ© avec succÃ¨s')
+            messages.success(request, 'Élément modifié avec succès')
             return redirect('paie:elements_salaire_employe', employe_id=element.employe.id)
             
         except Exception as e:
@@ -1972,11 +1966,11 @@ def modifier_element_salaire(request, pk):
 
 @login_required
 def supprimer_element_salaire(request, pk):
-    """Supprimer un Ã©lÃ©ment de salaire"""
+    """Supprimer un élément de salaire"""
     try:
         element = ElementSalaire.objects.get(pk=pk, employe__entreprise=request.user.entreprise)
     except ElementSalaire.DoesNotExist:
-        messages.warning(request, "Cet Ã©lÃ©ment de salaire n'existe plus ou a dÃ©jÃ  Ã©tÃ© supprimÃ©.")
+        messages.warning(request, "Cet élément de salaire n'existe plus ou a déjà été supprimé.")
         return redirect('paie:liste_elements_salaire')
     
     employe_id = element.employe.id
@@ -1984,7 +1978,7 @@ def supprimer_element_salaire(request, pk):
     if request.method == 'POST':
         libelle = element.rubrique.libelle_rubrique
         element.delete()
-        messages.success(request, f'Ã‰lÃ©ment "{libelle}" supprimÃ© avec succÃ¨s')
+        messages.success(request, f'Élément "{libelle}" supprimé avec succès')
         return redirect('paie:elements_salaire_employe', employe_id=employe_id)
     
     return render(request, 'paie/elements_salaire/supprimer.html', {
@@ -2018,7 +2012,7 @@ def liste_rubriques(request):
 
 @login_required
 def creer_rubrique(request):
-    """CrÃ©er une nouvelle rubrique de paie"""
+    """Créer une nouvelle rubrique de paie"""
     if request.method == 'POST':
         code = request.POST.get('code_rubrique')
         libelle = request.POST.get('libelle_rubrique')
@@ -2034,7 +2028,7 @@ def creer_rubrique(request):
         actif = request.POST.get('actif') == 'on'
         
         if RubriquePaie.objects.filter(code_rubrique=code, entreprise=request.user.entreprise).exists():
-            messages.error(request, f'Une rubrique avec le code "{code}" existe dÃ©jÃ . Veuillez choisir un autre code.')
+            messages.error(request, f'Une rubrique avec le code "{code}" existe déjà. Veuillez choisir un autre code.')
             return render(request, 'paie/rubriques/creer.html')
         
         try:
@@ -2054,28 +2048,28 @@ def creer_rubrique(request):
                 actif=actif
             )
             
-            messages.success(request, f'Rubrique "{libelle}" crÃ©Ã©e avec succÃ¨s')
+            messages.success(request, f'Rubrique "{libelle}" créée avec succès')
             return redirect('paie:liste_rubriques')
             
         except Exception as e:
-            messages.error(request, f'Erreur lors de la crÃ©ation : {str(e)}')
+            messages.error(request, f'Erreur lors de la création : {str(e)}')
     
     return render(request, 'paie/rubriques/creer.html')
 
 
 @login_required
 def detail_rubrique(request, pk):
-    """DÃ©tail d'une rubrique de paie"""
+    """Détail d'une rubrique de paie"""
     rubrique = get_object_or_404(RubriquePaie, pk=pk, entreprise=request.user.entreprise)
     
-    # Nombre d'employÃ©s utilisant cette rubrique
+    # Nombre d'employés utilisant cette rubrique
     nb_employes = ElementSalaire.objects.filter(
         rubrique=rubrique,
         actif=True,
         employe__entreprise=request.user.entreprise,
     ).values('employe').distinct().count()
     
-    # Ã‰lÃ©ments utilisant cette rubrique
+    # Éléments utilisant cette rubrique
     elements = ElementSalaire.objects.filter(
         rubrique=rubrique,
         employe__entreprise=request.user.entreprise,
@@ -2091,15 +2085,15 @@ def detail_rubrique(request, pk):
 @login_required
 @entreprise_active_required
 def tableau_bord_echeances(request):
-    """Tableau de bord des Ã©chÃ©ances de dÃ©clarations sociales"""
+    """Tableau de bord des échéances de déclarations sociales"""
     aujourd_hui = date.today()
     entreprise = request.user.entreprise
     
-    # GÃ©nÃ©rer/actualiser les alertes pour le mois en cours
+    # Générer/actualiser les alertes pour le mois en cours
     mois_courant = aujourd_hui.month
     annee_courante = aujourd_hui.year
     
-    # Mois prÃ©cÃ©dent (pour les dÃ©clarations en cours)
+    # Mois précédent (pour les déclarations en cours)
     if mois_courant == 1:
         mois_declaration = 12
         annee_declaration = annee_courante - 1
@@ -2107,7 +2101,7 @@ def tableau_bord_echeances(request):
         mois_declaration = mois_courant - 1
         annee_declaration = annee_courante
     
-    # GÃ©nÃ©rer les alertes si elles n'existent pas
+    # Générer les alertes si elles n'existent pas
     AlerteEcheance.generer_alertes_mois(entreprise, annee_declaration, mois_declaration)
     
     # Actualiser toutes les alertes
@@ -2118,7 +2112,7 @@ def tableau_bord_echeances(request):
     for alerte in alertes:
         alerte.actualiser_statut()
     
-    # RÃ©cupÃ©rer les alertes triÃ©es
+    # Récupérer les alertes triées
     alertes_urgentes = AlerteEcheance.objects.filter(
         entreprise=entreprise,
         statut__in=['urgent', 'en_retard']
@@ -2144,7 +2138,7 @@ def tableau_bord_echeances(request):
         ).count(),
     }
     
-    # Prochaine Ã©chÃ©ance
+    # Prochaine échéance
     prochaine_echeance = AlerteEcheance.objects.filter(
         entreprise=entreprise,
         statut__in=['a_venir', 'urgent']
@@ -2163,7 +2157,7 @@ def tableau_bord_echeances(request):
 @login_required
 @entreprise_active_required
 def marquer_alerte_traitee(request, pk):
-    """Marque une alerte comme traitÃ©e"""
+    """Marque une alerte comme traitée"""
     alerte = get_object_or_404(AlerteEcheance, pk=pk, entreprise=request.user.entreprise)
     
     alerte.statut = 'traite'
@@ -2171,17 +2165,17 @@ def marquer_alerte_traitee(request, pk):
     alerte.date_lecture = timezone.now()
     alerte.save()
     
-    messages.success(request, f'Alerte "{alerte.get_type_echeance_display()}" marquÃ©e comme traitÃ©e.')
+    messages.success(request, f'Alerte "{alerte.get_type_echeance_display()}" marquée comme traitée.')
     return redirect('paie:tableau_bord_echeances')
 
 
 @login_required
 @entreprise_active_required
 def api_alertes_echeances(request):
-    """API pour rÃ©cupÃ©rer les alertes (pour le header/notifications)"""
+    """API pour récupérer les alertes (pour le header/notifications)"""
     entreprise = request.user.entreprise
     
-    # Actualiser et rÃ©cupÃ©rer les alertes urgentes
+    # Actualiser et récupérer les alertes urgentes
     alertes = AlerteEcheance.objects.filter(
         entreprise=entreprise,
         statut__in=['urgent', 'en_retard'],
@@ -2279,7 +2273,7 @@ def historique_bulletins(request):
 @login_required
 @entreprise_active_required
 def telecharger_bulletins_masse(request):
-    """TÃ©lÃ©charge plusieurs bulletins en ZIP"""
+    """Télécharge plusieurs bulletins en ZIP"""
     import zipfile
     import io
     
@@ -2288,7 +2282,7 @@ def telecharger_bulletins_masse(request):
     mois = request.GET.get('mois')
     
     if not annee or not mois:
-        messages.error(request, "Veuillez sÃ©lectionner une annÃ©e et un mois")
+        messages.error(request, "Veuillez sélectionner une année et un mois")
         return redirect('paie:historique_bulletins')
     
     bulletins = BulletinPaie.objects.filter(
@@ -2299,14 +2293,14 @@ def telecharger_bulletins_masse(request):
     ).select_related('employe', 'periode')
     
     if not bulletins.exists():
-        messages.warning(request, "Aucun bulletin trouvÃ© pour cette pÃ©riode")
+        messages.warning(request, "Aucun bulletin trouvé pour cette période")
         return redirect('paie:historique_bulletins')
     
-    # CrÃ©er le ZIP en mÃ©moire
+    # Créer le ZIP en mémoire
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         for bulletin in bulletins:
-            # GÃ©nÃ©rer le PDF du bulletin
+            # Générer le PDF du bulletin
             from .utils import generer_bulletin_pdf
             try:
                 pdf_content = generer_bulletin_pdf(bulletin)
@@ -2325,17 +2319,17 @@ def telecharger_bulletins_masse(request):
 @login_required
 @entreprise_active_required
 def attestation_salaire(request, employe_id):
-    """GÃ©nÃ¨re une attestation de salaire pour un employÃ©"""
+    """Génère une attestation de salaire pour un employé"""
     employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
     
-    # RÃ©cupÃ©rer les 12 derniers bulletins
+    # Récupérer les 12 derniers bulletins
     bulletins = BulletinPaie.objects.filter(
         employe=employe,
         statut_bulletin__in=['valide', 'paye']
     ).order_by('-periode__annee', '-periode__mois')[:12]
     
     if not bulletins:
-        messages.warning(request, "Aucun bulletin trouvÃ© pour cet employÃ©")
+        messages.warning(request, "Aucun bulletin trouvé pour cet employé")
         return redirect('paie:historique_bulletins')
     
     # Calculer les moyennes
@@ -2367,7 +2361,7 @@ def simulation_paie(request):
     resultat = None
     employe_selectionne = None
     
-    # Liste des employÃ©s actifs
+    # Liste des employés actifs
     employes = Employe.objects.filter(
         entreprise=entreprise,
         statut_employe='actif'
@@ -2377,7 +2371,7 @@ def simulation_paie(request):
         employe_id = request.POST.get('employe')
         salaire_base = request.POST.get('salaire_base', '0')
         
-        # RÃ©cupÃ©rer les primes/indemnitÃ©s du formulaire
+        # Récupérer les primes/indemnités du formulaire
         prime_transport = request.POST.get('prime_transport', '0')
         prime_logement = request.POST.get('prime_logement', '0')
         prime_cherte_vie = request.POST.get('prime_cherte_vie', '0')
@@ -2408,17 +2402,17 @@ def simulation_paie(request):
         salaire_brut = (salaire_base + prime_transport + prime_logement + prime_cherte_vie +
                        prime_panier + prime_anciennete + prime_responsabilite + autres_primes)
         
-        # Primes exonÃ©rÃ©es de CNSS 5% (transport, logement, chertÃ© de vie)
+        # Primes exonérées de CNSS 5% (transport, logement, cherté de vie)
         primes_exonerees_cnss = prime_transport + prime_logement + prime_cherte_vie
         base_cnss_brute = salaire_brut - primes_exonerees_cnss
         
-        # Nombre de salariÃ©s actifs pour TA vs ONFPP
+        # Nombre de salariés actifs pour TA vs ONFPP
         nb_salaries = Employe.objects.filter(
             entreprise=entreprise,
             statut_employe='actif'
         ).count()
         
-        # RÃ©cupÃ©rer les constantes
+        # Récupérer les constantes
         plancher_cnss = Decimal('550000')
         plafond_cnss = Decimal('2500000')
         taux_cnss_employe = Decimal('5')
@@ -2435,8 +2429,8 @@ def simulation_paie(request):
         except:
             pass
         
-        # Calcul CNSS avec vÃ©rification du seuil minimum
-        # Base CNSS = brut - primes exonÃ©rÃ©es (transport, logement, chertÃ© de vie)
+        # Calcul CNSS avec vérification du seuil minimum
+        # Base CNSS = brut - primes exonérées (transport, logement, cherté de vie)
         seuil_minimum_cnss = plancher_cnss * Decimal('0.10')
         alertes = []
         
@@ -2446,7 +2440,7 @@ def simulation_paie(request):
             cnss_employeur = Decimal('0')
             alertes.append({
                 'type': 'critique',
-                'message': f"Salaire brut nul ou nÃ©gatif ({salaire_brut:,.0f} GNF). VÃ©rifiez les Ã©lÃ©ments de salaire."
+                'message': f"Salaire brut nul ou négatif ({salaire_brut:,.0f} GNF). Vérifiez les éléments de salaire."
             })
         elif base_cnss_brute < seuil_minimum_cnss:
             assiette_cnss = Decimal('0')
@@ -2454,82 +2448,80 @@ def simulation_paie(request):
             cnss_employeur = Decimal('0')
             alertes.append({
                 'type': 'avertissement',
-                'message': f"Base CNSS trÃ¨s faible ({base_cnss_brute:,.0f} GNF < {seuil_minimum_cnss:,.0f} GNF). Pas de cotisation CNSS calculÃ©e."
+                'message': f"Base CNSS très faible ({base_cnss_brute:,.0f} GNF < {seuil_minimum_cnss:,.0f} GNF). Pas de cotisation CNSS calculée."
             })
         else:
             assiette_cnss = min(max(base_cnss_brute, plancher_cnss), plafond_cnss)
             cnss_employe = (assiette_cnss * taux_cnss_employe / Decimal('100')).quantize(Decimal('1'))
             cnss_employeur = (assiette_cnss * taux_cnss_employeur / Decimal('100')).quantize(Decimal('1'))
         
-        # VÃ©rifier plafond 25% indemnitÃ©s forfaitaires
+        # Vérifier plafond 25% indemnités forfaitaires
         # FORMULE CORRECTE:
-        # Salaire brut = Salaire de base + Primes/IndemnitÃ©s
-        # Plafond exonÃ©rÃ© = 25% Ã— Salaire brut
-        # Si Primes > Plafond â†’ ExcÃ©dent rÃ©intÃ©grÃ© dans base RTS
+        # Salaire brut = Salaire de base + Primes/Indemnités
+        # Plafond exonéré = 25% × Salaire brut
+        # Si Primes > Plafond → Excédent réintégré dans base RTS
         #
-        # VÃ‰RIFICATION MATHÃ‰MATIQUE:
+        # VÉRIFICATION MATHÉMATIQUE:
         # Pour que les primes soient exactement au plafond:
-        # Primes = 25% Ã— (Salaire de base + Primes)
-        # Primes = 0.25 Ã— Salaire de base + 0.25 Ã— Primes
-        # 0.75 Ã— Primes = 0.25 Ã— Salaire de base
-        # Primes = 33.33% Ã— Salaire de base
-        # â†’ Pour respecter le plafond 25% du brut, les primes ne doivent pas dÃ©passer ~33% du salaire de base.
+        # Primes = 25% × (Salaire de base + Primes)
+        # Primes = 0.25 × Salaire de base + 0.25 × Primes
+        # 0.75 × Primes = 0.25 × Salaire de base
+        # Primes = 33.33% × Salaire de base
+        # → Pour respecter le plafond 25% du brut, les primes ne doivent pas dépasser ~33% du salaire de base.
         
         total_indemnites_forfaitaires = prime_transport + prime_logement + prime_cherte_vie + prime_panier
-        # Plafond = 25% du salaire brut (salaire de base + indemnitÃ©s)
+        # Plafond = 25% du salaire brut (salaire de base + indemnités)
         plafond_indemnites = (salaire_brut * Decimal('0.25')).quantize(Decimal('1'))
         exces_indemnites = max(Decimal('0'), total_indemnites_forfaitaires - plafond_indemnites)
         
-        # Calcul du seuil thÃ©orique: primes max = 33.33% du salaire de base
+        # Calcul du seuil théorique: primes max = 33.33% du salaire de base
         primes_max_theorique = (salaire_base * Decimal('0.3333')).quantize(Decimal('1'))
         
-        # Alerte si dÃ©passement du plafond
+        # Alerte si dépassement du plafond
         if exces_indemnites > 0:
             alertes.append({
                 'type': 'avertissement',
-                'message': f"Plafond 25% indemnitÃ©s forfaitaires dÃ©passÃ©: {total_indemnites_forfaitaires:,.0f} GNF > {plafond_indemnites:,.0f} GNF. "
-                           f"ExcÃ©dent {exces_indemnites:,.0f} GNF rÃ©intÃ©grÃ© dans base RTS."
+                'message': f"Plafond 25% indemnités forfaitaires dépassé: {total_indemnites_forfaitaires:,.0f} GNF > {plafond_indemnites:,.0f} GNF. "
+                           f"Excédent {exces_indemnites:,.0f} GNF réintégré dans base RTS."
             })
         
-        # Base imposable RTS = Imposable (soumis_irg=True) - CNSS + excÃ©dent indemnitÃ©s
-        # PAS d'abattement pour la RTS mensuelle (abattement rÃ©servÃ© Ã  l'IGR annuel)
-        # Imposable = gains soumis_irg=True uniquement (pas le brut total)
-        imposable_irg = salaire_brut - total_indemnites_forfaitaires + exces_indemnites
-        base_imposable = imposable_irg - cnss_employe
+        # Base imposable RTS = Brut - CNSS + Excédent indemnités
+        base_imposable = salaire_brut - cnss_employe + exces_indemnites
         
         # Calcul RTS par tranches (CGI 2022 - 6 tranches)
-        # BarÃ¨me RTS CGI 2022 â€” bornes continues (sans gaps de 1 GNF)
         tranches_rts = [
-            (Decimal('0'),        Decimal('1000000'),  Decimal('0')),
-            (Decimal('1000000'),  Decimal('3000000'),  Decimal('5')),
-            (Decimal('3000000'),  Decimal('5000000'),  Decimal('8')),
-            (Decimal('5000000'),  Decimal('10000000'), Decimal('10')),
-            (Decimal('10000000'), Decimal('20000000'), Decimal('15')),
-            (Decimal('20000000'), None,                Decimal('20')),
+            (Decimal('0'), Decimal('1000000'), Decimal('0')),
+            (Decimal('1000001'), Decimal('3000000'), Decimal('5')),
+            (Decimal('3000001'), Decimal('5000000'), Decimal('8')),
+            (Decimal('5000001'), Decimal('10000000'), Decimal('10')),
+            (Decimal('10000001'), Decimal('20000000'), Decimal('15')),
+            (Decimal('20000001'), None, Decimal('20')),
         ]
         
         rts = Decimal('0')
         detail_rts = []
         reste = base_imposable
         
-        # Calcul progressif par bornes absolues (mÃªme logique que services.py)
         for borne_inf, borne_sup, taux in tranches_rts:
-            if base_imposable <= borne_inf:
+            if reste <= 0:
                 break
-            if borne_sup is not None:
-                montant_tranche = min(base_imposable, borne_sup) - borne_inf
+            if borne_sup:
+                montant_tranche = min(reste, borne_sup - borne_inf + 1)
             else:
-                montant_tranche = base_imposable - borne_inf
-            if montant_tranche > 0:
+                montant_tranche = reste
+            
+            if base_imposable >= borne_inf:
                 impot_tranche = (montant_tranche * taux / Decimal('100')).quantize(Decimal('1'))
                 rts += impot_tranche
-                detail_rts.append({
-                    'borne_inf': borne_inf,
-                    'borne_sup': borne_sup,
-                    'taux': taux,
-                    'montant': montant_tranche,
-                    'impot': impot_tranche,
-                })
+                if montant_tranche > 0:
+                    detail_rts.append({
+                        'borne_inf': borne_inf,
+                        'borne_sup': borne_sup,
+                        'taux': taux,
+                        'montant': montant_tranche,
+                        'impot': impot_tranche,
+                    })
+                reste -= montant_tranche
         
         # Taux effectif RTS
         if base_imposable > 0:
@@ -2538,14 +2530,9 @@ def simulation_paie(request):
             taux_effectif_rts = Decimal('0')
         
         # Charges patronales
-        # VF biÃ©tagÃ©: DÃ©duction = min(Brut, Seuil) Ã— 6%, VF = (Brut - DÃ©duction) Ã— 6%
-        seuil_vf = constantes.get('SEUIL_VF', Decimal('2500000'))
-        base_deduction_vf = min(salaire_brut, seuil_vf)
-        deduction_vf = (base_deduction_vf * taux_vf / Decimal('100')).quantize(Decimal('1'))
-        base_vf_nette = salaire_brut - deduction_vf
-        vf = (base_vf_nette * taux_vf / Decimal('100')).quantize(Decimal('1'))
+        vf = (salaire_brut * taux_vf / Decimal('100')).quantize(Decimal('1'))
         
-        # TA et ONFPP mutuellement exclusifs selon le nombre de salariÃ©s
+        # TA et ONFPP mutuellement exclusifs selon le nombre de salariés
         if nb_salaries < 30:
             ta = (salaire_brut * taux_ta / Decimal('100')).quantize(Decimal('1'))
             onfpp = Decimal('0')
@@ -2553,24 +2540,24 @@ def simulation_paie(request):
             ta = Decimal('0')
             onfpp = (salaire_brut * taux_onfpp / Decimal('100')).quantize(Decimal('1'))
         
-        # Totaux (rappels et retenues trop-perÃ§u hors base)
+        # Totaux (rappels et retenues trop-perçu hors base)
         total_retenues = cnss_employe + rts
         net_a_payer = salaire_brut - total_retenues + rappel_salaire - retenue_trop_percu
         total_charges_patronales = cnss_employeur + vf + ta + onfpp
         cout_total_employeur = salaire_brut + total_charges_patronales
         retenues_excessives = Decimal('0')
         
-        # Protection: EmpÃªcher le net nÃ©gatif
+        # Protection: Empêcher le net négatif
         if net_a_payer < 0:
             alertes.append({
                 'type': 'critique',
-                'message': f"Net Ã  payer serait nÃ©gatif ({net_a_payer:,.0f} GNF). Les retenues ({total_retenues:,.0f} GNF) dÃ©passent le brut ({salaire_brut:,.0f} GNF). Retenues plafonnÃ©es."
+                'message': f"Net à payer serait négatif ({net_a_payer:,.0f} GNF). Les retenues ({total_retenues:,.0f} GNF) dépassent le brut ({salaire_brut:,.0f} GNF). Retenues plafonnées."
             })
             retenues_excessives = abs(net_a_payer)
             total_retenues = salaire_brut
             net_a_payer = Decimal('0')
         
-        # EmployÃ© sÃ©lectionnÃ©
+        # Employé sélectionné
         if employe_id:
             employe_selectionne = Employe.objects.filter(pk=employe_id).first()
         
@@ -2588,7 +2575,7 @@ def simulation_paie(request):
             'assiette_cnss': assiette_cnss,
             'cnss_employe': cnss_employe,
             'cnss_employeur': cnss_employeur,
-            # Plafond 25% indemnitÃ©s forfaitaires
+            # Plafond 25% indemnités forfaitaires
             'total_indemnites_forfaitaires': total_indemnites_forfaitaires,
             'plafond_indemnites': plafond_indemnites,
             'exces_indemnites': exces_indemnites,
@@ -2625,13 +2612,13 @@ def simulation_paie(request):
 
 
 # ============================================
-# VUES ARCHIVES BULLETINS - TRAÃ‡ABILITÃ‰
+# VUES ARCHIVES BULLETINS - TRAÇABILITÉ
 # ============================================
 
 @login_required
 @entreprise_active_required
 def liste_archives(request):
-    """Liste des bulletins archivÃ©s avec statistiques"""
+    """Liste des bulletins archivés avec statistiques"""
     from .services_archive import ArchivageService
     
     entreprise = request.user.entreprise
@@ -2654,7 +2641,7 @@ def liste_archives(request):
     # Stats
     stats = ArchivageService.stats_archives(entreprise)
     
-    # AnnÃ©es disponibles
+    # Années disponibles
     annees = ArchiveBulletin.objects.filter(
         bulletin__employe__entreprise=entreprise
     ).values_list('periode_annee', flat=True).distinct().order_by('-periode_annee')
@@ -2671,7 +2658,7 @@ def liste_archives(request):
 @login_required
 @entreprise_active_required
 def telecharger_archive(request, pk):
-    """TÃ©lÃ©charger un bulletin archivÃ©"""
+    """Télécharger un bulletin archivé"""
     from .services_archive import ArchivageService
     
     archive = get_object_or_404(
@@ -2693,7 +2680,7 @@ def telecharger_archive(request, pk):
 @login_required
 @entreprise_active_required
 def verifier_integrite_archive(request, pk):
-    """VÃ©rifier l'intÃ©gritÃ© d'une archive"""
+    """Vérifier l'intégrité d'une archive"""
     from .services_archive import ArchivageService
     
     archive = get_object_or_404(
@@ -2703,9 +2690,9 @@ def verifier_integrite_archive(request, pk):
     )
     
     if ArchivageService.verifier_integrite(archive):
-        messages.success(request, f"âœ“ IntÃ©gritÃ© vÃ©rifiÃ©e pour {archive.employe_nom}")
+        messages.success(request, f"✓ Intégrité vérifiée pour {archive.employe_nom}")
     else:
-        messages.error(request, f"âœ— ALERTE: IntÃ©gritÃ© compromise pour {archive.employe_nom}")
+        messages.error(request, f"✗ ALERTE: Intégrité compromise pour {archive.employe_nom}")
     
     return redirect('paie:liste_archives')
 
@@ -2713,7 +2700,7 @@ def verifier_integrite_archive(request, pk):
 @login_required
 @entreprise_active_required
 def config_paie_entreprise(request):
-    """Configuration des paramÃ¨tres de paie par entreprise (HS, CongÃ©s, CNSS)"""
+    """Configuration des paramètres de paie par entreprise (HS, Congés, CNSS)"""
     from .models import ConfigurationPaieEntreprise
     from decimal import Decimal
     
@@ -2725,12 +2712,12 @@ def config_paie_entreprise(request):
         
         if action == 'code_travail':
             config.appliquer_mode_code_travail()
-            messages.success(request, 'Configuration Code du Travail appliquÃ©e.')
+            messages.success(request, 'Configuration Code du Travail appliquée.')
         elif action == 'convention':
             config.appliquer_mode_convention()
-            messages.success(request, 'Configuration Convention Collective appliquÃ©e.')
+            messages.success(request, 'Configuration Convention Collective appliquée.')
         elif action == 'save':
-            # Fonction helper pour convertir en Decimal avec valeur par dÃ©faut
+            # Fonction helper pour convertir en Decimal avec valeur par défaut
             def to_decimal(value, default):
                 if value is None or value.strip() == '':
                     return Decimal(default)
@@ -2741,7 +2728,7 @@ def config_paie_entreprise(request):
                     return int(default)
                 return int(value)
             
-            # Heures supplÃ©mentaires
+            # Heures supplémentaires
             config.mode_heures_sup = request.POST.get('mode_heures_sup', 'code_travail')
             config.taux_hs_4_premieres = to_decimal(request.POST.get('taux_hs_4_premieres'), '30')
             config.taux_hs_au_dela = to_decimal(request.POST.get('taux_hs_au_dela'), '60')
@@ -2749,7 +2736,7 @@ def config_paie_entreprise(request):
             config.taux_hs_dimanche = to_decimal(request.POST.get('taux_hs_dimanche'), '100')
             config.taux_hs_ferie_nuit = to_decimal(request.POST.get('taux_hs_ferie_nuit'), '100')
             
-            # CongÃ©s
+            # Congés
             config.mode_conges = request.POST.get('mode_conges', 'code_travail')
             config.jours_conges_par_mois = to_decimal(request.POST.get('jours_conges_par_mois'), '1.5')
             config.jours_conges_anciennete = to_decimal(request.POST.get('jours_conges_anciennete'), '2')
@@ -2768,7 +2755,7 @@ def config_paie_entreprise(request):
             
             config.modifie_par = request.user
             config.save()
-            messages.success(request, 'Configuration enregistrÃ©e avec succÃ¨s.')
+            messages.success(request, 'Configuration enregistrée avec succès.')
         
         return redirect('paie:config_entreprise')
     
@@ -2777,9 +2764,4 @@ def config_paie_entreprise(request):
         'modes_hs': ConfigurationPaieEntreprise.MODES_HS,
         'modes_conges': ConfigurationPaieEntreprise.MODES_CONGES,
     })
-
-
-
-
-
 
