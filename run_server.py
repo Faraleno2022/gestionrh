@@ -261,9 +261,30 @@ def check_license():
 
 # ─── Ouverture du navigateur ──────────────────────────────────────────────────
 def open_browser():
-    """Ouvre le navigateur après un délai."""
+    """Ouvre le navigateur après un délai — privilégie un navigateur moderne."""
     time.sleep(3)
-    webbrowser.open('http://127.0.0.1:8000/')
+    url = 'http://127.0.0.1:8000/'
+
+    # Chemins potentiels vers des navigateurs modernes (Chrome, Edge Chromium)
+    candidates = [
+        os.path.expandvars(r'%ProgramFiles%\Google\Chrome\Application\chrome.exe'),
+        os.path.expandvars(r'%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe'),
+        os.path.expandvars(r'%LocalAppData%\Google\Chrome\Application\chrome.exe'),
+        os.path.expandvars(r'%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe'),
+        os.path.expandvars(r'%ProgramFiles%\Microsoft\Edge\Application\msedge.exe'),
+    ]
+    for path in candidates:
+        if os.path.isfile(path):
+            try:
+                webbrowser.get(f'"{path}" %s').open(url)
+                print(f"  Navigateur ouvert: {os.path.basename(path)}")
+                return
+            except Exception:
+                continue
+
+    # Fallback : navigateur par défaut du système
+    webbrowser.open(url)
+    print("  Navigateur par defaut ouvert")
 
 
 # ─── Point d'entrée principal ──────────────────────────────────────────────────
