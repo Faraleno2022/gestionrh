@@ -20,7 +20,7 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Module</label>
                 <select name="module" class="form-control">
                     <option value="">--- Tous les modules ---</option>
@@ -31,7 +31,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Criticité</label>
                 <select name="criticite" class="form-control">
                     <option value="">--- Toutes les criticités ---</option>
@@ -40,13 +40,18 @@
                     <option value="HAUTE" {% if request.GET.criticite == 'HAUTE' %}selected{% endif %}>Haute</option>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Statut</label>
                 <select name="actif" class="form-control">
                     <option value="">--- Tous ---</option>
                     <option value="actif" {% if request.GET.actif == 'actif' %}selected{% endif %}>Actif</option>
                     <option value="inactif" {% if request.GET.actif == 'inactif' %}selected{% endif %}>Inactif</option>
                 </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel"></i> Filtrer
+                </button>
             </div>
         </form>
     </div>

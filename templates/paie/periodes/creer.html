@@ -21,26 +21,14 @@
                         <div class="mb-3">
                             <label for="annee" class="form-label">Année</label>
                             <input type="number" class="form-control" id="annee" name="annee" 
-                                   min="2020" max="2050" value="{{ current_year }}" required>
+                                   value="{{ current_year }}" readonly required>
                         </div>
 
                         <div class="mb-3">
                             <label for="mois" class="form-label">Mois</label>
-                            <select class="form-select" id="mois" name="mois" required>
-                                <option value="">Sélectionner un mois</option>
-                                <option value="1">Janvier</option>
-                                <option value="2">Février</option>
-                                <option value="3">Mars</option>
-                                <option value="4">Avril</option>
-                                <option value="5">Mai</option>
-                                <option value="6">Juin</option>
-                                <option value="7">Juillet</option>
-                                <option value="8">Août</option>
-                                <option value="9">Septembre</option>
-                                <option value="10">Octobre</option>
-                                <option value="11">Novembre</option>
-                                <option value="12">Décembre</option>
-                            </select>
+                            <input type="hidden" name="mois" id="mois" value="">
+                            <input type="text" class="form-control" id="mois_display" readonly value="">
+                            <small class="text-muted">Seul le mois en cours peut être créé.</small>
                         </div>
 
                         <div class="d-flex justify-content-between">
@@ -79,17 +67,22 @@
 </div>
 
 <script>
-    // Définir l'année courante
+    // Définir l'année et le mois courant (verrouillés)
     document.addEventListener('DOMContentLoaded', function() {
         const anneeInput = document.getElementById('annee');
-        if (!anneeInput.value) {
-            anneeInput.value = new Date().getFullYear();
-        }
+        const moisInput = document.getElementById('mois');
+        const moisDisplay = document.getElementById('mois_display');
         
-        // Présélectionner le mois courant
-        const moisSelect = document.getElementById('mois');
-        const moisCourant = new Date().getMonth() + 1;
-        moisSelect.value = moisCourant;
+        const now = new Date();
+        const annee = now.getFullYear();
+        const moisCourant = now.getMonth() + 1;
+        
+        const nomsMois = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+        
+        anneeInput.value = annee;
+        moisInput.value = moisCourant;
+        moisDisplay.value = nomsMois[moisCourant];
     });
 </script>
 {% endblock %}

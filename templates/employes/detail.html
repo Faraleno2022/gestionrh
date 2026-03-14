@@ -78,8 +78,8 @@
             </div>
             <div class="col-auto">
                 <div class="btn-group" role="group">
-                    <a href="{% url 'employes:edit' employe.pk %}" class="btn btn-light">
-                        <i class="bi bi-pencil"></i> Modifier
+                    <a href="{% url 'employes:edit' employe.pk %}" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Modifier / Sauvegarder
                     </a>
                     <button type="button" class="btn btn-light" onclick="window.print()">
                         <i class="bi bi-printer"></i> Imprimer
@@ -842,6 +842,21 @@
                 {% endif %}
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Barre de sauvegarde fixe en bas -->
+<div class="fixed-bottom bg-white border-top shadow-lg py-2 px-4 d-flex justify-content-between align-items-center" style="z-index: 1020;">
+    <span class="text-muted">
+        <i class="bi bi-person-badge"></i> {{ employe.matricule }} - {{ employe.nom }} {{ employe.prenoms }}
+    </span>
+    <div>
+        <a href="{% url 'employes:list' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+        <a href="{% url 'employes:edit' employe.pk %}" class="btn btn-primary">
+            <i class="bi bi-save"></i> Modifier / Sauvegarder
+        </a>
     </div>
 </div>
 

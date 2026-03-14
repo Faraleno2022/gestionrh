@@ -86,7 +86,20 @@
                     Le matricule sera généré automatiquement si vous le laissez vide.
                 </div>
 
-                {% crispy form %}
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% crispy form %}
+                    
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-save"></i> Enregistrer
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-lg" onclick="window.history.back()">
+                            <i class="bi bi-x-lg"></i> Annuler
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

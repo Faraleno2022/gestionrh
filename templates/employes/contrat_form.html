@@ -33,7 +33,20 @@
                     <strong>Poste :</strong> {{ employe.poste.intitule_poste|default:"-" }}
                 </div>
 
-                {% crispy form %}
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% crispy form %}
+                    
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-save"></i> Enregistrer le contrat
+                        </button>
+                        <a href="{% url 'employes:detail' employe.pk %}" class="btn btn-secondary btn-lg">
+                            <i class="bi bi-x-lg"></i> Annuler
+                        </a>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

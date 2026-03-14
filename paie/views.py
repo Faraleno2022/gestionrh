@@ -113,17 +113,19 @@ def creer_periode(request):
             annee = int(request.POST.get('annee'))
             mois = int(request.POST.get('mois'))
             
-            # Vérifier que la période est antérieure (pas le mois courant ni mois futurs)
+            # Vérifier que la période correspond au mois courant uniquement
             today = date.today()
             
-            if annee > today.year or (annee == today.year and mois >= today.month):
+            if annee != today.year or mois != today.month:
                 messages.error(
                     request,
                     f"❌ Impossible de créer une période pour {mois:02d}/{annee}. "
-                    f"Nous sommes en {today.month:02d}/{today.year}. "
-                    f"Vous pouvez créer uniquement des périodes antérieures au mois courant."
+                    f"Vous pouvez uniquement créer la période du mois en cours ({today.month:02d}/{today.year})."
                 )
-                return render(request, 'paie/periodes/creer.html')
+                return render(request, 'paie/periodes/creer.html', {
+                    'current_year': today.year,
+                    'current_month': today.month,
+                })
             
             nb_jours = monthrange(annee, mois)[1]
             
@@ -158,7 +160,11 @@ def creer_periode(request):
         except Exception as e:
             messages.error(request, f'Erreur lors de la création : {str(e)}')
     
-    return render(request, 'paie/periodes/creer.html')
+    today = date.today()
+    return render(request, 'paie/periodes/creer.html', {
+        'current_year': today.year,
+        'current_month': today.month,
+    })
 
 
 @login_required

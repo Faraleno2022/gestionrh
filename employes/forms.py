@@ -75,6 +75,7 @@ class EmployeForm(forms.ModelForm):
         
         # Helper Crispy Forms
         self.helper = FormHelper()
+        self.helper.form_tag = False
         self.helper.form_method = 'post'
         self.helper.form_enctype = 'multipart/form-data'
         self.helper.form_class = 'form-horizontal'
@@ -202,19 +203,6 @@ class EmployeForm(forms.ModelForm):
                     ),
                 ),
             ),
-            
-            HTML('<hr>'),
-            Row(
-                Column(
-                    Submit('submit', 'Enregistrer', css_class='btn btn-primary'),
-                    css_class='col-md-6'
-                ),
-                Column(
-                    Button('cancel', 'Annuler', css_class='btn btn-secondary',
-                           onclick="window.history.back()"),
-                    css_class='col-md-6 text-end'
-                ),
-            ),
         )
     
     def clean_matricule(self):
@@ -307,6 +295,7 @@ class ContratForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         self.helper = FormHelper()
+        self.helper.form_tag = False
         self.helper.form_method = 'post'
         self.helper.form_enctype = 'multipart/form-data'
         
@@ -334,7 +323,6 @@ class ContratForm(forms.ModelForm):
                 'date_signature',
                 'observations',
             ),
-            Submit('submit', 'Enregistrer le contrat', css_class='btn btn-primary'),
         )
     
     def clean(self):
