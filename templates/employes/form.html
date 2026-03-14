@@ -86,12 +86,12 @@
                     Le matricule sera généré automatiquement si vous le laissez vide.
                 </div>
 
-                <form method="post" enctype="multipart/form-data">
+                <form method="post" enctype="multipart/form-data" id="employe-form">
                     {% csrf_token %}
                     {% crispy form %}
                     
                     <hr>
-                    <div class="d-flex justify-content-between">
+                    <div class="d-flex justify-content-between mb-5">
                         <button type="submit" class="btn btn-primary btn-lg">
                             <i class="bi bi-save"></i> Enregistrer
                         </button>
@@ -100,6 +100,22 @@
                         </button>
                     </div>
                 </form>
+
+<!-- Barre de sauvegarde fixe en bas -->
+<div class="fixed-bottom bg-white border-top shadow-lg py-2 px-4 d-flex justify-content-between align-items-center" style="z-index: 1020;">
+    <span class="text-muted">
+        <i class="bi bi-file-earmark-person"></i>
+        {% if object %}{{ object.matricule }} - {{ object.nom }} {{ object.prenoms }}{% else %}Nouvel employé{% endif %}
+    </span>
+    <div>
+        <a href="{% url 'employes:list' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+        <button type="submit" form="employe-form" class="btn btn-primary">
+            <i class="bi bi-save"></i> Enregistrer
+        </button>
+    </div>
+</div>
             </div>
         </div>
     </div>
