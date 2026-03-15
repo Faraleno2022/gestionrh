@@ -1,7 +1,7 @@
 ; GestionnaireRH - Inno Setup Installer Script
 ; ===============================================
 ; Auteur  : Guinée RH
-; Version : 1.0.0
+; Version : 1.1.0
 ;
 ; Prérequis : Inno Setup 6+ (https://jrsoftware.org/isinfo.php)
 ;
@@ -15,14 +15,14 @@
 ; ── Identification ─────────────────────────────────────────────────────────────
 AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
 AppName=GestionnaireRH
-AppVersion=1.0.0
-AppVerName=GestionnaireRH 1.0.0
+AppVersion=1.1.0
+AppVerName=GestionnaireRH 1.1.0
 AppPublisher=Guinée RH
 AppPublisherURL=https://www.guineerh.space
 AppSupportURL=https://www.guineerh.space
-AppCopyright=Copyright © 2024 Guinée RH. Tous droits réservés.
+AppCopyright=Copyright © 2024-2026 Guinée RH. Tous droits réservés.
 
-; ── Installation ───────────────────────────────────────────────────────────────
+; ── Installation / Mise à jour ─────────────────────────────────────────────────
 DefaultDirName={autopf}\GestionnaireRH
 DefaultGroupName=GestionnaireRH
 AllowNoIcons=yes
@@ -30,9 +30,14 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 
+; ── Mise à jour automatique : pas besoin de désinstaller ───────────────────────
+UsePreviousAppDir=yes
+CloseApplications=force
+RestartApplications=no
+
 ; ── Sortie ─────────────────────────────────────────────────────────────────────
 OutputDir=Output
-OutputBaseFilename=GestionnaireRH_Setup_v1.0.0
+OutputBaseFilename=GestionnaireRH_Setup_v1.1.0
 
 ; ── Icône ───────────────────────────────────────────────────────────────────────
 SetupIconFile=static\img\logo.ico
@@ -45,7 +50,6 @@ LZMAUseSeparateProcess=yes
 ; ── Interface ──────────────────────────────────────────────────────────────────
 WizardStyle=modern
 WizardSizePercent=100
-WizardResizable=no
 DisableWelcomePage=no
 
 ; ── Désinstallation ────────────────────────────────────────────────────────────
@@ -54,10 +58,10 @@ UninstallDisplayIcon={app}\GestionnaireRH.exe
 CreateUninstallRegKey=yes
 
 ; ── Version info (visible dans Programmes et fonctionnalités) ──────────────────
-VersionInfoVersion=1.0.0.0
+VersionInfoVersion=1.1.0.0
 VersionInfoCompany=Guinée RH
 VersionInfoDescription=GestionnaireRH - Système de Gestion des Ressources Humaines
-VersionInfoCopyright=Copyright © 2024 Guinée RH
+VersionInfoCopyright=Copyright © 2024-2026 Guinée RH
 
 [Languages]
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"
@@ -69,6 +73,7 @@ Name: "autostart";     Description: "Lancer GestionnaireRH au démarrage de Wind
 
 [Files]
 ; Application compilée (tout le dossier dist\GestionnaireRH)
+; ignoreversion + recursesubdirs : écrase les anciens fichiers lors d'une mise à jour
 Source: "dist\GestionnaireRH\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Script de désinstallation
@@ -77,8 +82,20 @@ Source: "desinstaller.bat"; DestDir: "{app}"; Flags: ignoreversion
 ; Script d'arrêt du serveur (raccourci menu Démarrer)
 Source: "Arreter_GestionnaireRH.bat"; DestDir: "{app}"; Flags: ignoreversion
 
+; Base de données template pré-migrée (première installation uniquement)
+Source: "dist\GestionnaireRH\db_template.sqlite3"; DestDir: "{app}"; Flags: onlyifdoesntexist
+
 ; Outil d'activation de licence (pour le technicien)
 Source: "license_manager.py"; DestDir: "{app}"; Flags: ignoreversion
+
+; Protection anti-vol et anti-falsification (ICG Guinea)
+; Les fichiers critiques sont déjà dans _internal/ via le build PyInstaller
+Source: "project_guardian.py"; DestDir: "{app}"; Flags: ignoreversion
+Source: ".integrity_manifest.json"; DestDir: "{app}"; Flags: ignoreversion
+; Copies supplémentaires dans _internal pour le guardian en mode frozen
+Source: "project_guardian.py"; DestDir: "{app}\_internal"; Flags: ignoreversion
+Source: ".integrity_manifest.json"; DestDir: "{app}\_internal"; Flags: ignoreversion
+Source: "license_manager.py"; DestDir: "{app}\_internal"; Flags: ignoreversion
 
 ; Icône
 Source: "static\img\logo.ico"; DestDir: "{app}"; Flags: ignoreversion
@@ -106,7 +123,7 @@ Name: "{userstartup}\GestionnaireRH"; Filename: "{app}\GestionnaireRH.exe"; Work
 
 [Registry]
 ; Enregistrement pour le panneau "Programmes et fonctionnalités"
-Root: HKCU; Subkey: "Software\Guinée RH\GestionnaireRH"; ValueType: string; ValueName: "Version";    ValueData: "1.0.0"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Guinée RH\GestionnaireRH"; ValueType: string; ValueName: "Version";    ValueData: "1.1.0"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Guinée RH\GestionnaireRH"; ValueType: string; ValueName: "InstallDir"; ValueData: "{app}";  Flags: uninsdeletevalue
 
 [Run]
@@ -127,9 +144,9 @@ Type: files;          Name: "{app}\install_path.txt"
 
 [Messages]
 WelcomeLabel1=Bienvenue dans l'assistant d'installation de GestionnaireRH
-WelcomeLabel2=Ce programme va installer GestionnaireRH - Système de Gestion des Ressources Humaines sur votre ordinateur.%n%nGestionnaireRH est une solution complète de gestion RH développée par Guinée RH. Elle fonctionne entièrement hors ligne.%n%nFermez toutes les autres applications avant de continuer.
+WelcomeLabel2=Ce programme va installer ou mettre à jour GestionnaireRH - Système de Gestion des Ressources Humaines sur votre ordinateur.%n%nGestionnaireRH est une solution complète de gestion RH développée par Guinée RH. Elle fonctionne entièrement hors ligne.%n%nSi une version précédente est installée, vos données seront conservées.%n%nFermez toutes les autres applications avant de continuer.
 FinishedHeadingLabel=Installation de GestionnaireRH terminée !
-FinishedLabel=GestionnaireRH a été installé avec succès sur votre ordinateur.%n%nIdentifiants par défaut :%n  Utilisateur : admin%n  Mot de passe  : admin1234%n%nL'application s'ouvre dans votre navigateur sur http://127.0.0.1:8000%n%nNOTE : Une période d'essai de 30 jours est incluse. Pour activer votre licence permanente, contactez Guinée RH.
+FinishedLabel=GestionnaireRH a été installé / mis à jour avec succès sur votre ordinateur.%n%nIdentifiants par défaut (première installation) :%n  Utilisateur : admin%n  Mot de passe  : admin1234%n%nL'application s'ouvre dans votre navigateur sur http://127.0.0.1:8000%n%nNOTE : Si c'est une mise à jour, vos données et votre licence sont conservées.
 
 [Code]
 
@@ -145,16 +162,37 @@ begin
 end;
 
 function InitializeSetup(): Boolean;
+var
+  ResultCode: Integer;
+  PrevVersion: String;
 begin
   Result := True;
+
+  // Détecter une installation existante et afficher un message de mise à jour
+  if RegQueryStringValue(HKCU, 'Software\Guinée RH\GestionnaireRH', 'Version', PrevVersion) then
+  begin
+    if MsgBox(
+      'GestionnaireRH version ' + PrevVersion + ' est déjà installé.' + #13#10 +
+      'Voulez-vous mettre à jour vers la version 1.1.0 ?' + #13#10 + #13#10 +
+      'Vos données (base de données, licences, médias) seront conservées.',
+      mbConfirmation, MB_YESNO
+    ) = IDNO then
+    begin
+      Result := False;
+      Exit;
+    end;
+  end;
+
+  // Fermer automatiquement l'application si elle tourne
   if IsAppRunning() then
   begin
     MsgBox(
-      'GestionnaireRH est actuellement en cours d''exécution.' + #13#10 +
-      'Veuillez fermer l''application avant de continuer l''installation.',
-      mbError, MB_OK
+      'GestionnaireRH est en cours d''exécution.' + #13#10 +
+      'L''application va être fermée automatiquement pour la mise à jour.',
+      mbInformation, MB_OK
     );
-    Result := False;
+    Exec('taskkill', '/F /IM GestionnaireRH.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Sleep(2000);
   end;
 end;
 
@@ -198,7 +236,7 @@ begin
         ForceDirectories(BackupDir);
         BackupPath := BackupDir + '\db_backup_' +
                       GetDateTimeString('yyyymmdd_hhnnss', #0, #0) + '.sqlite3';
-        FileCopy(DbPath, BackupPath, False);
+        CopyFile(DbPath, BackupPath, False);
         MsgBox(
           'Base de données sauvegardée dans :' + #13#10 + BackupPath,
           mbInformation, MB_OK
@@ -208,15 +246,53 @@ begin
   end;
 end;
 
-// ── Créer les dossiers nécessaires après installation ────────────────────────
+// ── Sauvegarde BDD avant mise à jour + création dossiers après install ────────
 procedure CurStepChanged(CurStep: TSetupStep);
+var
+  DbPath: String;
+  BackupDir: String;
+  BackupPath: String;
+  LicensePath: String;
+  LicenseBackup: String;
 begin
+  if CurStep = ssInstall then
+  begin
+    // Sauvegarder la base de données si elle existe (mise à jour)
+    DbPath := ExpandConstant('{app}\db.sqlite3');
+    if FileExists(DbPath) then
+    begin
+      BackupDir := ExpandConstant('{app}\backups');
+      ForceDirectories(BackupDir);
+      BackupPath := BackupDir + '\db_pre_update_' +
+                    GetDateTimeString('yyyymmdd_hhnnss', #0, #0) + '.sqlite3';
+      CopyFile(DbPath, BackupPath, False);
+      Log('Base de données sauvegardée dans : ' + BackupPath);
+    end;
+    // Sauvegarder la licence si elle existe
+    LicensePath := ExpandConstant('{app}\license.dat');
+    if FileExists(LicensePath) then
+    begin
+      LicenseBackup := ExpandConstant('{app}\backups\license_backup.dat');
+      CopyFile(LicensePath, LicenseBackup, False);
+      Log('Licence sauvegardée dans : ' + LicenseBackup);
+    end;
+  end;
+
   if CurStep = ssPostInstall then
   begin
     ForceDirectories(ExpandConstant('{app}\logs'));
     ForceDirectories(ExpandConstant('{app}\media'));
     ForceDirectories(ExpandConstant('{app}\backups'));
     ForceDirectories(ExpandConstant('{app}\data'));
+
+    // Restaurer la licence si elle a été écrasée
+    LicensePath := ExpandConstant('{app}\license.dat');
+    LicenseBackup := ExpandConstant('{app}\backups\license_backup.dat');
+    if (not FileExists(LicensePath)) and FileExists(LicenseBackup) then
+    begin
+      CopyFile(LicenseBackup, LicensePath, False);
+      Log('Licence restaurée depuis la sauvegarde');
+    end;
   end;
 end;
 

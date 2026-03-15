@@ -95,6 +95,8 @@ MIDDLEWARE = [
     'core.middleware.RequestLoggingMiddleware',
     # Multi-company middleware
     'core.middleware.EntrepriseQuotaMiddleware',
+    # Protection anti-falsification (ICG Guinea)
+    'core.middleware_guardian.ProjectIntegrityMiddleware',
     # Licence middleware
     'core.middleware_licence.LicenceMiddleware',
 ]

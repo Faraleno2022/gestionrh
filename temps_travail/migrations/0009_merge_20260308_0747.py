@@ -10,10 +10,6 @@ class Migration(migrations.Migration):
             "temps_travail",
             "0008_alter_reglementationtemps_jours_conges_annuels_and_more",
         ),
-        (
-            "temps_travail",
-            "0008_merge_20260131_1340",
-        ),
     ]
 
     operations = []

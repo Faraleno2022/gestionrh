@@ -113,14 +113,14 @@ def creer_periode(request):
             annee = int(request.POST.get('annee'))
             mois = int(request.POST.get('mois'))
             
-            # Vérifier que la période correspond au mois courant uniquement
+            # Vérifier que la période est dans l'année en cours
             today = date.today()
             
-            if annee != today.year or mois != today.month:
+            if annee != today.year or mois < 1 or mois > 12:
                 messages.error(
                     request,
                     f"❌ Impossible de créer une période pour {mois:02d}/{annee}. "
-                    f"Vous pouvez uniquement créer la période du mois en cours ({today.month:02d}/{today.year})."
+                    f"Vous pouvez uniquement créer des périodes pour l'année en cours ({today.year})."
                 )
                 return render(request, 'paie/periodes/creer.html', {
                     'current_year': today.year,
@@ -205,15 +205,15 @@ def calculer_periode(request, pk):
         messages.error(request, 'Cette période ne peut plus être calculée.')
         return redirect('paie:detail_periode', pk=pk)
     
-    # Vérifier que la période n'est pas ultérieure
+    # Vérifier que la période n'est pas dans un mois futur
     from datetime import date
     today = date.today()
-    if periode.date_fin > today:
+    if periode.annee > today.year or (periode.annee == today.year and periode.mois > today.month):
         messages.error(
             request,
             f"❌ Impossible de calculer les bulletins pour une période ultérieure ({periode}). "
             f"La date actuelle est le {today.strftime('%d/%m/%Y')}. "
-            f"Seules les périodes écoulées ou du mois courant peuvent être calculées."
+            f"Seules les périodes du mois en cours ou des mois passés peuvent être calculées."
         )
         return redirect('paie:detail_periode', pk=pk)
     
@@ -2085,6 +2085,37 @@ def detail_rubrique(request, pk):
         'rubrique': rubrique,
         'nb_employes': nb_employes,
         'elements': elements
+    })
+
+
+@login_required
+def supprimer_rubrique(request, pk):
+    """Supprimer une rubrique de paie"""
+    rubrique = get_object_or_404(RubriquePaie, pk=pk, entreprise=request.user.entreprise)
+    
+    # Vérifier si des bulletins utilisent cette rubrique
+    nb_lignes_bulletin = LigneBulletin.objects.filter(rubrique=rubrique).count()
+    nb_elements = ElementSalaire.objects.filter(rubrique=rubrique).count()
+    
+    if request.method == 'POST':
+        if nb_lignes_bulletin > 0:
+            messages.error(
+                request,
+                f'Impossible de supprimer la rubrique "{rubrique.libelle_rubrique}" : '
+                f'elle est utilisée dans {nb_lignes_bulletin} ligne(s) de bulletin. '
+                f'Désactivez-la plutôt.'
+            )
+            return redirect('paie:detail_rubrique', pk=pk)
+        
+        libelle = rubrique.libelle_rubrique
+        rubrique.delete()
+        messages.success(request, f'Rubrique "{libelle}" supprimée avec succès.')
+        return redirect('paie:liste_rubriques')
+    
+    return render(request, 'paie/rubriques/supprimer.html', {
+        'rubrique': rubrique,
+        'nb_lignes_bulletin': nb_lignes_bulletin,
+        'nb_elements': nb_elements,
     })
 
 

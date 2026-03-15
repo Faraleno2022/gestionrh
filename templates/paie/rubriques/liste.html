@@ -143,6 +143,9 @@
                             <a href="{% url 'paie:detail_rubrique' rubrique.id %}" class="btn btn-sm btn-outline-primary" title="Détails">
                                 <i class="bi bi-eye"></i>
                             </a>
+                            <a href="{% url 'paie:supprimer_rubrique' rubrique.id %}" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                                <i class="bi bi-trash"></i>
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}

@@ -53,6 +53,7 @@ urlpatterns = [
     path('rubriques/', views.liste_rubriques, name='liste_rubriques'),
     path('rubriques/creer/', views.creer_rubrique, name='creer_rubrique'),
     path('rubriques/<int:pk>/', views.detail_rubrique, name='detail_rubrique'),
+    path('rubriques/<int:pk>/supprimer/', views.supprimer_rubrique, name='supprimer_rubrique'),
     
     # Barème IRPP
     path('bareme-irpp/', bareme_irpp.bareme_irpp_liste, name='bareme_irpp_liste'),

@@ -13,6 +13,12 @@ PROJECT_DIR = Path(r'C:\Users\LENO\Desktop\GestionnaireRHofline')
 
 block_cipher = None
 
+# ── Localiser les paquets installés pour collecter les fichiers de migration ──
+import django
+import axes
+DJANGO_DIR = Path(django.__file__).parent
+AXES_DIR = Path(axes.__file__).parent
+
 # Collecter tous les fichiers de données
 datas = [
     # Templates Django
@@ -37,6 +43,16 @@ datas = [
     (str(PROJECT_DIR / 'gestionnaire_rh'), 'gestionnaire_rh'),
     # Fichiers de configuration
     (str(PROJECT_DIR / 'manage.py'), '.'),
+    # Protection anti-vol et anti-falsification (ICG Guinea)
+    (str(PROJECT_DIR / 'project_guardian.py'), '.'),
+    (str(PROJECT_DIR / '.integrity_manifest.json'), '.'),
+    # ── Migrations Django built-in (chargées dynamiquement, absentes du PYZ) ──
+    (str(DJANGO_DIR / 'contrib' / 'admin' / 'migrations'), 'django/contrib/admin/migrations'),
+    (str(DJANGO_DIR / 'contrib' / 'auth' / 'migrations'), 'django/contrib/auth/migrations'),
+    (str(DJANGO_DIR / 'contrib' / 'contenttypes' / 'migrations'), 'django/contrib/contenttypes/migrations'),
+    (str(DJANGO_DIR / 'contrib' / 'sessions' / 'migrations'), 'django/contrib/sessions/migrations'),
+    # ── Migrations axes (django-axes) ──
+    (str(AXES_DIR / 'migrations'), 'axes/migrations'),
 ]
 
 # Modules cachés nécessaires pour Django
@@ -79,6 +95,8 @@ hiddenimports = [
     'core.views',
     'core.middleware',
     'core.middleware_licence',
+    'core.middleware_guardian',
+    'project_guardian',
     'employes',
     'employes.models',
     'employes.views',
@@ -210,3 +228,16 @@ if _os.path.exists(_pyd_src) and not _os.path.exists(_pyd_dst):
     _shutil.copy2(_pyd_src, _pyd_dst)
     print('[Protection] Installed license_manager.pyd in dist')
 print('[Protection] license_manager protection applied.')
+
+# ─── Post-build: remove project_guardian.py source from dist (keep only in _internal) ──
+_guardian_src = _os.path.join(_internal, 'project_guardian.py')
+_guardian_pyc = _os.path.join(_pyc_dir)
+if _os.path.exists(_guardian_src):
+    # Keep it — it's needed at runtime, but remove any .pyc cache
+    pass
+if _os.path.exists(_pyc_dir):
+    for _f in _os.listdir(_pyc_dir):
+        if 'project_guardian' in _f:
+            _os.remove(_os.path.join(_pyc_dir, _f))
+            print('[Protection] Removed project_guardian .pyc from dist')
+print('[Protection] project_guardian protection applied.')

@@ -18,6 +18,33 @@ sys.path.insert(0, BASE)
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
+# ─── Protection anti-vol : vérification machine propriétaire ─────────────────
+try:
+    from project_guardian import guard_license_generation, is_owner_machine
+    guard_license_generation()
+except PermissionError as _pe:
+    try:
+        messagebox.showerror(
+            "ACCÈS REFUSÉ",
+            "Cette machine n'est PAS autorisée à générer des licences.\n\n"
+            "Seule la machine propriétaire de ICG Guinea peut utiliser cet outil.\n\n"
+            "Toute tentative de contournement est journalisée et signalée."
+        )
+    except Exception:
+        print(str(_pe))
+    sys.exit(1)
+except ImportError:
+    try:
+        messagebox.showerror(
+            "ERREUR DE SÉCURITÉ",
+            "Module de protection introuvable (project_guardian.py).\n"
+            "Le générateur de licences ne peut pas s'exécuter sans ce module."
+        )
+    except Exception:
+        pass
+    sys.exit(1)
+# ─── Fin protection anti-vol ──────────────────────────────────────────────────
+
 try:
     from license_manager import (
         generate_activation_file,

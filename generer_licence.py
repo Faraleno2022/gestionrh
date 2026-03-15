@@ -21,8 +21,22 @@ Tarification suggérée:
 import secrets
 import datetime
 import os
+import sys
 import hashlib
 import hmac as hmac_module
+
+# ─── Protection anti-vol : vérification machine propriétaire ─────────────────
+try:
+    from project_guardian import guard_license_generation
+    guard_license_generation()
+except PermissionError as _pe:
+    print(str(_pe))
+    sys.exit(1)
+except ImportError:
+    print("\n⛔ ERREUR DE SÉCURITÉ : Module de protection introuvable.")
+    print("Le générateur de licences ne peut pas s'exécuter sans project_guardian.py.")
+    sys.exit(1)
+# ─── Fin protection anti-vol ──────────────────────────────────────────────────
 
 # Caractères utilisés (sans I, O, 0, 1 pour éviter confusion)
 CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'

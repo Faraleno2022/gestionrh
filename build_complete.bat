@@ -15,24 +15,32 @@ if errorlevel 1 (
 )
 echo.
 
-echo [1/5] Collecte des fichiers statiques...
+echo [1/6] Regeneration du manifest d'integrite...
+python -c "from project_guardian import save_integrity_manifest; save_integrity_manifest(); print('  Manifest regenere OK')"
+if errorlevel 1 (
+    echo [AVERTISSEMENT] Impossible de regenerer le manifest d'integrite
+    echo   Verifiez que vous etes sur la machine proprietaire
+)
+echo.
+
+echo [2/6] Collecte des fichiers statiques...
 python manage.py collectstatic --noinput
 echo.
 
-echo [2/5] Nettoyage des builds precedents...
+echo [3/6] Nettoyage des builds precedents...
 if exist dist\GestionnaireRH rmdir /s /q dist\GestionnaireRH
 if exist build rmdir /s /q build
 echo   Nettoyage OK
 echo.
 
-echo [3/5] Preparation du dossier data_template...
+echo [4/6] Preparation du dossier data_template...
 if not exist data_template mkdir data_template
 if not exist data_template\logs mkdir data_template\logs
 if not exist data_template\media mkdir data_template\media
 echo   data_template OK
 echo.
 
-echo [4/5] Build PyInstaller (cela peut prendre 5-10 minutes)...
+echo [5/6] Build PyInstaller (cela peut prendre 5-10 minutes)...
 echo.
 
 pyinstaller --clean --noconfirm --distpath dist --workpath build GestionnaireRH_build.spec
@@ -55,10 +63,24 @@ if not exist dist\GestionnaireRH\templates xcopy /E /I /Y templates dist\Gestion
 if not exist dist\GestionnaireRH\static xcopy /E /I /Y static dist\GestionnaireRH\static >nul 2>nul
 if not exist dist\GestionnaireRH\staticfiles xcopy /E /I /Y staticfiles dist\GestionnaireRH\staticfiles >nul 2>nul
 
+echo   Copie des fichiers de protection anti-vol...
+copy /Y project_guardian.py dist\GestionnaireRH\_internal\project_guardian.py >nul
+copy /Y .integrity_manifest.json dist\GestionnaireRH\_internal\.integrity_manifest.json >nul
+copy /Y core\middleware_guardian.py dist\GestionnaireRH\_internal\core\middleware_guardian.py >nul
+echo   Copie des fichiers critiques pour verification d'integrite...
+copy /Y run_server.py dist\GestionnaireRH\_internal\run_server.py >nul
+copy /Y license_manager.py dist\GestionnaireRH\_internal\license_manager.py >nul
+echo   Protection anti-vol OK
+
+echo   Creation d'une base de donnees pre-migree pour les nouveaux clients...
+if exist dist\GestionnaireRH\db_template.sqlite3 del dist\GestionnaireRH\db_template.sqlite3
+python create_db_template.py "dist\GestionnaireRH\db_template.sqlite3"
+echo   Base pre-migree OK
+
 echo   Build PyInstaller OK
 echo.
 
-echo [5/5] Copie des scripts d'installation et desinstallation...
+echo [6/6] Copie des scripts d'installation et desinstallation...
 echo.
 
 copy /Y scripts\Installer.bat dist\GestionnaireRH\Installer.bat >nul

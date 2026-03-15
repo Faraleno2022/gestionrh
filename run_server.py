@@ -301,13 +301,50 @@ def main():
     print("  GESTIONNAIRE RH GUINEE - VERSION OFFLINE")
     print("=" * 50)
     print()
+
+    # ── Vérification intégrité anti-falsification ────────────────────────────
+    try:
+        from project_guardian import full_security_check
+        guardian_report = full_security_check()
+        if guardian_report.get('blocked'):
+            reason = guardian_report.get('reason', 'Intégrité compromise.')
+            print("  ╔══════════════════════════════════════════════════════╗")
+            print("  ║  ⛔  ALERTE SÉCURITÉ — APPLICATION BLOQUÉE         ║")
+            print("  ╚══════════════════════════════════════════════════════╝")
+            print()
+            print(f"  Raison : {reason}")
+            print()
+            print("  Contactez ICG Guinea pour une copie authentique.")
+            print()
+            try:
+                import tkinter as _tk
+                _r = _tk.Tk()
+                _r.withdraw()
+                from tkinter import messagebox as _mb
+                _mb.showerror(
+                    "ALERTE SÉCURITÉ — GestionnaireRH",
+                    f"L'application est bloquée.\n\n{reason}\n\n"
+                    "Contactez ICG Guinea pour obtenir une copie authentique."
+                )
+                _r.destroy()
+            except Exception:
+                pass
+            sys.exit(1)
+        else:
+            print("  Intégrité du projet : OK ✓")
+    except ImportError:
+        print("  ⚠ Module de protection introuvable — blocage.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"  ⚠ Vérification intégrité : {e}")
+
     check_license()   # Bloque ou ferme l'app si essai/licence expiré
 
     try:
         import django
         django.setup()
 
-        from django.core.management import execute_from_command_line
+        from django.core.management import call_command
 
         # Base de données
         db_path = os.path.join(BASE_DIR, 'db.sqlite3')
@@ -315,13 +352,70 @@ def main():
             print("  Base de donnees OK")
         else:
             print("  Base de donnees absente - creation en cours...")
+            # Copier le template pre-migre si disponible
+            template_path = os.path.join(BASE_DIR, 'db_template.sqlite3')
+            if os.path.exists(template_path):
+                import shutil
+                shutil.copy2(template_path, db_path)
+                print("  Base de donnees initialisee depuis le template")
 
         # Migrations
         try:
-            execute_from_command_line(['manage.py', 'migrate', '--run-syncdb'])
+            call_command('migrate', '--run-syncdb', verbosity=1)
             print("  Migrations appliquees avec succes")
         except Exception as e:
             print(f"  Erreur migration: {e}")
+
+        # Vérifier que les tables critiques existent
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+                existing = {row[0] for row in cursor.fetchall()}
+            critical = [
+                'django_session', 'django_content_type',
+                'auth_user', 'auth_permission', 'auth_group',
+                'django_admin_log', 'django_migrations',
+            ]
+            missing = [t for t in critical if t not in existing]
+            if missing:
+                print(f"  [!] Tables manquantes: {', '.join(missing)}")
+                print("  [!] Tentative de creation forcee...")
+                for app_label in ['contenttypes', 'auth', 'sessions', 'admin']:
+                    try:
+                        call_command('migrate', app_label, verbosity=1)
+                    except Exception:
+                        pass
+                # Re-vérifier
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table'"
+                    )
+                    existing = {row[0] for row in cursor.fetchall()}
+                still_missing = [t for t in critical if t not in existing]
+                if still_missing:
+                    print(f"  [!!] Tables encore manquantes: {', '.join(still_missing)}")
+                    print("  [!!] Tentative syncdb...")
+                    try:
+                        from django.core.management.commands.migrate import Command as MigrateCommand
+                        from django.apps import apps
+                        from django.db import connection as db_conn
+                        with db_conn.schema_editor() as editor:
+                            for app_config in apps.get_app_configs():
+                                for model in app_config.get_models():
+                                    if model._meta.db_table not in existing:
+                                        try:
+                                            editor.create_model(model)
+                                        except Exception:
+                                            pass
+                    except Exception as e2:
+                        print(f"  [!!] Erreur syncdb manuelle: {e2}")
+                else:
+                    print("  Tables creees avec succes")
+        except Exception as e:
+            print(f"  Verification tables: {e}")
 
         print()
         print("  Serveur demarre sur: http://127.0.0.1:8000/")
@@ -343,7 +437,7 @@ def main():
             _rs.Command.check_migrations = lambda self: None
         except Exception:
             pass
-        execute_from_command_line(['manage.py', 'runserver', '--noreload', '127.0.0.1:8000'])
+        call_command('runserver', '--noreload', '127.0.0.1:8000')
 
     except KeyboardInterrupt:
         print("\nServeur arrete.")

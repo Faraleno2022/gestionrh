@@ -89,7 +89,18 @@ def generate_activation_file(machine_id: str, expiry_days: int = 365,
                                company_name: str = '', edition: str = 'Standard') -> dict:
     """
     Génère un fichier d'activation complet (à envoyer au client).
+    PROTÉGÉ : Seule la machine propriétaire peut exécuter cette fonction.
     """
+    # Vérification anti-vol : seule la machine propriétaire peut générer
+    try:
+        from project_guardian import guard_license_generation
+        guard_license_generation()
+    except ImportError:
+        raise PermissionError(
+            "Module de protection introuvable. "
+            "Génération de licence bloquée."
+        )
+
     payload = {
         'mid': machine_id,
         'exp': (_now_utc() + timedelta(days=expiry_days)).strftime('%Y%m%d'),
