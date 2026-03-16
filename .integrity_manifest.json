@@ -1,18 +1,20 @@
 {
   "version": "2.0.0",
-  "generated_at": "2026-03-16T10:55:58.853034+00:00",
+  "generated_at": "2026-03-16T13:13:20.951956+00:00",
   "machine_id": "AD0A6556",
   "watermark": "816b3e65f9e3071bdab068391dec0bb399d901399aa6163847d5cc56d9463449",
   "files": {
     "license_manager.py": "5f067b5e3751c11beee7bcf8cab3f96e237349f7ec9eba41c16f8887fb30ce40",
-    "project_guardian.py": "4a255f38729785e6b4610a7dc137a7b6d7e947b2e44ead4901919fbf8fdf6e5c",
-    "run_server.py": "dba00cb4856705e090ebb96e939745b0cfa68a54355c56ddd03beef6791217ce",
+    "project_guardian.py": "f0dbfaf3c4228bd36b9fc952d8a30a0ec60ef3af4996d5100fa09f0c6c6e8fb8",
+    "runtime_shield.py": "7d6b32a9110ecfaa3ee0286acb87fddc654e7d556a1ed958f968d48b0e62f26e",
+    "run_server.py": "26bc1f71c9cd58720a35b807b16d8b35340cc3b3676eda731f6485a1b1b89302",
     "manage.py": "e8f521f75f2a93c443484b5586bac988f307a7b42f52dea05d92927eb4e3ccaf",
     "core/middleware_licence.py": "8f16546b737c21fb9da7be19b76097ddfb1043340822426aeebfac328f778b99",
     "core/middleware.py": "5e2201b46da28d77f7b21c42f052d4f82521275d1072176ec48b36214219f9bd",
+    "core/middleware_guardian.py": "5953b06f93a94798d0e339de49c96f14c660bf901428ba8eb39d8a17c200249c",
     "core/decorators.py": "b6543a798b49a147890e44c50f167c1e269dd089207c432a1c88ef4a53078fb7",
     "core/models_licence.py": "28b433a41f8e08b53629b00be69959930efc405feaa03605b53b778ddd97c97b",
     "gestionnaire_rh/settings.py": "a7df68cf32e13248a8cc889eec8225b67b76f5dee3d669069afc76a8f3200580"
   },
-  "signature": "0b2f31627278c0ed0aefa1deb3f412f3126c7f5283f89820e7a7e2511a8e8bd9"
+  "signature": "68a5738ebebcad5bd9412f50b41481295dea98e8e1876ff5e34aac2086d4442a"
 }

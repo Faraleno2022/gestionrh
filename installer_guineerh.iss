@@ -89,13 +89,12 @@ Source: "dist\GestionnaireRH\db_template.sqlite3"; DestDir: "{app}"; Flags: only
 Source: "license_manager.py"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Protection anti-vol et anti-falsification (ICG Guinea)
-; Les fichiers critiques sont déjà dans _internal/ via le build PyInstaller
-Source: "project_guardian.py"; DestDir: "{app}"; Flags: ignoreversion
+; IMPORTANT : project_guardian.pyd, runtime_shield.pyd et license_manager.pyd
+; sont déjà dans dist\GestionnaireRH\_internal\ (compilés Nuitka via le build).
+; NE PAS copier les .py sources dans _internal — runtime_shield.py les détecterait
+; comme une falsification et bloquerait l'application.
 Source: ".integrity_manifest.json"; DestDir: "{app}"; Flags: ignoreversion
-; Copies supplémentaires dans _internal pour le guardian en mode frozen
-Source: "project_guardian.py"; DestDir: "{app}\_internal"; Flags: ignoreversion
-Source: ".integrity_manifest.json"; DestDir: "{app}\_internal"; Flags: ignoreversion
-Source: "license_manager.py"; DestDir: "{app}\_internal"; Flags: ignoreversion
+; Le manifest est déjà dans _internal via dist\GestionnaireRH\*, pas besoin de le dupliquer.
 
 ; Icône
 Source: "static\img\logo.ico"; DestDir: "{app}"; Flags: ignoreversion
