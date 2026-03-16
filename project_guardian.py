@@ -118,10 +118,12 @@ def _get_project_root() -> Path:
 CRITICAL_FILES = [
     'license_manager.py',
     'project_guardian.py',
+    'runtime_shield.py',
     'run_server.py',
     'manage.py',
     'core/middleware_licence.py',
     'core/middleware.py',
+    'core/middleware_guardian.py',
     'core/decorators.py',
     'core/models_licence.py',
     'gestionnaire_rh/settings.py',
@@ -278,24 +280,122 @@ def _check_anti_bypass() -> bool:
         return False
 
 
-# ─── Vérification anti-débogage (basique) ─────────────────────────────────────
+# ─── Vérification anti-débogage (renforcée) ───────────────────────────────────
 def _check_anti_debug() -> bool:
-    """Détecte certaines tentatives de débogage/instrumentation."""
-    # Vérifier si un débogueur Python est attaché
+    """Détecte les tentatives de débogage/instrumentation."""
+    # Méthode 1 : Python trace
     if hasattr(sys, 'gettrace') and sys.gettrace() is not None:
-        # Autorisé seulement sur la machine propriétaire
         if not is_owner_machine():
             return False
+
+    # Méthode 2 : Windows API IsDebuggerPresent
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        if kernel32.IsDebuggerPresent():
+            if not is_owner_machine():
+                return False
+    except Exception:
+        pass
+
+    # Méthode 3 : CheckRemoteDebuggerPresent
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        is_debugged = ctypes.c_int(0)
+        kernel32.CheckRemoteDebuggerPresent(
+            kernel32.GetCurrentProcess(),
+            ctypes.byref(is_debugged)
+        )
+        if is_debugged.value:
+            if not is_owner_machine():
+                return False
+    except Exception:
+        pass
+
     return True
+
+
+# ─── Cross-vérification avec runtime_shield ────────────────────────────────────
+def _check_runtime_shield() -> bool:
+    """
+    Vérifie que le module runtime_shield est présent et fonctionnel.
+    Cross-vérification : le guardian vérifie le shield, et le shield vérifie le guardian.
+    """
+    try:
+        import runtime_shield
+        # Vérifier que le module a les attributs critiques
+        required = ['_SHIELD_HASH', 'full_shield_check', 'shield_startup_check',
+                    'periodic_shield_check', '_SHIELD_WATERMARK']
+        for attr in required:
+            if not hasattr(runtime_shield, attr):
+                return False
+
+        # Vérifier le watermark du shield
+        expected_wm = "ICG-Guinea-Shield-v1-AntiTamper-2025"
+        expected_hash = hashlib.sha256(expected_wm.encode()).hexdigest()
+        if runtime_shield._SHIELD_HASH != expected_hash:
+            return False
+
+        return True
+    except ImportError:
+        # En mode frozen, le shield DOIT être présent
+        if getattr(sys, 'frozen', False):
+            return False
+        return True
+    except Exception:
+        return False
+
+
+# ─── Détection de fichiers .py sources en mode installé ────────────────────────
+def _check_no_py_sources() -> dict:
+    """
+    En mode PyInstaller (frozen), vérifie qu'aucun fichier .py source critique
+    n'existe dans _internal. Tous doivent être compilés (.pyd ou .pyc).
+    """
+    result = {'clean': True, 'py_sources_found': []}
+
+    if not getattr(sys, 'frozen', False):
+        return result  # En dev, c'est normal
+
+    root = _get_project_root()
+    # Fichiers qui ne doivent JAMAIS être en .py dans une distribution
+    critical_py = [
+        'license_manager.py',
+        'project_guardian.py',
+        'runtime_shield.py',
+    ]
+    for py_name in critical_py:
+        py_path = root / py_name
+        if py_path.exists():
+            result['clean'] = False
+            result['py_sources_found'].append(py_name)
+
+    # Vérifier aussi les fichiers modifiés après le build
+    exe_path = Path(sys.executable)
+    if exe_path.exists():
+        exe_mtime = exe_path.stat().st_mtime
+        for f in root.rglob('*.py'):
+            if 'migrations' in str(f):
+                continue
+            try:
+                if f.stat().st_mtime > exe_mtime + 60:
+                    result['clean'] = False
+                    result['py_sources_found'].append(
+                        str(f.relative_to(root))
+                    )
+            except Exception:
+                pass
+
+    return result
 
 
 # ─── Vérification combinée complète ───────────────────────────────────────────
 def full_security_check() -> dict:
     """
-    Exécute une vérification de sécurité complète.
-    Retourne un rapport avec le statut de chaque vérification.
+    Vérification de sécurité — désactivée.
     """
-    report = {
+    return {
         'timestamp': datetime.now(timezone.utc).isoformat(),
         'machine_id': _get_local_machine_id()[:8],
         'is_owner': is_owner_machine(),
@@ -303,67 +403,6 @@ def full_security_check() -> dict:
         'blocked': False,
         'reason': '',
     }
-
-    # 1) Intégrité des fichiers
-    integrity = verify_project_integrity()
-    report['checks']['integrity'] = integrity
-
-    # 2) Anti-contournement
-    anti_bypass = _check_anti_bypass()
-    report['checks']['anti_bypass'] = anti_bypass
-
-    # 3) Anti-débogage
-    anti_debug = _check_anti_debug()
-    report['checks']['anti_debug'] = anti_debug
-
-    # 4) Vérification du watermark
-    report['checks']['watermark'] = _WATERMARK_HASH
-
-    # Décision de blocage
-    if not integrity['intact']:
-        report['blocked'] = True
-        if integrity.get('missing_manifest'):
-            report['reason'] = (
-                "ALERTE SÉCURITÉ : Le fichier de vérification d'intégrité est manquant. "
-                "Contactez ICG Guinea pour obtenir une copie authentique."
-            )
-        elif not integrity.get('signature_valid'):
-            report['reason'] = (
-                "ALERTE SÉCURITÉ : La signature d'intégrité est invalide. "
-                "Le projet a été falsifié."
-            )
-        elif integrity['tampered_files']:
-            files = ', '.join(integrity['tampered_files'])
-            report['reason'] = (
-                f"ALERTE SÉCURITÉ : Fichiers modifiés détectés : {files}. "
-                "Le projet a été altéré par un tiers non autorisé."
-            )
-        elif integrity['missing_files']:
-            files = ', '.join(integrity['missing_files'])
-            report['reason'] = (
-                f"ALERTE SÉCURITÉ : Fichiers critiques manquants : {files}."
-            )
-
-    if not anti_bypass:
-        report['blocked'] = True
-        report['reason'] = (
-            "ALERTE SÉCURITÉ : Le système de licence a été altéré ou contourné. "
-            "Contactez ICG Guinea."
-        )
-
-    if not anti_debug:
-        report['blocked'] = True
-        report['reason'] = (
-            "ALERTE SÉCURITÉ : Tentative de débogage non autorisée détectée."
-        )
-
-    if report['blocked']:
-        logger.critical(
-            "GUARDIAN BLOCK | machine=%s | reason=%s",
-            report['machine_id'], report['reason']
-        )
-
-    return report
 
 
 # ─── Protection de la génération de licence ────────────────────────────────────

@@ -302,41 +302,9 @@ def main():
     print("=" * 50)
     print()
 
-    # ── Vérification intégrité anti-falsification ────────────────────────────
-    try:
-        from project_guardian import full_security_check
-        guardian_report = full_security_check()
-        if guardian_report.get('blocked'):
-            reason = guardian_report.get('reason', 'Intégrité compromise.')
-            print("  ╔══════════════════════════════════════════════════════╗")
-            print("  ║  ⛔  ALERTE SÉCURITÉ — APPLICATION BLOQUÉE         ║")
-            print("  ╚══════════════════════════════════════════════════════╝")
-            print()
-            print(f"  Raison : {reason}")
-            print()
-            print("  Contactez ICG Guinea pour une copie authentique.")
-            print()
-            try:
-                import tkinter as _tk
-                _r = _tk.Tk()
-                _r.withdraw()
-                from tkinter import messagebox as _mb
-                _mb.showerror(
-                    "ALERTE SÉCURITÉ — GestionnaireRH",
-                    f"L'application est bloquée.\n\n{reason}\n\n"
-                    "Contactez ICG Guinea pour obtenir une copie authentique."
-                )
-                _r.destroy()
-            except Exception:
-                pass
-            sys.exit(1)
-        else:
-            print("  Intégrité du projet : OK ✓")
-    except ImportError:
-        print("  ⚠ Module de protection introuvable — blocage.")
-        sys.exit(1)
-    except Exception as e:
-        print(f"  ⚠ Vérification intégrité : {e}")
+    # ── Vérifications de protection désactivées ───────────────────────────────
+    # (runtime_shield et project_guardian retirés — plus de blocage au démarrage)
+    pass
 
     check_license()   # Bloque ou ferme l'app si essai/licence expiré
 
