@@ -596,9 +596,9 @@ def telecharger_bulletin_pdf(request, pk):
         ["Poste:", str(emp.poste or "-"), "Service:", str(emp.service or "-")],
         ["Date embauche:", emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else "-", "Mode paiement:", emp.mode_paiement or "-"],
         ["Congés acquis:", f"{conges_acquis:g} j", "Congés pris:", f"{conges_pris:g} j"],
-        ["Solde congés:", f"{conges_restants:g} j", "", ""],
+        ["Solde congés:", f"{conges_restants:g} j", "Nature contrat:", dict(emp.TYPES_CONTRATS).get(emp.type_contrat, emp.type_contrat or "-")],
     ]
-    
+
     for row in infos_emp:
         p.setFont(_FB, 8)
         p.drawString(1.5*cm, y, row[0])
@@ -1049,9 +1049,9 @@ def telecharger_bulletin_public(request, token):
         ["Poste:", str(emp.poste or "-"), "Service:", str(emp.service or "-")],
         ["Date embauche:", emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else "-", "Mode paiement:", emp.mode_paiement or "-"],
         ["Congés acquis:", f"{conges_acquis:g} j", "Congés pris:", f"{conges_pris:g} j"],
-        ["Solde congés:", f"{conges_restants:g} j", "", ""],
+        ["Solde congés:", f"{conges_restants:g} j", "Nature contrat:", dict(emp.TYPES_CONTRATS).get(emp.type_contrat, emp.type_contrat or "-")],
     ]
-    
+
     for row in infos_emp:
         p.setFont(_FB, 8)
         p.drawString(1.5*cm, y, row[0])
