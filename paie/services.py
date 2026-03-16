@@ -816,10 +816,10 @@ class MoteurCalculPaie:
         )
         
         # TA et ONFPP sont mutuellement exclusifs selon le nombre de salariés:
-        # - Moins de 30 salariés: TA (1,5%)
+        # - Moins de 30 salariés: TA (2%)
         # - 30 salariés ou plus: ONFPP (1,5%)
         if self.nb_salaries < 30:
-            taux_ta = self.constantes.get('TAUX_TA', Decimal('1.50'))
+            taux_ta = self.constantes.get('TAUX_TA', Decimal('2.00'))
             self.montants['base_ta'] = base_vf_ta
             self.montants['taux_ta'] = taux_ta
             self.montants['taxe_apprentissage'] = self._arrondir(

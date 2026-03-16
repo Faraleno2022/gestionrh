@@ -143,7 +143,7 @@ class BulletinPaie(models.Model):
     # Charges patronales
     base_vf = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='Base de calcul du VF (brut - déduction)')
     versement_forfaitaire = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='VF 6% sur brut total')
-    taxe_apprentissage = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='TA 1,5% sur brut total')
+    taxe_apprentissage = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='TA 2% sur brut total')
     taux_ta = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text='Taux TA appliqué (%)')
     contribution_onfpp = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text='ONFPP 1,5% sur brut total')
     nombre_salaries = models.IntegerField(default=1, help_text='Nombre de salariés pour déterminer TA vs ONFPP')
@@ -999,7 +999,7 @@ class ConfigurationPaieEntreprise(models.Model):
         verbose_name='Versement Forfaitaire VF (%)'
     )
     taux_taxe_apprentissage = models.DecimalField(
-        max_digits=5, decimal_places=2, default=1.50,
+        max_digits=5, decimal_places=2, default=2.00,
         verbose_name='Taxe d\'Apprentissage TA (%)'
     )
     taux_onfpp = models.DecimalField(

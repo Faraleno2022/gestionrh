@@ -631,7 +631,7 @@ def telecharger_manuel(request):
         ['CNSS Employé', 'Assiette CNSS × 5%', 'Cotisation sociale obligatoire'],
         ['CNSS Employeur', 'Assiette CNSS × 18%', 'Charge patronale'],
         ['VF (Versement Forfaitaire)', 'Brut × 6%', 'Charge patronale'],
-        ['TA (Taxe Apprentissage)', 'Brut × 1,5%', 'Charge patronale'],
+        ['TA (Taxe Apprentissage)', 'Brut × 2%', 'Charge patronale'],
         ['Base imposable RTS', 'Brut - CNSS Employé', 'Assiette de l\'impôt'],
         ['RTS', 'Selon barème 6 tranches', 'Voir tableau ci-dessous'],
         ['Total Retenues', 'CNSS + RTS + Autres', 'Somme des prélèvements'],
@@ -724,7 +724,7 @@ def telecharger_manuel(request):
     table_ex.drawOn(p, 2*cm, y - th)
     y = y - th - 0.5*cm
     
-    y = draw_note(y, "Note: Charges patronales: CNSS 18% (450K sur plafond 2,5M) + VF 6% (480K) + TA 1,5% (120K) = 1 050 000 GNF.")
+    y = draw_note(y, "Note: Charges patronales: CNSS 18% (450K sur plafond 2,5M) + VF 6% (480K) + TA 2% (160K) = 1 090 000 GNF.")
     
     y = nouvelle_page()
     
@@ -842,7 +842,7 @@ def telecharger_manuel(request):
     y = draw_subtitle(y, "7.3 Versement Forfaitaire (VF) et Taxe d'Apprentissage (TA)")
     y = draw_text(y, "Charges patronales calculées sur le salaire brut total (non plafonné):")
     y = draw_bullet(y, "VF: 6% du salaire brut - Échéance: 15 du mois suivant")
-    y = draw_bullet(y, "TA: 1,5% du salaire brut - Échéance: 15 du mois suivant")
+    y = draw_bullet(y, "TA: 2% du salaire brut - Échéance: 15 du mois suivant")
     
     y -= 0.2*cm
     y = draw_note(y, "Pénalités: Le non-respect des échéances entraîne des majorations de retard (10% + intérêts).")
