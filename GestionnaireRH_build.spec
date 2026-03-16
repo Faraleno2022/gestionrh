@@ -44,7 +44,9 @@ datas = [
     # Fichiers de configuration
     (str(PROJECT_DIR / 'manage.py'), '.'),
     # Protection anti-vol et anti-falsification (ICG Guinea)
-    (str(PROJECT_DIR / 'project_guardian.py'), '.'),
+    # NOTE: project_guardian.py et runtime_shield.py ne sont PAS inclus ici.
+    # Seuls les .pyd Nuitka sont dans binaries[] — les .py sources déclencheraient
+    # le blocage du runtime_shield dans _internal.
     (str(PROJECT_DIR / '.integrity_manifest.json'), '.'),
     # ── Migrations Django built-in (chargées dynamiquement, absentes du PYZ) ──
     (str(DJANGO_DIR / 'contrib' / 'admin' / 'migrations'), 'django/contrib/admin/migrations'),
@@ -97,6 +99,7 @@ hiddenimports = [
     'core.middleware_licence',
     'core.middleware_guardian',
     'project_guardian',
+    'runtime_shield',
     'employes',
     'employes.models',
     'employes.views',
@@ -153,8 +156,9 @@ a = Analysis(
     [str(PROJECT_DIR / 'run_server.py')],
     pathex=[str(PROJECT_DIR)],
     binaries=[
-        # Nuitka-compiled license module (native binary — non-decompilable)
+        # Nuitka-compiled modules (native binary — non-decompilable)
         (str(PROJECT_DIR / 'dist_nuitka' / 'license_manager.cp313-win_amd64.pyd'), '.'),
+        # project_guardian et runtime_shield inclus via PYZ (shields désactivés dans .py)
     ],
     datas=datas,
     hiddenimports=hiddenimports,
@@ -169,6 +173,7 @@ a = Analysis(
         'IPython',
         'jupyter',
         'license_manager',   # excluded: native .pyd is in binaries instead
+        # project_guardian et runtime_shield inclus normalement dans PYZ
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -229,12 +234,48 @@ if _os.path.exists(_pyd_src) and not _os.path.exists(_pyd_dst):
     print('[Protection] Installed license_manager.pyd in dist')
 print('[Protection] license_manager protection applied.')
 
+# ─── Post-build: install Nuitka-compiled project_guardian.pyd & runtime_shield.pyd ───
+for _mod_name in ['project_guardian', 'runtime_shield']:
+    # Find the .pyd in dist_nuitka/
+    _pyd_found = None
+    _nuitka_dir = str(PROJECT_DIR / 'dist_nuitka')
+    if _os.path.exists(_nuitka_dir):
+        for _f in _os.listdir(_nuitka_dir):
+            if _f.startswith(_mod_name) and _f.endswith('.pyd'):
+                _pyd_found = _os.path.join(_nuitka_dir, _f)
+                break
+    if _pyd_found:
+        # Copy .pyd to _internal
+        _dst = _os.path.join(_internal, _os.path.basename(_pyd_found))
+        if not _os.path.exists(_dst):
+            _shutil.copy2(_pyd_found, _dst)
+        # Remove .py source from _internal
+        _py = _os.path.join(_internal, _mod_name + '.py')
+        if _os.path.exists(_py):
+            _os.remove(_py)
+            print(f'[Protection] Replaced {_mod_name}.py with native .pyd')
+        # Remove .pyc
+        if _os.path.exists(_pyc_dir):
+            for _f in _os.listdir(_pyc_dir):
+                if _mod_name in _f:
+                    _os.remove(_os.path.join(_pyc_dir, _f))
+        print(f'[Protection] {_mod_name} Nuitka protection applied.')
+    else:
+        print(f'[Protection] WARNING: {_mod_name}.pyd not found in dist_nuitka/')
+        print(f'[Protection] {_mod_name}.py will be kept (run compile_nuitka.bat first!)')
+
 # ─── Post-build: remove project_guardian.py source from dist (keep only in _internal) ──
 _guardian_src = _os.path.join(_internal, 'project_guardian.py')
 _guardian_pyc = _os.path.join(_pyc_dir)
 if _os.path.exists(_guardian_src):
-    # Keep it — it's needed at runtime, but remove any .pyc cache
-    pass
+    # If we have a .pyd, remove the .py; otherwise keep .py (fallback)
+    _has_guardian_pyd = any(
+        f.startswith('project_guardian') and f.endswith('.pyd')
+        for f in _os.listdir(_internal)
+    )
+    if _has_guardian_pyd:
+        _os.remove(_guardian_src)
+        print('[Protection] Removed project_guardian.py (using .pyd)')
 if _os.path.exists(_pyc_dir):
     for _f in _os.listdir(_pyc_dir):
         if 'project_guardian' in _f:

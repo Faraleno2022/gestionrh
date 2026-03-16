@@ -15,7 +15,19 @@ if errorlevel 1 (
 )
 echo.
 
-echo [1/6] Regeneration du manifest d'integrite...
+echo [1/8] Verification des modules Nuitka compiles...
+if not exist dist_nuitka\license_manager*.pyd (
+    echo   [!] Modules Nuitka non trouves!
+    echo   Lancez d'abord: compile_nuitka.bat
+    echo   Les fichiers critiques seront proteges en .pyc uniquement
+    echo.
+) else (
+    echo   Modules Nuitka trouves:
+    dir /B dist_nuitka\*.pyd
+    echo.
+)
+
+echo [2/8] Regeneration du manifest d'integrite...
 python -c "from project_guardian import save_integrity_manifest; save_integrity_manifest(); print('  Manifest regenere OK')"
 if errorlevel 1 (
     echo [AVERTISSEMENT] Impossible de regenerer le manifest d'integrite
@@ -23,24 +35,24 @@ if errorlevel 1 (
 )
 echo.
 
-echo [2/6] Collecte des fichiers statiques...
+echo [3/8] Collecte des fichiers statiques...
 python manage.py collectstatic --noinput
 echo.
 
-echo [3/6] Nettoyage des builds precedents...
+echo [4/8] Nettoyage des builds precedents...
 if exist dist\GestionnaireRH rmdir /s /q dist\GestionnaireRH
 if exist build rmdir /s /q build
 echo   Nettoyage OK
 echo.
 
-echo [4/6] Preparation du dossier data_template...
+echo [5/8] Preparation du dossier data_template...
 if not exist data_template mkdir data_template
 if not exist data_template\logs mkdir data_template\logs
 if not exist data_template\media mkdir data_template\media
 echo   data_template OK
 echo.
 
-echo [5/6] Build PyInstaller (cela peut prendre 5-10 minutes)...
+echo [6/8] Build PyInstaller (cela peut prendre 5-10 minutes)...
 echo.
 
 pyinstaller --clean --noconfirm --distpath dist --workpath build GestionnaireRH_build.spec
@@ -63,14 +75,10 @@ if not exist dist\GestionnaireRH\templates xcopy /E /I /Y templates dist\Gestion
 if not exist dist\GestionnaireRH\static xcopy /E /I /Y static dist\GestionnaireRH\static >nul 2>nul
 if not exist dist\GestionnaireRH\staticfiles xcopy /E /I /Y staticfiles dist\GestionnaireRH\staticfiles >nul 2>nul
 
-echo   Copie des fichiers de protection anti-vol...
-copy /Y project_guardian.py dist\GestionnaireRH\_internal\project_guardian.py >nul
+echo   Copie du manifest d'integrite dans _internal...
 copy /Y .integrity_manifest.json dist\GestionnaireRH\_internal\.integrity_manifest.json >nul
-copy /Y core\middleware_guardian.py dist\GestionnaireRH\_internal\core\middleware_guardian.py >nul
-echo   Copie des fichiers critiques pour verification d'integrite...
-copy /Y run_server.py dist\GestionnaireRH\_internal\run_server.py >nul
-copy /Y license_manager.py dist\GestionnaireRH\_internal\license_manager.py >nul
-echo   Protection anti-vol OK
+echo   (Les .pyd Nuitka sont deja dans _internal via PyInstaller — pas de .py a copier)
+echo   Manifest copie OK
 
 echo   Creation d'une base de donnees pre-migree pour les nouveaux clients...
 if exist dist\GestionnaireRH\db_template.sqlite3 del dist\GestionnaireRH\db_template.sqlite3
@@ -80,7 +88,17 @@ echo   Base pre-migree OK
 echo   Build PyInstaller OK
 echo.
 
-echo [6/6] Copie des scripts d'installation et desinstallation...
+echo [7/8] Protection anti-edition de la distribution...
+echo   Compilation .pyc + suppression sources + checksums + signature exe...
+python protect_distribution.py dist\GestionnaireRH
+if errorlevel 1 (
+    echo   [AVERTISSEMENT] Protection partielle - verifiez les erreurs ci-dessus
+) else (
+    echo   Protection anti-edition OK
+)
+echo.
+
+echo [8/8] Copie des scripts d'installation et desinstallation...
 echo.
 
 copy /Y scripts\Installer.bat dist\GestionnaireRH\Installer.bat >nul
