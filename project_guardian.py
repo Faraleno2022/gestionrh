@@ -130,9 +130,9 @@ CRITICAL_FILES = [
 
 # ─── Calcul du hash d'un fichier ──────────────────────────────────────────────
 def _hash_file(filepath: Path) -> str:
-    """Calcule le SHA-256 HMAC signé d'un fichier."""
+    """Calcule le SHA-256 HMAC signé d'un fichier (CRLF normalisé en LF)."""
     try:
-        content = filepath.read_bytes()
+        content = filepath.read_bytes().replace(b'\r\n', b'\n')
         return hmac.new(_INTEGRITY_KEY, content, hashlib.sha256).hexdigest()
     except Exception:
         return ''
