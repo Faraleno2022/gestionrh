@@ -676,14 +676,20 @@ def generer_bulletin_pdf_sdbk(bulletin):
             p.drawString(right_col + 2.5 * cm, row_y, str(rvalue))
 
     nature_contrat = dict(emp.TYPES_CONTRATS).get(emp.type_contrat, emp.type_contrat or '-') if hasattr(emp, 'TYPES_CONTRATS') else (emp.type_contrat or '-')
+    mode_pmt       = dict(emp.MODES_PAIEMENT).get(emp.mode_paiement, emp.mode_paiement or '-') if hasattr(emp, 'MODES_PAIEMENT') else (getattr(emp, 'mode_paiement', None) or '-')
+    heures_str     = f"{float(bulletin.heures_normales or 173.33):.2f} h"
+    sal_base_str   = (_fmt0(bulletin.salaire_base) + " GNF") if bulletin.salaire_base else '-'
+    adresse_str    = (str(emp.adresse_actuelle or '').strip()
+                      or (str(getattr(entreprise, 'adresse', '') or '').strip())
+                      or '-')
+
     rows_emp = [
-        ("N° de Sécurité Sociale", emp.num_cnss_individuel or '-', "M.",        f"{emp.nom} {emp.prenoms}"),
-        ("Indice",                 getattr(emp, 'indice', '')    or '-', "Niveau",   getattr(emp, 'niveau', '') or '-'),
-        ("Coefficient",            getattr(emp, 'coefficient', '') or '-', "Horaire", getattr(emp, 'horaire', '') or '-'),
-        ("Emploi",                 str(emp.poste or '-'),              "Qualification", str(getattr(emp, 'qualification', '') or emp.poste or '-')),
-        ("Nature du contrat",      nature_contrat,                     "Département",   str(emp.service or '-')),
-        ("Date d'embauche",        emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else '-',
-         "Adresse",                str(getattr(emp, 'adresse', '') or (entreprise.adresse if entreprise else '-'))),
+        ("N° Sécurité Sociale",  emp.num_cnss_individuel or '-',    "M.",              f"{emp.nom} {emp.prenoms}"),
+        ("Emploi",               str(emp.poste or '-'),              "Service",         str(emp.service or '-')),
+        ("Salaire de base",      sal_base_str,                       "Heures",          heures_str),
+        ("Mode de paiement",     mode_pmt,                           "Statut",          str(emp.statut_employe or '-')),
+        ("Nature du contrat",    nature_contrat,                     "Date d'embauche", emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else '-'),
+        ("Adresse",              adresse_str,                        "",                ""),
     ]
     for i, (ll, lv, rl, rv) in enumerate(rows_emp):
         _emp_row(ll, lv, rl, rv, y - i * 0.42 * cm)
