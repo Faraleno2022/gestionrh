@@ -84,6 +84,7 @@ class ProjectIntegrityMiddleware:
     """
     Middleware Django qui vérifie l'intégrité des fichiers critiques du projet.
     Bloque TOUTES les requêtes si une falsification est détectée.
+    Intègre les vérifications du guardian ET du runtime_shield.
     """
 
     def __init__(self, get_response):
@@ -99,9 +100,31 @@ class ProjectIntegrityMiddleware:
             try:
                 from project_guardian import full_security_check
                 report = full_security_check()
+                blocked = report['blocked']
+                reason = report.get('reason', '')
+
+                # ── Vérification runtime_shield en complément ──
+                if not blocked:
+                    try:
+                        from runtime_shield import periodic_shield_check
+                        shield_report = periodic_shield_check()
+                        if shield_report.get('blocked'):
+                            blocked = True
+                            reason = shield_report.get('reason', 'Falsification détectée par le bouclier.')
+                    except ImportError:
+                        import sys as _sys
+                        if getattr(_sys, 'frozen', False):
+                            blocked = True
+                            reason = (
+                                "Module runtime_shield introuvable. "
+                                "Le système de protection a été altéré."
+                            )
+                    except Exception:
+                        pass
+
                 _guardian_cache = {
-                    'blocked': report['blocked'],
-                    'reason': report.get('reason', ''),
+                    'blocked': blocked,
+                    'reason': reason,
                     'checked_at': now,
                 }
             except ImportError:
@@ -116,8 +139,6 @@ class ProjectIntegrityMiddleware:
                 }
             except Exception as e:
                 logger.error("Erreur vérification intégrité : %s", e)
-                # En cas d'erreur inattendue, on ne bloque pas (fail-open pour éviter
-                # un déni de service en cas de problème disque).
                 _guardian_cache = {
                     'blocked': False,
                     'reason': '',

@@ -133,6 +133,15 @@ Filename: "{app}\GestionnaireRH.exe"; Description: "Démarrer GestionnaireRH mai
 ; Arrêter le serveur avant la désinstallation
 Filename: "taskkill"; Parameters: "/F /IM GestionnaireRH.exe"; Flags: runhidden; RunOnceId: "KillServer"
 
+[InstallDelete]
+; Nettoyer les anciens .py sources dans _internal (mis par erreur dans les versions précédentes)
+; Ces fichiers doivent être compilés en .pyd, pas en texte clair.
+Type: files; Name: "{app}\_internal\license_manager.py"
+Type: files; Name: "{app}\_internal\project_guardian.py"
+Type: files; Name: "{app}\_internal\runtime_shield.py"
+; Nettoyer le marqueur de falsification (réinitialisation à la mise à jour)
+Type: files; Name: "{app}\.tamper_detected"
+
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\logs"
 Type: filesandordirs; Name: "{app}\staticfiles"
