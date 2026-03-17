@@ -872,26 +872,30 @@ def generer_bulletin_pdf_sdbk(bulletin):
     ]
 
     fd = [
-        ['Période', 'Année', 'S. Brut', 'Charge\nSalariale', 'Charge\nPatronale', 'Avan.\nnature', 'Net\nImposable'],
+        ['Période', 'Année', 'S. Brut', 'Ch.\nSalariale', 'Ch.\nPatronale', 'Av.\nNature', 'Net\nImpos.'],
         [per_str,   ann_str, _fmt0(bulletin.salaire_brut), _fmt0(charge_sal),
          _fmt0(charge_pat), _fmt0(avnat) if avnat else '0', _fmt0(net_imp)],
     ]
-    FT_H = 15  # hauteur par ligne (pt)
-    ft = Table(fd, colWidths=fc_w, rowHeights=FT_H)
+    FT_H_HDR = 22  # en-tête : 2 lignes de texte (2 × 6.5pt + leading + padding)
+    FT_H_DAT = 15  # données  : 1 ligne
+    ft = Table(fd, colWidths=fc_w, rowHeights=[FT_H_HDR, FT_H_DAT])
     ft.setStyle(TableStyle([
         ('FONTNAME',      (0, 0), (-1, 0),  _FONT_BOLD),
         ('FONTNAME',      (0, 1), (-1, 1),  _FONT_NORMAL),
         ('FONTSIZE',      (0, 0), (-1, -1), 6.5),
         ('GRID',          (0, 0), (-1, -1), 0.4, colors.black),
         ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+        ('VALIGN',        (0, 0), (-1, 0),  'MIDDLE'),   # en-tête : centré verticalement
+        ('VALIGN',        (0, 1), (-1, 1),  'MIDDLE'),   # données  : centré verticalement
         ('BACKGROUND',    (0, 0), (-1, 0),  colors.HexColor('#d8d8d8')),
         ('LEFTPADDING',   (0, 0), (-1, -1), 2),
         ('RIGHTPADDING',  (0, 0), (-1, -1), 2),
-        ('TOPPADDING',    (0, 0), (-1, -1), 1),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+        ('TOPPADDING',    (0, 0), (-1, 0),  0),   # pas de padding sur en-tête (texte 2 lignes)
+        ('BOTTOMPADDING', (0, 0), (-1, 0),  0),
+        ('TOPPADDING',    (0, 1), (-1, 1),  2),
+        ('BOTTOMPADDING', (0, 1), (-1, 1),  2),
     ]))
-    ft_h = 2 * FT_H
+    ft_h = FT_H_HDR + FT_H_DAT
     ft.wrapOn(p, width, height)
     ft.drawOn(p, margin_x, y - ft_h)
 
@@ -904,10 +908,10 @@ def generer_bulletin_pdf_sdbk(bulletin):
     p.rect(nb_x, y - ft_h, nb_w, ft_h, stroke=1, fill=1)
     p.setFillColor(colors.black)
     p.setFont(_FONT_BOLD, 7.5)
-    p.drawCentredString(nb_x + nb_w / 2, y - 0.52 * cm, "Net à payer")
+    p.drawCentredString(nb_x + nb_w / 2, y - 0.6 * cm, "Net à payer")
     p.setFont(_FONT_BOLD, 9)
     net_str = f"{int(bulletin.net_a_payer):,} GNF".replace(",", " ")
-    p.drawCentredString(nb_x + nb_w / 2, y - 1.0 * cm, net_str)
+    p.drawCentredString(nb_x + nb_w / 2, y - 1.1 * cm, net_str)
     y -= ft_h + 0.5 * cm
 
     # ════════════════════════════════════════════════════════════════════════
