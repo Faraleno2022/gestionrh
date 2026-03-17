@@ -573,7 +573,7 @@ def generer_bulletin_pdf_sdbk(bulletin):
         if not v:
             return ''
         try:
-            return f"{int(v):,}".replace(",", "\u202f")
+            return f"{int(v):,}".replace(",", " ")
         except Exception:
             return str(v)
 
@@ -583,7 +583,7 @@ def generer_bulletin_pdf_sdbk(bulletin):
         if v == 0:
             return '0'
         try:
-            return f"{int(v):,}".replace(",", "\u202f")
+            return f"{int(v):,}".replace(",", " ")
         except Exception:
             return str(v)
 
@@ -592,32 +592,21 @@ def generer_bulletin_pdf_sdbk(bulletin):
     # ════════════════════════════════════════════════════════════════════════
     y = height - 0.8 * cm
 
-    # Logo + raison sociale (gauche)
-    logo_x, logo_y = margin_x, y - 2.0 * cm
-    if entreprise and entreprise.logo:
-        try:
-            lp = entreprise.logo.path
-            if os.path.exists(lp):
-                p.drawImage(lp, logo_x, logo_y, width=3 * cm, height=2 * cm,
-                            preserveAspectRatio=True)
-        except Exception:
-            pass
+    # ── Dimensions de l'en-tête (zone fixe de 3.0 cm) ──────────────────────
+    HDR_H   = 3.0 * cm
+    HDR_TOP = y                    # = height - 0.8 cm
+    HDR_BOT = HDR_TOP - HDR_H      # ligne de séparation exacte
+
     nom_ent = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
-    p.setFont(_FONT_BOLD, 9)
-    p.drawString(logo_x, logo_y - 0.45 * cm, nom_ent)
 
-    # « BULLETIN DE PAIE » centré (légèrement à droite du logo)
-    p.setFont(_FONT_BOLD, 16)
-    p.drawCentredString(width / 2 + 1.5 * cm, y - 0.9 * cm, "BULLETIN DE PAIE")
-
-    # Boîte info (haut droite)
-    bx = width - 6.8 * cm
-    by = y - 0.2 * cm
+    # Boîte info (haut droite) — dimensionnée pour tenir dans HDR_H
     bw = 6.2 * cm
-    bh = 2.9 * cm
+    bh = HDR_H
+    bx = width - margin_x - bw     # bord droit aligné sur la marge droite
+    by = HDR_TOP
     p.setStrokeColor(colors.black)
     p.setLineWidth(0.5)
-    p.rect(bx, by - bh, bw, bh)
+    p.rect(bx, HDR_BOT, bw, bh)
 
     periode_debut = bulletin.periode.date_debut.strftime('%d/%m/%y') if bulletin.periode and bulletin.periode.date_debut else ''
     periode_fin   = bulletin.periode.date_fin.strftime('%d/%m/%y')   if bulletin.periode and bulletin.periode.date_fin   else ''
@@ -629,7 +618,7 @@ def generer_bulletin_pdf_sdbk(bulletin):
         ("Matricule :", str(emp.matricule or '-')),
         ("Ancienneté :", anciennete_str),
     ]
-    iy = by - 0.55 * cm
+    iy = by - 0.6 * cm
     for lbl, val in box_lines:
         p.setFont(_FONT_BOLD, 7)
         p.drawString(bx + 0.25 * cm, iy, lbl)
@@ -637,7 +626,30 @@ def generer_bulletin_pdf_sdbk(bulletin):
         p.drawString(bx + 2.6 * cm, iy, val)
         iy -= 0.6 * cm
 
-    y = logo_y - 0.9 * cm
+    # Logo (gauche, centré verticalement dans HDR_H)
+    logo_x  = margin_x
+    logo_h  = 2.0 * cm
+    logo_w  = 3.0 * cm
+    logo_y  = HDR_BOT + (HDR_H - logo_h) / 2   # centré verticalement
+    if entreprise and entreprise.logo:
+        try:
+            lp = entreprise.logo.path
+            if os.path.exists(lp):
+                p.drawImage(lp, logo_x, logo_y, width=logo_w, height=logo_h,
+                            preserveAspectRatio=True)
+        except Exception:
+            pass
+
+    # Raison sociale sous le logo
+    p.setFont(_FONT_BOLD, 8)
+    p.drawString(logo_x, HDR_BOT + 0.15 * cm, nom_ent)
+
+    # « BULLETIN DE PAIE » centré entre le logo et la boîte info
+    title_x = (margin_x + logo_w + bx) / 2
+    p.setFont(_FONT_BOLD, 14)
+    p.drawCentredString(title_x, HDR_BOT + HDR_H / 2, "BULLETIN DE PAIE")
+
+    y = HDR_BOT
 
     # Ligne séparatrice
     p.setLineWidth(1)
@@ -663,13 +675,15 @@ def generer_bulletin_pdf_sdbk(bulletin):
             p.setFont(_FONT_NORMAL if rlabel != "M." else _FONT_BOLD, 7.5)
             p.drawString(right_col + 2.5 * cm, row_y, str(rvalue))
 
+    nature_contrat = dict(emp.TYPES_CONTRATS).get(emp.type_contrat, emp.type_contrat or '-') if hasattr(emp, 'TYPES_CONTRATS') else (emp.type_contrat or '-')
     rows_emp = [
-        ("N° de Sécurité Sociale", emp.num_cnss_individuel or '-', "",          ""),
+        ("N° de Sécurité Sociale", emp.num_cnss_individuel or '-', "M.",        f"{emp.nom} {emp.prenoms}"),
         ("Indice",                 getattr(emp, 'indice', '')    or '-', "Niveau",   getattr(emp, 'niveau', '') or '-'),
         ("Coefficient",            getattr(emp, 'coefficient', '') or '-', "Horaire", getattr(emp, 'horaire', '') or '-'),
-        ("Emploi",                 str(emp.poste or '-'),              "M.",       f"{emp.nom} {emp.prenoms}"),
-        ("Qualification",          str(getattr(emp, 'qualification', '') or emp.poste or '-'), "", ""),
-        ("Département",            str(emp.service or '-'),            "Adresse",  str(getattr(emp, 'adresse', '') or (entreprise.adresse if entreprise else '-'))),
+        ("Emploi",                 str(emp.poste or '-'),              "Qualification", str(getattr(emp, 'qualification', '') or emp.poste or '-')),
+        ("Nature du contrat",      nature_contrat,                     "Département",   str(emp.service or '-')),
+        ("Date d'embauche",        emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else '-',
+         "Adresse",                str(getattr(emp, 'adresse', '') or (entreprise.adresse if entreprise else '-'))),
     ]
     for i, (ll, lv, rl, rv) in enumerate(rows_emp):
         _emp_row(ll, lv, rl, rv, y - i * 0.42 * cm)
@@ -778,10 +792,12 @@ def generer_bulletin_pdf_sdbk(bulletin):
     tot_pat = vf + ta + onfpp + float(bulletin.cnss_employeur)
     td.append(['', 'Total cotisation', '', '', '', _fmt0(tot_sal), '', '', _fmt0(tot_pat), ''])
 
-    RH = 12   # row height (pt)
-    nb = len(td)
+    RH_HDR = 14  # hauteur lignes d'en-tête (pt) — plus haute pour lisibilité
+    RH     = 13  # hauteur lignes de données (pt)
+    nb     = len(td)
+    row_heights = [RH_HDR, RH_HDR] + [RH] * (nb - 2)
 
-    main_t = Table(td, colWidths=col_w, rowHeights=RH)
+    main_t = Table(td, colWidths=col_w, rowHeights=row_heights)
 
     # ── Index des lignes spéciales ──
     idx_brut = next((i for i, r in enumerate(td) if r[1] == 'Total brut'), None)
@@ -789,34 +805,43 @@ def generer_bulletin_pdf_sdbk(bulletin):
 
     ts = [
         # En-tête fond gris clair
-        ('BACKGROUND',    (0, 0), (-1, 1),  colors.HexColor('#eeeeee')),
+        ('BACKGROUND',    (0, 0), (-1, 1),  colors.HexColor('#d8d8d8')),
         ('FONTNAME',      (0, 0), (-1, 1),  _FONT_BOLD),
-        ('FONTSIZE',      (0, 0), (-1, -1), 7),
+        ('FONTSIZE',      (0, 0), (-1, 1),  7),
+        ('FONTSIZE',      (0, 2), (-1, -1), 7),
+        ('FONTNAME',      (0, 2), (-1, -1), _FONT_NORMAL),
         ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
-        ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
-        ('ALIGN',         (1, 2), (1, -1),  'LEFT'),   # Désignation
-        ('ALIGN',         (3, 2), (-1, -1), 'RIGHT'),  # colonnes numériques
+        # Alignements
+        ('ALIGN',         (0, 0), (-1,  1), 'CENTER'),   # en-têtes : centré
+        ('ALIGN',         (0, 2), (0, -1),  'CENTER'),   # N° : centré
+        ('ALIGN',         (1, 2), (1, -1),  'LEFT'),     # Désignation : gauche
+        ('ALIGN',         (2, 2), (2, -1),  'CENTER'),   # Nombre : centré
+        ('ALIGN',         (3, 2), (-1, -1), 'RIGHT'),    # colonnes numériques : droite
+        # Bordures
         ('GRID',          (0, 0), (-1, -1), 0.35, colors.black),
+        # Padding
         ('LEFTPADDING',   (0, 0), (-1, -1), 2),
-        ('RIGHTPADDING',  (0, 0), (-1, -1), 2),
-        # Spans en-tête
-        ('SPAN', (0, 0), (0, 1)),
-        ('SPAN', (1, 0), (1, 1)),
-        ('SPAN', (2, 0), (2, 1)),
-        ('SPAN', (3, 0), (3, 1)),
-        ('SPAN', (4, 0), (6, 0)),   # Part Salariale
-        ('SPAN', (7, 0), (8, 0)),   # Part Patronale
-        ('SPAN', (9, 0), (9, 1)),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 3),
+        ('TOPPADDING',    (0, 0), (-1, -1), 1),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+        # Spans en-tête (fusionner les colonnes sur 2 lignes ou entre colonnes)
+        ('SPAN', (0, 0), (0, 1)),   # N°
+        ('SPAN', (1, 0), (1, 1)),   # Désignation
+        ('SPAN', (2, 0), (2, 1)),   # Nombre
+        ('SPAN', (3, 0), (3, 1)),   # Base
+        ('SPAN', (4, 0), (6, 0)),   # Part Salariale (cols 4-6)
+        ('SPAN', (7, 0), (8, 0)),   # Part Patronale (cols 7-8)
+        ('SPAN', (9, 0), (9, 1)),   # Montant en GNF
     ]
     if idx_brut is not None:
         ts += [('FONTNAME',   (0, idx_brut), (-1, idx_brut), _FONT_BOLD),
-               ('BACKGROUND', (0, idx_brut), (-1, idx_brut), colors.HexColor('#f0f0f0'))]
+               ('BACKGROUND', (0, idx_brut), (-1, idx_brut), colors.HexColor('#e8e8e8'))]
     if idx_cot is not None:
         ts += [('FONTNAME',   (0, idx_cot),  (-1, idx_cot),  _FONT_BOLD),
-               ('BACKGROUND', (0, idx_cot),  (-1, idx_cot),  colors.HexColor('#f0f0f0'))]
+               ('BACKGROUND', (0, idx_cot),  (-1, idx_cot),  colors.HexColor('#e8e8e8'))]
 
     main_t.setStyle(TableStyle(ts))
-    mt_h = nb * RH
+    mt_h = RH_HDR * 2 + RH * (nb - 2)
     main_t.wrapOn(p, width, height)
     main_t.drawOn(p, margin_x, y - mt_h)
     y -= mt_h + 0.4 * cm
@@ -832,42 +857,57 @@ def generer_bulletin_pdf_sdbk(bulletin):
     per_str  = bulletin.periode.date_debut.strftime('%d/%m/%y') if bulletin.periode and bulletin.periode.date_debut else ''
     ann_str  = str(bulletin.annee_paie)
 
-    # Colonnes pied (total ≈ 14.5 cm, Net à payer dans boîte séparée)
-    fc_w = [2.3*cm, 1.4*cm, 2.5*cm, 2.1*cm, 2.2*cm, 1.9*cm, 2.1*cm]
-    fc_total = sum(fc_w)   # 14.5 cm
+    # Boîte « Net à payer » : largeur fixe 4.5 cm à droite
+    NET_BOX_W = 4.5 * cm
+    fc_total  = table_w - NET_BOX_W          # largeur du tableau récap
+    # Répartir fc_total entre 7 colonnes proportionnellement
+    fc_w = [
+        fc_total * 0.158,   # Période
+        fc_total * 0.097,   # Année
+        fc_total * 0.172,   # S.Brut
+        fc_total * 0.145,   # Charge Salariale
+        fc_total * 0.152,   # Charge Patronale
+        fc_total * 0.130,   # Avan. nature
+        fc_total * 0.146,   # Net Imposable
+    ]
 
     fd = [
-        ['Période', 'Année', 'S.Brut', 'Charge\nSalariale', 'Charge\nPatronale', 'Avan. En\nnature', 'Net\nImposable'],
+        ['Période', 'Année', 'S. Brut', 'Charge\nSalariale', 'Charge\nPatronale', 'Avan.\nnature', 'Net\nImposable'],
         [per_str,   ann_str, _fmt0(bulletin.salaire_brut), _fmt0(charge_sal),
-         _fmt0(charge_pat), f"{avnat:.2f}", _fmt0(net_imp)],
+         _fmt0(charge_pat), _fmt0(avnat) if avnat else '0', _fmt0(net_imp)],
     ]
-    ft = Table(fd, colWidths=fc_w, rowHeights=15)
+    FT_H = 15  # hauteur par ligne (pt)
+    ft = Table(fd, colWidths=fc_w, rowHeights=FT_H)
     ft.setStyle(TableStyle([
-        ('FONTNAME',    (0, 0), (-1, 0),  _FONT_BOLD),
-        ('FONTNAME',    (0, 1), (-1, 1),  _FONT_NORMAL),
-        ('FONTSIZE',    (0, 0), (-1, -1), 7),
-        ('GRID',        (0, 0), (-1, -1), 0.4, colors.black),
-        ('ALIGN',       (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN',      (0, 0), (-1, -1), 'MIDDLE'),
-        ('BACKGROUND',  (0, 0), (-1, 0),  colors.HexColor('#eeeeee')),
+        ('FONTNAME',      (0, 0), (-1, 0),  _FONT_BOLD),
+        ('FONTNAME',      (0, 1), (-1, 1),  _FONT_NORMAL),
+        ('FONTSIZE',      (0, 0), (-1, -1), 6.5),
+        ('GRID',          (0, 0), (-1, -1), 0.4, colors.black),
+        ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+        ('BACKGROUND',    (0, 0), (-1, 0),  colors.HexColor('#d8d8d8')),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 2),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 2),
+        ('TOPPADDING',    (0, 0), (-1, -1), 1),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
     ]))
-    ft_h = 2 * 15
+    ft_h = 2 * FT_H
     ft.wrapOn(p, width, height)
     ft.drawOn(p, margin_x, y - ft_h)
 
-    # Boîte « Net à payer » (droite du pied)
-    nb_x = margin_x + fc_total + 0.3 * cm
-    nb_w = table_w - fc_total - 0.3 * cm
+    # Boîte « Net à payer » — collée directement à droite du tableau
+    nb_x = margin_x + fc_total
+    nb_w = NET_BOX_W
     p.setStrokeColor(colors.black)
-    p.setLineWidth(1.2)
-    p.setFillColor(colors.white)
+    p.setLineWidth(1.0)
+    p.setFillColor(colors.HexColor('#f5f5f5'))
     p.rect(nb_x, y - ft_h, nb_w, ft_h, stroke=1, fill=1)
     p.setFillColor(colors.black)
-    p.setFont(_FONT_BOLD, 8)
-    p.drawCentredString(nb_x + nb_w / 2, y - 0.55 * cm, "Net à payer")
-    p.setFont(_FONT_BOLD, 10)
-    net_str = f"{int(bulletin.net_a_payer):,} GNF".replace(",", "\u202f")
-    p.drawCentredString(nb_x + nb_w / 2, y - 1.15 * cm, net_str)
+    p.setFont(_FONT_BOLD, 7.5)
+    p.drawCentredString(nb_x + nb_w / 2, y - 0.52 * cm, "Net à payer")
+    p.setFont(_FONT_BOLD, 9)
+    net_str = f"{int(bulletin.net_a_payer):,} GNF".replace(",", " ")
+    p.drawCentredString(nb_x + nb_w / 2, y - 1.0 * cm, net_str)
     y -= ft_h + 0.5 * cm
 
     # ════════════════════════════════════════════════════════════════════════
