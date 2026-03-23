@@ -9,22 +9,37 @@ class PlanAbonnement(models.Model):
     nom = models.CharField(max_length=50)
     slug = models.SlugField(unique=True)
     description = models.TextField(blank=True)
-    
+    sous_titre = models.CharField(max_length=100, blank=True, help_text="Ex: Idéal pour les petites entreprises")
+
     # Tarification
     prix_mensuel = models.DecimalField(max_digits=12, decimal_places=0, help_text="Prix en GNF")
     prix_annuel = models.DecimalField(max_digits=12, decimal_places=0, help_text="Prix en GNF (avec réduction)")
-    
+    prix_installation = models.DecimalField(max_digits=12, decimal_places=0, default=0, help_text="Frais d'installation one-shot en GNF")
+
     # Limites
     max_utilisateurs = models.IntegerField(default=5)
     max_employes = models.IntegerField(default=50)
-    
+
     # Fonctionnalités
     module_paie = models.BooleanField(default=True)
     module_conges = models.BooleanField(default=True)
     module_recrutement = models.BooleanField(default=False)
     module_formation = models.BooleanField(default=False)
+    module_comptabilite = models.BooleanField(default=False)
+    module_portail = models.BooleanField(default=False)
     support_prioritaire = models.BooleanField(default=False)
-    
+    support_telephonique = models.BooleanField(default=False)
+    formation_incluse = models.BooleanField(default=False)
+    personnalisation = models.BooleanField(default=False)
+    multi_entreprise = models.BooleanField(default=False)
+    declarations_fiscales = models.BooleanField(default=False)
+    export_comptable = models.BooleanField(default=False)
+
+    # Badges / mise en avant
+    badge = models.CharField(max_length=30, blank=True, help_text="Ex: Populaire, Recommandé")
+    couleur = models.CharField(max_length=7, default='#0d6efd', help_text="Couleur principale hex")
+    icone = models.CharField(max_length=50, default='bi-box', help_text="Classe Bootstrap Icons")
+
     actif = models.BooleanField(default=True)
     ordre = models.IntegerField(default=0)
     
@@ -60,6 +75,7 @@ class Transaction(models.Model):
         ('abonnement', 'Abonnement'),
         ('renouvellement', 'Renouvellement'),
         ('upgrade', 'Mise à niveau'),
+        ('installation', 'Installation & Configuration'),
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
