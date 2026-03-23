@@ -799,15 +799,18 @@ class MoteurCalculPaie:
             )
         
         # Versement Forfaitaire (VF) - charge patronale
-        # Déduction = min(Salaire, Seuil) × 6%, puis VF = (Salaire - Déduction) × 6%
-        # Pour salaire >= 2 500 000: déduction = 2 500 000 × 6% = 150 000 (plafonnée)
-        # Pour salaire <  2 500 000: déduction = salaire × 6% (proportionnelle)
+        # Règle fiscale guinéenne :
+        #   Si salaire <  2 500 000 : base_vf = salaire × 94%
+        #   Si salaire >= 2 500 000 : base_vf = salaire – 150 000  (déduction forfaitaire plafonnée)
+        #   VF = base_vf × 6%
         taux_vf = self.constantes.get('TAUX_VF', Decimal('6.00'))
         seuil_vf = self.constantes.get('SEUIL_VF', Decimal('2500000'))
-        
-        base_deduction_vf = min(base_vf_ta, seuil_vf)
-        deduction_vf = self._arrondir(base_deduction_vf * taux_vf / Decimal('100'))
-        base_vf_nette = base_vf_ta - deduction_vf
+
+        if base_vf_ta < seuil_vf:
+            base_vf_nette = self._arrondir(base_vf_ta * Decimal('0.94'))
+        else:
+            deduction_fixe = self._arrondir(seuil_vf * taux_vf / Decimal('100'))  # 150 000
+            base_vf_nette = base_vf_ta - deduction_fixe
         
         self.montants['base_vf'] = base_vf_nette
         self.montants['taux_vf'] = taux_vf
@@ -873,11 +876,15 @@ class MoteurCalculPaie:
             self.montants['total_retenues'] += montant
     
     def _calculer_irg(self):
-        """Calculer l'RTS/RTS selon le barème progressif"""
-        # Base imposable = imposable - CNSS - autres déductions
+        """Calculer la RTS selon le barème progressif CGI 2022"""
+        # Base imposable = gains non-forfaitaires (+ réintégration si dépassement plafond) - CNSS
+        # Note: la réduction de base est assurée par l'exonération des indemnités forfaitaires
+        # plafonnée à 25% du brut (voir _appliquer_exoneration_indemnites_forfaitaires).
+        # L'abattement_forfaitaire ci-dessous est calculé à titre indicatif/affichage uniquement
+        # et n'intervient PAS dans le calcul de la base_rts.
         base_imposable = self.montants['imposable'] - self.montants['cnss_employe']
-        
-        # Calculer l'abattement forfaitaire 25% (documenter cette déduction)
+
+        # Mémorise le plafond d'exonération (25% du brut) à titre informatif pour le bulletin
         abattement_brut = self.montants['brut'] * Decimal('0.25')
         self.montants['abattement_forfaitaire'] = self._arrondir(abattement_brut)
         
@@ -900,8 +907,8 @@ class MoteurCalculPaie:
             self.montants['exoneration_rts'] = True
             self.montants['raison_exoneration_rts'] = raison_exoneration
         else:
-            # RTS Guinée (Retenue à la Source) = barème progressif sur (Imposable - CNSS)
-            # Base RTS = (Brut - 25% abattement forfaitaire) - CNSS
+            # RTS Guinée (Retenue à la Source) = barème progressif sur base_imposable
+            # Base RTS = gains non-forfaitaires (exonération indemnités plafonnée à 25% du brut) - CNSS
             # Pas de déductions familiales ni d'abattement professionnel pour la RTS
             # (ces déductions s'appliquent uniquement à l'IGR annuel)
             irg_brut = self._calculer_irg_progressif(base_imposable)

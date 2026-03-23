@@ -4,6 +4,7 @@ from . import views_evaluation
 from . import views_mission
 from . import views_reclamation
 from . import views_medical
+from . import views_import
 
 app_name = 'employes'
 
@@ -14,9 +15,16 @@ urlpatterns = [
     path('<int:pk>/', views.EmployeDetailView.as_view(), name='detail'),
     path('<int:pk>/edit/', views.EmployeUpdateView.as_view(), name='edit'),
     path('<int:pk>/delete/', views.EmployeDeleteView.as_view(), name='delete'),
-    
+
     # Export
     path('export/excel/', views.employe_export_excel, name='export_excel'),
+
+    # Import employés
+    path('import/', views_import.import_employes_page, name='import_page'),
+    path('import/template/', views_import.telecharger_template_import, name='telecharger_template'),
+    path('import/preview/', views_import.import_employes_preview, name='import_preview'),
+    path('import/execute/', views_import.import_employes_execute, name='import_execute'),
+    path('import/template-salaires/', views_import.telecharger_template_import_salaires, name='template_salaires'),
     
     # Contrats
     path('<int:employe_id>/contrat/create/', views.employe_contrat_create, name='contrat_create'),

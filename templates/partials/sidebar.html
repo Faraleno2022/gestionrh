@@ -44,7 +44,13 @@
                 <i class="bi bi-person-plus"></i> Nouvel Employé
             </a>
         </li>
-        
+
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'employes:import_page' %}">
+                <i class="bi bi-upload"></i> Import Employés
+            </a>
+        </li>
+
         <li class="nav-item">
             <a class="nav-link" href="{% url 'employes:liste_contrats' %}">
                 <i class="bi bi-file-earmark-text"></i> Contrats
