@@ -27,7 +27,10 @@ def index(request):
     if not entreprise_id:
         context = {
             'total_employes': 0, 'employes_hommes': 0, 'employes_femmes': 0,
-            'employes_cdi': 0, 'employes_cdd': 0, 'employes_stage': 0,
+            'employes_cdi': 0, 'employes_cdd': 0, 'employes_cdimp': 0,
+            'employes_cti': 0, 'employes_stage': 0, 'employes_apprentissage': 0,
+            'employes_temporaire': 0, 'employes_sans_contrat': 0,
+            'contrats_detail': [], 'contrats_actifs': [], 'contrats_sans': 0,
             'conges_en_cours': 0, 'employes_en_conge': [],
             'conges_en_attente': 0, 'bulletins_calcules': 0,
             'bulletins_valides': 0, 'masse_salariale': 0, 'pointages_jour': 0,
@@ -49,7 +52,7 @@ def index(request):
     context = {}
     aujourd_hui = timezone.now().date()
     
-    # Statistiques employés - Une seule requête avec agrégation
+    # Statistiques employés - Une seule requête avec agrégation complète
     employes_stats = Employe.objects.filter(
         entreprise_id=entreprise_id,
         statut_employe='actif'
@@ -59,15 +62,47 @@ def index(request):
         femmes=Count('id', filter=Q(sexe='F')),
         cdi=Count('id', filter=Q(type_contrat='CDI')),
         cdd=Count('id', filter=Q(type_contrat='CDD')),
-        stage=Count('id', filter=Q(type_contrat='Stage')),
+        cdimp=Count('id', filter=Q(type_contrat='CDImp')),
+        cti=Count('id', filter=Q(type_contrat='CTI')),
+        stage=Count('id', filter=Q(type_contrat='stage')),
+        apprentissage=Count('id', filter=Q(type_contrat='apprentissage')),
+        temporaire=Count('id', filter=Q(type_contrat='temporaire')),
+        sans_contrat=Count('id', filter=Q(type_contrat__isnull=True) | Q(type_contrat='')),
     )
-    
+
     context['total_employes'] = employes_stats['total']
     context['employes_hommes'] = employes_stats['hommes']
     context['employes_femmes'] = employes_stats['femmes']
+
+    # Contrats — tous les types
     context['employes_cdi'] = employes_stats['cdi']
     context['employes_cdd'] = employes_stats['cdd']
+    context['employes_cdimp'] = employes_stats['cdimp']
+    context['employes_cti'] = employes_stats['cti']
     context['employes_stage'] = employes_stats['stage']
+    context['employes_apprentissage'] = employes_stats['apprentissage']
+    context['employes_temporaire'] = employes_stats['temporaire']
+    context['employes_sans_contrat'] = employes_stats['sans_contrat']
+
+    # Détail structuré pour le tableau et les graphiques
+    total = employes_stats['total'] or 1  # éviter division par zéro
+    contrats_detail = [
+        {'code': 'CDI',   'label': 'CDI — Durée Indéterminée',    'count': employes_stats['cdi'],           'color': '#2563eb', 'icon': 'bi-shield-check'},
+        {'code': 'CDD',   'label': 'CDD — Durée Déterminée',      'count': employes_stats['cdd'],           'color': '#f59e0b', 'icon': 'bi-clock-history'},
+        {'code': 'CDImp', 'label': 'CDImp — Durée Imprécise',     'count': employes_stats['cdimp'],         'color': '#8b5cf6', 'icon': 'bi-question-circle'},
+        {'code': 'CTI',   'label': 'CTI — Travail Intermittent',   'count': employes_stats['cti'],           'color': '#06b6d4', 'icon': 'bi-arrow-repeat'},
+        {'code': 'Stage', 'label': 'Stage',                        'count': employes_stats['stage'],         'color': '#10b981', 'icon': 'bi-mortarboard'},
+        {'code': 'Apprentissage', 'label': 'Apprentissage',        'count': employes_stats['apprentissage'], 'color': '#ec4899', 'icon': 'bi-tools'},
+        {'code': 'Temporaire',    'label': 'Temporaire',           'count': employes_stats['temporaire'],    'color': '#ef4444', 'icon': 'bi-hourglass-split'},
+    ]
+    # Calculer le pourcentage pour chaque type
+    for c in contrats_detail:
+        c['pct'] = round(c['count'] / total * 100, 1) if c['count'] else 0
+
+    # Filtrer les types avec au moins 1 employé (pour le graphique)
+    context['contrats_detail'] = contrats_detail
+    context['contrats_actifs'] = [c for c in contrats_detail if c['count'] > 0]
+    context['contrats_sans'] = employes_stats['sans_contrat']
     
     # Congés en cours
     aujourd_hui = timezone.now().date()
@@ -119,21 +154,48 @@ def index(request):
     # Alertes
     context['alertes'] = []
     
-    # Contrats arrivant à échéance (30 jours)
+    # Contrats arrivant à échéance (30 jours) — tous types à durée limitée
     date_limite = aujourd_hui + timedelta(days=30)
     contrats_echeance = Employe.objects.filter(
         entreprise=request.user.entreprise,
-        type_contrat='CDD',
+        type_contrat__in=['CDD', 'CDImp', 'CTI', 'stage', 'apprentissage', 'temporaire'],
         date_fin_contrat__lte=date_limite,
         date_fin_contrat__gte=aujourd_hui,
         statut_employe='actif'
-    ).count()
-    
-    if contrats_echeance > 0:
+    )
+    contrats_echeance_count = contrats_echeance.count()
+
+    if contrats_echeance_count > 0:
+        # Détail par type
+        echeance_par_type = contrats_echeance.values('type_contrat').annotate(nb=Count('id'))
+        details = ', '.join([f"{e['nb']} {e['type_contrat']}" for e in echeance_par_type])
         context['alertes'].append({
             'type': 'warning',
             'icon': 'bi-exclamation-triangle',
-            'message': f'{contrats_echeance} contrat(s) arrivent à échéance dans les 30 jours'
+            'message': f'{contrats_echeance_count} contrat(s) arrivent à échéance dans les 30 jours ({details})'
+        })
+
+    # Contrats expirés non traités
+    contrats_expires = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        date_fin_contrat__lt=aujourd_hui,
+        statut_employe='actif',
+        type_contrat__in=['CDD', 'CDImp', 'CTI', 'stage', 'apprentissage', 'temporaire'],
+    ).count()
+
+    if contrats_expires > 0:
+        context['alertes'].append({
+            'type': 'danger',
+            'icon': 'bi-calendar-x',
+            'message': f'{contrats_expires} contrat(s) expiré(s) avec employé(s) toujours actif(s) — action requise'
+        })
+
+    # Employés sans type de contrat
+    if context.get('contrats_sans', 0) > 0:
+        context['alertes'].append({
+            'type': 'info',
+            'icon': 'bi-file-earmark-x',
+            'message': f'{context["contrats_sans"]} employé(s) actif(s) sans type de contrat défini'
         })
     
     # Congés en attente de validation

@@ -4,6 +4,44 @@
 
 {% block title %}Tableau de bord - Gestionnaire RH Guinée{% endblock %}
 
+{% block extra_css %}
+<style>
+    .contrat-card {
+        border-radius: 10px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: default;
+    }
+    .contrat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important;
+    }
+    .contrat-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+    .contrat-pct {
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .progress-thin {
+        height: 6px;
+        border-radius: 3px;
+    }
+    .detail-table td, .detail-table th {
+        vertical-align: middle;
+    }
+    .badge-contrat {
+        font-size: 0.8rem;
+        padding: 0.35em 0.65em;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2"><i class="bi bi-speedometer2"></i> Tableau de bord</h1>
@@ -19,7 +57,7 @@
     </div>
 </div>
 
-<!-- Cartes statistiques -->
+<!-- Cartes statistiques principales -->
 <div class="row mb-4">
     <div class="col-xl-3 col-md-6 mb-4">
         <div class="card border-left-primary shadow h-100 py-2">
@@ -31,7 +69,7 @@
                         </div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_employes }}</div>
                         <small class="text-muted">
-                            <i class="bi bi-gender-male"></i> {{ employes_hommes }} H | 
+                            <i class="bi bi-gender-male"></i> {{ employes_hommes }} H |
                             <i class="bi bi-gender-female"></i> {{ employes_femmes }} F
                         </small>
                     </div>
@@ -122,24 +160,166 @@
 </div>
 {% endif %}
 
-<!-- Graphiques et tableaux -->
-<div class="row">
-    <!-- Répartition par type de contrat -->
-    <div class="col-xl-4 col-lg-6 mb-4">
-        <div class="card shadow">
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION CONTRATS — Classification détaillée
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h5 class="mb-3">
+            <i class="bi bi-file-earmark-text"></i> Répartition des contrats
+            <span class="badge bg-primary ms-2">{{ total_employes }} employé{{ total_employes|pluralize }}</span>
+        </h5>
+    </div>
+
+    <!-- Mini-cartes par type de contrat -->
+    {% for c in contrats_detail %}
+    <div class="col-xl-3 col-md-4 col-sm-6 mb-3">
+        <div class="card contrat-card shadow-sm h-100">
+            <div class="card-body py-3">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="contrat-icon me-3" style="background: {{ c.color }}20; color: {{ c.color }};">
+                        <i class="bi {{ c.icon }}"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 text-truncate" style="max-width: 140px;" title="{{ c.label }}">{{ c.code }}</h6>
+                            <span class="h5 mb-0 font-weight-bold" style="color: {{ c.color }};">{{ c.count }}</span>
+                        </div>
+                        <small class="text-muted">{{ c.label }}</small>
+                    </div>
+                </div>
+                <div class="progress progress-thin">
+                    <div class="progress-bar" role="progressbar"
+                         style="width: {{ c.pct }}%; background-color: {{ c.color }};"
+                         aria-valuenow="{{ c.pct }}" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                </div>
+                <div class="text-end mt-1">
+                    <span class="contrat-pct" style="color: {{ c.color }};">{{ c.pct }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Carte employés sans contrat -->
+    {% if contrats_sans > 0 %}
+    <div class="col-xl-3 col-md-4 col-sm-6 mb-3">
+        <div class="card contrat-card shadow-sm h-100 border-danger">
+            <div class="card-body py-3">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="contrat-icon me-3" style="background: #fee2e2; color: #dc2626;">
+                        <i class="bi bi-file-earmark-x"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">Non défini</h6>
+                            <span class="h5 mb-0 font-weight-bold text-danger">{{ contrats_sans }}</span>
+                        </div>
+                        <small class="text-danger">Sans type de contrat</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Graphiques contrats + Tableau détaillé -->
+<div class="row mb-4">
+    <!-- Graphique Doughnut -->
+    <div class="col-xl-5 col-lg-6 mb-4">
+        <div class="card shadow h-100">
             <div class="card-header py-3">
                 <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="bi bi-pie-chart"></i> Répartition par contrat
+                    <i class="bi bi-pie-chart"></i> Répartition graphique
                 </h6>
             </div>
-            <div class="card-body">
-                <canvas id="contratChart"></canvas>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <div style="max-width: 320px; width: 100%;">
+                    <canvas id="contratChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Employés en congé -->
-    <div class="col-xl-8 col-lg-6 mb-4">
+    <!-- Tableau détaillé -->
+    <div class="col-xl-7 col-lg-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-table"></i> Détail par type de contrat
+                </h6>
+                <a href="{% url 'employes:liste_contrats' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-list-ul"></i> Voir tous
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover detail-table mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Type</th>
+                                <th>Libellé complet</th>
+                                <th class="text-center">Effectif</th>
+                                <th class="text-center">%</th>
+                                <th>Répartition</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in contrats_detail %}
+                            <tr>
+                                <td>
+                                    <span class="badge badge-contrat" style="background-color: {{ c.color }};">
+                                        <i class="bi {{ c.icon }} me-1"></i>{{ c.code }}
+                                    </span>
+                                </td>
+                                <td>{{ c.label }}</td>
+                                <td class="text-center">
+                                    <strong>{{ c.count }}</strong>
+                                </td>
+                                <td class="text-center">
+                                    <span class="contrat-pct" style="color: {{ c.color }};">{{ c.pct }}%</span>
+                                </td>
+                                <td style="min-width: 120px;">
+                                    <div class="progress progress-thin">
+                                        <div class="progress-bar" style="width: {{ c.pct }}%; background-color: {{ c.color }};"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if contrats_sans > 0 %}
+                            <tr class="table-danger">
+                                <td>
+                                    <span class="badge bg-danger badge-contrat">
+                                        <i class="bi bi-file-earmark-x me-1"></i>N/A
+                                    </span>
+                                </td>
+                                <td>Sans type de contrat</td>
+                                <td class="text-center"><strong>{{ contrats_sans }}</strong></td>
+                                <td class="text-center">—</td>
+                                <td>—</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                        <tfoot class="table-dark">
+                            <tr>
+                                <td colspan="2"><strong>TOTAL</strong></td>
+                                <td class="text-center"><strong>{{ total_employes }}</strong></td>
+                                <td class="text-center"><strong>100%</strong></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Employés en congé -->
+<div class="row mb-4">
+    <div class="col-12">
         <div class="card shadow">
             <div class="card-header py-3">
                 <h6 class="m-0 font-weight-bold text-primary">
@@ -211,31 +391,48 @@
 {% block extra_js %}
 <script src="{% static 'js/chart.umd.min.js' %}"></script>
 <script>
-// Graphique répartition par contrat
+// Données contrats depuis le contexte Django
+const contratLabels = [{% for c in contrats_actifs %}'{{ c.code }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+const contratData   = [{% for c in contrats_actifs %}{{ c.count }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+const contratColors = [{% for c in contrats_actifs %}'{{ c.color }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+
 const ctx = document.getElementById('contratChart');
 new Chart(ctx, {
     type: 'doughnut',
     data: {
-        labels: ['CDI', 'CDD', 'Stage'],
+        labels: contratLabels,
         datasets: [{
-            data: [{{ employes_cdi }}, {{ employes_cdd }}, {{ employes_stage }}],
-            backgroundColor: [
-                'rgba(54, 162, 235, 0.8)',
-                'rgba(255, 206, 86, 0.8)',
-                'rgba(75, 192, 192, 0.8)'
-            ],
-            borderWidth: 1
+            data: contratData,
+            backgroundColor: contratColors.map(c => c + 'CC'),
+            borderColor: contratColors,
+            borderWidth: 2,
+            hoverOffset: 8,
         }]
     },
     options: {
         responsive: true,
+        cutout: '55%',
         plugins: {
             legend: {
                 position: 'bottom',
+                labels: {
+                    padding: 15,
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    font: { size: 12 }
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(ctx) {
+                        const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                        const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                        return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                    }
+                }
             }
         }
     }
 });
 </script>
 {% endblock %}
-
