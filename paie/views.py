@@ -644,11 +644,22 @@ def telecharger_bulletin_pdf(request, pk):
     gains_data = [["Libellé", "Nbre", "Base", "Taux", "Montant"]]
     for g in gains:
         nbre_str = f"{g.nombre:g}" if g.nombre and g.nombre != 1 else ""
+        # Nettoyer le taux : supprimer les zéros inutiles (30.0000% → 30%)
+        taux_val = g.taux
+        taux_str = f"{float(taux_val):g}%" if taux_val else "-"
+        # Corriger libellé HS si taux incohérent (ex: "HS 25%" mais taux=30%)
+        libelle = g.rubrique.libelle_rubrique[:35]
+        code_rub = (g.rubrique.code_rubrique or '').upper()
+        if ('HS' in code_rub or 'HEURE' in libelle.upper()) and 'SUP' in libelle.upper():
+            if taux_val and float(taux_val) == 30:
+                libelle = libelle.replace('25%', '+30%').replace('25 %', '+30%')
+            elif taux_val and float(taux_val) == 60:
+                libelle = libelle.replace('25%', '+60%').replace('25 %', '+60%')
         gains_data.append([
-            g.rubrique.libelle_rubrique[:35],
+            libelle,
             nbre_str,
             f"{g.base:,.0f}".replace(",", " ") if g.base else "-",
-            f"{g.taux}%" if g.taux else "-",
+            taux_str,
             f"{g.montant:,.0f}".replace(",", " ")
         ])
     gains_data.append(["TOTAL BRUT", "", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " ")])
@@ -803,16 +814,28 @@ def telecharger_bulletin_pdf(request, pk):
     if detail_rts:
         p.setFont(_FB, 7)
         p.setFillColor(colors.HexColor("#6c757d"))
-        p.drawString(1.5*cm, y, f"DÉTAIL RTS — Barème progressif sur base imposable: {base_rts_val:,.0f} GNF".replace(",", " "))
+        # Explication base imposable
+        abattement_val = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
+        if float(abattement_val) > 0:
+            p.drawString(1.5*cm, y,
+                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} GNF "
+                f"(Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
+                f"− Abattement {abattement_val:,.0f})".replace(",", " "))
+        else:
+            p.drawString(1.5*cm, y,
+                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} GNF "
+                f"(Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
+                f"− éléments exonérés)".replace(",", " "))
         p.setFillColor(colors.black)
         y -= 0.25*cm
-        
+
         rts_detail_data = [["Tranche", "Taux", "Impôt"]]
         cumul_impot = Decimal('0')
         for i, t in enumerate(detail_rts, start=1):
+            taux_pct = f"{t['taux']:g}"
             rts_detail_data.append([
-                f"RTS {i}",
-                f"{t['taux']:g}%",
+                f"Tranche {taux_pct}%",
+                f"{taux_pct}%",
                 f"{t['impot_tranche']:,.0f}".replace(",", " "),
             ])
             cumul_impot += t['impot_tranche']
@@ -896,33 +919,57 @@ def telecharger_bulletin_pdf(request, pk):
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
     taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '1,5'
     
-    p.setFont(_FB, 8)
-    p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
-    y -= 0.35*cm
-    p.setFont(_FN, 6.5)
-    p.drawString(1.5*cm, y, f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " "))
-    p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
-    # TA ou ONFPP selon effectif
+    # Tableau charges patronales (une ligne par charge = lisibilité audit)
+    charges_data = [["Charge patronale", "Base", "Taux", "Montant"]]
+    charges_data.append(["CNSS Employeur",
+        f"{min(bulletin.salaire_brut, 2500000):,.0f}".replace(",", " "),
+        "18%",
+        f"{bulletin.cnss_employeur:,.0f}".replace(",", " ")])
+    charges_data.append(["Versement Forfaitaire (VF)",
+        f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
+        "6%",
+        f"{vf:,.0f}".replace(",", " ")])
     if ta > 0:
-        p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta:,.0f}".replace(",", " "))
+        charges_data.append([f"Taxe d'Apprentissage (eff. {nb_sal} <30)",
+            f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
+            f"{taux_ta_label}%",
+            f"{ta:,.0f}".replace(",", " ")])
     elif onfpp > 0:
-        p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} ≥30): {onfpp:,.0f}".replace(",", " "))
-    p.setFont(_FB, 7)
-    p.drawRightString(width - 1.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
-    y -= 0.3*cm
-    # Base de calcul VF/TA avec explication de la déduction
+        charges_data.append([f"ONFPP (eff. {nb_sal} >=30)",
+            f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
+            "1,5%",
+            f"{onfpp:,.0f}".replace(",", " ")])
+    charges_data.append(["TOTAL CHARGES PATRONALES", "", "",
+        f"{total_charges:,.0f} GNF".replace(",", " ")])
+
+    ch_row_h = 13
+    charges_table = Table(charges_data, colWidths=[7*cm, 3.5*cm, 2*cm, 4.5*cm], rowHeights=ch_row_h)
+    charges_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#fd7e14")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), _FB),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
+        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor("#dee2e6")),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#fff3cd")),
+        ('FONTNAME', (0, -1), (-1, -1), _FB),
+    ]))
+    ch_table_h = len(charges_data) * ch_row_h
+    charges_table.wrapOn(p, width, height)
+    charges_table.drawOn(p, 1.5*cm, y - ch_table_h)
+    y -= ch_table_h + 0.15*cm
+    # Note explicative déduction VF
     if base_vf > 0:
-        p.setFont(_FN, 6)
-        p.setFillColor(colors.HexColor("#666666"))
         brut_gnf = float(bulletin.salaire_brut)
         deduction = brut_gnf - float(base_vf)
         if deduction > 0:
+            p.setFont(_FI, 6)
+            p.setFillColor(colors.HexColor("#666666"))
             p.drawString(1.5*cm, y,
-                f"└─ Base VF/TA: {base_vf:,.0f} = brut {brut_gnf:,.0f} − abattement {deduction:,.0f}"
+                f"Base VF/TA = Brut {brut_gnf:,.0f} - deduction forfaitaire {deduction:,.0f} = {base_vf:,.0f} GNF"
                 .replace(",", " "))
-        else:
-            p.drawString(1.5*cm, y, f"└─ Base VF/TA: {base_vf:,.0f}".replace(",", " "))
-        y -= 0.25*cm
+            y -= 0.25*cm
     p.setFillColor(colors.black)
     
     # === ZONE DE SIGNATURES ===
@@ -1125,11 +1172,22 @@ def telecharger_bulletin_public(request, token):
     gains_data = [["Libellé", "Nbre", "Base", "Taux", "Montant"]]
     for g in gains:
         nbre_str = f"{g.nombre:g}" if g.nombre and g.nombre != 1 else ""
+        # Nettoyer le taux : supprimer les zéros inutiles (30.0000% → 30%)
+        taux_val = g.taux
+        taux_str = f"{float(taux_val):g}%" if taux_val else "-"
+        # Corriger libellé HS si taux incohérent (ex: "HS 25%" mais taux=30%)
+        libelle = g.rubrique.libelle_rubrique[:35]
+        code_rub = (g.rubrique.code_rubrique or '').upper()
+        if ('HS' in code_rub or 'HEURE' in libelle.upper()) and 'SUP' in libelle.upper():
+            if taux_val and float(taux_val) == 30:
+                libelle = libelle.replace('25%', '+30%').replace('25 %', '+30%')
+            elif taux_val and float(taux_val) == 60:
+                libelle = libelle.replace('25%', '+60%').replace('25 %', '+60%')
         gains_data.append([
-            g.rubrique.libelle_rubrique[:35],
+            libelle,
             nbre_str,
             f"{g.base:,.0f}".replace(",", " ") if g.base else "-",
-            f"{g.taux}%" if g.taux else "-",
+            taux_str,
             f"{g.montant:,.0f}".replace(",", " ")
         ])
     gains_data.append(["TOTAL BRUT", "", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " ")])
@@ -1283,16 +1341,28 @@ def telecharger_bulletin_public(request, token):
     if detail_rts:
         p.setFont(_FB, 7)
         p.setFillColor(colors.HexColor("#6c757d"))
-        p.drawString(1.5*cm, y, f"DÉTAIL RTS — Barème progressif sur base imposable: {base_rts_val:,.0f} GNF".replace(",", " "))
+        # Explication base imposable
+        abattement_val = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
+        if float(abattement_val) > 0:
+            p.drawString(1.5*cm, y,
+                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} GNF "
+                f"(Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
+                f"− Abattement {abattement_val:,.0f})".replace(",", " "))
+        else:
+            p.drawString(1.5*cm, y,
+                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} GNF "
+                f"(Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
+                f"− éléments exonérés)".replace(",", " "))
         p.setFillColor(colors.black)
         y -= 0.25*cm
-        
+
         rts_detail_data = [["Tranche", "Taux", "Impôt"]]
         cumul_impot = Decimal('0')
         for i, t in enumerate(detail_rts, start=1):
+            taux_pct = f"{t['taux']:g}"
             rts_detail_data.append([
-                f"RTS {i}",
-                f"{t['taux']:g}%",
+                f"Tranche {taux_pct}%",
+                f"{taux_pct}%",
                 f"{t['impot_tranche']:,.0f}".replace(",", " "),
             ])
             cumul_impot += t['impot_tranche']
@@ -1384,33 +1454,57 @@ def telecharger_bulletin_public(request, token):
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
     taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '1,5'
     
-    p.setFont(_FB, 8)
-    p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
-    y -= 0.35*cm
-    p.setFont(_FN, 6.5)
-    p.drawString(1.5*cm, y, f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " "))
-    p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
-    # TA ou ONFPP selon effectif
+    # Tableau charges patronales (une ligne par charge = lisibilité audit)
+    charges_data = [["Charge patronale", "Base", "Taux", "Montant"]]
+    charges_data.append(["CNSS Employeur",
+        f"{min(bulletin.salaire_brut, 2500000):,.0f}".replace(",", " "),
+        "18%",
+        f"{bulletin.cnss_employeur:,.0f}".replace(",", " ")])
+    charges_data.append(["Versement Forfaitaire (VF)",
+        f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
+        "6%",
+        f"{vf:,.0f}".replace(",", " ")])
     if ta > 0:
-        p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta:,.0f}".replace(",", " "))
+        charges_data.append([f"Taxe d'Apprentissage (eff. {nb_sal} <30)",
+            f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
+            f"{taux_ta_label}%",
+            f"{ta:,.0f}".replace(",", " ")])
     elif onfpp > 0:
-        p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} ≥30): {onfpp:,.0f}".replace(",", " "))
-    p.setFont(_FB, 7)
-    p.drawRightString(width - 1.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
-    y -= 0.3*cm
-    # Base de calcul VF/TA avec explication de la déduction
+        charges_data.append([f"ONFPP (eff. {nb_sal} >=30)",
+            f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
+            "1,5%",
+            f"{onfpp:,.0f}".replace(",", " ")])
+    charges_data.append(["TOTAL CHARGES PATRONALES", "", "",
+        f"{total_charges:,.0f} GNF".replace(",", " ")])
+
+    ch_row_h = 13
+    charges_table = Table(charges_data, colWidths=[7*cm, 3.5*cm, 2*cm, 4.5*cm], rowHeights=ch_row_h)
+    charges_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#fd7e14")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), _FB),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
+        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor("#dee2e6")),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#fff3cd")),
+        ('FONTNAME', (0, -1), (-1, -1), _FB),
+    ]))
+    ch_table_h = len(charges_data) * ch_row_h
+    charges_table.wrapOn(p, width, height)
+    charges_table.drawOn(p, 1.5*cm, y - ch_table_h)
+    y -= ch_table_h + 0.15*cm
+    # Note explicative déduction VF
     if base_vf > 0:
-        p.setFont(_FN, 6)
-        p.setFillColor(colors.HexColor("#666666"))
         brut_gnf = float(bulletin.salaire_brut)
         deduction = brut_gnf - float(base_vf)
         if deduction > 0:
+            p.setFont(_FI, 6)
+            p.setFillColor(colors.HexColor("#666666"))
             p.drawString(1.5*cm, y,
-                f"└─ Base VF/TA: {base_vf:,.0f} = brut {brut_gnf:,.0f} − abattement {deduction:,.0f}"
+                f"Base VF/TA = Brut {brut_gnf:,.0f} - deduction forfaitaire {deduction:,.0f} = {base_vf:,.0f} GNF"
                 .replace(",", " "))
-        else:
-            p.drawString(1.5*cm, y, f"└─ Base VF/TA: {base_vf:,.0f}".replace(",", " "))
-        y -= 0.25*cm
+            y -= 0.25*cm
     p.setFillColor(colors.black)
     
     # === ZONE DE SIGNATURES ===
