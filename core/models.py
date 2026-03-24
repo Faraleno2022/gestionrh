@@ -31,18 +31,56 @@ class Entreprise(models.Model):
     plan_abonnement = models.CharField(max_length=50, default='gratuit', choices=[
         ('gratuit', 'Gratuit'),
         ('basique', 'Basique'),
+        ('starter', 'Starter'),
+        ('pro', 'Pro'),
         ('premium', 'Premium'),
         ('entreprise', 'Entreprise'),
     ])
     max_utilisateurs = models.IntegerField(default=5, help_text='Nombre maximum d\'utilisateurs')
-    
+    max_employes = models.IntegerField(default=30, help_text='Nombre maximum d\'employés')
+
+    # Flags modules — synchronisés depuis PlanAbonnement lors de l'activation
+    module_paie = models.BooleanField(default=True)
+    module_conges = models.BooleanField(default=True)
+    module_recrutement = models.BooleanField(default=False)
+    module_formation = models.BooleanField(default=False)
+    module_comptabilite = models.BooleanField(default=False)
+    module_portail = models.BooleanField(default=False)
+    acces_declarations_fiscales = models.BooleanField(default=False)
+    acces_export_comptable = models.BooleanField(default=False)
+
     @property
     def has_rh(self):
         return self.type_module in ['rh', 'both']
-    
+
     @property
     def has_compta(self):
         return self.type_module in ['compta', 'both']
+
+    def has_module(self, module_name):
+        """Vérifie si l'entreprise a accès à un module donné"""
+        module_map = {
+            'paie': self.module_paie,
+            'conges': self.module_conges,
+            'recrutement': self.module_recrutement,
+            'formation': self.module_formation,
+            'comptabilite': self.module_comptabilite,
+            'portail': self.module_portail,
+        }
+        return module_map.get(module_name, False)
+
+    def sync_from_plan(self, plan):
+        """Synchronise les limites et modules depuis un PlanAbonnement"""
+        self.max_utilisateurs = plan.max_utilisateurs
+        self.max_employes = plan.max_employes
+        self.module_paie = plan.module_paie
+        self.module_conges = plan.module_conges
+        self.module_recrutement = plan.module_recrutement
+        self.module_formation = plan.module_formation
+        self.module_comptabilite = getattr(plan, 'module_comptabilite', False)
+        self.module_portail = getattr(plan, 'module_portail', False)
+        self.acces_declarations_fiscales = getattr(plan, 'declarations_fiscales', False)
+        self.acces_export_comptable = getattr(plan, 'export_comptable', False)
     
     class Meta:
         db_table = 'entreprises'

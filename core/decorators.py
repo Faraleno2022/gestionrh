@@ -300,11 +300,41 @@ def entreprise_active_required(view_func):
         if not hasattr(request.user, 'entreprise') or not request.user.entreprise:
             messages.error(request, "Vous n'êtes associé à aucune entreprise.")
             return redirect('core:login')
-        
+
         if not request.user.entreprise.actif:
             messages.error(request, "Votre entreprise est désactivée. Contactez le support.")
             return redirect('core:login')
-        
+
         return view_func(request, *args, **kwargs)
-    
+
     return wrapped_view
+
+
+def module_required(module_name):
+    """
+    Décorateur pour vérifier qu'un module est inclus dans le plan de l'entreprise.
+    Usage: @module_required('recrutement')
+
+    Modules possibles : paie, conges, recrutement, formation, comptabilite, portail
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        @login_required
+        def wrapped_view(request, *args, **kwargs):
+            entreprise = getattr(request.user, 'entreprise', None)
+            if not entreprise:
+                messages.error(request, "Vous n'êtes associé à aucune entreprise.")
+                return redirect('core:login')
+
+            if not entreprise.has_module(module_name):
+                plan = entreprise.plan_abonnement or 'gratuit'
+                messages.warning(
+                    request,
+                    f"Le module « {module_name.title()} » n'est pas inclus dans votre "
+                    f"plan {plan.title()}. Passez au plan supérieur pour y accéder."
+                )
+                return redirect('payments:plans')
+
+            return view_func(request, *args, **kwargs)
+        return wrapped_view
+    return decorator

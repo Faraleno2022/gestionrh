@@ -234,12 +234,18 @@ def activer_abonnement(transaction):
             derniere_transaction=transaction
         )
     
-    # Mettre à jour l'entreprise
+    # Mettre à jour l'entreprise — synchroniser TOUTES les limites et modules du plan
     entreprise.plan_abonnement = plan.slug
-    entreprise.max_utilisateurs = plan.max_utilisateurs
     entreprise.date_expiration = date_fin
     entreprise.actif = True
-    entreprise.save(update_fields=['plan_abonnement', 'max_utilisateurs', 'date_expiration', 'actif'])
+    entreprise.sync_from_plan(plan)
+    entreprise.save(update_fields=[
+        'plan_abonnement', 'date_expiration', 'actif',
+        'max_utilisateurs', 'max_employes',
+        'module_paie', 'module_conges', 'module_recrutement', 'module_formation',
+        'module_comptabilite', 'module_portail',
+        'acces_declarations_fiscales', 'acces_export_comptable',
+    ])
     
     # Mettre à jour la transaction
     transaction.statut = 'completed'

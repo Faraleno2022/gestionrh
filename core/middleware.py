@@ -192,47 +192,111 @@ class RequestLoggingMiddleware:
 
 class EntrepriseQuotaMiddleware:
     """
-    Middleware pour vérifier les quotas d'abonnement de l'entreprise
+    Middleware pour vérifier les quotas d'abonnement et l'accès aux modules
+    selon le plan souscrit (Starter / Pro / Premium).
+
+    Contrôle :
+    - Entreprise active
+    - Date d'expiration de l'abonnement
+    - Quota d'utilisateurs
+    - Quota d'employés
+    - Accès aux modules selon le plan
     """
+
+    # Mapping URL prefix → module requis
+    MODULE_URL_MAP = {
+        '/paie/': 'paie',
+        '/conges/': 'conges',
+        '/recrutement/': 'recrutement',
+        '/formation/': 'formation',
+        '/comptabilite/': 'comptabilite',
+        '/portail/': 'portail',
+    }
+
+    # Chemins exemptés (toujours accessibles)
+    EXEMPT_PATHS = (
+        '/payments/',
+        '/renouvellement/',
+        '/dashboard/',
+        '/core/',
+        '/admin/',
+        '/static/',
+        '/media/',
+        '/employes/',
+        '/contrats/',
+        '/temps/',
+    )
+
     def __init__(self, get_response):
         self.get_response = get_response
-    
+
     def __call__(self, request):
-        # Vérifier uniquement pour les utilisateurs authentifiés
-        if request.user.is_authenticated and hasattr(request.user, 'entreprise'):
-            entreprise = request.user.entreprise
-            
-            if entreprise:
-                # Vérifier si l'entreprise est active
-                if not entreprise.actif:
-                    from django.shortcuts import redirect
-                    from django.contrib import messages
-                    messages.error(request, "Votre entreprise est désactivée. Contactez le support.")
-                    return redirect('core:login')
-                
-                # Vérifier la date d'expiration
-                if entreprise.date_expiration:
-                    from django.utils import timezone
-                    if timezone.now().date() > entreprise.date_expiration:
-                        from django.shortcuts import redirect
-                        from django.contrib import messages
-                        messages.warning(request, "Votre abonnement a expiré. Veuillez le renouveler.")
-                        # Permettre l'accès uniquement aux pages de renouvellement
-                        if not (request.path.startswith('/payments/') or request.path.startswith('/renouvellement/')):
-                            return redirect('payments:plans')
-                
-                # Vérifier le quota d'utilisateurs (seulement pour les admins qui créent des users)
-                if request.path == '/manage-users/' and request.method == 'POST':
-                    current_users = entreprise.utilisateurs.filter(actif=True).count()
-                    if current_users >= entreprise.max_utilisateurs:
-                        from django.contrib import messages
-                        messages.error(
-                            request,
-                            f"Quota d'utilisateurs atteint ({entreprise.max_utilisateurs}). "
-                            f"Veuillez upgrader votre plan."
-                        )
-                        from django.shortcuts import redirect
-                        return redirect('core:manage_users')
-        
+        if not request.user.is_authenticated or not hasattr(request.user, 'entreprise'):
+            return self.get_response(request)
+
+        entreprise = request.user.entreprise
+        if not entreprise:
+            return self.get_response(request)
+
+        from django.shortcuts import redirect
+        from django.contrib import messages
+
+        # ── 1. Entreprise désactivée ──
+        if not entreprise.actif:
+            messages.error(request, "Votre entreprise est désactivée. Contactez le support.")
+            return redirect('core:login')
+
+        # ── 2. Abonnement expiré ──
+        if entreprise.date_expiration:
+            from django.utils import timezone
+            if timezone.now().date() > entreprise.date_expiration:
+                # Permettre l'accès aux pages de paiement uniquement
+                if not any(request.path.startswith(p) for p in ('/payments/', '/renouvellement/', '/static/', '/media/', '/core/login/')):
+                    messages.warning(
+                        request,
+                        "Votre abonnement a expiré. Veuillez le renouveler pour continuer."
+                    )
+                    return redirect('payments:plans')
+
+        # ── 3. Contrôle d'accès aux modules selon le plan ──
+        path = request.path
+        for url_prefix, module_name in self.MODULE_URL_MAP.items():
+            if path.startswith(url_prefix):
+                if not entreprise.has_module(module_name):
+                    plan = entreprise.plan_abonnement or 'gratuit'
+                    messages.warning(
+                        request,
+                        f"Le module « {module_name.title()} » n'est pas inclus dans votre "
+                        f"plan {plan.title()}. Passez au plan supérieur pour y accéder."
+                    )
+                    return redirect('payments:plans')
+                break
+
+        # ── 4. Quota d'utilisateurs (lors de la création) ──
+        if request.path == '/manage-users/' and request.method == 'POST':
+            current_users = entreprise.utilisateurs.filter(actif=True).count()
+            if current_users >= entreprise.max_utilisateurs:
+                messages.error(
+                    request,
+                    f"Quota d'utilisateurs atteint ({current_users}/{entreprise.max_utilisateurs}). "
+                    f"Veuillez upgrader votre plan."
+                )
+                return redirect('core:manage_users')
+
+        # ── 5. Quota d'employés (lors de l'ajout) ──
+        if path.startswith('/employes/') and request.method == 'POST':
+            # Ne bloquer que sur les vues de création (pas modification)
+            if '/ajouter' in path or '/create' in path or '/import' in path:
+                from employes.models import Employe
+                current_count = Employe.objects.filter(entreprise=entreprise).count()
+                max_emp = getattr(entreprise, 'max_employes', 9999)
+                if current_count >= max_emp:
+                    messages.error(
+                        request,
+                        f"Quota d'employés atteint ({current_count}/{max_emp}). "
+                        f"Veuillez upgrader votre plan pour ajouter plus d'employés."
+                    )
+                    return redirect('employes:list')
+
         response = self.get_response(request)
         return response
