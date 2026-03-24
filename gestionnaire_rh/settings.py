@@ -95,8 +95,8 @@ MIDDLEWARE = [
     'core.middleware.RequestLoggingMiddleware',
     # Multi-company middleware
     'core.middleware.EntrepriseQuotaMiddleware',
-    # Protection anti-falsification désactivée
-    # 'core.middleware_guardian.ProjectIntegrityMiddleware',
+    # Protection anti-falsification
+    'core.middleware_guardian.ProjectIntegrityMiddleware',
     # Licence middleware
     'core.middleware_licence.LicenceMiddleware',
 ]

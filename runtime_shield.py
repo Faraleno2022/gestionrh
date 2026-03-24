@@ -660,8 +660,22 @@ def full_shield_check() -> dict:
 
 def shield_startup_check():
     """
-    Vérification au démarrage — désactivée.
+    Vérification rapide au démarrage de l'application.
+    Retourne True si OK, False si compromis.
     """
+    if not getattr(sys, 'frozen', False):
+        return True  # Pas de blocage en mode dev
+
+    try:
+        result = full_shield_check()
+        if result.get('blocked'):
+            logger.critical(
+                "SHIELD STARTUP BLOCKED: %s", result.get('reason', '')
+            )
+            return False
+    except Exception as e:
+        logger.warning("Shield startup check error: %s", e)
+
     return True
 
 

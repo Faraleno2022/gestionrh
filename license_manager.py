@@ -229,6 +229,42 @@ def activate_from_file(activation_file_path: str) -> dict:
 # ─── Mode essai (30 jours sans licence) ───────────────────────────────────────
 _TRIAL_FILE_NAME = '.trial_start'
 
+
+def _trial_sign(date_str: str, machine_id: str) -> str:
+    """Signe le fichier trial pour empêcher la modification manuelle."""
+    payload = f"{date_str}|{machine_id}|GuineeRH-Trial".encode()
+    return hmac.new(_DEV_SECRET, payload, hashlib.sha256).hexdigest()[:24]
+
+
+def _trial_read(tp: Path) -> datetime:
+    """Lit et vérifie un fichier trial signé. Retourne None si invalide."""
+    try:
+        content = tp.read_text(encoding='utf-8').strip()
+        if '|' not in content:
+            # Ancien format non signé → invalide, forcer renouvellement
+            return None
+        parts = content.split('|')
+        if len(parts) != 3:
+            return None
+        date_str, mid_short, sig = parts
+        # Vérifier la signature
+        machine_id = get_machine_id()
+        expected_sig = _trial_sign(date_str, machine_id[:16])
+        if not hmac.compare_digest(sig, expected_sig):
+            return None  # Fichier modifié ou copié d'une autre machine
+        return datetime.strptime(date_str, '%Y-%m-%d')
+    except Exception:
+        return None
+
+
+def _trial_write(tp: Path, trial_start: datetime):
+    """Écrit un fichier trial signé et lié à la machine."""
+    machine_id = get_machine_id()
+    date_str = trial_start.strftime('%Y-%m-%d')
+    sig = _trial_sign(date_str, machine_id[:16])
+    tp.write_text(f"{date_str}|{machine_id[:16]}|{sig}", encoding='utf-8')
+
+
 def get_or_create_trial() -> dict:
     """Gère une période d'essai de 30 jours sans licence."""
     trial_paths = [
@@ -239,24 +275,32 @@ def get_or_create_trial() -> dict:
     trial_start = None
     for tp in trial_paths:
         if tp.exists():
-            try:
-                with open(tp, 'r') as f:
-                    trial_start = datetime.strptime(f.read().strip(), '%Y-%m-%d')
+            trial_start = _trial_read(tp)
+            if trial_start is not None:
                 break
-            except Exception:
-                continue
 
     if trial_start is None:
         trial_start = _now_utc()
         for tp in trial_paths:
             try:
-                with open(tp, 'w') as f:
-                    f.write(trial_start.strftime('%Y-%m-%d'))
+                _trial_write(tp, trial_start)
                 break
             except Exception:
                 continue
 
-    days_elapsed = (_now_utc() - trial_start).days
+    # Protection anti-horloge : détecter si la date système a été reculée
+    now = _now_utc()
+    days_elapsed = (now - trial_start).days
+    if days_elapsed < 0:
+        # L'utilisateur a reculé l'horloge → considérer l'essai comme expiré
+        return {
+            'trial': True,
+            'valid': False,
+            'days_left': 0,
+            'days_elapsed': 30,
+            'reason': "Manipulation de l'horloge détectée. Période d'essai révoquée.",
+        }
+
     days_left = max(0, 30 - days_elapsed)
 
     return {

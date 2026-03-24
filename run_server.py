@@ -395,9 +395,44 @@ def main():
     print("=" * 50)
     print()
 
-    # ── Vérifications de protection désactivées ───────────────────────────────
-    # (runtime_shield et project_guardian retirés — plus de blocage au démarrage)
-    pass
+    # ── Vérifications de protection au démarrage ───────────────────────────────
+    if getattr(sys, 'frozen', False):
+        try:
+            import project_guardian
+            report = project_guardian.full_security_check()
+            if report.get('blocked'):
+                print()
+                print("  [SECURITE] Application bloquee !")
+                print(f"  [SECURITE] Raison : {report.get('reason', 'Violation detectee')}")
+                print()
+                print("  Ce logiciel a ete modifie ou copie de maniere non autorisee.")
+                print("  Contactez ICG Guinea pour obtenir une copie legale.")
+                print()
+                input("  Appuyez sur Entree pour fermer...")
+                sys.exit(1)
+        except ImportError:
+            print("  [SECURITE] Module de protection manquant — blocage.")
+            input("  Appuyez sur Entree pour fermer...")
+            sys.exit(1)
+        except Exception:
+            pass  # En cas d'erreur inattendue, ne pas bloquer le propriétaire
+
+        try:
+            import runtime_shield
+            shield_result = runtime_shield.full_shield_check()
+            if shield_result.get('blocked'):
+                print()
+                print("  [SECURITE] Falsification detectee !")
+                print(f"  [SECURITE] {shield_result.get('reason', 'Environnement compromis')}")
+                print()
+                input("  Appuyez sur Entree pour fermer...")
+                sys.exit(1)
+        except ImportError:
+            print("  [SECURITE] Bouclier runtime manquant — blocage.")
+            input("  Appuyez sur Entree pour fermer...")
+            sys.exit(1)
+        except Exception:
+            pass
 
     check_license()   # Bloque ou ferme l'app si essai/licence expiré
 

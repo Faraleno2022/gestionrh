@@ -393,9 +393,10 @@ def _check_no_py_sources() -> dict:
 # ─── Vérification combinée complète ───────────────────────────────────────────
 def full_security_check() -> dict:
     """
-    Vérification de sécurité — désactivée.
+    Vérification de sécurité complète.
+    Retourne un rapport détaillé et bloque si nécessaire.
     """
-    return {
+    report = {
         'timestamp': datetime.now(timezone.utc).isoformat(),
         'machine_id': _get_local_machine_id()[:8],
         'is_owner': is_owner_machine(),
@@ -403,6 +404,77 @@ def full_security_check() -> dict:
         'blocked': False,
         'reason': '',
     }
+
+    # Si machine propriétaire, ne jamais bloquer
+    if report['is_owner']:
+        return report
+
+    # 1. Vérification d'intégrité du projet
+    try:
+        integrity = verify_project_integrity()
+        report['checks']['integrity'] = integrity
+        if not integrity['intact']:
+            tampered = integrity.get('tampered_files', [])
+            missing = integrity.get('missing_files', [])
+            if not integrity.get('signature_valid', True):
+                report['blocked'] = True
+                report['reason'] = 'Signature du manifest invalide — fichiers modifiés.'
+            elif tampered:
+                report['blocked'] = True
+                report['reason'] = f'Fichiers modifiés détectés : {", ".join(tampered)}'
+            elif missing:
+                report['blocked'] = True
+                report['reason'] = f'Fichiers de protection manquants : {", ".join(missing)}'
+    except Exception as e:
+        logger.warning("Erreur vérification intégrité: %s", e)
+
+    # 2. Vérification anti-bypass
+    try:
+        ab = _check_anti_bypass()
+        report['checks']['anti_bypass'] = ab
+        if not ab:
+            report['blocked'] = True
+            report['reason'] = 'Module de licence altéré ou absent.'
+    except Exception:
+        pass
+
+    # 3. Vérification anti-debug
+    try:
+        ad = _check_anti_debug()
+        report['checks']['anti_debug'] = ad
+        if not ad:
+            report['blocked'] = True
+            report['reason'] = 'Débogueur détecté — exécution bloquée.'
+    except Exception:
+        pass
+
+    # 4. Vérification sources .py en mode compilé
+    try:
+        sources = _check_no_py_sources()
+        report['checks']['no_py_sources'] = sources
+        if not sources['clean']:
+            report['blocked'] = True
+            report['reason'] = f'Sources .py non autorisées : {", ".join(sources["py_sources_found"][:3])}'
+    except Exception:
+        pass
+
+    # 5. Cross-vérification runtime_shield
+    try:
+        shield_ok = _check_runtime_shield()
+        report['checks']['runtime_shield'] = shield_ok
+        if not shield_ok and getattr(sys, 'frozen', False):
+            report['blocked'] = True
+            report['reason'] = 'Module runtime_shield altéré ou manquant.'
+    except Exception:
+        pass
+
+    if report['blocked']:
+        logger.critical(
+            "SÉCURITÉ BLOQUÉE | machine=%s | raison=%s",
+            report['machine_id'], report['reason']
+        )
+
+    return report
 
 
 # ─── Protection de la génération de licence ────────────────────────────────────
