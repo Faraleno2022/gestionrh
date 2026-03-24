@@ -1206,6 +1206,9 @@ class MoteurCalculPaie:
         bulletin_data['taux_ta'] = self.montants.get('taux_ta', Decimal('0'))
         bulletin_data['contribution_onfpp'] = self.montants.get('contribution_onfpp', Decimal('0'))
         
+        # Salaire de base (pour calcul taux horaire HS dans le PDF)
+        bulletin_data['salaire_base'] = self._obtenir_base_calcul('SALAIRE_BASE')
+
         # Heures de travail et primes HS
         bulletin_data['heures_normales'] = self.montants.get('heures_travaillees', Decimal('0'))
         bulletin_data['heures_supplementaires_30'] = self.montants.get('heures_sup_30', Decimal('0'))

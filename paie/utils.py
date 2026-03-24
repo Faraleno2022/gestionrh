@@ -298,9 +298,24 @@ def generer_bulletin_pdf(bulletin):
         y -= 0.25*cm
         
         # Calcul des montants individuels (salaire_base / 173,33 × h × coefficient)
-        _sal_h = Decimal(str(bulletin.salaire_base or 0)) / Decimal('173.33')
+        _sal_base = Decimal(str(bulletin.salaire_base or 0))
+        # Fallback: si salaire_base=0 (ancien bulletin), chercher dans les gains
+        if _sal_base == 0:
+            try:
+                from .models import LigneBulletin
+                ligne_base = LigneBulletin.objects.filter(
+                    bulletin=bulletin,
+                    rubrique__code_rubrique__icontains='SAL_BASE'
+                ).first()
+                if ligne_base:
+                    _sal_base = Decimal(str(ligne_base.montant or 0))
+            except Exception:
+                pass
+        _sal_h = _sal_base / Decimal('173.33') if _sal_base > 0 else Decimal('0')
         _montant_30 = int(_sal_h * Decimal(str(hs_30)) * Decimal('1.30'))
         _montant_60 = int(_sal_h * Decimal(str(hs_60)) * Decimal('1.60'))
+        _montant_nuit = int(_sal_h * Decimal(str(hs_nuit)) * Decimal('1.20')) if float(hs_nuit) > 0 else 0
+        _montant_feries = int(_sal_h * Decimal(str(hs_feries)) * Decimal('1.60')) if float(hs_feries) > 0 else 0
 
         hs_detail_data = [["Type", "Heures", "Majoration", "Montant"]]
         if float(hs_30) > 0:
@@ -311,10 +326,10 @@ def generer_bulletin_pdf(bulletin):
                                     f"{_montant_60:,.0f}".replace(",", " ")])
         if float(hs_nuit) > 0:
             hs_detail_data.append(["Heures de nuit (20h-6h)", f"{hs_nuit:g}h", "+20% (120%)",
-                                    f"{prime_nuit:,.0f}".replace(",", " ")])
+                                    f"{_montant_nuit:,.0f}".replace(",", " ")])
         if float(hs_feries) > 0:
             hs_detail_data.append(["Jours fériés", f"{hs_feries:g}h", "+60/100%",
-                                    f"{prime_feries:,.0f}".replace(",", " ")])
+                                    f"{_montant_feries:,.0f}".replace(",", " ")])
 
         total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries)
         hs_detail_data.append(["", f"{total_hs_heures:g}h", "Total HS:",
