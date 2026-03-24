@@ -588,47 +588,37 @@ def generer_bulletin_pdf(bulletin):
             y -= 0.25*cm
     p.setFillColor(colors.black)
 
-    # === PIED DE PAGE — centré, positions fixes depuis le bas ===
+    # === PIED DE PAGE — signatures aux coins + infos centrées, tout compact en bas ===
+    # Signatures : L'Employeur à gauche, L'Employé(e) à droite
+    p.setFont(_FONT_BOLD, 7)
+    p.drawString(1.5*cm, 4.0*cm, "L'Employeur")
+    p.drawRightString(width - 1.5*cm, 4.0*cm, "L'Employé(e)")
     p.setFont(_FONT_NORMAL, 6.5)
-    p.setFillColor(colors.HexColor("#555555"))
-    p.drawCentredString(width/2, 2.2*cm, "Ce bulletin est conforme à la législation guinéenne en vigueur.")
     if entreprise:
-        p.drawCentredString(width/2, 1.8*cm, f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
-        p.drawCentredString(width/2, 1.4*cm, f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
-    p.drawCentredString(width/2, 0.9*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
-    p.setFillColor(colors.black)
-
-    # === ZONE DE SIGNATURES — en bas, poussée dans les coins gauche/droit ===
-    sig_top = 5.8*cm   # "L'Employeur / L'Employé(e)"
-    sig_nom = 5.4*cm   # noms
-    sig_line = 4.2*cm  # lignes pointillées
-    sig_lbl = 3.8*cm   # "Date et signature"
-    # Trait séparateur entre signatures et pied de page
+        p.drawString(1.5*cm, 3.65*cm, entreprise.nom_entreprise or '')
+    p.drawRightString(width - 1.5*cm, 3.65*cm, f"{emp.nom} {emp.prenoms}")
+    # Lignes pointillées pour signature
+    p.setDash(3, 3)
+    p.line(1.5*cm, 2.9*cm, 7*cm, 2.9*cm)
+    p.line(width - 7*cm, 2.9*cm, width - 1.5*cm, 2.9*cm)
+    p.setDash()
+    p.setFont(_FONT_NORMAL, 5.5)
+    p.drawString(1.5*cm, 2.6*cm, "Date et signature")
+    p.drawRightString(width - 1.5*cm, 2.6*cm, "Lu et approuvé, date et signature")
+    # Trait séparateur
     p.setStrokeColor(colors.HexColor("#dee2e6"))
     p.setLineWidth(0.5)
-    p.line(1.5*cm, 2.8*cm, width - 1.5*cm, 2.8*cm)
+    p.line(1.5*cm, 2.35*cm, width - 1.5*cm, 2.35*cm)
     p.setStrokeColor(colors.black)
-    # Côté GAUCHE — L'Employeur
-    p.setFont(_FONT_BOLD, 8)
-    p.drawString(1.5*cm, sig_top, "L'Employeur")
-    p.setFont(_FONT_NORMAL, 7)
+    # Infos légales centrées — compact
+    p.setFont(_FONT_NORMAL, 5.5)
+    p.setFillColor(colors.HexColor("#555555"))
+    p.drawCentredString(width/2, 2.0*cm, "Ce bulletin est conforme à la législation guinéenne en vigueur.")
     if entreprise:
-        p.drawString(1.5*cm, sig_nom, entreprise.nom_entreprise or '')
-    p.setDash(3, 3)
-    p.line(1.5*cm, sig_line, 7*cm, sig_line)
-    p.setDash()
-    p.setFont(_FONT_NORMAL, 6)
-    p.drawString(1.5*cm, sig_lbl, "Date et signature")
-    # Côté DROIT — L'Employé(e)
-    p.setFont(_FONT_BOLD, 8)
-    p.drawRightString(width - 1.5*cm, sig_top, "L'Employé(e)")
-    p.setFont(_FONT_NORMAL, 7)
-    p.drawRightString(width - 1.5*cm, sig_nom, f"{emp.nom} {emp.prenoms}")
-    p.setDash(3, 3)
-    p.line(width - 7*cm, sig_line, width - 1.5*cm, sig_line)
-    p.setDash()
-    p.setFont(_FONT_NORMAL, 6)
-    p.drawRightString(width - 1.5*cm, sig_lbl, "Lu et approuvé, date et signature")
+        p.drawCentredString(width/2, 1.65*cm, f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
+        p.drawCentredString(width/2, 1.35*cm, f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
+    p.drawCentredString(width/2, 1.0*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
+    p.setFillColor(colors.black)
     
     # Finaliser le PDF
     p.showPage()
