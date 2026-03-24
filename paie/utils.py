@@ -267,14 +267,12 @@ def generer_bulletin_pdf(bulletin):
             taux_str = f"{float(taux_val):g}%"
         else:
             taux_str = "-"
-        # Corriger libellé HS si taux incohérent (ex: "HS 25%" mais taux=30%)
+        # Nettoyer libellé HS : retirer le % du libellé (la colonne Taux l'affiche déjà)
         libelle = g.rubrique.libelle_rubrique[:35]
         code_rub = (g.rubrique.code_rubrique or '').upper()
         if ('HS' in code_rub or 'HEURE' in libelle.upper()) and 'SUP' in libelle.upper():
-            if taux_val and float(taux_val) == 30:
-                libelle = libelle.replace('25%', '+30%').replace('25 %', '+30%')
-            elif taux_val and float(taux_val) == 60:
-                libelle = libelle.replace('25%', '+60%').replace('25 %', '+60%')
+            import re
+            libelle = re.sub(r'\s*\+?\d+\s*%', '', libelle).strip()
         gains_data.append([
             libelle,
             nbre_str,
@@ -446,21 +444,19 @@ def generer_bulletin_pdf(bulletin):
         p.setFillColor(colors.black)
         y -= 0.25*cm
 
-        rts_detail_data = [["Tranche", "Taux", "Impôt"]]
+        rts_detail_data = [["Tranche", "Impôt"]]
         cumul_impot = Decimal('0')
         for i, t in enumerate(detail_rts, start=1):
-            # Libellé clair : "Tranche X%" au lieu de "RTS 1"
             taux_pct = f"{t['taux']:g}"
             rts_detail_data.append([
                 f"Tranche {taux_pct}%",
-                f"{taux_pct}%",
                 f"{t['impot_tranche']:,.0f}".replace(",", " "),
             ])
             cumul_impot += t['impot_tranche']
-        rts_detail_data.append(["", "Total RTS:", f"{cumul_impot:,.0f} GNF".replace(",", " ")])
+        rts_detail_data.append(["Total RTS:", f"{cumul_impot:,.0f} GNF".replace(",", " ")])
         
         rts_row_h = 12
-        rts_table = Table(rts_detail_data, colWidths=[3*cm, 3*cm, 11*cm], rowHeights=rts_row_h)
+        rts_table = Table(rts_detail_data, colWidths=[6*cm, 11*cm], rowHeights=rts_row_h)
         nb_rows = len(rts_detail_data)
         rts_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
