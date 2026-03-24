@@ -337,6 +337,16 @@ def _apply_missing_columns():
         except Exception:
             pass
 
+    # Colonnes sur axes_accesslog (django-axes)
+    axes_cols = [
+        ('session_hash', 'VARCHAR(256) DEFAULT ""'),
+    ]
+    for col_name, col_type in axes_cols:
+        try:
+            cursor.execute(f'ALTER TABLE axes_accesslog ADD COLUMN {col_name} {col_type}')
+        except Exception:
+            pass
+
     conn.commit()
     conn.close()
     print("  Colonnes manquantes ajoutees (patch direct)")
