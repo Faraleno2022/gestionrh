@@ -394,7 +394,9 @@ def _check_no_py_sources() -> dict:
 def full_security_check() -> dict:
     """
     Vérification de sécurité complète.
-    Retourne un rapport détaillé et bloque si nécessaire.
+    - Mode dev (non-frozen) : ne bloque jamais
+    - Mode installé (frozen) : bloque si code modifié après le build
+    - Machine propriétaire : ne bloque jamais
     """
     report = {
         'timestamp': datetime.now(timezone.utc).isoformat(),
@@ -405,74 +407,55 @@ def full_security_check() -> dict:
         'reason': '',
     }
 
-    # Si machine propriétaire, ne jamais bloquer
+    # Machine propriétaire → ne jamais bloquer
     if report['is_owner']:
         return report
 
-    # 1. Vérification d'intégrité du projet
-    try:
-        integrity = verify_project_integrity()
-        report['checks']['integrity'] = integrity
-        if not integrity['intact']:
-            tampered = integrity.get('tampered_files', [])
-            missing = integrity.get('missing_files', [])
-            if not integrity.get('signature_valid', True):
-                report['blocked'] = True
-                report['reason'] = 'Signature du manifest invalide — fichiers modifiés.'
-            elif tampered:
-                report['blocked'] = True
-                report['reason'] = f'Fichiers modifiés détectés : {", ".join(tampered)}'
-            elif missing:
-                report['blocked'] = True
-                report['reason'] = f'Fichiers de protection manquants : {", ".join(missing)}'
-    except Exception as e:
-        logger.warning("Erreur vérification intégrité: %s", e)
+    # Mode développement (non-frozen) → ne pas bloquer
+    # Les vérifications ne s'appliquent qu'à l'exe installé
+    if not getattr(sys, 'frozen', False):
+        return report
 
-    # 2. Vérification anti-bypass
-    try:
-        ab = _check_anti_bypass()
-        report['checks']['anti_bypass'] = ab
-        if not ab:
-            report['blocked'] = True
-            report['reason'] = 'Module de licence altéré ou absent.'
-    except Exception:
-        pass
+    # === MODE INSTALLÉ (frozen) — Vérifications actives ===
 
-    # 3. Vérification anti-debug
+    # 1. Anti-debug : débogueur attaché au processus
     try:
         ad = _check_anti_debug()
         report['checks']['anti_debug'] = ad
         if not ad:
             report['blocked'] = True
             report['reason'] = 'Débogueur détecté — exécution bloquée.'
+            logger.critical("BLOCKED: debugger | machine=%s", report['machine_id'])
+            return report
     except Exception:
         pass
 
-    # 4. Vérification sources .py en mode compilé
+    # 2. Sources .py critiques en clair dans _internal (doivent être .pyd/.pyc)
     try:
         sources = _check_no_py_sources()
         report['checks']['no_py_sources'] = sources
         if not sources['clean']:
             report['blocked'] = True
-            report['reason'] = f'Sources .py non autorisées : {", ".join(sources["py_sources_found"][:3])}'
+            report['reason'] = (
+                'Fichiers source modifiés détectés dans l\'installation : '
+                f'{", ".join(sources["py_sources_found"][:3])}'
+            )
+            logger.critical("BLOCKED: py sources | machine=%s", report['machine_id'])
+            return report
     except Exception:
         pass
 
-    # 5. Cross-vérification runtime_shield
+    # 3. Cross-vérification runtime_shield (doit exister en mode installé)
     try:
         shield_ok = _check_runtime_shield()
         report['checks']['runtime_shield'] = shield_ok
-        if not shield_ok and getattr(sys, 'frozen', False):
+        if not shield_ok:
             report['blocked'] = True
-            report['reason'] = 'Module runtime_shield altéré ou manquant.'
+            report['reason'] = 'Module de protection runtime altéré ou manquant.'
+            logger.critical("BLOCKED: shield | machine=%s", report['machine_id'])
+            return report
     except Exception:
         pass
-
-    if report['blocked']:
-        logger.critical(
-            "SÉCURITÉ BLOQUÉE | machine=%s | raison=%s",
-            report['machine_id'], report['reason']
-        )
 
     return report
 
