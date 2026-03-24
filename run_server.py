@@ -287,6 +287,61 @@ def open_browser():
     print("  Navigateur par defaut ouvert")
 
 
+# ─── Patch DB : ajoute les colonnes manquantes (mise à jour sans migration) ──
+def _apply_missing_columns():
+    """Ajoute les colonnes manquantes si les migrations ne peuvent pas s'appliquer."""
+    import sqlite3
+    db_path = os.path.join(BASE_DIR, 'db.sqlite3')
+    if not os.path.exists(db_path):
+        return
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Colonnes à ajouter sur entreprises
+    ent_cols = [
+        ('max_employes', 'INTEGER DEFAULT 30'),
+        ('module_paie', 'BOOLEAN DEFAULT 1'),
+        ('module_conges', 'BOOLEAN DEFAULT 1'),
+        ('module_recrutement', 'BOOLEAN DEFAULT 0'),
+        ('module_formation', 'BOOLEAN DEFAULT 0'),
+        ('module_comptabilite', 'BOOLEAN DEFAULT 0'),
+        ('module_portail', 'BOOLEAN DEFAULT 0'),
+        ('acces_declarations_fiscales', 'BOOLEAN DEFAULT 0'),
+        ('acces_export_comptable', 'BOOLEAN DEFAULT 0'),
+    ]
+    for col_name, col_type in ent_cols:
+        try:
+            cursor.execute(f'ALTER TABLE entreprises ADD COLUMN {col_name} {col_type}')
+        except Exception:
+            pass  # colonne existe déjà
+
+    # Colonnes sur plans_abonnement
+    plan_cols = [
+        ('sous_titre', 'VARCHAR(100) DEFAULT ""'),
+        ('prix_installation', 'DECIMAL DEFAULT 0'),
+        ('module_comptabilite', 'BOOLEAN DEFAULT 0'),
+        ('module_portail', 'BOOLEAN DEFAULT 0'),
+        ('support_telephonique', 'BOOLEAN DEFAULT 0'),
+        ('formation_incluse', 'BOOLEAN DEFAULT 0'),
+        ('personnalisation', 'BOOLEAN DEFAULT 0'),
+        ('multi_entreprise', 'BOOLEAN DEFAULT 0'),
+        ('declarations_fiscales', 'BOOLEAN DEFAULT 0'),
+        ('export_comptable', 'BOOLEAN DEFAULT 0'),
+        ('badge', 'VARCHAR(30) DEFAULT ""'),
+        ('couleur', 'VARCHAR(7) DEFAULT "#0d6efd"'),
+        ('icone', 'VARCHAR(50) DEFAULT "bi-box"'),
+    ]
+    for col_name, col_type in plan_cols:
+        try:
+            cursor.execute(f'ALTER TABLE plans_abonnement ADD COLUMN {col_name} {col_type}')
+        except Exception:
+            pass
+
+    conn.commit()
+    conn.close()
+    print("  Colonnes manquantes ajoutees (patch direct)")
+
+
 # ─── Point d'entrée principal ──────────────────────────────────────────────────
 def main():
     # Configurer Django
@@ -327,12 +382,25 @@ def main():
                 shutil.copy2(template_path, db_path)
                 print("  Base de donnees initialisee depuis le template")
 
-        # Migrations
+        # Migrations — applique les nouvelles migrations sur la DB existante
         try:
-            call_command('migrate', '--run-syncdb', verbosity=1)
+            call_command('migrate', '--run-syncdb', verbosity=0)
             print("  Migrations appliquees avec succes")
         except Exception as e:
-            print(f"  Erreur migration: {e}")
+            # Si erreur "table already exists", tenter avec --fake-initial
+            if 'already exists' in str(e):
+                try:
+                    call_command('migrate', '--fake-initial', verbosity=0)
+                    print("  Migrations appliquees (fake-initial)")
+                except Exception as e2:
+                    print(f"  Erreur migration fake-initial: {e2}")
+            else:
+                print(f"  Erreur migration: {e}")
+                # Fallback: appliquer colonnes manquantes directement
+                try:
+                    _apply_missing_columns()
+                except Exception:
+                    pass
 
         # Vérifier que les tables critiques existent
         try:
