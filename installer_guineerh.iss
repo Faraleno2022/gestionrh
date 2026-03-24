@@ -85,16 +85,16 @@ Source: "Arreter_GestionnaireRH.bat"; DestDir: "{app}"; Flags: ignoreversion
 ; Base de données template pré-migrée (première installation uniquement)
 Source: "dist\GestionnaireRH\db_template.sqlite3"; DestDir: "{app}"; Flags: onlyifdoesntexist
 
-; Outil d'activation de licence (pour le technicien)
-Source: "license_manager.py"; DestDir: "{app}"; Flags: ignoreversion
+; NOTE: license_manager.py n'est plus copié en source (sécurité).
+; Le technicien utilise le script d'activation depuis la machine propriétaire.
 
 ; Protection anti-vol et anti-falsification (ICG Guinea)
 ; IMPORTANT : project_guardian.pyd, runtime_shield.pyd et license_manager.pyd
 ; sont déjà dans dist\GestionnaireRH\_internal\ (compilés Nuitka via le build).
 ; NE PAS copier les .py sources dans _internal — runtime_shield.py les détecterait
 ; comme une falsification et bloquerait l'application.
-Source: ".integrity_manifest.json"; DestDir: "{app}"; Flags: ignoreversion
-; Le manifest est déjà dans _internal via dist\GestionnaireRH\*, pas besoin de le dupliquer.
+; NOTE: .integrity_manifest.json retiré de l'installeur (causait des faux positifs).
+; La protection repose sur les checksums runtime_shield générés par protect_distribution.py.
 
 ; Icône
 Source: "static\img\logo.ico"; DestDir: "{app}"; Flags: ignoreversion
@@ -134,13 +134,31 @@ Filename: "{app}\GestionnaireRH.exe"; Description: "Démarrer GestionnaireRH mai
 Filename: "taskkill"; Parameters: "/F /IM GestionnaireRH.exe"; Flags: runhidden; RunOnceId: "KillServer"
 
 [InstallDelete]
-; Nettoyer les anciens .py sources dans _internal (mis par erreur dans les versions précédentes)
-; Ces fichiers doivent être compilés en .pyd, pas en texte clair.
+; Nettoyer les anciens .py sources dans _internal (résidus des versions précédentes)
+; Ces fichiers doivent être compilés en .pyd/.pyc, pas en texte clair.
 Type: files; Name: "{app}\_internal\license_manager.py"
 Type: files; Name: "{app}\_internal\project_guardian.py"
 Type: files; Name: "{app}\_internal\runtime_shield.py"
+Type: files; Name: "{app}\_internal\run_server.py"
+Type: files; Name: "{app}\_internal\manage.py"
+; Nettoyer les anciens .pyc résiduels (seront recréés par le nouveau build)
+Type: files; Name: "{app}\_internal\run_server.pyc"
+Type: files; Name: "{app}\_internal\manage.pyc"
+; Nettoyer les anciens sous-dossiers .py résiduels
+Type: filesandordirs; Name: "{app}\_internal\core\*.py"
+Type: filesandordirs; Name: "{app}\_internal\employes\*.py"
+Type: filesandordirs; Name: "{app}\_internal\paie\*.py"
+Type: filesandordirs; Name: "{app}\_internal\dashboard\*.py"
+Type: filesandordirs; Name: "{app}\_internal\gestionnaire_rh\*.py"
 ; Nettoyer le marqueur de falsification (réinitialisation à la mise à jour)
 Type: files; Name: "{app}\.tamper_detected"
+; Nettoyer l'ancien manifest (sera remplacé par le nouveau)
+Type: files; Name: "{app}\.integrity_manifest.json"
+; Nettoyer les anciens .py sources à la RACINE de {app} (résidus critiques)
+Type: files; Name: "{app}\license_manager.py"
+Type: files; Name: "{app}\project_guardian.py"
+Type: files; Name: "{app}\runtime_shield.py"
+Type: files; Name: "{app}\run_server.py"
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\logs"
