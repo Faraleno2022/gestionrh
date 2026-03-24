@@ -163,16 +163,16 @@ def generer_bulletin_pdf(bulletin):
     p.setFont(_FONT_BOLD, 12)
     nom_entreprise = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
     p.drawCentredString(width/2, y, nom_entreprise)
-    y -= 0.35*cm
-    # NIF et CNSS entreprise sous le nom (obligatoire)
+    y -= 0.50*cm
+    # NIF et CNSS entreprise sous le nom (obligatoire légalement)
     if entreprise:
         nif_str = entreprise.nif or "Non renseigné"
         cnss_str = getattr(entreprise, 'num_cnss', None) or "Non renseigné"
-        p.setFont(_FONT_NORMAL, 7)
-        p.setFillColor(colors.HexColor("#555555"))
-        p.drawCentredString(width/2, y, f"NIF: {nif_str}  |  CNSS Employeur: {cnss_str}")
+        p.setFont(_FONT_NORMAL, 7.5)
+        p.setFillColor(colors.HexColor("#444444"))
+        p.drawCentredString(width/2, y, f"NIF: {nif_str}   |   CNSS Employeur: {cnss_str}")
         p.setFillColor(colors.black)
-    y -= 0.35*cm
+    y -= 0.45*cm
 
     # Titre bulletin
     p.setFont(_FONT_BOLD, 14)
@@ -796,11 +796,21 @@ def generer_bulletin_pdf_sdbk(bulletin):
                           'heure' in (g.rubrique.libelle_rubrique or '').lower()
                           for g in gains)
     if not has_hs_in_gains:
-        td.append([str(num), 'HS30%', f'{hs_30:g}h' if hs_30 else '', '', '', _fmt0(prime_hs) if hs_30 > 0 else '0', '', '', '', ''])
+        # Récupérer salaire de base pour calcul taux horaire
+        _sal_base_hs = Decimal(str(bulletin.salaire_base or 0))
+        if _sal_base_hs == 0:
+            try:
+                from .models import LigneBulletin as _LB
+                _lb = _LB.objects.filter(bulletin=bulletin, rubrique__code_rubrique__icontains='SAL_BASE').first()
+                if _lb: _sal_base_hs = Decimal(str(_lb.montant or 0))
+            except Exception:
+                pass
+        _sal_h2 = _sal_base_hs / Decimal('173.33') if _sal_base_hs > 0 else Decimal('0')
+        mnt30  = int(_sal_h2 * Decimal(str(hs_30)) * Decimal('1.30')) if hs_30 > 0 else 0
+        mnt60  = int(_sal_h2 * Decimal(str(hs_60)) * Decimal('1.60')) if hs_60 > 0 else 0
+        td.append([str(num), 'HS +30% (Art.221)', f'{hs_30:g}h' if hs_30 else '', '', '130%', _fmt0(mnt30) if hs_30 > 0 else '0', '', '', '', ''])
         num += 1
-        _sal_h = Decimal(str(bulletin.salaire_base or 0)) / Decimal('173.33')
-        mnt60  = int(_sal_h * Decimal(str(hs_60)) * Decimal('1.60')) if hs_60 > 0 else 0
-        td.append([str(num), 'HS60%', f'{hs_60:g}h' if hs_60 else '', '', '', _fmt0(mnt60) if hs_60 > 0 else '0', '', '', '', ''])
+        td.append([str(num), 'HS +60% (Art.221)', f'{hs_60:g}h' if hs_60 else '', '', '160%', _fmt0(mnt60) if hs_60 > 0 else '0', '', '', '', ''])
         num += 1
 
     # ── Prime d'ancienneté (si absente des gains) ──
@@ -819,7 +829,7 @@ def generer_bulletin_pdf_sdbk(bulletin):
     # ── RTS ──
     base_rts = float(getattr(bulletin, 'base_rts', 0) or 0)
     taux_rts = float(getattr(bulletin, 'taux_effectif_rts', 0) or 0)
-    td.append(['', 'RTS', '', _fmt(base_rts), f'{taux_rts:.1f}%' if taux_rts else '', '', _fmt0(bulletin.irg), '', '', ''])
+    td.append(['', 'RTS (progressif)', '', _fmt(base_rts), f'moy.{taux_rts:.1f}%' if taux_rts else '', '', _fmt0(bulletin.irg), '', '', ''])
 
     # ── Versement Forfaitaire ──
     vf    = float(getattr(bulletin, 'versement_forfaitaire', 0) or 0)

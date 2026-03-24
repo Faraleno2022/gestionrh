@@ -180,8 +180,8 @@ class MoteurCalculPaie:
         return tranches
     
     def _arrondir(self, montant):
-        """Arrondir un montant à 2 décimales"""
-        return montant.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        """Arrondir un montant à l'unité (GNF = pas de centimes)"""
+        return montant.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
     
     def _calculer_anciennete(self):
         """Calculer l'ancienneté en années"""

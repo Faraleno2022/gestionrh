@@ -544,16 +544,16 @@ def telecharger_bulletin_pdf(request, pk):
     p.setFont(_FB, 12)
     nom_entreprise = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
     p.drawCentredString(width/2, y, nom_entreprise)
-    y -= 0.35*cm
-    # NIF et CNSS entreprise sous le nom (obligatoire)
+    y -= 0.50*cm
+    # NIF et CNSS entreprise sous le nom (obligatoire légalement)
     if entreprise:
         nif_str = entreprise.nif or "Non renseigné"
         cnss_str = getattr(entreprise, 'num_cnss', None) or "Non renseigné"
-        p.setFont(_FN, 7)
-        p.setFillColor(colors.HexColor("#555555"))
-        p.drawCentredString(width/2, y, f"NIF: {nif_str}  |  CNSS Employeur: {cnss_str}")
+        p.setFont(_FN, 7.5)
+        p.setFillColor(colors.HexColor("#444444"))
+        p.drawCentredString(width/2, y, f"NIF: {nif_str}   |   CNSS Employeur: {cnss_str}")
         p.setFillColor(colors.black)
-    y -= 0.35*cm
+        y -= 0.45*cm
 
     # Titre bulletin
     p.setFont(_FB, 14)
@@ -1026,16 +1026,16 @@ def telecharger_bulletin_public(request, token):
     p.setFont(_FB, 12)
     nom_entreprise = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
     p.drawCentredString(width/2, y, nom_entreprise)
-    y -= 0.35*cm
-    # NIF et CNSS entreprise sous le nom (obligatoire)
+    y -= 0.50*cm
+    # NIF et CNSS entreprise sous le nom (obligatoire légalement)
     if entreprise:
         nif_str = entreprise.nif or "Non renseigné"
         cnss_str = getattr(entreprise, 'num_cnss', None) or "Non renseigné"
-        p.setFont(_FN, 7)
-        p.setFillColor(colors.HexColor("#555555"))
-        p.drawCentredString(width/2, y, f"NIF: {nif_str}  |  CNSS Employeur: {cnss_str}")
+        p.setFont(_FN, 7.5)
+        p.setFillColor(colors.HexColor("#444444"))
+        p.drawCentredString(width/2, y, f"NIF: {nif_str}   |   CNSS Employeur: {cnss_str}")
         p.setFillColor(colors.black)
-    y -= 0.35*cm
+        y -= 0.45*cm
 
     # Titre bulletin
     p.setFont(_FB, 14)
