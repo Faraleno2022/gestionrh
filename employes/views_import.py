@@ -188,10 +188,11 @@ def telecharger_template_import(request):
         cell.fill = example_fill
         cell.border = border
 
-    # Largeur colonnes
-    col_widths = [14, 10, 18, 22, 8, 16, 18, 14, 22, 14, 20, 20, 20, 28, 25, 22, 22, 22, 16, 14, 16, 16, 20, 22]
-    for i, w in enumerate(col_widths, 1):
-        ws.column_dimensions[get_column_letter(i)].width = w
+    # Largeur colonnes (auto pour toutes les colonnes)
+    for col_idx, (col_name, _, _, desc, _) in enumerate(IMPORT_COLUMNS, 1):
+        # Largeur basée sur le plus long entre nom de colonne et description
+        w = max(len(col_name), len(desc) // 2, 14)
+        ws.column_dimensions[get_column_letter(col_idx)].width = min(w, 30)
 
     # Figer la première ligne
     ws.freeze_panes = 'A4'
@@ -430,6 +431,24 @@ def import_employes_preview(request):
         if date_embauche_str and not _parse_date(date_embauche_str):
             line['avertissements'].append(f'Date embauche invalide : "{date_embauche_str}"')
 
+        # Validations dates supplémentaires (conducteur, formation, visite)
+        for field, label in [
+            ('date_obtention_permis', 'Date obtention permis'),
+            ('date_validite_permis', 'Date validité permis'),
+            ('date_formation_apth', 'Date formation APTH'),
+            ('date_dernier_recyclage', 'Date dernier recyclage'),
+            ('date_derniere_visite_medicale', 'Date visite médicale'),
+            ('date_prochaine_visite_medicale', 'Prochaine visite médicale'),
+        ]:
+            val = row.get(field, row.get(label, ''))
+            if val and not _parse_date(val):
+                line['avertissements'].append(f'{label} invalide : "{val}"')
+
+        # Validation groupe sanguin
+        gs = _clean_str(row.get('groupe_sanguin', row.get('Groupe sanguin', '')))
+        if gs and gs not in ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'):
+            line['avertissements'].append(f'Groupe sanguin invalide : "{gs}"')
+
         # Validation références
         etab = _clean_str(row.get('etablissement', row.get('Établissement', '')))
         if etab and etab.lower() not in etabs_cache:
@@ -504,7 +523,8 @@ def _read_xlsx(fichier):
         header_map[field_name.lower()] = field_name
 
     # Ligne 2 = descriptions, Ligne 3 = exemple → à ignorer
-    description_row = next(rows_iter, None)  # skip descriptions
+    next(rows_iter, None)  # skip ligne 2 (descriptions)
+    next(rows_iter, None)  # skip ligne 3 (exemple)
 
     rows = []
     for row_values in rows_iter:
@@ -537,7 +557,33 @@ def _read_csv(fichier):
         header_map[field_name.lower()] = field_name
 
     rows = []
-    for row in reader:
+    row_iter = iter(reader)
+
+    # Si le CSV vient du template, les 2 premières lignes de données
+    # sont les descriptions et l'exemple → les ignorer
+    first_row = next(row_iter, None)
+    if first_row:
+        # Détecter si c'est la ligne de description du template
+        first_vals = [str(v).strip().lower() for v in first_row.values() if v]
+        is_template_desc = any(
+            kw in ' '.join(first_vals)
+            for kw in ['obligatoire', 'laisser vide', 'format jj/mm', 'numéro']
+        )
+        if is_template_desc:
+            # C'est la ligne description → skip aussi la ligne exemple
+            next(row_iter, None)
+        else:
+            # C'est une vraie donnée → la traiter
+            row_dict = {}
+            for key, val in first_row.items():
+                if key:
+                    key_lower = key.strip().lower().rstrip('*')
+                    field = header_map.get(key_lower, key.strip())
+                    row_dict[field] = val
+                    row_dict[key.strip()] = val
+            rows.append(row_dict)
+
+    for row in row_iter:
         row_dict = {}
         for key, val in row.items():
             if key:
