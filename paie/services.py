@@ -813,27 +813,29 @@ class MoteurCalculPaie:
             base_vf_nette = base_vf_ta - deduction_fixe
         
         self.montants['base_vf'] = base_vf_nette
+        self.montants['deduction_vf'] = base_vf_ta - base_vf_nette  # pour affichage PDF
         self.montants['taux_vf'] = taux_vf
         self.montants['versement_forfaitaire'] = self._arrondir(
             base_vf_nette * taux_vf / Decimal('100')
         )
-        
+
         # TA et ONFPP sont mutuellement exclusifs selon le nombre de salariés:
         # - Moins de 30 salariés: TA (2%)
         # - 30 salariés ou plus: ONFPP (1,5%)
+        # Base harmonisée avec VF (base_vf_nette) pour cohérence comptable
         if self.nb_salaries < 30:
             taux_ta = self.constantes.get('TAUX_TA', Decimal('2.00'))
-            self.montants['base_ta'] = base_vf_ta
+            self.montants['base_ta'] = base_vf_nette
             self.montants['taux_ta'] = taux_ta
             self.montants['taxe_apprentissage'] = self._arrondir(
-                base_vf_ta * taux_ta / Decimal('100')
+                base_vf_nette * taux_ta / Decimal('100')
             )
             self.montants['contribution_onfpp'] = Decimal('0')
         else:
             self.montants['taxe_apprentissage'] = Decimal('0')
             taux_onfpp = self.constantes.get('TAUX_ONFPP', Decimal('1.50'))
             self.montants['contribution_onfpp'] = self._arrondir(
-                base_vf_ta * taux_onfpp / Decimal('100')
+                base_vf_nette * taux_onfpp / Decimal('100')
             )
         
         # Total charges patronales

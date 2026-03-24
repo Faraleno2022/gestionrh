@@ -163,8 +163,17 @@ def generer_bulletin_pdf(bulletin):
     p.setFont(_FONT_BOLD, 12)
     nom_entreprise = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
     p.drawCentredString(width/2, y, nom_entreprise)
-    y -= 0.6*cm
-    
+    y -= 0.35*cm
+    # NIF et CNSS entreprise sous le nom (obligatoire)
+    if entreprise:
+        nif_str = entreprise.nif or "Non renseigné"
+        cnss_str = getattr(entreprise, 'num_cnss', None) or "Non renseigné"
+        p.setFont(_FONT_NORMAL, 7)
+        p.setFillColor(colors.HexColor("#555555"))
+        p.drawCentredString(width/2, y, f"NIF: {nif_str}  |  CNSS Employeur: {cnss_str}")
+        p.setFillColor(colors.black)
+    y -= 0.35*cm
+
     # Titre bulletin
     p.setFont(_FONT_BOLD, 14)
     p.drawCentredString(width/2, y, "BULLETIN DE PAIE")
@@ -312,10 +321,10 @@ def generer_bulletin_pdf(bulletin):
             except Exception:
                 pass
         _sal_h = _sal_base / Decimal('173.33') if _sal_base > 0 else Decimal('0')
-        _montant_30 = int(_sal_h * Decimal(str(hs_30)) * Decimal('1.30'))
-        _montant_60 = int(_sal_h * Decimal(str(hs_60)) * Decimal('1.60'))
-        _montant_nuit = int(_sal_h * Decimal(str(hs_nuit)) * Decimal('1.20')) if float(hs_nuit) > 0 else 0
-        _montant_feries = int(_sal_h * Decimal(str(hs_feries)) * Decimal('1.60')) if float(hs_feries) > 0 else 0
+        _montant_30 = round(_sal_h * Decimal(str(hs_30)) * Decimal('1.30'))
+        _montant_60 = round(_sal_h * Decimal(str(hs_60)) * Decimal('1.60'))
+        _montant_nuit = round(_sal_h * Decimal(str(hs_nuit)) * Decimal('1.20')) if float(hs_nuit) > 0 else 0
+        _montant_feries = round(_sal_h * Decimal(str(hs_feries)) * Decimal('1.60')) if float(hs_feries) > 0 else 0
 
         hs_detail_data = [["Type", "Heures", "Majoration", "Montant"]]
         if float(hs_30) > 0:
@@ -384,8 +393,8 @@ def generer_bulletin_pdf(bulletin):
     base_rts_val = getattr(bulletin, 'base_rts', 0) or 0
     taux_eff_rts_val = getattr(bulletin, 'taux_effectif_rts', 0) or 0
     rts_base_str = f"{base_rts_val:,.0f}".replace(",", " ") if base_rts_val else "-"
-    rts_taux_str = f"{taux_eff_rts_val:.2f}%" if taux_eff_rts_val else "-"
-    retenues_data.append(["RTS (Impôt sur le Revenu)", rts_base_str, rts_taux_str, f"{bulletin.irg:,.0f}".replace(",", " ")])
+    rts_taux_str = f"moy. {taux_eff_rts_val:.2f}%" if taux_eff_rts_val else "-"
+    retenues_data.append(["RTS (Barème progressif)", rts_base_str, rts_taux_str, f"{bulletin.irg:,.0f}".replace(",", " ")])
     
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
@@ -492,21 +501,41 @@ def generer_bulletin_pdf(bulletin):
     # === CHARGES PATRONALES ===
     vf = getattr(bulletin, 'versement_forfaitaire', 0) or 0
     ta = getattr(bulletin, 'taxe_apprentissage', 0) or 0
+    taux_ta = getattr(bulletin, 'taux_ta', 0) or 0
     onfpp = getattr(bulletin, 'contribution_onfpp', 0) or 0
+    base_vf = getattr(bulletin, 'base_vf', 0) or 0
+    nb_sal = getattr(bulletin, 'nombre_salaries', 0) or 0
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
-    
+    taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '1,5'
+
     p.setFont(_FONT_BOLD, 8)
     p.drawString(1.5*cm, y, "CHARGES PATRONALES:")
     y -= 0.35*cm
     p.setFont(_FONT_NORMAL, 6.5)
     p.drawString(1.5*cm, y, f"CNSS 18%: {bulletin.cnss_employeur:,.0f}".replace(",", " "))
     p.drawString(5.5*cm, y, f"VF 6%: {vf:,.0f}".replace(",", " "))
-    p.drawString(9*cm, y, f"TA 1,5%: {ta:,.0f}".replace(",", " "))
-    p.drawString(12.5*cm, y, f"ONFPP 1,5%: {onfpp:,.0f}".replace(",", " "))
+    if ta > 0:
+        p.drawString(9*cm, y, f"TA {taux_ta_label}% (eff: {nb_sal} <30): {ta:,.0f}".replace(",", " "))
+    elif onfpp > 0:
+        p.drawString(9*cm, y, f"ONFPP 1,5% (eff: {nb_sal} >=30): {onfpp:,.0f}".replace(",", " "))
     p.setFont(_FONT_BOLD, 7)
     p.drawRightString(width - 1.5*cm, y, f"Total: {total_charges:,.0f} GNF".replace(",", " "))
     y -= 0.3*cm
-    
+    # Base de calcul VF/TA avec explication de la déduction
+    if base_vf > 0:
+        p.setFont(_FONT_NORMAL, 6)
+        p.setFillColor(colors.HexColor("#666666"))
+        brut_gnf = float(bulletin.salaire_brut)
+        deduction = brut_gnf - float(base_vf)
+        if deduction > 0:
+            p.drawString(1.5*cm, y,
+                f"└─ Base VF/TA: {base_vf:,.0f} = brut {brut_gnf:,.0f} − abattement {deduction:,.0f}"
+                .replace(",", " "))
+        else:
+            p.drawString(1.5*cm, y, f"└─ Base VF/TA: {base_vf:,.0f}".replace(",", " "))
+        y -= 0.25*cm
+    p.setFillColor(colors.black)
+
     # === ZONE DE SIGNATURES ===
     y -= 1.2*cm
     p.setFont(_FONT_BOLD, 8)
