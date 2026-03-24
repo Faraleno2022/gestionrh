@@ -337,6 +337,34 @@ def _apply_missing_columns():
         except Exception:
             pass
 
+    # Colonnes sur employes (conducteur, filiation, formation, visite médicale)
+    emp_cols = [
+        ('nom_pere', 'VARCHAR(200)'),
+        ('nom_mere', 'VARCHAR(200)'),
+        ('nombre_femmes', 'INTEGER DEFAULT 0'),
+        ('id_conducteur', 'VARCHAR(50)'),
+        ('tracteur', 'VARCHAR(100)'),
+        ('citerne', 'VARCHAR(100)'),
+        ('numero_permis', 'VARCHAR(50)'),
+        ('date_obtention_permis', 'DATE'),
+        ('date_validite_permis', 'DATE'),
+        ('groupe_sanguin', 'VARCHAR(10)'),
+        ('base_chauffeur', 'VARCHAR(100)'),
+        ('date_formation_apth', 'DATE'),
+        ('anciennete_transport_hcl', 'INTEGER'),
+        ('date_dernier_recyclage', 'DATE'),
+        ('formation_extincteur', 'BOOLEAN DEFAULT 0'),
+        ('date_derniere_visite_medicale', 'DATE'),
+        ('service_medical_accredite', 'VARCHAR(200)'),
+        ('date_prochaine_visite_medicale', 'DATE'),
+        ('vehicule_assigne', 'VARCHAR(200)'),
+    ]
+    for col_name, col_type in emp_cols:
+        try:
+            cursor.execute(f'ALTER TABLE employes ADD COLUMN {col_name} {col_type}')
+        except Exception:
+            pass
+
     # Colonnes sur axes_accesslog (django-axes)
     axes_cols = [
         ('session_hash', 'VARCHAR(256) DEFAULT ""'),

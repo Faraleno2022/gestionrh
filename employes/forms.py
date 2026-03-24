@@ -43,7 +43,7 @@ class EmployeForm(forms.ModelForm):
             'nom_pere', 'nom_mere', 'nombre_femmes',
 
             # Conducteur / Transport
-            'id_conducteur', 'tracteur', 'citerne',
+            'id_conducteur', 'tracteur', 'citerne', 'vehicule_assigne',
             'numero_permis', 'date_obtention_permis', 'date_validite_permis',
             'groupe_sanguin', 'base_chauffeur',
 
@@ -220,6 +220,9 @@ class EmployeForm(forms.ModelForm):
                         ),
                     ),
                     Fieldset('Véhicules assignés',
+                        Row(
+                            Column('vehicule_assigne', css_class='col-md-12'),
+                        ),
                         Row(
                             Column('tracteur', css_class='col-md-6'),
                             Column('citerne', css_class='col-md-6'),

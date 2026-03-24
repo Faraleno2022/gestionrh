@@ -46,6 +46,7 @@ IMPORT_COLUMNS = [
     ('Date validité permis', 'date_validite_permis', False, 'Format JJ/MM/AAAA', '10/05/2030'),
     ('Groupe sanguin', 'groupe_sanguin', False, 'A+ / A- / B+ / B- / AB+ / AB- / O+ / O-', 'O+'),
     ('Chauffeur basé à', 'base_chauffeur', False, 'Lieu d\'affectation du chauffeur', 'Conakry'),
+    ('Camion/Voiture assigné(e)', 'vehicule_assigne', False, 'Véhicule assigné (immat. ou description)', 'RC-9999-AB / Toyota Hilux'),
     # --- IMMATRICULATIONS / ÉTAT CIVIL ---
     ('Date de naissance', 'date_naissance', False, 'Format JJ/MM/AAAA', '15/03/1990'),
     ('Lieu de naissance', 'lieu_naissance', False, 'Ville de naissance', 'Conakry'),
@@ -679,6 +680,7 @@ def import_employes_execute(request):
                     date_validite_permis=_parse_date(row.get('date_validite_permis', row.get('Date validité permis', ''))),
                     groupe_sanguin=_clean_str(row.get('groupe_sanguin', row.get('Groupe sanguin', ''))) or None,
                     base_chauffeur=_clean_str(row.get('base_chauffeur', row.get('Chauffeur basé à', ''))) or None,
+                    vehicule_assigne=_clean_str(row.get('vehicule_assigne', row.get('Camion/Voiture assigné(e)', ''))) or None,
                     # Formation transport / sécurité
                     date_formation_apth=_parse_date(row.get('date_formation_apth', row.get('Date formation APTH', ''))),
                     anciennete_transport_hcl=_parse_int(row.get('anciennete_transport_hcl', row.get('Ancienneté transport HCL (ans)', ''))) or None,

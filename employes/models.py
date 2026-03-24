@@ -131,6 +131,8 @@ class Employe(models.Model):
                                       choices=[('A+','A+'),('A-','A-'),('B+','B+'),('B-','B-'),
                                                ('AB+','AB+'),('AB-','AB-'),('O+','O+'),('O-','O-')])
     base_chauffeur = models.CharField(max_length=100, blank=True, null=True, verbose_name='Chauffeur basé à')
+    vehicule_assigne = models.CharField(max_length=200, blank=True, null=True, verbose_name='Camion/Voiture assigné(e)',
+                                        help_text='Véhicule assigné à l\'employé (immatriculation ou description)')
 
     # Formation transport / sécurité
     date_formation_apth = models.DateField(blank=True, null=True, verbose_name='Date formation APTH')
