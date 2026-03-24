@@ -39,6 +39,22 @@ class EmployeForm(forms.ModelForm):
             'date_embauche', 'date_anciennete', 'type_contrat',
             'superieur_hierarchique',
             
+            # Filiation
+            'nom_pere', 'nom_mere', 'nombre_femmes',
+
+            # Conducteur / Transport
+            'id_conducteur', 'tracteur', 'citerne',
+            'numero_permis', 'date_obtention_permis', 'date_validite_permis',
+            'groupe_sanguin', 'base_chauffeur',
+
+            # Formation transport / sécurité
+            'date_formation_apth', 'anciennete_transport_hcl',
+            'date_dernier_recyclage', 'formation_extincteur',
+
+            # Visite médicale (suivi rapide)
+            'date_derniere_visite_medicale', 'service_medical_accredite',
+            'date_prochaine_visite_medicale',
+
             # Bancaire
             'mode_paiement', 'nom_banque', 'agence_banque',
             'numero_compte', 'rib', 'operateur_mobile_money',
@@ -53,6 +69,12 @@ class EmployeForm(forms.ModelForm):
             'date_anciennete': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
             'photo': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
             'adresse_actuelle': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'date_obtention_permis': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            'date_validite_permis': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            'date_formation_apth': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            'date_dernier_recyclage': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            'date_derniere_visite_medicale': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            'date_prochaine_visite_medicale': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
         }
     
     def __init__(self, *args, **kwargs):
@@ -95,7 +117,6 @@ class EmployeForm(forms.ModelForm):
                             Column('situation_matrimoniale', css_class='col-md-4'),
                         ),
                         Row(
-                            Column('nombre_enfants', css_class='col-md-4'),
                             Column('photo', css_class='col-md-8'),
                         ),
                     ),
@@ -147,15 +168,8 @@ class EmployeForm(forms.ModelForm):
                             Column('email_professionnel', css_class='col-md-6'),
                         ),
                     ),
-                    Fieldset('Contact d\'urgence',
-                        Row(
-                            Column('contact_urgence_nom', css_class='col-md-6'),
-                            Column('contact_urgence_lien', css_class='col-md-6'),
-                        ),
-                        'contact_urgence_telephone',
-                    ),
                 ),
-                
+
                 Tab('Professionnel',
                     Fieldset('Affectation',
                         'matricule',
@@ -177,6 +191,69 @@ class EmployeForm(forms.ModelForm):
                     ),
                 ),
                 
+                Tab('Filiation',
+                    Fieldset('Famille',
+                        Row(
+                            Column('nombre_femmes', css_class='col-md-4'),
+                            Column('nombre_enfants', css_class='col-md-4'),
+                        ),
+                        Row(
+                            Column('nom_pere', css_class='col-md-6'),
+                            Column('nom_mere', css_class='col-md-6'),
+                        ),
+                    ),
+                    Fieldset('Contact d\'urgence',
+                        Row(
+                            Column('contact_urgence_nom', css_class='col-md-4'),
+                            Column('contact_urgence_lien', css_class='col-md-4'),
+                            Column('contact_urgence_telephone', css_class='col-md-4'),
+                        ),
+                    ),
+                ),
+
+                Tab('Conducteur',
+                    Fieldset('Identification conducteur',
+                        Row(
+                            Column('id_conducteur', css_class='col-md-4'),
+                            Column('groupe_sanguin', css_class='col-md-4'),
+                            Column('base_chauffeur', css_class='col-md-4'),
+                        ),
+                    ),
+                    Fieldset('Véhicules assignés',
+                        Row(
+                            Column('tracteur', css_class='col-md-6'),
+                            Column('citerne', css_class='col-md-6'),
+                        ),
+                    ),
+                    Fieldset('Permis de conduire',
+                        Row(
+                            Column('numero_permis', css_class='col-md-4'),
+                            Column('date_obtention_permis', css_class='col-md-4'),
+                            Column('date_validite_permis', css_class='col-md-4'),
+                        ),
+                    ),
+                ),
+
+                Tab('Formation & Sécurité',
+                    Fieldset('Formation transport',
+                        Row(
+                            Column('date_formation_apth', css_class='col-md-4'),
+                            Column('anciennete_transport_hcl', css_class='col-md-4'),
+                            Column('formation_extincteur', css_class='col-md-4'),
+                        ),
+                        Row(
+                            Column('date_dernier_recyclage', css_class='col-md-6'),
+                        ),
+                    ),
+                    Fieldset('Visite médicale',
+                        Row(
+                            Column('date_derniere_visite_medicale', css_class='col-md-4'),
+                            Column('service_medical_accredite', css_class='col-md-4'),
+                            Column('date_prochaine_visite_medicale', css_class='col-md-4'),
+                        ),
+                    ),
+                ),
+
                 Tab('Bancaire',
                     Fieldset('Mode de paiement',
                         Row(

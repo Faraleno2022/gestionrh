@@ -28,26 +28,57 @@ from core.views import log_activity
 # ============================================================
 IMPORT_COLUMNS = [
     # (nom_colonne, champ_model, obligatoire, description, exemple)
+    # --- RENSEIGNEMENTS ---
     ('Matricule', 'matricule', False, 'Laisser vide pour génération automatique', 'EMP-001'),
     ('Civilité', 'civilite', False, 'M. / Mme / Mlle', 'M.'),
     ('Nom*', 'nom', True, 'Nom de famille (obligatoire)', 'DIALLO'),
     ('Prénoms*', 'prenoms', True, 'Prénoms (obligatoire)', 'Mamadou Alpha'),
     ('Sexe', 'sexe', False, 'M ou F', 'M'),
+    ('N° CNSS', 'num_cnss_individuel', False, 'Numéro CNSS individuel', 'CNSS-2024-001'),
+    ('N° Pièce identité', 'numero_piece_identite', False, 'Numéro du document', 'CNI-123456'),
+    ('Statut', 'statut_employe', False, 'actif / suspendu / demissionnaire / licencie / retraite', 'actif'),
+    # --- CONDUCTEUR / TRANSPORT ---
+    ('ID Conducteur', 'id_conducteur', False, 'Identifiant conducteur', 'COND-001'),
+    ('Tracteur', 'tracteur', False, 'Immatriculation ou nom tracteur', 'RC-1234-AB'),
+    ('Citerne', 'citerne', False, 'Immatriculation ou nom citerne', 'CT-5678-CD'),
+    ('N° Permis', 'numero_permis', False, 'Numéro du permis de conduire', 'PG-2024-12345'),
+    ('Date obtention permis', 'date_obtention_permis', False, 'Format JJ/MM/AAAA', '10/05/2015'),
+    ('Date validité permis', 'date_validite_permis', False, 'Format JJ/MM/AAAA', '10/05/2030'),
+    ('Groupe sanguin', 'groupe_sanguin', False, 'A+ / A- / B+ / B- / AB+ / AB- / O+ / O-', 'O+'),
+    ('Chauffeur basé à', 'base_chauffeur', False, 'Lieu d\'affectation du chauffeur', 'Conakry'),
+    # --- IMMATRICULATIONS / ÉTAT CIVIL ---
     ('Date de naissance', 'date_naissance', False, 'Format JJ/MM/AAAA', '15/03/1990'),
     ('Lieu de naissance', 'lieu_naissance', False, 'Ville de naissance', 'Conakry'),
     ('Nationalité', 'nationalite', False, 'Par défaut : Guinéenne', 'Guinéenne'),
     ('Situation matrimoniale', 'situation_matrimoniale', False, 'celibataire / marie / divorce / veuf', 'celibataire'),
-    ('Nombre enfants', 'nombre_enfants', False, 'Nombre entier', '2'),
-    ('N° Pièce identité', 'numero_piece_identite', False, 'Numéro du document', 'CNI-123456'),
-    ('N° CNSS', 'num_cnss_individuel', False, 'Numéro CNSS individuel', 'CNSS-2024-001'),
     ('Téléphone', 'telephone_principal', False, 'Numéro principal', '+224 620 00 00 00'),
     ('Email professionnel', 'email_professionnel', False, 'Adresse email pro', 'mdiallo@entreprise.gn'),
     ('Adresse', 'adresse_actuelle', False, 'Adresse de résidence', 'Kaloum, Conakry'),
+    ('Date embauche', 'date_embauche', False, 'Format JJ/MM/AAAA', '01/01/2024'),
+    # --- PROFESSIONNEL ---
     ('Établissement', 'etablissement', False, 'Nom de l\'établissement (doit exister)', 'Siège Conakry'),
     ('Service', 'service', False, 'Nom du service (doit exister)', 'Ressources Humaines'),
     ('Poste', 'poste', False, 'Intitulé du poste (doit exister)', 'Responsable RH'),
-    ('Date embauche', 'date_embauche', False, 'Format JJ/MM/AAAA', '01/01/2024'),
     ('Type contrat', 'type_contrat', False, 'CDI / CDD / Stage / etc.', 'CDI'),
+    # --- FORMATION TRANSPORT / SÉCURITÉ ---
+    ('Date formation APTH', 'date_formation_apth', False, 'Format JJ/MM/AAAA', '15/06/2023'),
+    ('Ancienneté transport HCL (ans)', 'anciennete_transport_hcl', False, 'Nombre d\'années', '5'),
+    ('Date dernier recyclage', 'date_dernier_recyclage', False, 'Format JJ/MM/AAAA', '20/01/2025'),
+    ('Formation extincteur', 'formation_extincteur', False, 'OUI / NON', 'OUI'),
+    # --- VISITE MÉDICALE ---
+    ('Date visite médicale', 'date_derniere_visite_medicale', False, 'Format JJ/MM/AAAA', '10/02/2025'),
+    ('Service médical accrédité', 'service_medical_accredite', False, 'Nom du centre médical', 'CMC Kaloum'),
+    ('Prochaine visite médicale', 'date_prochaine_visite_medicale', False, 'Format JJ/MM/AAAA', '10/02/2026'),
+    # --- FILIATION ---
+    ('Nombre de femmes', 'nombre_femmes', False, 'Nombre entier', '1'),
+    ('Nombre enfants', 'nombre_enfants', False, 'Nombre entier', '2'),
+    ('Nom du père', 'nom_pere', False, 'Nom complet du père', 'DIALLO Ibrahima'),
+    ('Nom de la mère', 'nom_mere', False, 'Nom complet de la mère', 'BAH Fatoumata'),
+    # --- CONTACT D\'URGENCE ---
+    ('Contact urgence - Nom', 'contact_urgence_nom', False, 'Nom et prénoms', 'CAMARA Moussa'),
+    ('Contact urgence - Lien', 'contact_urgence_lien', False, 'Lien de parenté', 'Frère'),
+    ('Contact urgence - Téléphone', 'contact_urgence_telephone', False, 'Numéro de téléphone', '+224 621 11 11 11'),
+    # --- BANCAIRE ---
     ('Mode paiement', 'mode_paiement', False, 'virement / cheque / especes / mobile_money', 'virement'),
     ('Nom banque', 'nom_banque', False, 'Nom de la banque', 'BCRG'),
     ('N° Compte', 'numero_compte', False, 'Numéro de compte bancaire', '001-234567-89'),
@@ -164,34 +195,26 @@ def telecharger_template_import(request):
     # Figer la première ligne
     ws.freeze_panes = 'A4'
 
-    # ── Validations de données ──
-    # Civilité
-    dv_civilite = DataValidation(type='list', formula1='"M.,Mme,Mlle"', allow_blank=True)
-    dv_civilite.error = 'Valeur invalide. Choisir M., Mme ou Mlle'
-    dv_civilite.errorTitle = 'Civilité invalide'
-    ws.add_data_validation(dv_civilite)
-    dv_civilite.add(f'B4:B1000')
+    # ── Validations de données (dynamique par nom de colonne) ──
+    col_index = {col[1]: i + 1 for i, col in enumerate(IMPORT_COLUMNS)}
 
-    # Sexe
-    dv_sexe = DataValidation(type='list', formula1='"M,F"', allow_blank=True)
-    dv_sexe.error = 'Valeur invalide. Choisir M ou F'
-    ws.add_data_validation(dv_sexe)
-    dv_sexe.add(f'E4:E1000')
+    def _add_dv(field_name, formula, error_msg='Valeur invalide'):
+        """Ajoute une validation dropdown sur la colonne du champ"""
+        if field_name in col_index:
+            letter = get_column_letter(col_index[field_name])
+            dv = DataValidation(type='list', formula1=formula, allow_blank=True)
+            dv.error = error_msg
+            ws.add_data_validation(dv)
+            dv.add(f'{letter}4:{letter}1000')
 
-    # Situation matrimoniale
-    dv_matri = DataValidation(type='list', formula1='"celibataire,marie,divorce,veuf"', allow_blank=True)
-    ws.add_data_validation(dv_matri)
-    dv_matri.add(f'I4:I1000')
-
-    # Type contrat
-    dv_contrat = DataValidation(type='list', formula1='"CDI,CDD,CDImp,CTI,stage,apprentissage,temporaire"', allow_blank=True)
-    ws.add_data_validation(dv_contrat)
-    dv_contrat.add(f'T4:T1000')
-
-    # Mode paiement
-    dv_paie = DataValidation(type='list', formula1='"virement,cheque,especes,mobile_money"', allow_blank=True)
-    ws.add_data_validation(dv_paie)
-    dv_paie.add(f'U4:U1000')
+    _add_dv('civilite', '"M.,Mme,Mlle"', 'Choisir M., Mme ou Mlle')
+    _add_dv('sexe', '"M,F"', 'Choisir M ou F')
+    _add_dv('statut_employe', '"actif,suspendu,demissionnaire,licencie,retraite"', 'Statut invalide')
+    _add_dv('situation_matrimoniale', '"celibataire,marie,divorce,veuf"', 'Situation invalide')
+    _add_dv('type_contrat', '"CDI,CDD,CDImp,CTI,stage,apprentissage,temporaire"', 'Type contrat invalide')
+    _add_dv('mode_paiement', '"virement,cheque,especes,mobile_money"', 'Mode paiement invalide')
+    _add_dv('groupe_sanguin', '"A+,A-,B+,B-,AB+,AB-,O+,O-"', 'Groupe sanguin invalide')
+    _add_dv('formation_extincteur', '"OUI,NON"', 'Choisir OUI ou NON')
 
     # ── Feuille 2 : Données de référence ──
     ws_ref = wb.create_sheet("Données de référence")
@@ -615,6 +638,15 @@ def import_employes_execute(request):
 
         try:
             with transaction.atomic():
+                # Résoudre le booléen extincteur
+                ext_val = _clean_str(row.get('formation_extincteur', row.get('Formation extincteur', '')))
+                formation_ext = ext_val.upper() in ('OUI', 'YES', '1', 'TRUE', 'O') if ext_val else False
+
+                # Résoudre le statut
+                statut_val = _clean_str(row.get('statut_employe', row.get('Statut', '')))
+                statut_valides = ['actif', 'suspendu', 'demissionnaire', 'licencie', 'retraite']
+                statut_final = statut_val if statut_val in statut_valides else 'actif'
+
                 employe = Employe(
                     entreprise=entreprise,
                     matricule=matricule,
@@ -637,11 +669,38 @@ def import_employes_execute(request):
                     poste=poste,
                     date_embauche=_parse_date(row.get('date_embauche', row.get('Date embauche', ''))),
                     type_contrat=_clean_str(row.get('type_contrat', row.get('Type contrat', ''))) or None,
+                    statut_employe=statut_final,
+                    # Conducteur / Transport
+                    id_conducteur=_clean_str(row.get('id_conducteur', row.get('ID Conducteur', ''))) or None,
+                    tracteur=_clean_str(row.get('tracteur', row.get('Tracteur', ''))) or None,
+                    citerne=_clean_str(row.get('citerne', row.get('Citerne', ''))) or None,
+                    numero_permis=_clean_str(row.get('numero_permis', row.get('N° Permis', ''))) or None,
+                    date_obtention_permis=_parse_date(row.get('date_obtention_permis', row.get('Date obtention permis', ''))),
+                    date_validite_permis=_parse_date(row.get('date_validite_permis', row.get('Date validité permis', ''))),
+                    groupe_sanguin=_clean_str(row.get('groupe_sanguin', row.get('Groupe sanguin', ''))) or None,
+                    base_chauffeur=_clean_str(row.get('base_chauffeur', row.get('Chauffeur basé à', ''))) or None,
+                    # Formation transport / sécurité
+                    date_formation_apth=_parse_date(row.get('date_formation_apth', row.get('Date formation APTH', ''))),
+                    anciennete_transport_hcl=_parse_int(row.get('anciennete_transport_hcl', row.get('Ancienneté transport HCL (ans)', ''))) or None,
+                    date_dernier_recyclage=_parse_date(row.get('date_dernier_recyclage', row.get('Date dernier recyclage', ''))),
+                    formation_extincteur=formation_ext,
+                    # Visite médicale
+                    date_derniere_visite_medicale=_parse_date(row.get('date_derniere_visite_medicale', row.get('Date visite médicale', ''))),
+                    service_medical_accredite=_clean_str(row.get('service_medical_accredite', row.get('Service médical accrédité', ''))) or None,
+                    date_prochaine_visite_medicale=_parse_date(row.get('date_prochaine_visite_medicale', row.get('Prochaine visite médicale', ''))),
+                    # Filiation
+                    nombre_femmes=_parse_int(row.get('nombre_femmes', row.get('Nombre de femmes', 0))),
+                    nom_pere=_clean_str(row.get('nom_pere', row.get('Nom du père', ''))) or None,
+                    nom_mere=_clean_str(row.get('nom_mere', row.get('Nom de la mère', ''))) or None,
+                    # Contact d'urgence
+                    contact_urgence_nom=_clean_str(row.get('contact_urgence_nom', row.get('Contact urgence - Nom', ''))) or None,
+                    contact_urgence_lien=_clean_str(row.get('contact_urgence_lien', row.get('Contact urgence - Lien', ''))) or None,
+                    contact_urgence_telephone=_clean_str(row.get('contact_urgence_telephone', row.get('Contact urgence - Téléphone', ''))) or None,
+                    # Bancaire
                     mode_paiement=_clean_str(row.get('mode_paiement', row.get('Mode paiement', ''))) or 'virement',
                     nom_banque=_clean_str(row.get('nom_banque', row.get('Nom banque', ''))) or None,
                     numero_compte=_clean_str(row.get('numero_compte', row.get('N° Compte', ''))) or None,
                     rib=_clean_str(row.get('rib', row.get('RIB', ''))) or None,
-                    statut_employe='actif',
                     utilisateur_creation=request.user,
                     utilisateur_modification=request.user,
                 )

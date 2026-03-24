@@ -115,6 +115,35 @@ class Employe(models.Model):
     motif_depart = models.CharField(max_length=50, blank=True, null=True)
     superieur_hierarchique = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='subordonnes')
     
+    # Filiation
+    nom_pere = models.CharField(max_length=200, blank=True, null=True, verbose_name='Nom du père')
+    nom_mere = models.CharField(max_length=200, blank=True, null=True, verbose_name='Nom de la mère')
+    nombre_femmes = models.IntegerField(default=0, validators=[MinValueValidator(0)], verbose_name='Nombre de femmes')
+
+    # Conducteur / Transport
+    id_conducteur = models.CharField(max_length=50, blank=True, null=True, verbose_name='ID Conducteur')
+    tracteur = models.CharField(max_length=100, blank=True, null=True, verbose_name='Tracteur assigné')
+    citerne = models.CharField(max_length=100, blank=True, null=True, verbose_name='Citerne assignée')
+    numero_permis = models.CharField(max_length=50, blank=True, null=True, verbose_name='N° de permis')
+    date_obtention_permis = models.DateField(blank=True, null=True, verbose_name='Date obtention permis')
+    date_validite_permis = models.DateField(blank=True, null=True, verbose_name='Date validité permis')
+    groupe_sanguin = models.CharField(max_length=10, blank=True, null=True, verbose_name='Groupe sanguin',
+                                      choices=[('A+','A+'),('A-','A-'),('B+','B+'),('B-','B-'),
+                                               ('AB+','AB+'),('AB-','AB-'),('O+','O+'),('O-','O-')])
+    base_chauffeur = models.CharField(max_length=100, blank=True, null=True, verbose_name='Chauffeur basé à')
+
+    # Formation transport / sécurité
+    date_formation_apth = models.DateField(blank=True, null=True, verbose_name='Date formation APTH')
+    anciennete_transport_hcl = models.IntegerField(blank=True, null=True, validators=[MinValueValidator(0)],
+                                                    verbose_name='Ancienneté transport HCL (ans)')
+    date_dernier_recyclage = models.DateField(blank=True, null=True, verbose_name='Date dernier recyclage')
+    formation_extincteur = models.BooleanField(default=False, verbose_name='Formation extincteur')
+
+    # Visite médicale (suivi rapide)
+    date_derniere_visite_medicale = models.DateField(blank=True, null=True, verbose_name='Dernière visite médicale')
+    service_medical_accredite = models.CharField(max_length=200, blank=True, null=True, verbose_name='Service médical accrédité')
+    date_prochaine_visite_medicale = models.DateField(blank=True, null=True, verbose_name='Prochaine visite médicale')
+
     # Informations bancaires
     mode_paiement = models.CharField(max_length=20, choices=MODES_PAIEMENT, default='virement')
     nom_banque = models.CharField(max_length=100, blank=True, null=True)
@@ -171,6 +200,52 @@ class Employe(models.Model):
             return today.year - self.date_embauche.year
         return None
     
+    @property
+    def jours_restants_permis(self):
+        """Nombre de jours restants avant expiration du permis"""
+        if self.date_validite_permis:
+            delta = self.date_validite_permis - timezone.now().date()
+            return max(delta.days, 0)
+        return None
+
+    @property
+    def statut_permis(self):
+        """Statut du permis: Valide / Expiré / Proche expiration"""
+        jours = self.jours_restants_permis
+        if jours is None:
+            return 'Non renseigné'
+        if jours <= 0:
+            return 'Expiré'
+        if jours <= 30:
+            return 'Proche expiration'
+        return 'Valide'
+
+    @property
+    def jours_restants_recyclage(self):
+        """Jours restants avant prochain recyclage (cycle 12 mois)"""
+        if self.date_dernier_recyclage:
+            from dateutil.relativedelta import relativedelta
+            prochaine = self.date_dernier_recyclage + relativedelta(years=1)
+            delta = prochaine - timezone.now().date()
+            return max(delta.days, 0)
+        return None
+
+    @property
+    def date_prochain_recyclage(self):
+        """Date du prochain recyclage"""
+        if self.date_dernier_recyclage:
+            from dateutil.relativedelta import relativedelta
+            return self.date_dernier_recyclage + relativedelta(years=1)
+        return None
+
+    @property
+    def jours_restants_visite_medicale(self):
+        """Jours restants avant prochaine visite médicale"""
+        if self.date_prochaine_visite_medicale:
+            delta = self.date_prochaine_visite_medicale - timezone.now().date()
+            return max(delta.days, 0)
+        return None
+
     @property
     def est_stagiaire_ou_apprenti(self):
         """Vérifie si l'employé est stagiaire ou apprenti"""
