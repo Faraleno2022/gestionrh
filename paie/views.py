@@ -1624,6 +1624,15 @@ def telecharger_livre_paie_pdf(request):
     from django.db.models import F
     import io
 
+    # Polices
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        pdfmetrics.getFont('Arial')
+        _FN = 'Arial'; _FB = 'Arial-Bold'
+    except Exception:
+        _FN = 'Helvetica'; _FB = 'Helvetica-Bold'
+
     annee = request.GET.get('annee', timezone.now().year)
     mois = request.GET.get('mois')
 
