@@ -63,17 +63,43 @@ class RubriquePaie(models.Model):
         ('cotisation', 'Cotisation'),
         ('information', 'Information'),
     )
-    
+
+    CATEGORIES = (
+        ('salaire_base', 'Salaire de base'),
+        ('prime', 'Prime (récompense/motivation)'),
+        ('indemnite', 'Indemnité (compensation/remboursement)'),
+        ('avantage', 'Avantage en nature'),
+        ('cotisation', 'Cotisation sociale'),
+        ('retenue', 'Retenue fiscale'),
+        ('autre', 'Autre'),
+    )
+
+    MODES_CALCUL = (
+        ('fixe', 'Montant fixe'),
+        ('pourcentage_base', '% du salaire de base'),
+        ('pourcentage_brut', '% du brut'),
+        ('horaire', 'Taux horaire × heures'),
+        ('formule', 'Formule personnalisée'),
+    )
+
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name='rubriques_paie')
     code_rubrique = models.CharField(max_length=20)
     libelle_rubrique = models.CharField(max_length=200)
     type_rubrique = models.CharField(max_length=20, choices=TYPES)
+    categorie_rubrique = models.CharField(max_length=20, choices=CATEGORIES, default='autre',
+        help_text='Prime = imposable+CNSS | Indemnité = exonérable selon plafond')
+    mode_calcul = models.CharField(max_length=20, choices=MODES_CALCUL, default='fixe',
+        help_text='Comment le montant est calculé')
     formule_calcul = models.TextField(blank=True, null=True)
     taux_rubrique = models.DecimalField(max_digits=8, decimal_places=4, blank=True, null=True)
     montant_fixe = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     soumis_cnss = models.BooleanField(default=False)
     # Champ historique IRG – alias RTS utilisé côté métier (Option C)
     soumis_irg = models.BooleanField(default=False)
+    inclus_brut = models.BooleanField(default=True,
+        help_text='Inclus dans le salaire brut (False = versé en plus du net)')
+    exonere_rts = models.BooleanField(default=False,
+        help_text='Exonéré de RTS (indemnités forfaitaires, dans la limite du plafond 25%)')
     ordre_calcul = models.IntegerField(default=100)
     ordre_affichage = models.IntegerField(default=100)
     affichage_bulletin = models.BooleanField(default=True)

@@ -375,6 +375,19 @@ def _apply_missing_columns():
         except Exception:
             pass
 
+    # Colonnes sur rubriques_paie (catégorie, mode calcul, exonération)
+    rub_cols = [
+        ('categorie_rubrique', 'VARCHAR(20) DEFAULT "autre"'),
+        ('mode_calcul', 'VARCHAR(20) DEFAULT "fixe"'),
+        ('inclus_brut', 'BOOLEAN DEFAULT 1'),
+        ('exonere_rts', 'BOOLEAN DEFAULT 0'),
+    ]
+    for col_name, col_type in rub_cols:
+        try:
+            cursor.execute(f'ALTER TABLE rubriques_paie ADD COLUMN {col_name} {col_type}')
+        except Exception:
+            pass
+
     conn.commit()
     conn.close()
     print("  Colonnes manquantes ajoutees (patch direct)")
