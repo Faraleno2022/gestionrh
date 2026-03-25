@@ -1234,10 +1234,12 @@ class MoteurCalculPaie:
         bulletin_data['heures_supplementaires_30'] = self.montants.get('heures_sup_30', Decimal('0'))
         bulletin_data['heures_supplementaires_60'] = self.montants.get('heures_sup_60', Decimal('0'))
         bulletin_data['heures_nuit'] = self.montants.get('heures_sup_nuit', Decimal('0'))
-        bulletin_data['heures_feries'] = self.montants.get('heures_sup_ferie_jour', Decimal('0')) + self.montants.get('heures_sup_ferie_nuit', Decimal('0'))
+        bulletin_data['heures_feries'] = self.montants.get('heures_sup_ferie_jour', Decimal('0'))
+        bulletin_data['heures_feries_nuit'] = self.montants.get('heures_sup_ferie_nuit', Decimal('0'))
         bulletin_data['prime_heures_sup'] = self.montants.get('montant_heures_sup', Decimal('0'))
         bulletin_data['prime_nuit'] = self.montants.get('montant_hs_nuit', Decimal('0'))
-        bulletin_data['prime_feries'] = self.montants.get('montant_hs_ferie_jour', Decimal('0')) + self.montants.get('montant_hs_ferie_nuit', Decimal('0'))
+        bulletin_data['prime_feries'] = self.montants.get('montant_hs_ferie_jour', Decimal('0'))
+        bulletin_data['prime_feries_nuit'] = self.montants.get('montant_hs_ferie_nuit', Decimal('0'))
         
         # Champs de transparence/conformité
         bulletin_data['abattement_forfaitaire'] = self.montants.get('abattement_forfaitaire', Decimal('0'))

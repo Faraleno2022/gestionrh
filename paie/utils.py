@@ -313,10 +313,12 @@ def generer_bulletin_pdf(bulletin):
     hs_60 = getattr(bulletin, 'heures_supplementaires_60', 0) or 0
     hs_nuit = getattr(bulletin, 'heures_nuit', 0) or 0
     hs_feries = getattr(bulletin, 'heures_feries', 0) or 0
+    hs_feries_nuit = getattr(bulletin, 'heures_feries_nuit', 0) or 0
     prime_hs = getattr(bulletin, 'prime_heures_sup', 0) or 0
     prime_nuit = getattr(bulletin, 'prime_nuit', 0) or 0
     prime_feries = getattr(bulletin, 'prime_feries', 0) or 0
-    total_hs_heures = float(hs_30) + float(hs_60) + float(hs_nuit) + float(hs_feries)
+    prime_feries_nuit = getattr(bulletin, 'prime_feries_nuit', 0) or 0
+    total_hs_heures = float(hs_30) + float(hs_60) + float(hs_nuit) + float(hs_feries) + float(hs_feries_nuit)
     
     if total_hs_heures > 0 or float(prime_hs) > 0:
         p.setFont(_FONT_BOLD, 7)
@@ -344,6 +346,7 @@ def generer_bulletin_pdf(bulletin):
         _montant_60 = round(_sal_h * Decimal(str(hs_60)) * Decimal('1.60'))
         _montant_nuit = round(_sal_h * Decimal(str(hs_nuit)) * Decimal('1.20')) if float(hs_nuit) > 0 else 0
         _montant_feries = round(_sal_h * Decimal(str(hs_feries)) * Decimal('1.60')) if float(hs_feries) > 0 else 0
+        _montant_feries_nuit = round(_sal_h * Decimal(str(hs_feries_nuit)) * Decimal('2.00')) if float(hs_feries_nuit) > 0 else 0
 
         hs_detail_data = [["Type", "Heures", "Majoration", "Montant"]]
         if float(hs_30) > 0:
@@ -356,10 +359,13 @@ def generer_bulletin_pdf(bulletin):
             hs_detail_data.append(["Heures de nuit (20h-6h)", f"{hs_nuit:g}h", "+20% (120%)",
                                     f"{_montant_nuit:,.0f}".replace(",", " ")])
         if float(hs_feries) > 0:
-            hs_detail_data.append(["Jours fériés", f"{hs_feries:g}h", "+60/100%",
+            hs_detail_data.append(["Jours fériés (jour)", f"{hs_feries:g}h", "+60% (160%)",
                                     f"{_montant_feries:,.0f}".replace(",", " ")])
+        if float(hs_feries_nuit) > 0:
+            hs_detail_data.append(["Jours fériés (nuit)", f"{hs_feries_nuit:g}h", "+100% (200%)",
+                                    f"{_montant_feries_nuit:,.0f}".replace(",", " ")])
 
-        total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries)
+        total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries) + float(prime_feries_nuit)
         hs_detail_data.append(["", f"{total_hs_heures:g}h", "Total HS:",
                                 f"{total_prime:,.0f} GNF".replace(",", " ")])
         
@@ -869,12 +875,29 @@ def generer_bulletin_pdf_sdbk(bulletin):
             except Exception:
                 pass
         _sal_h2 = _sal_base_hs / Decimal('173.33') if _sal_base_hs > 0 else Decimal('0')
+        _hs_nuit2 = float(getattr(bulletin, 'heures_nuit', 0) or 0)
+        _hs_fer2 = float(getattr(bulletin, 'heures_feries', 0) or 0)
+        _hs_fer_n2 = float(getattr(bulletin, 'heures_feries_nuit', 0) or 0)
         mnt30  = int(_sal_h2 * Decimal(str(hs_30)) * Decimal('1.30')) if hs_30 > 0 else 0
         mnt60  = int(_sal_h2 * Decimal(str(hs_60)) * Decimal('1.60')) if hs_60 > 0 else 0
-        td.append([str(num), 'HS +30% (Art.221)', f'{hs_30:g}h' if hs_30 else '', '', '130%', _fmt0(mnt30) if hs_30 > 0 else '0', '', '', '', ''])
-        num += 1
-        td.append([str(num), 'HS +60% (Art.221)', f'{hs_60:g}h' if hs_60 else '', '', '160%', _fmt0(mnt60) if hs_60 > 0 else '0', '', '', '', ''])
-        num += 1
+        mnt_nuit2 = int(_sal_h2 * Decimal(str(_hs_nuit2)) * Decimal('1.20')) if _hs_nuit2 > 0 else 0
+        mnt_fer2 = int(_sal_h2 * Decimal(str(_hs_fer2)) * Decimal('1.60')) if _hs_fer2 > 0 else 0
+        mnt_fer_n2 = int(_sal_h2 * Decimal(str(_hs_fer_n2)) * Decimal('2.00')) if _hs_fer_n2 > 0 else 0
+        if hs_30 > 0:
+            td.append([str(num), 'HS +30% (Art.221)', f'{hs_30:g}h', '', '130%', _fmt0(mnt30), '', '', '', ''])
+            num += 1
+        if hs_60 > 0:
+            td.append([str(num), 'HS +60% (Art.221)', f'{hs_60:g}h', '', '160%', _fmt0(mnt60), '', '', '', ''])
+            num += 1
+        if _hs_nuit2 > 0:
+            td.append([str(num), 'HS nuit +20% (Art.221)', f'{_hs_nuit2:g}h', '', '120%', _fmt0(mnt_nuit2), '', '', '', ''])
+            num += 1
+        if _hs_fer2 > 0:
+            td.append([str(num), 'HS férié jour +60%', f'{_hs_fer2:g}h', '', '160%', _fmt0(mnt_fer2), '', '', '', ''])
+            num += 1
+        if _hs_fer_n2 > 0:
+            td.append([str(num), 'HS férié nuit +100%', f'{_hs_fer_n2:g}h', '', '200%', _fmt0(mnt_fer_n2), '', '', '', ''])
+            num += 1
 
     # ── Prime d'ancienneté (si absente des gains) ──
     has_anc = any('anciennet' in (g.rubrique.libelle_rubrique or '').lower() for g in gains)

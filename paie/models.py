@@ -145,13 +145,15 @@ class BulletinPaie(models.Model):
     heures_supplementaires_30 = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="HS à +30% (4 premières HS/semaine)")
     heures_supplementaires_60 = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="HS à +60% (au-delà 4 HS/semaine)")
     heures_nuit = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="Heures de nuit (20h-6h) à +20%")
-    heures_feries = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="Heures jours fériés")
+    heures_feries = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="Heures jours fériés (jour)")
+    heures_feries_nuit = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="Heures jours fériés (nuit) à +100%")
     
     # Calculs de paie
     salaire_base = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Salaire de base")
     prime_heures_sup = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Prime heures supplémentaires")
     prime_nuit = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Prime de nuit")
-    prime_feries = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Prime jours fériés")
+    prime_feries = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Prime jours fériés (jour)")
+    prime_feries_nuit = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Prime jours fériés (nuit)")
     salaire_brut = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     cnss_employe = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     cnss_employeur = models.DecimalField(max_digits=15, decimal_places=2, default=0)

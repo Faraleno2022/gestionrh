@@ -375,6 +375,17 @@ def _apply_missing_columns():
         except Exception:
             pass
 
+    # Colonnes sur bulletins_paie (fériés nuit séparés)
+    bul_cols = [
+        ('heures_feries_nuit', 'DECIMAL(6,2) DEFAULT 0'),
+        ('prime_feries_nuit', 'DECIMAL(15,2) DEFAULT 0'),
+    ]
+    for col_name, col_type in bul_cols:
+        try:
+            cursor.execute(f'ALTER TABLE bulletins_paie ADD COLUMN {col_name} {col_type}')
+        except Exception:
+            pass
+
     # Colonnes sur rubriques_paie (catégorie, mode calcul, exonération)
     rub_cols = [
         ('categorie_rubrique', 'VARCHAR(20) DEFAULT "autre"'),

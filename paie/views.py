@@ -693,10 +693,12 @@ def telecharger_bulletin_pdf(request, pk):
     hs_60 = getattr(bulletin, 'heures_supplementaires_60', 0) or 0
     hs_nuit = getattr(bulletin, 'heures_nuit', 0) or 0
     hs_feries = getattr(bulletin, 'heures_feries', 0) or 0
+    hs_feries_nuit = getattr(bulletin, 'heures_feries_nuit', 0) or 0
     prime_hs = getattr(bulletin, 'prime_heures_sup', 0) or 0
     prime_nuit = getattr(bulletin, 'prime_nuit', 0) or 0
     prime_feries = getattr(bulletin, 'prime_feries', 0) or 0
-    total_hs_heures = float(hs_30) + float(hs_60) + float(hs_nuit) + float(hs_feries)
+    prime_feries_nuit = getattr(bulletin, 'prime_feries_nuit', 0) or 0
+    total_hs_heures = float(hs_30) + float(hs_60) + float(hs_nuit) + float(hs_feries) + float(hs_feries_nuit)
     
     if total_hs_heures > 0 or float(prime_hs) > 0:
         p.setFont(_FB, 7)
@@ -722,6 +724,7 @@ def telecharger_bulletin_pdf(request, pk):
         _montant_60 = round(_sal_h * Decimal(str(hs_60)) * Decimal('1.60'))
         _montant_nuit = round(_sal_h * Decimal(str(hs_nuit)) * Decimal('1.20')) if float(hs_nuit) > 0 else 0
         _montant_feries = round(_sal_h * Decimal(str(hs_feries)) * Decimal('1.60')) if float(hs_feries) > 0 else 0
+        _montant_feries_nuit = round(_sal_h * Decimal(str(hs_feries_nuit)) * Decimal('2.00')) if float(hs_feries_nuit) > 0 else 0
 
         hs_detail_data = [["Type", "Heures", "Majoration", "Montant"]]
         if float(hs_30) > 0:
@@ -734,10 +737,13 @@ def telecharger_bulletin_pdf(request, pk):
             hs_detail_data.append(["Heures de nuit (20h-6h)", f"{hs_nuit:g}h", "+20% (120%)",
                                     f"{_montant_nuit:,.0f}".replace(",", " ")])
         if float(hs_feries) > 0:
-            hs_detail_data.append(["Jours fériés", f"{hs_feries:g}h", "+60/100%",
+            hs_detail_data.append(["Jours fériés (jour)", f"{hs_feries:g}h", "+60% (160%)",
                                     f"{_montant_feries:,.0f}".replace(",", " ")])
+        if float(hs_feries_nuit) > 0:
+            hs_detail_data.append(["Jours fériés (nuit)", f"{hs_feries_nuit:g}h", "+100% (200%)",
+                                    f"{_montant_feries_nuit:,.0f}".replace(",", " ")])
 
-        total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries)
+        total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries) + float(prime_feries_nuit)
         hs_detail_data.append(["", f"{total_hs_heures:g}h", "Total HS:",
                                 f"{total_prime:,.0f} GNF".replace(",", " ")])
         
@@ -1229,10 +1235,12 @@ def telecharger_bulletin_public(request, token):
     hs_60 = getattr(bulletin, 'heures_supplementaires_60', 0) or 0
     hs_nuit = getattr(bulletin, 'heures_nuit', 0) or 0
     hs_feries = getattr(bulletin, 'heures_feries', 0) or 0
+    hs_feries_nuit = getattr(bulletin, 'heures_feries_nuit', 0) or 0
     prime_hs = getattr(bulletin, 'prime_heures_sup', 0) or 0
     prime_nuit = getattr(bulletin, 'prime_nuit', 0) or 0
     prime_feries = getattr(bulletin, 'prime_feries', 0) or 0
-    total_hs_heures = float(hs_30) + float(hs_60) + float(hs_nuit) + float(hs_feries)
+    prime_feries_nuit = getattr(bulletin, 'prime_feries_nuit', 0) or 0
+    total_hs_heures = float(hs_30) + float(hs_60) + float(hs_nuit) + float(hs_feries) + float(hs_feries_nuit)
     
     if total_hs_heures > 0 or float(prime_hs) > 0:
         p.setFont(_FB, 7)
@@ -1258,6 +1266,7 @@ def telecharger_bulletin_public(request, token):
         _montant_60 = round(_sal_h * Decimal(str(hs_60)) * Decimal('1.60'))
         _montant_nuit = round(_sal_h * Decimal(str(hs_nuit)) * Decimal('1.20')) if float(hs_nuit) > 0 else 0
         _montant_feries = round(_sal_h * Decimal(str(hs_feries)) * Decimal('1.60')) if float(hs_feries) > 0 else 0
+        _montant_feries_nuit = round(_sal_h * Decimal(str(hs_feries_nuit)) * Decimal('2.00')) if float(hs_feries_nuit) > 0 else 0
 
         hs_detail_data = [["Type", "Heures", "Majoration", "Montant"]]
         if float(hs_30) > 0:
@@ -1270,10 +1279,13 @@ def telecharger_bulletin_public(request, token):
             hs_detail_data.append(["Heures de nuit (20h-6h)", f"{hs_nuit:g}h", "+20% (120%)",
                                     f"{_montant_nuit:,.0f}".replace(",", " ")])
         if float(hs_feries) > 0:
-            hs_detail_data.append(["Jours fériés", f"{hs_feries:g}h", "+60/100%",
+            hs_detail_data.append(["Jours fériés (jour)", f"{hs_feries:g}h", "+60% (160%)",
                                     f"{_montant_feries:,.0f}".replace(",", " ")])
+        if float(hs_feries_nuit) > 0:
+            hs_detail_data.append(["Jours fériés (nuit)", f"{hs_feries_nuit:g}h", "+100% (200%)",
+                                    f"{_montant_feries_nuit:,.0f}".replace(",", " ")])
 
-        total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries)
+        total_prime = float(prime_hs) + float(prime_nuit) + float(prime_feries) + float(prime_feries_nuit)
         hs_detail_data.append(["", f"{total_hs_heures:g}h", "Total HS:",
                                 f"{total_prime:,.0f} GNF".replace(",", " ")])
         
