@@ -978,14 +978,12 @@ def telecharger_bulletin_pdf(request, pk):
     # Note explicative déduction VF
     if base_vf > 0:
         brut_gnf = float(bulletin.salaire_brut)
-        deduction = brut_gnf - float(base_vf)
-        if deduction > 0:
-            p.setFont(_FI, 6)
-            p.setFillColor(colors.HexColor("#666666"))
-            p.drawString(1.5*cm, y,
-                f"Base VF/TA = Brut {brut_gnf:,.0f} − déduction forfaitaire {deduction:,.0f} = {base_vf:,.0f} GNF"
-                .replace(",", " "))
-            y -= 0.25*cm
+        p.setFont(_FI, 6)
+        p.setFillColor(colors.HexColor("#666666"))
+        p.drawString(1.5*cm, y,
+            f"Base VF/TA = Brut {brut_gnf:,.0f} GNF  |  VF = {brut_gnf:,.0f} × 6%  |  TA = {brut_gnf:,.0f} × 2%"
+            .replace(",", " "))
+        y -= 0.25*cm
     p.setFillColor(colors.black)
     
     # === PIED DE PAGE — signatures compactes + infos légales centrées ===
@@ -1527,14 +1525,12 @@ def telecharger_bulletin_public(request, token):
     # Note explicative déduction VF
     if base_vf > 0:
         brut_gnf = float(bulletin.salaire_brut)
-        deduction = brut_gnf - float(base_vf)
-        if deduction > 0:
-            p.setFont(_FI, 6)
-            p.setFillColor(colors.HexColor("#666666"))
-            p.drawString(1.5*cm, y,
-                f"Base VF/TA = Brut {brut_gnf:,.0f} − déduction forfaitaire {deduction:,.0f} = {base_vf:,.0f} GNF"
-                .replace(",", " "))
-            y -= 0.25*cm
+        p.setFont(_FI, 6)
+        p.setFillColor(colors.HexColor("#666666"))
+        p.drawString(1.5*cm, y,
+            f"Base VF/TA = Brut {brut_gnf:,.0f} GNF  |  VF = {brut_gnf:,.0f} × 6%  |  TA = {brut_gnf:,.0f} × 2%"
+            .replace(",", " "))
+        y -= 0.25*cm
     p.setFillColor(colors.black)
     
     # === PIED DE PAGE — signatures compactes + infos légales centrées ===

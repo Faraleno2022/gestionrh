@@ -789,30 +789,20 @@ class MoteurCalculPaie:
             )
         
         # Versement Forfaitaire (VF) - charge patronale
-        # Règle fiscale guinéenne :
-        #   Si salaire <  2 500 000 : base_vf = salaire × 94%
-        #   Si salaire >= 2 500 000 : base_vf = salaire – 150 000  (déduction forfaitaire plafonnée)
-        #   VF = base_vf × 6%
+        # Règle CGI Guinée : VF = Brut × 6% (base = salaire brut, sans déduction)
         taux_vf = self.constantes.get('TAUX_VF', Decimal('6.00'))
-        seuil_vf = self.constantes.get('SEUIL_VF', Decimal('2500000'))
 
-        if base_vf_ta < seuil_vf:
-            base_vf_nette = self._arrondir(base_vf_ta * Decimal('0.94'))
-        else:
-            deduction_fixe = self._arrondir(seuil_vf * taux_vf / Decimal('100'))  # 150 000
-            base_vf_nette = base_vf_ta - deduction_fixe
-        
+        base_vf_nette = base_vf_ta  # base = brut directement
         self.montants['base_vf'] = base_vf_nette
-        self.montants['deduction_vf'] = base_vf_ta - base_vf_nette  # pour affichage PDF
+        self.montants['deduction_vf'] = Decimal('0')
         self.montants['taux_vf'] = taux_vf
         self.montants['versement_forfaitaire'] = self._arrondir(
             base_vf_nette * taux_vf / Decimal('100')
         )
 
         # TA et ONFPP sont mutuellement exclusifs selon le nombre de salariés:
-        # - Moins de 30 salariés: TA (2%)
-        # - 30 salariés ou plus: ONFPP (1,5%)
-        # Base harmonisée avec VF (base_vf_nette) pour cohérence comptable
+        # - Moins de 30 salariés: TA (2%) sur brut
+        # - 30 salariés ou plus: ONFPP (1,5%) sur brut
         if self.nb_salaries < 30:
             taux_ta = self.constantes.get('TAUX_TA', Decimal('2.00'))
             self.montants['base_ta'] = base_vf_nette
