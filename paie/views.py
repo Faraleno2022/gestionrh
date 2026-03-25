@@ -1866,14 +1866,13 @@ def declarations_sociales_pdf(request):
     periodes = PeriodePaie.objects.filter(
         entreprise=entreprise,
         annee=annee,
-        statut_periode__in=['validee', 'cloturee']
     )
     if mois:
         periodes = periodes.filter(mois=mois)
-    
+
     bulletins = BulletinPaie.objects.filter(
         periode__in=periodes,
-        statut_bulletin__in=['valide', 'paye'],
+        statut_bulletin__in=['calcule', 'valide', 'paye'],
         employe__entreprise=entreprise,
     ).select_related('employe', 'periode')
     
@@ -1919,16 +1918,16 @@ def declarations_sociales_pdf(request):
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EF7707')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 0), (-1, 0), _FB),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f5f5f5')),
-        ('FONTNAME', (0, -1), (-1, -1), _FB),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
     ]))
     elements.append(cnss_table)
     elements.append(Spacer(1, 0.5*cm))
-    
-    # RTS/RTS
-    elements.append(Paragraph("RTS/RTS - Retenue sur Traitements et Salaires", styles['Heading2']))
+
+    # RTS - Retenue sur Traitements et Salaires
+    elements.append(Paragraph("RTS - Retenue sur Traitements et Salaires", styles['Heading2']))
     irg_data = [
         ['Libellé', 'Montant (GNF)'],
         ['Nombre de salariés', str(declaration_irg['total_salaries'])],
@@ -1939,7 +1938,7 @@ def declarations_sociales_pdf(request):
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EF7707')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 0), (-1, 0), _FB),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
     ]))
     elements.append(irg_table)
