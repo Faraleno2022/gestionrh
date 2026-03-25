@@ -653,28 +653,48 @@ class MoteurCalculPaie:
         """
         Applique l'exonération RTS des indemnités forfaitaires.
 
-        Législation guinéenne (CGI):
-        - Les indemnités forfaitaires représentatives de frais professionnels
-          (transport, logement, panier, cherté de vie, etc.) sont INTÉGRALEMENT
-          exonérées de RTS — pas de plafond en pourcentage du brut.
-        - Seules les primes (récompense/motivation) sont imposables.
+        Législation guinéenne (CGI Art. strict) :
+        - Les indemnités forfaitaires (transport, logement, cherté de vie, etc.)
+          sont exonérées de RTS dans la limite de 25% du salaire brut.
+        - L'excédent au-delà du plafond est réintégré dans la base imposable RTS.
+        - Les primes (récompense/motivation) sont intégralement imposables.
 
         Détection: utilise _est_indemnite_forfaitaire() pour classifier
         automatiquement les rubriques par code et libellé.
         """
         # Totaliser les indemnités forfaitaires détectées
         total_indemnites = sum(montant for _, montant, _ in self._indemnites_detectees)
-        salaire_base = self.montants['imposable']  # gains non-forfaitaires déjà accumulés
         salaire_brut = self.montants['total_gains']
 
         self.montants['indemnites_forfaitaires'] = total_indemnites
-        self.montants['salaire_base_hors_indemnites'] = salaire_base
+        self.montants['salaire_base_hors_indemnites'] = self.montants['imposable']
 
-        # Pas de plafond — exonération intégrale (CGI Guinée)
-        self.montants['plafond_indemnites'] = total_indemnites  # pour compatibilité
-        self.montants['depassement_plafond_indemnites'] = Decimal('0')
-        self.montants['reintegration_base_imposable'] = Decimal('0')
-        self.montants['alerte_plafond_indemnites'] = ''
+        # Plafond légal CGI = 25% du salaire brut
+        taux_plafond = Decimal('25')
+        plafond = self._arrondir(salaire_brut * taux_plafond / Decimal('100'))
+
+        # Exonération retenue = min(total indemnités, plafond 25%)
+        exoneration_retenue = min(total_indemnites, plafond)
+        depassement = max(Decimal('0'), total_indemnites - plafond)
+
+        self.montants['plafond_indemnites'] = plafond
+        self.montants['exoneration_indemnites'] = exoneration_retenue
+        self.montants['depassement_plafond_indemnites'] = depassement
+        self.montants['reintegration_base_imposable'] = depassement  # réintégré dans base RTS
+        self.montants['taux_plafond_indemnites'] = taux_plafond
+
+        # Alerte si dépassement du plafond 25%
+        if depassement > 0:
+            if 'alertes' not in self.montants:
+                self.montants['alertes'] = []
+            self.montants['alertes'].append({
+                'type': 'avertissement',
+                'message': (
+                    f"Indemnités forfaitaires ({total_indemnites:,.0f} GNF) dépassent "
+                    f"le plafond légal 25% du brut ({plafond:,.0f} GNF). "
+                    f"Excédent de {depassement:,.0f} GNF réintégré dans la base RTS."
+                )
+            })
 
         # Stocker le détail des détections pour traçabilité
         self.montants['detail_indemnites_detectees'] = [
@@ -682,25 +702,6 @@ class MoteurCalculPaie:
              'montant': m, 'raison': raison}
             for r, m, raison in self._indemnites_detectees
         ]
-
-        # Alerte informative: indemnités disproportionnées par rapport au salaire de base
-        # (alerte structurelle uniquement, pas de réintégration fiscale)
-        sal_base_element = self._obtenir_base_calcul('SALAIRE_BASE')
-        if sal_base_element > 0 and total_indemnites > 0:
-            ratio_ind_base = total_indemnites * 100 / sal_base_element
-            self.montants['ratio_indemnites_base'] = ratio_ind_base
-            if ratio_ind_base > 50:
-                if 'alertes' not in self.montants:
-                    self.montants['alertes'] = []
-                self.montants['alertes'].append({
-                    'type': 'info',
-                    'message': (
-                        f"Indemnités forfaitaires ({total_indemnites:,.0f} GNF) = "
-                        f"{ratio_ind_base:.0f}% du salaire de base ({sal_base_element:,.0f} GNF). "
-                        f"Vérifiez que les libellés sont bien des indemnités "
-                        f"et non des primes (impact fiscal différent)."
-                    )
-                })
     
     def _calculer_cotisations_sociales(self):
         """Calculer les cotisations sociales (CNSS, etc.)
@@ -867,13 +868,19 @@ class MoteurCalculPaie:
             self.montants['total_retenues'] += montant
     
     def _calculer_irg(self):
-        """Calculer la RTS selon le barème progressif CGI 2022"""
-        # Base imposable = gains non-forfaitaires - CNSS
-        # Les indemnités forfaitaires sont intégralement exonérées (CGI Guinée)
-        base_imposable = self.montants['imposable'] - self.montants['cnss_employe']
+        """Calculer la RTS selon le barème progressif CGI Guinée officiel
 
-        # Mémorise le total des indemnités exonérées pour affichage sur le bulletin
-        self.montants['abattement_forfaitaire'] = self.montants.get('indemnites_forfaitaires', Decimal('0'))
+        Base RTS = Brut - CNSS - Exonération indemnités forfaitaires (plafonnée à 25% du brut)
+        L'excédent d'indemnités au-delà du plafond 25% est réintégré dans la base imposable.
+        """
+        # Base imposable = gains non-forfaitaires - CNSS
+        # + réintégration de l'excédent d'indemnités au-delà du plafond 25%
+        depassement = self.montants.get('depassement_plafond_indemnites', Decimal('0'))
+        base_imposable = self.montants['imposable'] - self.montants['cnss_employe'] + depassement
+
+        # Exonération retenue = min(total indemnités, plafond 25%) pour affichage bulletin
+        self.montants['abattement_forfaitaire'] = self.montants.get('exoneration_indemnites',
+            self.montants.get('indemnites_forfaitaires', Decimal('0')))
         
         # Convertir en GNF si nécessaire (la RTS est toujours calculée en GNF)
         if self.devise_employe != self.devise_base:

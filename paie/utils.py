@@ -445,10 +445,11 @@ def generer_bulletin_pdf(bulletin):
         # Explication de la base imposable avec nature de l'abattement
         abattement_val = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
         if float(abattement_val) > 0:
+            plafond_25 = round(float(bulletin.salaire_brut) * 0.25)
             p.drawString(1.5*cm, y,
                 f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
                 f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− Indemnités forfaitaires exonérées {abattement_val:,.0f}"
+                f"− Exonération indemnités {abattement_val:,.0f} (plafond 25% = {plafond_25:,.0f})"
                 .replace(",", " "))
         else:
             p.drawString(1.5*cm, y,

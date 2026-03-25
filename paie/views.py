@@ -831,7 +831,7 @@ def telecharger_bulletin_pdf(request, pk):
             p.drawString(1.5*cm, y,
                 f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
                 f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− Indemnités forfaitaires exonérées {abattement_val:,.0f}"
+                f"− Exonération indemnités {abattement_val:,.0f} (plafond 25% = {round(float(bulletin.salaire_brut)*0.25):,.0f})"
                 .replace(",", " "))
         else:
             p.drawString(1.5*cm, y,
@@ -1372,7 +1372,7 @@ def telecharger_bulletin_public(request, token):
             p.drawString(1.5*cm, y,
                 f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
                 f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− Indemnités forfaitaires exonérées {abattement_val:,.0f}"
+                f"− Exonération indemnités {abattement_val:,.0f} (plafond 25% = {round(float(bulletin.salaire_brut)*0.25):,.0f})"
                 .replace(",", " "))
         else:
             p.drawString(1.5*cm, y,
