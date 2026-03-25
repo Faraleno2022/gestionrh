@@ -712,6 +712,24 @@ class MoteurCalculPaie:
             self.montants['depassement_plafond_indemnites'] = Decimal('0')
             self.montants['reintegration_base_imposable'] = Decimal('0')
             self.montants['alerte_plafond_indemnites'] = ''
+
+        # Alerte structurelle: indemnités disproportionnées par rapport au salaire de base
+        sal_base_element = self._obtenir_base_calcul('SALAIRE_BASE')
+        if sal_base_element > 0 and total_indemnites > 0:
+            ratio_ind_base = total_indemnites * 100 / sal_base_element
+            self.montants['ratio_indemnites_base'] = ratio_ind_base
+            if ratio_ind_base > 50:
+                if 'alertes' not in self.montants:
+                    self.montants['alertes'] = []
+                self.montants['alertes'].append({
+                    'type': 'avertissement',
+                    'message': (
+                        f"Indemnités forfaitaires ({total_indemnites:,.0f} GNF) = "
+                        f"{ratio_ind_base:.0f}% du salaire de base ({sal_base_element:,.0f} GNF). "
+                        f"Ratio élevé — vérifiez que les libellés sont bien des indemnités "
+                        f"et non des primes (impact fiscal différent)."
+                    )
+                })
     
     def _calculer_cotisations_sociales(self):
         """Calculer les cotisations sociales (CNSS, etc.)

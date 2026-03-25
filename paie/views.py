@@ -647,9 +647,16 @@ def telecharger_bulletin_pdf(request, pk):
         # Nettoyer le taux : supprimer les zéros inutiles (30.0000% → 30%)
         taux_val = g.taux
         taux_str = f"{float(taux_val):g}%" if taux_val else "-"
-        # Nettoyer libellé HS : retirer le % du libellé (la colonne Taux l'affiche déjà)
+        # Corriger libellé: "Prime de transport" → "Indemnité de transport" si forfaitaire
         libelle = g.rubrique.libelle_rubrique[:35]
         code_rub = (g.rubrique.code_rubrique or '').upper()
+        if libelle.lower().startswith('prime'):
+            from .services import PATTERNS_CODES_FORFAITAIRES, MOTS_CLES_LIBELLE_FORFAITAIRES
+            lib_low = libelle.lower()
+            is_indem = any(p in code_rub for p in PATTERNS_CODES_FORFAITAIRES) or \
+                       any(m in lib_low for m in MOTS_CLES_LIBELLE_FORFAITAIRES)
+            if is_indem:
+                libelle = 'Indemnité' + libelle[5:]
         if ('HS' in code_rub or 'HEURE' in libelle.upper()) and 'SUP' in libelle.upper():
             import re
             libelle = re.sub(r'\s*\+?\d+\s*%', '', libelle).strip()
@@ -815,12 +822,10 @@ def telecharger_bulletin_pdf(request, pk):
         # Explication base imposable avec nature de l'abattement
         abattement_val = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
         if float(abattement_val) > 0:
-            brut_moins_cnss = float(bulletin.salaire_brut) - float(bulletin.cnss_employe)
-            pct_abat = (float(abattement_val) / brut_moins_cnss * 100) if brut_moins_cnss > 0 else 0
             p.drawString(1.5*cm, y,
                 f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
                 f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− Abattement forfaitaire {abattement_val:,.0f} ({pct_abat:.0f}% indemnités exonérées)"
+                f"− Exonération indemnités {abattement_val:,.0f} (plafond légal 25% du brut)"
                 .replace(",", " "))
         else:
             p.drawString(1.5*cm, y,
@@ -1178,9 +1183,16 @@ def telecharger_bulletin_public(request, token):
         # Nettoyer le taux : supprimer les zéros inutiles (30.0000% → 30%)
         taux_val = g.taux
         taux_str = f"{float(taux_val):g}%" if taux_val else "-"
-        # Nettoyer libellé HS : retirer le % du libellé (la colonne Taux l'affiche déjà)
+        # Corriger libellé: "Prime de transport" → "Indemnité de transport" si forfaitaire
         libelle = g.rubrique.libelle_rubrique[:35]
         code_rub = (g.rubrique.code_rubrique or '').upper()
+        if libelle.lower().startswith('prime'):
+            from .services import PATTERNS_CODES_FORFAITAIRES, MOTS_CLES_LIBELLE_FORFAITAIRES
+            lib_low = libelle.lower()
+            is_indem = any(p in code_rub for p in PATTERNS_CODES_FORFAITAIRES) or \
+                       any(m in lib_low for m in MOTS_CLES_LIBELLE_FORFAITAIRES)
+            if is_indem:
+                libelle = 'Indemnité' + libelle[5:]
         if ('HS' in code_rub or 'HEURE' in libelle.upper()) and 'SUP' in libelle.upper():
             import re
             libelle = re.sub(r'\s*\+?\d+\s*%', '', libelle).strip()
@@ -1345,12 +1357,10 @@ def telecharger_bulletin_public(request, token):
         # Explication base imposable avec nature de l'abattement
         abattement_val = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
         if float(abattement_val) > 0:
-            brut_moins_cnss = float(bulletin.salaire_brut) - float(bulletin.cnss_employe)
-            pct_abat = (float(abattement_val) / brut_moins_cnss * 100) if brut_moins_cnss > 0 else 0
             p.drawString(1.5*cm, y,
                 f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
                 f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− Abattement forfaitaire {abattement_val:,.0f} ({pct_abat:.0f}% indemnités exonérées)"
+                f"− Exonération indemnités {abattement_val:,.0f} (plafond légal 25% du brut)"
                 .replace(",", " "))
         else:
             p.drawString(1.5*cm, y,
