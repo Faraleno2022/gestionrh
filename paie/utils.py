@@ -511,7 +511,7 @@ def generer_bulletin_pdf(bulletin):
     p.setFillColor(colors.HexColor("#dc3545"))
     mid_x = width / 2
     p.drawString(2*cm, y - 1*cm, f"CNSS (5%): -{bulletin.cnss_employe:,.0f}".replace(",", " "))
-    p.drawString(mid_x, y - 1*cm, f"RTS ({taux_eff_rts_val:.2f}%): -{bulletin.irg:,.0f}".replace(",", " "))
+    p.drawString(mid_x, y - 1*cm, f"RTS (moy. {taux_eff_rts_val:.2f}%): -{bulletin.irg:,.0f}".replace(",", " "))
     p.drawRightString(width - 2*cm, y - 1*cm, f"Total retenues: -{bulletin.cnss_employe + bulletin.irg:,.0f} GNF".replace(",", " "))
     
     offset_y = 1*cm
