@@ -501,8 +501,8 @@ def telecharger_bulletin_pdf(request, pk):
         pdfmetrics.registerFont(TTFont('Arial-Italic', os.path.join(_font_dir, 'Arial-Italic.ttf')))
         _FN = 'Arial'; _FB = 'Arial-Bold'; _FI = 'Arial-Italic'
     except Exception:
-        _FN = _FN; _FB = _FB; _FI = 'Helvetica-Oblique'
-    
+        _FN = 'Helvetica'; _FB = 'Helvetica-Bold'; _FI = 'Helvetica-Oblique'
+
     bulletin = get_object_or_404(
         BulletinPaie,
         pk=pk,
@@ -831,7 +831,7 @@ def telecharger_bulletin_pdf(request, pk):
             p.drawString(1.5*cm, y,
                 f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
                 f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− Exonération indemnités {abattement_val:,.0f} (plafond légal 25% du brut)"
+                f"− Indemnités forfaitaires exonérées {abattement_val:,.0f}"
                 .replace(",", " "))
         else:
             p.drawString(1.5*cm, y,
@@ -1046,8 +1046,8 @@ def telecharger_bulletin_public(request, token):
         pdfmetrics.registerFont(TTFont('Arial-Italic', os.path.join(_font_dir, 'Arial-Italic.ttf')))
         _FN = 'Arial'; _FB = 'Arial-Bold'; _FI = 'Arial-Italic'
     except Exception:
-        _FN = _FN; _FB = _FB; _FI = 'Helvetica-Oblique'
-    
+        _FN = 'Helvetica'; _FB = 'Helvetica-Bold'; _FI = 'Helvetica-Oblique'
+
     # Récupérer le bulletin par son token
     bulletin = get_object_or_404(BulletinPaie, token_public=token)
     
@@ -1372,7 +1372,7 @@ def telecharger_bulletin_public(request, token):
             p.drawString(1.5*cm, y,
                 f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
                 f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− Exonération indemnités {abattement_val:,.0f} (plafond légal 25% du brut)"
+                f"− Indemnités forfaitaires exonérées {abattement_val:,.0f}"
                 .replace(",", " "))
         else:
             p.drawString(1.5*cm, y,
@@ -2690,38 +2690,13 @@ def simulation_paie(request):
             cnss_employe = (assiette_cnss * taux_cnss_employe / Decimal('100')).quantize(Decimal('1'))
             cnss_employeur = (assiette_cnss * taux_cnss_employeur / Decimal('100')).quantize(Decimal('1'))
         
-        # Vérifier plafond 25% indemnités forfaitaires
-        # FORMULE CORRECTE:
-        # Salaire brut = Salaire de base + Primes/Indemnités
-        # Plafond exonéré = 25% × Salaire brut
-        # Si Primes > Plafond → Excédent réintégré dans base RTS
-        #
-        # VÉRIFICATION MATHÉMATIQUE:
-        # Pour que les primes soient exactement au plafond:
-        # Primes = 25% × (Salaire de base + Primes)
-        # Primes = 0.25 × Salaire de base + 0.25 × Primes
-        # 0.75 × Primes = 0.25 × Salaire de base
-        # Primes = 33.33% × Salaire de base
-        # → Pour respecter le plafond 25% du brut, les primes ne doivent pas dépasser ~33% du salaire de base.
-        
+        # CGI Guinée: indemnités forfaitaires intégralement exonérées de RTS
+        # Pas de plafond — toutes les indemnités forfaitaires sont déductibles
+        # CGI Guinée: indemnités forfaitaires intégralement exonérées de RTS
         total_indemnites_forfaitaires = prime_transport + prime_logement + prime_cherte_vie + prime_panier
-        # Plafond = 25% du salaire brut (salaire de base + indemnités)
-        plafond_indemnites = (salaire_brut * Decimal('0.25')).quantize(Decimal('1'))
-        exces_indemnites = max(Decimal('0'), total_indemnites_forfaitaires - plafond_indemnites)
-        
-        # Calcul du seuil théorique: primes max = 33.33% du salaire de base
-        primes_max_theorique = (salaire_base * Decimal('0.3333')).quantize(Decimal('1'))
-        
-        # Alerte si dépassement du plafond
-        if exces_indemnites > 0:
-            alertes.append({
-                'type': 'avertissement',
-                'message': f"Plafond 25% indemnités forfaitaires dépassé: {total_indemnites_forfaitaires:,.0f} GNF > {plafond_indemnites:,.0f} GNF. "
-                           f"Excédent {exces_indemnites:,.0f} GNF réintégré dans base RTS."
-            })
-        
-        # Base imposable RTS = Brut - CNSS + Excédent indemnités
-        base_imposable = salaire_brut - cnss_employe + exces_indemnites
+
+        # Base imposable RTS = Brut - CNSS - Indemnités forfaitaires (exonération intégrale)
+        base_imposable = salaire_brut - cnss_employe - total_indemnites_forfaitaires
         
         # Calcul RTS par tranches (CGI 2022 - 6 tranches)
         tranches_rts = [
@@ -2810,11 +2785,8 @@ def simulation_paie(request):
             'assiette_cnss': assiette_cnss,
             'cnss_employe': cnss_employe,
             'cnss_employeur': cnss_employeur,
-            # Plafond 25% indemnités forfaitaires
+            # Indemnités forfaitaires exonérées (intégralement)
             'total_indemnites_forfaitaires': total_indemnites_forfaitaires,
-            'plafond_indemnites': plafond_indemnites,
-            'exces_indemnites': exces_indemnites,
-            'primes_max_theorique': primes_max_theorique,  # 33.33% du salaire de base
             'base_imposable': base_imposable,
             'rts': rts,
             'taux_effectif_rts': taux_effectif_rts,

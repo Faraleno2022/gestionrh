@@ -128,7 +128,7 @@ except Exception as e:
     print(f"Import error: {e}")
     
     # Créer une vue simple pour le formulaire d'écriture
-    from django.shortcuts import render
+    from django.shortcuts import render, get_object_or_404
     from django.contrib.auth.decorators import login_required
     from django.contrib import messages
     from django import forms
@@ -1535,6 +1535,54 @@ except Exception as e:
             'resultat': resultat,
         })
 
+    # ── Fallback TemplateView pour toutes les vues _view non définies ci-dessus ──
+    _cs = TemplateView.as_view(template_name='comptabilite/coming_soon.html')
+    # Tiers
+    tiers_list_view = tiers_list_view if 'tiers_list_view' in vars() else _cs
+    tiers_create_view = tiers_create_view if 'tiers_create_view' in vars() else _cs
+    tiers_detail_view = tiers_detail_view if 'tiers_detail_view' in vars() else _cs
+    tiers_update_view = tiers_update_view if 'tiers_update_view' in vars() else _cs
+    tiers_delete_view = _cs
+    # Factures
+    facture_list_view = facture_list_view if 'facture_list_view' in vars() else _cs
+    facture_create_view = _cs
+    facture_detail_view = _cs
+    facture_update_view = _cs
+    facture_delete_view = _cs
+    facture_valider_view = _cs
+    facture_print_view = _cs
+    # Écritures
+    ecriture_delete_view = _cs
+    ecriture_valider_view = _cs
+    # Plan comptable
+    plan_comptable_update_view = _cs
+    plan_comptable_delete_view = _cs
+    # Journaux
+    journal_list_view = _cs
+    journal_create_view = _cs
+    journal_detail_view = _cs
+    journal_update_view = _cs
+    journal_delete_view = _cs
+    # Exercices
+    exercice_list_view = _cs
+    exercice_create_view = _cs
+    exercice_detail_view = _cs
+    exercice_update_view = _cs
+    exercice_delete_view = _cs
+    # Règlements
+    reglement_create_view = _cs
+    reglement_detail_view = _cs
+    reglement_update_view = _cs
+    reglement_delete_view = _cs
+    # Comptes clients/fournisseurs
+    compte_client_list_view = _cs
+    compte_client_detail_view = _cs
+    # Vieillissement/impayés
+    vieillissement_creances_view = _cs
+    impayes_clients_view = _cs
+    vieillissement_dettes_view = _cs
+    impayes_fournisseurs_view = _cs
+
 # Vues temporaires pour les autres éléments (seront remplacées progressivement)
 tiers_create = tiers_create_view
 tiers_detail = tiers_detail_view
@@ -1571,11 +1619,7 @@ reglement_detail = reglement_detail_view
 reglement_update = reglement_update_view
 reglement_delete = reglement_delete_view
 
-# Assigner les vues des comptes clients et fournisseurs
-compte_client_list_view = compte_client_list_view
-compte_client_detail_view = compte_client_detail_view
-compte_fournisseur_list_view = compte_fournisseur_list_view
-compte_fournisseur_detail_view = compte_fournisseur_detail_view
+# Les vues comptes clients/fournisseurs sont déjà définies via try/except ci-dessus
 
 app_name = 'comptabilite'
 

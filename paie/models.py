@@ -99,7 +99,7 @@ class RubriquePaie(models.Model):
     inclus_brut = models.BooleanField(default=True,
         help_text='Inclus dans le salaire brut (False = versé en plus du net)')
     exonere_rts = models.BooleanField(default=False,
-        help_text='Exonéré de RTS (indemnités forfaitaires, dans la limite du plafond 25%)')
+        help_text='Exonéré de RTS (indemnités forfaitaires intégralement exonérées, CGI Guinée)')
     ordre_calcul = models.IntegerField(default=100)
     ordre_affichage = models.IntegerField(default=100)
     affichage_bulletin = models.BooleanField(default=True)

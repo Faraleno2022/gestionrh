@@ -134,13 +134,13 @@
                                 <span class="badge bg-danger"><i class="bi bi-x-lg"></i></span>
                                 {% endif %}
                             </td>
-                            <td>{{ line.donnees.matricule|default:line.donnees.Matricule|default:"(auto)" }}</td>
-                            <td><strong>{{ line.donnees.nom|default:line.donnees.Nom|default:"-" }}</strong></td>
-                            <td>{{ line.donnees.prenoms|default:line.donnees.Prénoms|default:"-" }}</td>
-                            <td>{{ line.donnees.sexe|default:line.donnees.Sexe|default:"-" }}</td>
-                            <td>{{ line.donnees.telephone_principal|default:line.donnees.Téléphone|default:"-" }}</td>
-                            <td>{{ line.donnees.service|default:line.donnees.Service|default:"-" }}</td>
-                            <td>{{ line.donnees.poste|default:line.donnees.Poste|default:"-" }}</td>
+                            <td>{{ line.donnees.matricule|default:"(auto)" }}</td>
+                            <td><strong>{{ line.donnees.nom|default:"-" }}</strong></td>
+                            <td>{{ line.donnees.prenoms|default:"-" }}</td>
+                            <td>{{ line.donnees.sexe|default:"-" }}</td>
+                            <td>{{ line.donnees.telephone_principal|default:"-" }}</td>
+                            <td>{{ line.donnees.service|default:"-" }}</td>
+                            <td>{{ line.donnees.poste|default:"-" }}</td>
                             <td>{{ line.donnees.type_contrat|default:"-" }}</td>
                             <td>
                                 {% if line.erreurs %}

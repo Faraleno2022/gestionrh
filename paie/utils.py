@@ -448,7 +448,7 @@ def generer_bulletin_pdf(bulletin):
             p.drawString(1.5*cm, y,
                 f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
                 f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− Exonération indemnités {abattement_val:,.0f} (plafond légal 25% du brut)"
+                f"− Indemnités forfaitaires exonérées {abattement_val:,.0f}"
                 .replace(",", " "))
         else:
             p.drawString(1.5*cm, y,
