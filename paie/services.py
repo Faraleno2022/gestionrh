@@ -1016,13 +1016,13 @@ class MoteurCalculPaie:
         """
         Calculer l'RTS selon le barème progressif CGI 2022.
         
-        Barème RTS Guinée (6 tranches continues):
+        Barème RTS Guinée (6 tranches continues, CGI officiel):
         - 0 - 1 000 000 GNF: 0%
-        - 1 000 000 - 3 000 000 GNF: 5%
-        - 3 000 000 - 5 000 000 GNF: 8%
-        - 5 000 000 - 10 000 000 GNF: 10%
-        - 10 000 000 - 20 000 000 GNF: 15%
-        - Au-delà 20 000 000 GNF: 20%
+        - 1 000 001 - 5 000 000 GNF: 10%
+        - 5 000 001 - 10 000 000 GNF: 15%
+        - 10 000 001 - 15 000 000 GNF: 20%
+        - 15 000 001 - 20 000 000 GNF: 25%
+        - Au-delà 20 000 000 GNF: 35%
         
         Utilise des comparaisons absolues sur les bornes pour éviter
         les erreurs d'arrondi liées aux gaps entre tranches (1000001 vs 1000000).

@@ -280,18 +280,18 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f'  ⚠ {const_data["code"]} déjà existant'))
 
     def creer_tranches_irg(self):
-        """Créer les tranches du barème RTS (Retenue sur Traitements et Salaires) - CGI 2022
-        
-        Barème officiel RTS CGI 2022 (6 tranches):
+        """Créer les tranches du barème RTS (Retenue sur Traitements et Salaires) - CGI Guinée
+
+        Barème officiel RTS CGI Guinée (6 tranches):
         - 0 à 1 000 000 GNF : 0%
-        - 1 000 001 à 3 000 000 GNF : 5%
-        - 3 000 001 à 5 000 000 GNF : 8%
-        - 5 000 001 à 10 000 000 GNF : 10%
-        - 10 000 001 à 20 000 000 GNF : 15%
-        - Plus de 20 000 000 GNF : 20%
+        - 1 000 001 à 5 000 000 GNF : 10%
+        - 5 000 001 à 10 000 000 GNF : 15%
+        - 10 000 001 à 15 000 000 GNF : 20%
+        - 15 000 001 à 20 000 000 GNF : 25%
+        - Plus de 20 000 000 GNF : 35%
         """
         self.stdout.write('📊 Création des tranches RTS (RTS)...')
-        
+
         tranches = [
             {
                 'numero_tranche': 1,
@@ -302,32 +302,32 @@ class Command(BaseCommand):
             {
                 'numero_tranche': 2,
                 'borne_inferieure': Decimal('1000001'),
-                'borne_superieure': Decimal('3000000'),
-                'taux_irg': Decimal('5.00'),
-            },
-            {
-                'numero_tranche': 3,
-                'borne_inferieure': Decimal('3000001'),
                 'borne_superieure': Decimal('5000000'),
-                'taux_irg': Decimal('8.00'),
-            },
-            {
-                'numero_tranche': 4,
-                'borne_inferieure': Decimal('5000001'),
-                'borne_superieure': Decimal('10000000'),
                 'taux_irg': Decimal('10.00'),
             },
             {
-                'numero_tranche': 5,
-                'borne_inferieure': Decimal('10000001'),
-                'borne_superieure': Decimal('20000000'),
+                'numero_tranche': 3,
+                'borne_inferieure': Decimal('5000001'),
+                'borne_superieure': Decimal('10000000'),
                 'taux_irg': Decimal('15.00'),
+            },
+            {
+                'numero_tranche': 4,
+                'borne_inferieure': Decimal('10000001'),
+                'borne_superieure': Decimal('15000000'),
+                'taux_irg': Decimal('20.00'),
+            },
+            {
+                'numero_tranche': 5,
+                'borne_inferieure': Decimal('15000001'),
+                'borne_superieure': Decimal('20000000'),
+                'taux_irg': Decimal('25.00'),
             },
             {
                 'numero_tranche': 6,
                 'borne_inferieure': Decimal('20000001'),
                 'borne_superieure': None,  # Illimité
-                'taux_irg': Decimal('20.00'),
+                'taux_irg': Decimal('35.00'),
             },
         ]
         

@@ -399,9 +399,43 @@ def _apply_missing_columns():
         except Exception:
             pass
 
+    # Correction barème RTS — CGI Guinée officiel
+    bareme_cgi = [
+        (1, 0, 1000000, 0.00),
+        (2, 1000001, 5000000, 10.00),
+        (3, 5000001, 10000000, 15.00),
+        (4, 10000001, 15000000, 20.00),
+        (5, 15000001, 20000000, 25.00),
+        (6, 20000001, None, 35.00),
+    ]
+    try:
+        count = cursor.execute('SELECT COUNT(*) FROM tranches_irg').fetchone()[0]
+        for num, b_inf, b_sup, taux in bareme_cgi:
+            if count == 0:
+                cursor.execute(
+                    'INSERT INTO tranches_irg (numero_tranche, borne_inferieure, borne_superieure, taux_irg, annee_validite, date_debut_validite, actif) '
+                    'VALUES (?, ?, ?, ?, 2025, "2025-01-01", 1)',
+                    (num, b_inf, b_sup, taux)
+                )
+            else:
+                if b_sup is not None:
+                    cursor.execute(
+                        'UPDATE tranches_irg SET borne_inferieure=?, borne_superieure=?, taux_irg=? '
+                        'WHERE numero_tranche=?',
+                        (b_inf, b_sup, taux, num)
+                    )
+                else:
+                    cursor.execute(
+                        'UPDATE tranches_irg SET borne_inferieure=?, borne_superieure=NULL, taux_irg=? '
+                        'WHERE numero_tranche=?',
+                        (b_inf, taux, num)
+                    )
+    except Exception:
+        pass  # table n'existe pas encore
+
     conn.commit()
     conn.close()
-    print("  Colonnes manquantes ajoutees (patch direct)")
+    print("  Colonnes manquantes ajoutees + bareme RTS corrige (patch direct)")
 
 
 # ─── Point d'entrée principal ──────────────────────────────────────────────────
