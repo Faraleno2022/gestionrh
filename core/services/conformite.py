@@ -56,7 +56,7 @@ class ConformiteService:
     
     def verifier_contrats_signes(self):
         """Vérifie si tous les employés ont un contrat"""
-        from employes.models import Employe, Contrat
+        from employes.models import Employe
         
         employes_actifs = Employe.objects.filter(
             entreprise=self.entreprise,
