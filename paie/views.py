@@ -812,34 +812,42 @@ def telecharger_bulletin_pdf(request, pk):
     if detail_rts:
         p.setFont(_FB, 7)
         p.setFillColor(colors.HexColor("#6c757d"))
-        # Explication base imposable
+        # Explication base imposable avec nature de l'abattement
         abattement_val = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
         if float(abattement_val) > 0:
+            brut_moins_cnss = float(bulletin.salaire_brut) - float(bulletin.cnss_employe)
+            pct_abat = (float(abattement_val) / brut_moins_cnss * 100) if brut_moins_cnss > 0 else 0
             p.drawString(1.5*cm, y,
-                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} GNF "
-                f"(Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− Abattement {abattement_val:,.0f})".replace(",", " "))
+                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
+                f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
+                f"− Abattement forfaitaire {abattement_val:,.0f} ({pct_abat:.0f}% indemnités exonérées)"
+                .replace(",", " "))
         else:
             p.drawString(1.5*cm, y,
-                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} GNF "
-                f"(Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− éléments exonérés)".replace(",", " "))
+                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
+                f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f}"
+                .replace(",", " "))
         p.setFillColor(colors.black)
         y -= 0.25*cm
 
-        rts_detail_data = [["Tranche", "Impôt"]]
+        rts_detail_data = [["Tranche (bornes)", "Base taxable", "Taux", "Impôt"]]
         cumul_impot = Decimal('0')
         for i, t in enumerate(detail_rts, start=1):
             taux_pct = f"{t['taux']:g}"
+            b_inf = f"{t['borne_inf']:,.0f}".replace(",", " ")
+            b_sup = f"{t['borne_sup']:,.0f}".replace(",", " ") if t.get('borne_sup') else "∞"
+            base_tr = f"{t['base_tranche']:,.0f}".replace(",", " ")
             rts_detail_data.append([
-                f"Tranche {taux_pct}%",
+                f"{b_inf} à {b_sup}",
+                base_tr,
+                f"{taux_pct}%",
                 f"{t['impot_tranche']:,.0f}".replace(",", " "),
             ])
             cumul_impot += t['impot_tranche']
-        rts_detail_data.append(["Total RTS:", f"{cumul_impot:,.0f} GNF".replace(",", " ")])
+        rts_detail_data.append(["", "", "Total RTS:", f"{cumul_impot:,.0f} GNF".replace(",", " ")])
 
         rts_row_h = 12
-        rts_table = Table(rts_detail_data, colWidths=[6*cm, 11*cm], rowHeights=rts_row_h)
+        rts_table = Table(rts_detail_data, colWidths=[5*cm, 4*cm, 3*cm, 5*cm], rowHeights=rts_row_h)
         nb_rows = len(rts_detail_data)
         rts_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
@@ -1334,34 +1342,42 @@ def telecharger_bulletin_public(request, token):
     if detail_rts:
         p.setFont(_FB, 7)
         p.setFillColor(colors.HexColor("#6c757d"))
-        # Explication base imposable
+        # Explication base imposable avec nature de l'abattement
         abattement_val = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
         if float(abattement_val) > 0:
+            brut_moins_cnss = float(bulletin.salaire_brut) - float(bulletin.cnss_employe)
+            pct_abat = (float(abattement_val) / brut_moins_cnss * 100) if brut_moins_cnss > 0 else 0
             p.drawString(1.5*cm, y,
-                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} GNF "
-                f"(Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− Abattement {abattement_val:,.0f})".replace(",", " "))
+                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
+                f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
+                f"− Abattement forfaitaire {abattement_val:,.0f} ({pct_abat:.0f}% indemnités exonérées)"
+                .replace(",", " "))
         else:
             p.drawString(1.5*cm, y,
-                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} GNF "
-                f"(Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− éléments exonérés)".replace(",", " "))
+                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
+                f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f}"
+                .replace(",", " "))
         p.setFillColor(colors.black)
         y -= 0.25*cm
 
-        rts_detail_data = [["Tranche", "Impôt"]]
+        rts_detail_data = [["Tranche (bornes)", "Base taxable", "Taux", "Impôt"]]
         cumul_impot = Decimal('0')
         for i, t in enumerate(detail_rts, start=1):
             taux_pct = f"{t['taux']:g}"
+            b_inf = f"{t['borne_inf']:,.0f}".replace(",", " ")
+            b_sup = f"{t['borne_sup']:,.0f}".replace(",", " ") if t.get('borne_sup') else "∞"
+            base_tr = f"{t['base_tranche']:,.0f}".replace(",", " ")
             rts_detail_data.append([
-                f"Tranche {taux_pct}%",
+                f"{b_inf} à {b_sup}",
+                base_tr,
+                f"{taux_pct}%",
                 f"{t['impot_tranche']:,.0f}".replace(",", " "),
             ])
             cumul_impot += t['impot_tranche']
-        rts_detail_data.append(["Total RTS:", f"{cumul_impot:,.0f} GNF".replace(",", " ")])
+        rts_detail_data.append(["", "", "Total RTS:", f"{cumul_impot:,.0f} GNF".replace(",", " ")])
 
         rts_row_h = 12
-        rts_table = Table(rts_detail_data, colWidths=[6*cm, 11*cm], rowHeights=rts_row_h)
+        rts_table = Table(rts_detail_data, colWidths=[5*cm, 4*cm, 3*cm, 5*cm], rowHeights=rts_row_h)
         nb_rows = len(rts_detail_data)
         rts_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#6c757d")),
