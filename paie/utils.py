@@ -593,34 +593,36 @@ def generer_bulletin_pdf(bulletin):
             y -= 0.25*cm
     p.setFillColor(colors.black)
 
-    # === PIED DE PAGE — signatures + infos légales, ultra-compact ===
-    p.setFont(_FONT_BOLD, 6.5)
-    p.drawString(1.5*cm, 3.55*cm, "L'Employeur")
-    p.drawRightString(width - 1.5*cm, 3.55*cm, "L'Employé(e)")
-    p.setFont(_FONT_NORMAL, 6)
+    # === PIED DE PAGE — signatures compactes + infos légales centrées ===
+    # Bloc signatures — interlignes serrés (0.18cm entre chaque ligne)
+    p.setFont(_FONT_BOLD, 6)
+    p.drawString(1.5*cm, 3.20*cm, "L'Employeur")
+    p.drawRightString(width - 1.5*cm, 3.20*cm, "L'Employé(e)")
+    p.setFont(_FONT_NORMAL, 5.5)
     if entreprise:
-        p.drawString(1.5*cm, 3.30*cm, entreprise.nom_entreprise or '')
-    p.drawRightString(width - 1.5*cm, 3.30*cm, f"{emp.nom} {emp.prenoms}")
-    p.setDash(3, 3)
-    p.line(1.5*cm, 2.95*cm, 7*cm, 2.95*cm)
-    p.line(width - 7*cm, 2.95*cm, width - 1.5*cm, 2.95*cm)
-    p.setDash()
+        p.drawString(1.5*cm, 3.02*cm, entreprise.nom_entreprise or '')
+    p.drawRightString(width - 1.5*cm, 3.02*cm, f"{emp.nom} {emp.prenoms}")
     p.setFont(_FONT_NORMAL, 5)
-    p.drawString(1.5*cm, 2.75*cm, "Date et signature")
-    p.drawRightString(width - 1.5*cm, 2.75*cm, "Lu et approuvé, date et signature")
+    p.drawString(1.5*cm, 2.86*cm, "Date et signature")
+    p.drawRightString(width - 1.5*cm, 2.86*cm, "Lu et approuvé, date et signature")
+    # Lignes pointillées pour signature
+    p.setDash(2, 2)
+    p.line(1.5*cm, 2.78*cm, 6.5*cm, 2.78*cm)
+    p.line(width - 6.5*cm, 2.78*cm, width - 1.5*cm, 2.78*cm)
+    p.setDash()
     # Trait séparateur
     p.setStrokeColor(colors.HexColor("#dee2e6"))
     p.setLineWidth(0.5)
-    p.line(1.5*cm, 2.55*cm, width - 1.5*cm, 2.55*cm)
+    p.line(1.5*cm, 2.60*cm, width - 1.5*cm, 2.60*cm)
     p.setStrokeColor(colors.black)
-    # Infos légales centrées
+    # Infos légales centrées — interlignes serrés (0.22cm)
     p.setFont(_FONT_NORMAL, 5)
     p.setFillColor(colors.HexColor("#555555"))
-    p.drawCentredString(width/2, 2.25*cm, "Ce bulletin est conforme à la législation guinéenne en vigueur.")
+    p.drawCentredString(width/2, 2.38*cm, "Ce bulletin est conforme à la législation guinéenne en vigueur.")
     if entreprise:
-        p.drawCentredString(width/2, 1.95*cm, f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
-        p.drawCentredString(width/2, 1.70*cm, f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
-    p.drawCentredString(width/2, 1.40*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
+        p.drawCentredString(width/2, 2.16*cm, f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
+        p.drawCentredString(width/2, 1.94*cm, f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
+    p.drawCentredString(width/2, 1.72*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
     p.setFillColor(colors.black)
     
     # Finaliser le PDF
