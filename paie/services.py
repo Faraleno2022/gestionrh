@@ -7,7 +7,7 @@ OPTIMISATIONS PERFORMANCE:
 - Bulk operations pour les insertions
 - Select_related/prefetch_related pour réduire les requêtes N+1
 """
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, ROUND_FLOOR
 from datetime import date, timedelta
 import calendar
 from django.db import transaction
@@ -711,14 +711,14 @@ class MoteurCalculPaie:
                 exoneration_retenue = min(total_indemnites, exoneration_retenue)
             except ValueError:
                 # Fallback plafond 25% si la formule échoue
-                exoneration_retenue = min(total_indemnites, self._arrondir(salaire_brut * Decimal('25') / Decimal('100')))
+                exoneration_retenue = min(total_indemnites, (salaire_brut * Decimal('25') / Decimal('100')).quantize(Decimal('1'), rounding=ROUND_FLOOR))
             plafond = exoneration_retenue
             taux_plafond = (plafond * Decimal('100') / salaire_brut).quantize(Decimal('0.01')) if salaire_brut else Decimal('25')
         else:
             # Mode par défaut : plafond % du brut (CGI)
             pct = Decimal(str(params.plafond_exoneration_pct)) if params else Decimal('25')
             taux_plafond = pct
-            plafond = self._arrondir(salaire_brut * pct / Decimal('100'))
+            plafond = (salaire_brut * pct / Decimal('100')).quantize(Decimal('1'), rounding=ROUND_FLOOR)
             exoneration_retenue = min(total_indemnites, plafond)
 
         # Arrondir exonération et dépassement pour cohérence (0 GNF d'écart)
