@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 title Build GestionnaireRH - Executable Complet
 
 echo ============================================
