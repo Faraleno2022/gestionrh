@@ -132,10 +132,83 @@ def calculer_detail_tranches_rts(base_rts):
     return detail
 
 
+def _dessiner_footer(p, width, margin_left, margin_right, entreprise, emp, bulletin):
+    """Dessine le pied de page (signatures, infos légales, badge, QR) — positions absolues."""
+    from reportlab.lib.units import cm
+
+    # Signatures
+    p.setFont(_FONT_BOLD, 6)
+    p.setFillColor(colors.black)
+    p.drawString(margin_left, 3.10*cm, "L'Employeur")
+    p.drawRightString(width - margin_right, 3.10*cm, "L'Employé(e)")
+    p.setFont(_FONT_NORMAL, 5.5)
+    if entreprise:
+        p.drawString(margin_left, 2.94*cm, entreprise.nom_entreprise or '')
+    p.drawRightString(width - margin_right, 2.94*cm, f"{emp.nom} {emp.prenoms}")
+    p.setFont(_FONT_NORMAL, 5)
+    p.drawString(margin_left, 2.78*cm, "Date et signature")
+    p.drawRightString(width - margin_right, 2.78*cm, "Lu et approuvé, date et signature")
+    # Lignes pointillées
+    p.setDash(2, 2)
+    p.line(margin_left, 2.70*cm, 6*cm, 2.70*cm)
+    p.line(width - 6*cm, 2.70*cm, width - margin_right, 2.70*cm)
+    p.setDash()
+    # Trait séparateur
+    p.setStrokeColor(colors.HexColor("#dee2e6"))
+    p.setLineWidth(0.5)
+    p.line(margin_left, 2.55*cm, width - margin_right, 2.55*cm)
+    p.setStrokeColor(colors.black)
+    # Infos légales
+    p.setFont(_FONT_NORMAL, 5)
+    p.setFillColor(colors.HexColor("#555555"))
+    if entreprise:
+        p.drawCentredString(width/2, 2.35*cm,
+            f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
+        p.drawCentredString(width/2, 2.15*cm,
+            f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
+    from django.utils import timezone
+    p.drawCentredString(width/2, 1.95*cm,
+        f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
+
+    # Badge conformité
+    badge_x = margin_left
+    badge_y = 1.55*cm
+    badge_w = 5.5*cm
+    badge_h = 0.40*cm
+    p.setFillColor(colors.HexColor("#198754"))
+    p.roundRect(badge_x, badge_y, badge_w, badge_h, 3, stroke=0, fill=1)
+    p.setFillColor(colors.white)
+    p.setFont(_FONT_BOLD, 5.5)
+    p.drawCentredString(badge_x + badge_w / 2, badge_y + 0.12*cm,
+                        "\u2713 Conforme CGI Guinee | Compatible CNSS")
+
+    # QR Code
+    qr_size = 1.6*cm
+    qr_x = width - margin_right - qr_size
+    qr_y = 1.25*cm
+    try:
+        qr_contenu = (
+            f"BUL:{bulletin.numero_bulletin}|"
+            f"EMP:{emp.nom} {emp.prenoms}|"
+            f"NET:{int(bulletin.net_a_payer)} GNF|"
+            f"DATE:{bulletin.date_bulletin.strftime('%d/%m/%Y') if bulletin.date_bulletin else ''}|"
+            f"CNSS:{emp.num_cnss_individuel or '-'}"
+        )
+        qr_img = _generer_qr_code(qr_contenu, taille_cm=qr_size / cm)
+        if qr_img:
+            p.drawImage(qr_img, qr_x, qr_y, width=qr_size, height=qr_size, mask='auto')
+            p.setFont(_FONT_NORMAL, 4.5)
+            p.setFillColor(colors.HexColor("#666666"))
+            p.drawCentredString(qr_x + qr_size / 2, qr_y - 0.18*cm, "Vérification")
+    except Exception:
+        pass
+    p.setFillColor(colors.black)
+
+
 def generer_bulletin_pdf(bulletin):
     """
     Génère le PDF d'un bulletin de paie et retourne les bytes du PDF.
-    
+
     Args:
         bulletin: Instance BulletinPaie
         
@@ -592,7 +665,7 @@ def generer_bulletin_pdf(bulletin):
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
     taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '1,5'
 
-    # Tableau charges patronales (une ligne par charge = lisibilité audit)
+    # Tableau charges patronales
     charges_data = [["Charge patronale", "Base", "Taux", "Montant"]]
     charges_data.append(["CNSS Employeur",
         f"{min(bulletin.salaire_brut, 2500000):,.0f}".replace(",", " "),
@@ -616,6 +689,15 @@ def generer_bulletin_pdf(bulletin):
         f"{total_charges:,.0f} GNF".replace(",", " ")])
 
     ch_row_h = 11
+    ch_table_h = len(charges_data) * ch_row_h
+    # Espace nécessaire = tableau charges + note VF + footer (3.5cm)
+    espace_necessaire = ch_table_h + 0.4*cm + footer_zone
+    if y - espace_necessaire < 0:
+        # Pas assez de place → nouvelle page
+        _dessiner_footer(p, width, margin_left, margin_right, entreprise, emp, bulletin)
+        p.showPage()
+        y = height - margin_top
+
     charges_table = Table(charges_data, colWidths=[7*cm, 3.5*cm, 2*cm, 4.5*cm], rowHeights=ch_row_h)
     charges_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#fd7e14")),
@@ -628,85 +710,22 @@ def generer_bulletin_pdf(bulletin):
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#fff3cd")),
         ('FONTNAME', (0, -1), (-1, -1), _FONT_BOLD),
     ]))
-    ch_table_h = len(charges_data) * ch_row_h
     charges_table.wrapOn(p, width, height)
-    charges_table.drawOn(p, 1.5*cm, y - ch_table_h)
+    charges_table.drawOn(p, margin_left, y - ch_table_h)
     y -= ch_table_h + 0.15*cm
-    # Note explicative sous le tableau si déduction VF
+    # Note explicative VF/TA
     if base_vf > 0:
         brut_gnf = float(bulletin.salaire_brut)
-        p.setFont(_FONT_ITALIC, 6)
+        p.setFont(_FONT_ITALIC, 5.5)
         p.setFillColor(colors.HexColor("#666666"))
-        p.drawString(1.5*cm, y,
-            f"Base VF/TA = Brut {brut_gnf:,.0f} GNF  |  VF = {brut_gnf:,.0f} × 6%  |  TA = {brut_gnf:,.0f} × 2%"
+        p.drawString(margin_left, y,
+            f"Base VF/TA = Brut {brut_gnf:,.0f} GNF  |  VF = {brut_gnf:,.0f} x 6%  |  TA = {brut_gnf:,.0f} x 2%"
             .replace(",", " "))
-        y -= 0.25*cm
+        y -= 0.20*cm
     p.setFillColor(colors.black)
 
-    # === PIED DE PAGE — signatures compactes + infos légales centrées ===
-    # Bloc signatures — interlignes serrés (0.18cm entre chaque ligne)
-    p.setFont(_FONT_BOLD, 6)
-    p.drawString(1.5*cm, 3.20*cm, "L'Employeur")
-    p.drawRightString(width - 1.5*cm, 3.20*cm, "L'Employé(e)")
-    p.setFont(_FONT_NORMAL, 5.5)
-    if entreprise:
-        p.drawString(1.5*cm, 3.02*cm, entreprise.nom_entreprise or '')
-    p.drawRightString(width - 1.5*cm, 3.02*cm, f"{emp.nom} {emp.prenoms}")
-    p.setFont(_FONT_NORMAL, 5)
-    p.drawString(1.5*cm, 2.86*cm, "Date et signature")
-    p.drawRightString(width - 1.5*cm, 2.86*cm, "Lu et approuvé, date et signature")
-    # Lignes pointillées pour signature
-    p.setDash(2, 2)
-    p.line(1.5*cm, 2.78*cm, 6.5*cm, 2.78*cm)
-    p.line(width - 6.5*cm, 2.78*cm, width - 1.5*cm, 2.78*cm)
-    p.setDash()
-    # Trait séparateur
-    p.setStrokeColor(colors.HexColor("#dee2e6"))
-    p.setLineWidth(0.5)
-    p.line(1.5*cm, 2.60*cm, width - 1.5*cm, 2.60*cm)
-    p.setStrokeColor(colors.black)
-    # Infos légales centrées — interlignes serrés (0.22cm)
-    p.setFont(_FONT_NORMAL, 5)
-    p.setFillColor(colors.HexColor("#555555"))
-    if entreprise:
-        p.drawCentredString(width/2, 2.38*cm, f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
-        p.drawCentredString(width/2, 2.16*cm, f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
-    p.drawCentredString(width/2, 1.94*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
-
-    # Badge de conformité — rectangle vert avec coche
-    badge_x = 1.5*cm
-    badge_y = 1.55*cm
-    badge_w = 5.5*cm
-    badge_h = 0.45*cm
-    p.setFillColor(colors.HexColor("#198754"))
-    p.roundRect(badge_x, badge_y, badge_w, badge_h, 3, stroke=0, fill=1)
-    p.setFillColor(colors.white)
-    p.setFont(_FONT_BOLD, 5.5)
-    p.drawCentredString(badge_x + badge_w / 2, badge_y + 0.13*cm,
-                        "\u2713 Conforme CGI Guinee | Compatible CNSS")
-
-    # QR Code (coin bas droit) — contenu: numéro + employé + net + date
-    qr_size = 1.8*cm
-    qr_x = width - 1.5*cm - qr_size
-    qr_y = 1.2*cm
-    try:
-        qr_contenu = (
-            f"BUL:{bulletin.numero_bulletin}|"
-            f"EMP:{emp.nom} {emp.prenoms}|"
-            f"NET:{int(bulletin.net_a_payer)} GNF|"
-            f"DATE:{bulletin.date_bulletin.strftime('%d/%m/%Y') if bulletin.date_bulletin else ''}|"
-            f"CNSS:{emp.num_cnss_individuel or '-'}"
-        )
-        qr_img = _generer_qr_code(qr_contenu, taille_cm=qr_size / cm)
-        if qr_img:
-            p.drawImage(qr_img, qr_x, qr_y, width=qr_size, height=qr_size, mask='auto')
-            p.setFont(_FONT_NORMAL, 4.5)
-            p.setFillColor(colors.HexColor("#666666"))
-            p.drawCentredString(qr_x + qr_size / 2, qr_y - 0.20*cm, "Vérification")
-    except Exception:
-        pass
-
-    p.setFillColor(colors.black)
+    # === PIED DE PAGE (footer unique — positions absolues en bas de page) ===
+    _dessiner_footer(p, width, margin_left, margin_right, entreprise, emp, bulletin)
     
     # Finaliser le PDF
     p.showPage()
