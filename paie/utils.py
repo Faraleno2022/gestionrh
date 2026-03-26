@@ -135,55 +135,55 @@ def calculer_detail_tranches_rts(base_rts):
 def _dessiner_footer(p, width, margin_left, margin_right, entreprise, emp, bulletin):
     """Dessine le pied de page (signatures, infos légales, badge, QR) — positions absolues.
     Layout :
-        L'Employeur (gauche)           L'Employé(e) (droite)    ← 2.40cm
-        Nom entreprise                 Nom employé               ← 2.24cm
-        Date et signature              Lu et approuvé...         ← 2.10cm
-        - - - - - - -                  - - - - - - -             ← 2.05cm
-        ─────────────────────────────────────────────            ← 2.00cm
-           Infos entreprise centrées                             ← 1.88cm
-           NIF — CNSS                                            ← 1.72cm
-           Document généré le ...                                ← 1.56cm
-        ✓ Conforme CGI ...                        [QR Code]     ← 1.10cm
+        L'Employeur (gauche)           L'Employé(e) (droite)    ← 2.15cm
+        Nom entreprise                 Nom employé               ← 1.93cm
+        Date et signature              Lu et approuvé...         ← 1.74cm
+        - - - - - - -                  - - - - - - -             ← 1.67cm
+        ─────────────────────────────────────────────            ← 1.60cm
+           Infos entreprise centrées                             ← 1.45cm
+           NIF — CNSS                                            ← 1.30cm
+           Document généré le ...                                ← 1.15cm
+        ✓ Conforme CGI ...                        [QR Code]     ← 0.78cm / 0.30cm
     """
     from reportlab.lib.units import cm
 
     # ── Signatures (angles gauche / droit) ──
     p.setFont(_FONT_BOLD, 6)
     p.setFillColor(colors.black)
-    p.drawString(margin_left, 2.40*cm, "L'Employeur")
-    p.drawRightString(width - margin_right, 2.40*cm, "L'Employé(e)")
+    p.drawString(margin_left, 2.15*cm, "L'Employeur")
+    p.drawRightString(width - margin_right, 2.15*cm, "L'Employé(e)")
     p.setFont(_FONT_NORMAL, 5.5)
     if entreprise:
-        p.drawString(margin_left, 2.24*cm, entreprise.nom_entreprise or '')
-    p.drawRightString(width - margin_right, 2.24*cm, f"{emp.nom} {emp.prenoms}")
+        p.drawString(margin_left, 1.93*cm, entreprise.nom_entreprise or '')
+    p.drawRightString(width - margin_right, 1.93*cm, f"{emp.nom} {emp.prenoms}")
     p.setFont(_FONT_NORMAL, 5)
-    p.drawString(margin_left, 2.10*cm, "Date et signature")
-    p.drawRightString(width - margin_right, 2.10*cm, "Lu et approuvé, date et signature")
+    p.drawString(margin_left, 1.74*cm, "Date et signature")
+    p.drawRightString(width - margin_right, 1.74*cm, "Lu et approuvé, date et signature")
     # Lignes pointillées
     p.setDash(2, 2)
-    p.line(margin_left, 2.05*cm, 6.5*cm, 2.05*cm)
-    p.line(width - 6.5*cm, 2.05*cm, width - margin_right, 2.05*cm)
+    p.line(margin_left, 1.67*cm, 6.5*cm, 1.67*cm)
+    p.line(width - 6.5*cm, 1.67*cm, width - margin_right, 1.67*cm)
     p.setDash()
     # Trait séparateur sous les signatures
     p.setStrokeColor(colors.HexColor("#dee2e6"))
     p.setLineWidth(0.5)
-    p.line(margin_left, 2.00*cm, width - margin_right, 2.00*cm)
+    p.line(margin_left, 1.60*cm, width - margin_right, 1.60*cm)
     p.setStrokeColor(colors.black)
     # Infos légales centrées
     p.setFont(_FONT_NORMAL, 5)
     p.setFillColor(colors.HexColor("#555555"))
     if entreprise:
-        p.drawCentredString(width/2, 1.88*cm,
+        p.drawCentredString(width/2, 1.45*cm,
             f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
-        p.drawCentredString(width/2, 1.72*cm,
+        p.drawCentredString(width/2, 1.30*cm,
             f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
     from django.utils import timezone
-    p.drawCentredString(width/2, 1.56*cm,
+    p.drawCentredString(width/2, 1.15*cm,
         f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
 
     # Badge conformité
     badge_x = margin_left
-    badge_y = 1.10*cm
+    badge_y = 0.78*cm
     badge_w = 5.5*cm
     badge_h = 0.40*cm
     p.setFillColor(colors.HexColor("#198754"))
@@ -194,9 +194,9 @@ def _dessiner_footer(p, width, margin_left, margin_right, entreprise, emp, bulle
                         "\u2713 Conforme CGI Guinee | Compatible CNSS")
 
     # QR Code (coin bas droit)
-    qr_size = 1.6*cm
+    qr_size = 1.4*cm
     qr_x = width - margin_right - qr_size
-    qr_y = 0.80*cm
+    qr_y = 0.30*cm
     try:
         qr_contenu = (
             f"BUL:{bulletin.numero_bulletin}|"
@@ -262,7 +262,7 @@ def generer_bulletin_pdf(bulletin):
     margin_top = 0.8*cm
     margin_left = 1.2*cm
     margin_right = 1.2*cm
-    footer_zone = 2.6*cm  # zone réservée en bas (signatures + badge + QR)
+    footer_zone = 2.3*cm  # zone réservée en bas (signatures + badge + QR)
     y = height - margin_top
 
     # === EN-TÊTE ===
