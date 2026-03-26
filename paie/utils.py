@@ -432,6 +432,9 @@ def generer_bulletin_pdf(bulletin):
     ]))
     
     table_height = len(gains_data) * row_height
+    # Vérifier espace pour le tableau des gains
+    y = _saut_page_si_necessaire(p, y, table_height + 0.3*cm, width, height, margin_top,
+                                  margin_left, margin_right, footer_zone, entreprise, emp, bulletin)
     gains_table.wrapOn(p, width, height)
     gains_table.drawOn(p, margin_left, y - table_height)
     y -= table_height + 0.3*cm
@@ -477,6 +480,7 @@ def generer_bulletin_pdf(bulletin):
         _montant_feries_nuit = round(_sal_h * Decimal(str(hs_feries_nuit)) * Decimal('2.00')) if float(hs_feries_nuit) > 0 else 0
 
         hs_detail_data = [["Type", "Heures", "Majoration", "Montant"]]
+        # (données HS construites ci-dessous, page break vérifié avant le dessin)
         if float(hs_30) > 0:
             hs_detail_data.append(["4 prem. HS/sem.", f"{hs_30:g}h", "+30% (130%)",
                                     f"{_montant_30:,.0f}".replace(",", " ")])
@@ -513,6 +517,9 @@ def generer_bulletin_pdf(bulletin):
         ]))
         
         hs_table_h = nb_hs_rows * hs_row_h
+        # Vérifier espace pour le tableau HS
+        y = _saut_page_si_necessaire(p, y, hs_table_h + 0.60*cm, width, height, margin_top,
+                                      margin_left, margin_right, footer_zone, entreprise, emp, bulletin)
         hs_table.wrapOn(p, width, height)
         hs_table.drawOn(p, 1.5*cm, y - hs_table_h)
         y -= hs_table_h + 0.35*cm
@@ -724,8 +731,8 @@ def generer_bulletin_pdf(bulletin):
 
     ch_row_h = 11
     ch_table_h = len(charges_data) * ch_row_h
-    # Espace nécessaire = tableau charges + note VF + footer (3.5cm)
-    espace_necessaire = ch_table_h + 0.4*cm + footer_zone
+    # Espace nécessaire = tableau charges + note VF (footer_zone déjà pris en compte par _saut_page)
+    espace_necessaire = ch_table_h + 0.4*cm
     y = _saut_page_si_necessaire(p, y, espace_necessaire, width, height, margin_top,
                                   margin_left, margin_right, footer_zone, entreprise, emp, bulletin)
 
@@ -756,8 +763,9 @@ def generer_bulletin_pdf(bulletin):
     p.setFillColor(colors.black)
 
     # === PIED DE PAGE (footer unique — positions absolues en bas de page) ===
-    # Si le contenu déborde dans la zone du footer, passer à une nouvelle page
+    # Si le contenu déborde dans la zone du footer, sauter et dessiner le footer sur la nouvelle page
     if y < footer_zone:
+        # Footer ne tient plus sur cette page → nouvelle page pour le footer
         p.showPage()
     _dessiner_footer(p, width, margin_left, margin_right, entreprise, emp, bulletin)
     
