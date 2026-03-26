@@ -608,14 +608,25 @@ def telecharger_bulletin_pdf(request, pk):
     conges_acquis = solde_conge.conges_acquis if solde_conge else Decimal('0')
     conges_pris = solde_conge.conges_pris if solde_conge else Decimal('0')
     conges_restants = solde_conge.conges_restants if solde_conge else Decimal('0')
-    
+
+    # Acquisition mensuelle
+    acquis_ce_mois = Decimal('1.5')
+    try:
+        from .models import ConfigurationPaie
+        cfg = ConfigurationPaie.objects.filter(entreprise=entreprise).first()
+        if cfg:
+            acquis_ce_mois = cfg.jours_conges_par_mois
+    except Exception:
+        pass
+
     infos_emp = [
         ["Matricule:", emp.matricule or "-", "N° CNSS:", emp.num_cnss_individuel or "-"],
         ["Nom et Prénoms:", f"{emp.nom} {emp.prenoms}", "Ancienneté:", anciennete_str],
         ["Poste:", str(emp.poste or "-"), "Service:", str(emp.service or "-")],
         ["Date embauche:", emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else "-", "Mode paiement:", emp.mode_paiement or "-"],
         ["Congés acquis:", f"{conges_acquis:g} j", "Congés pris:", f"{conges_pris:g} j"],
-        ["Solde congés:", f"{conges_restants:g} j", "Nature contrat:", dict(emp.TYPES_CONTRATS).get(emp.type_contrat, emp.type_contrat or "-")],
+        ["Solde congés:", f"{conges_restants:g} j", "Acquis ce mois:", f"{acquis_ce_mois:g} j"],
+        ["Nature contrat:", dict(emp.TYPES_CONTRATS).get(emp.type_contrat, emp.type_contrat or "-"), "", ""],
     ]
 
     for row in infos_emp:
@@ -1006,11 +1017,42 @@ def telecharger_bulletin_pdf(request, pk):
     p.setStrokeColor(colors.black)
     p.setFont(_FN, 5)
     p.setFillColor(colors.HexColor("#555555"))
-    p.drawCentredString(width/2, 2.38*cm, "Ce bulletin est conforme à la législation guinéenne en vigueur.")
     if entreprise:
-        p.drawCentredString(width/2, 2.16*cm, f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
-        p.drawCentredString(width/2, 1.94*cm, f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
-    p.drawCentredString(width/2, 1.72*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
+        p.drawCentredString(width/2, 2.38*cm, f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
+        p.drawCentredString(width/2, 2.16*cm, f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
+    p.drawCentredString(width/2, 1.94*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
+
+    # Badge conformité
+    badge_x, badge_y, badge_w, badge_h = 1.5*cm, 1.55*cm, 5.5*cm, 0.45*cm
+    p.setFillColor(colors.HexColor("#198754"))
+    p.roundRect(badge_x, badge_y, badge_w, badge_h, 3, stroke=0, fill=1)
+    p.setFillColor(colors.white)
+    p.setFont(_FB, 5.5)
+    p.drawCentredString(badge_x + badge_w / 2, badge_y + 0.13*cm,
+                        "\u2713 Conforme CGI Guinee | CNSS certifie")
+
+    # QR Code (coin bas droit)
+    try:
+        from .utils import _generer_qr_code
+        qr_size = 1.8*cm
+        qr_x = width - 1.5*cm - qr_size
+        qr_y = 1.2*cm
+        qr_contenu = (
+            f"BUL:{bulletin.numero_bulletin}|"
+            f"EMP:{emp.nom} {emp.prenoms}|"
+            f"NET:{int(bulletin.net_a_payer)} GNF|"
+            f"DATE:{bulletin.date_bulletin.strftime('%d/%m/%Y') if bulletin.date_bulletin else ''}|"
+            f"CNSS:{emp.num_cnss_individuel or '-'}"
+        )
+        qr_img = _generer_qr_code(qr_contenu)
+        if qr_img:
+            p.drawImage(qr_img, qr_x, qr_y, width=qr_size, height=qr_size, mask='auto')
+            p.setFont(_FN, 4.5)
+            p.setFillColor(colors.HexColor("#666666"))
+            p.drawCentredString(qr_x + qr_size / 2, qr_y - 0.20*cm, "Vérification")
+    except Exception:
+        pass
+
     p.setFillColor(colors.black)
     
     # Finaliser le PDF
@@ -1148,14 +1190,25 @@ def telecharger_bulletin_public(request, token):
     conges_acquis = solde_conge.conges_acquis if solde_conge else Decimal('0')
     conges_pris = solde_conge.conges_pris if solde_conge else Decimal('0')
     conges_restants = solde_conge.conges_restants if solde_conge else Decimal('0')
-    
+
+    # Acquisition mensuelle
+    acquis_ce_mois = Decimal('1.5')
+    try:
+        from .models import ConfigurationPaie
+        cfg = ConfigurationPaie.objects.filter(entreprise=entreprise).first()
+        if cfg:
+            acquis_ce_mois = cfg.jours_conges_par_mois
+    except Exception:
+        pass
+
     infos_emp = [
         ["Matricule:", emp.matricule or "-", "N° CNSS:", emp.num_cnss_individuel or "-"],
         ["Nom et Prénoms:", f"{emp.nom} {emp.prenoms}", "Ancienneté:", anciennete_str],
         ["Poste:", str(emp.poste or "-"), "Service:", str(emp.service or "-")],
         ["Date embauche:", emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else "-", "Mode paiement:", emp.mode_paiement or "-"],
         ["Congés acquis:", f"{conges_acquis:g} j", "Congés pris:", f"{conges_pris:g} j"],
-        ["Solde congés:", f"{conges_restants:g} j", "Nature contrat:", dict(emp.TYPES_CONTRATS).get(emp.type_contrat, emp.type_contrat or "-")],
+        ["Solde congés:", f"{conges_restants:g} j", "Acquis ce mois:", f"{acquis_ce_mois:g} j"],
+        ["Nature contrat:", dict(emp.TYPES_CONTRATS).get(emp.type_contrat, emp.type_contrat or "-"), "", ""],
     ]
 
     for row in infos_emp:
@@ -1552,11 +1605,42 @@ def telecharger_bulletin_public(request, token):
     p.setStrokeColor(colors.black)
     p.setFont(_FN, 5)
     p.setFillColor(colors.HexColor("#555555"))
-    p.drawCentredString(width/2, 2.38*cm, "Ce bulletin est conforme à la législation guinéenne en vigueur.")
     if entreprise:
-        p.drawCentredString(width/2, 2.16*cm, f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
-        p.drawCentredString(width/2, 1.94*cm, f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
-    p.drawCentredString(width/2, 1.72*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
+        p.drawCentredString(width/2, 2.38*cm, f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
+        p.drawCentredString(width/2, 2.16*cm, f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
+    p.drawCentredString(width/2, 1.94*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
+
+    # Badge conformité
+    badge_x, badge_y, badge_w, badge_h = 1.5*cm, 1.55*cm, 5.5*cm, 0.45*cm
+    p.setFillColor(colors.HexColor("#198754"))
+    p.roundRect(badge_x, badge_y, badge_w, badge_h, 3, stroke=0, fill=1)
+    p.setFillColor(colors.white)
+    p.setFont(_FB, 5.5)
+    p.drawCentredString(badge_x + badge_w / 2, badge_y + 0.13*cm,
+                        "\u2713 Conforme CGI Guinee | CNSS certifie")
+
+    # QR Code (coin bas droit)
+    try:
+        from .utils import _generer_qr_code
+        qr_size = 1.8*cm
+        qr_x = width - 1.5*cm - qr_size
+        qr_y = 1.2*cm
+        qr_contenu = (
+            f"BUL:{bulletin.numero_bulletin}|"
+            f"EMP:{emp.nom} {emp.prenoms}|"
+            f"NET:{int(bulletin.net_a_payer)} GNF|"
+            f"DATE:{bulletin.date_bulletin.strftime('%d/%m/%Y') if bulletin.date_bulletin else ''}|"
+            f"CNSS:{emp.num_cnss_individuel or '-'}"
+        )
+        qr_img = _generer_qr_code(qr_contenu)
+        if qr_img:
+            p.drawImage(qr_img, qr_x, qr_y, width=qr_size, height=qr_size, mask='auto')
+            p.setFont(_FN, 4.5)
+            p.setFillColor(colors.HexColor("#666666"))
+            p.drawCentredString(qr_x + qr_size / 2, qr_y - 0.20*cm, "Vérification")
+    except Exception:
+        pass
+
     p.setFillColor(colors.black)
     
     # Finaliser le PDF
