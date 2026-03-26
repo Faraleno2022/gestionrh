@@ -8,6 +8,7 @@ from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from django.views.static import serve
 from django.http import HttpResponse
+from core.views_modules.demo import demo_accueil, demo_telecharger_pdf
 import os
 
 def robots_txt(request):
@@ -57,6 +58,10 @@ def google_verification(request):
     return HttpResponse("google-site-verification: google47b11a2550ab2dda.html", content_type="text/html")
 
 urlpatterns = [
+    # Démonstration commerciale (accessible sans authentification)
+    path('demo/', demo_accueil, name='demo_accueil'),
+    path('demo/pdf/', demo_telecharger_pdf, name='demo_telecharger_pdf'),
+
     path('robots.txt', robots_txt, name='robots_txt'),
     path('sitemap.xml', sitemap_xml, name='sitemap_xml'),
     path('google47b11a2550ab2dda.html', google_verification, name='google_verification'),
