@@ -1029,7 +1029,7 @@ def telecharger_bulletin_pdf(request, pk):
     p.setFillColor(colors.white)
     p.setFont(_FB, 5.5)
     p.drawCentredString(badge_x + badge_w / 2, badge_y + 0.13*cm,
-                        "\u2713 Conforme CGI Guinee | CNSS certifie")
+                        "\u2713 Conforme CGI Guinee | Compatible CNSS")
 
     # QR Code (coin bas droit)
     try:
@@ -1617,7 +1617,7 @@ def telecharger_bulletin_public(request, token):
     p.setFillColor(colors.white)
     p.setFont(_FB, 5.5)
     p.drawCentredString(badge_x + badge_w / 2, badge_y + 0.13*cm,
-                        "\u2713 Conforme CGI Guinee | CNSS certifie")
+                        "\u2713 Conforme CGI Guinee | Compatible CNSS")
 
     # QR Code (coin bas droit)
     try:

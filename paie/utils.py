@@ -671,7 +671,7 @@ def generer_bulletin_pdf(bulletin):
     p.setFillColor(colors.white)
     p.setFont(_FONT_BOLD, 5.5)
     p.drawCentredString(badge_x + badge_w / 2, badge_y + 0.13*cm,
-                        "\u2713 Conforme CGI Guinee | CNSS certifie")
+                        "\u2713 Conforme CGI Guinee | Compatible CNSS")
 
     # QR Code (coin bas droit) — contenu: numéro + employé + net + date
     qr_size = 1.8*cm
