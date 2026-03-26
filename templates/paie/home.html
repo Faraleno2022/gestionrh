@@ -116,6 +116,30 @@
         </div>
     </div>
 
+    <!-- Paramètres -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-secondary">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>Paramètres avancés</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'paie:config_entreprise' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-gear me-1"></i>Configuration heures sup / congés
+                        </a>
+                        <a href="{% url 'paie:parametres_calcul' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-calculator me-1"></i>Paramètres de calcul (formules)
+                        </a>
+                        <a href="{% url 'paie:bareme_irpp_liste' %}" class="btn btn-outline-warning">
+                            <i class="bi bi-percent me-1"></i>Barème RTS
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Fonctionnalités -->
     <div class="row">
         <div class="col-12">

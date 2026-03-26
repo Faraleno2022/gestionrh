@@ -1082,6 +1082,60 @@ class ConfigurationPaieEntreprise(models.Model):
         return config
 
 
+class ParametresCalculPaie(models.Model):
+    """Paramètres personnalisables du moteur de calcul de paie"""
+    entreprise = models.OneToOneField('core.Entreprise', on_delete=models.CASCADE, related_name='parametres_calcul_paie')
+
+    # Exonération indemnités forfaitaires
+    MODE_EXONERATION = [
+        ('plafond_pct', 'Plafond % du brut (CGI strict)'),
+        ('integrale', 'Exonération intégrale'),
+        ('formule', 'Formule personnalisée'),
+    ]
+    mode_exoneration_indemnites = models.CharField(
+        max_length=20, choices=MODE_EXONERATION, default='plafond_pct'
+    )
+    plafond_exoneration_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=25,
+        help_text="Plafond % du brut (défaut CGI: 25%)"
+    )
+    formule_exoneration = models.TextField(
+        blank=True,
+        help_text="Ex: brut * 0.25 ou indemnites if indemnites <= brut * 0.3 else brut * 0.3"
+    )
+
+    # Base VF / TA
+    MODE_BASE_VF = [
+        ('brut', 'Brut direct (simplifié)'),
+        ('brut_moins_deduction', 'Brut − déduction fixe (si brut≥2.5M: −150000)'),
+        ('formule', 'Formule personnalisée'),
+    ]
+    mode_base_vf = models.CharField(
+        max_length=30, choices=MODE_BASE_VF, default='brut'
+    )
+    formule_base_vf = models.TextField(
+        blank=True,
+        help_text="Ex: brut - 150000 if brut >= 2500000 else brut * 0.94"
+    )
+
+    # Base RTS personnalisée
+    utiliser_formule_base_rts = models.BooleanField(default=False)
+    formule_base_rts = models.TextField(
+        blank=True,
+        help_text="Ex: brut - cnss - (indemnites if indemnites <= brut*0.25 else brut*0.25)"
+    )
+
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'parametres_calcul_paie'
+        verbose_name = 'Paramètres calcul paie'
+        verbose_name_plural = 'Paramètres calcul paie'
+
+    def __str__(self):
+        return f"Paramètres calcul paie — {self.entreprise.nom_entreprise}"
+
+
 # Import des modèles de frais
 from .models_frais import CategoriesFrais, NoteFrais, LigneFrais, BaremeFrais
 

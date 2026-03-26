@@ -425,6 +425,25 @@ def _apply_missing_columns():
     except Exception:
         pass  # table n'existe pas encore
 
+    # Table parametres_calcul_paie (moteur de formules personnalisées)
+    try:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS parametres_calcul_paie (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                entreprise_id INTEGER NOT NULL UNIQUE REFERENCES entreprises(id) ON DELETE CASCADE,
+                mode_exoneration_indemnites VARCHAR(20) NOT NULL DEFAULT "plafond_pct",
+                plafond_exoneration_pct DECIMAL(5,2) NOT NULL DEFAULT 25,
+                formule_exoneration TEXT NOT NULL DEFAULT "",
+                mode_base_vf VARCHAR(30) NOT NULL DEFAULT "brut",
+                formule_base_vf TEXT NOT NULL DEFAULT "",
+                utiliser_formule_base_rts BOOLEAN NOT NULL DEFAULT 0,
+                formule_base_rts TEXT NOT NULL DEFAULT "",
+                date_modification DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+    except Exception:
+        pass  # table existe déjà
+
     conn.commit()
     conn.close()
     print("  Colonnes manquantes ajoutees + bareme RTS corrige (patch direct)")

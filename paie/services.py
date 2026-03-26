@@ -191,6 +191,30 @@ class MoteurCalculPaie:
         delta = date(self.periode.annee, self.periode.mois, 1) - self.employe.date_embauche
         return delta.days // 365
     
+    def _construire_variables_formule(self) -> dict:
+        """Construit le dictionnaire de variables exposées aux formules personnalisées."""
+        employe = self.employe
+        # Ancienneté en mois
+        anciennete_mois = 0
+        if employe.date_embauche:
+            d = date(self.periode.annee, self.periode.mois, 1)
+            delta = d - employe.date_embauche
+            anciennete_mois = max(0, delta.days // 30)
+
+        return {
+            'brut': float(self.montants.get('brut', Decimal('0'))),
+            'cnss': float(self.montants.get('cnss_employe', Decimal('0'))),
+            'indemnites': float(self.montants.get('indemnites_forfaitaires', Decimal('0'))),
+            'salaire_base': float(self.montants.get('salaire_base', Decimal('0'))),
+            'primes': float(self.montants.get('total_primes', Decimal('0'))),
+            'heures_sup': float(self.montants.get('total_heures_sup', Decimal('0'))),
+            'anciennete_mois': anciennete_mois,
+            'anciennete_ans': anciennete_mois // 12,
+            'nb_enfants': int(getattr(employe, 'nombre_enfants', 0) or 0),
+            'nb_conjoints': int(getattr(employe, 'nombre_femmes', 0) or 0),
+            'plafond_cnss': float(self.constantes.get('PLAFOND_CNSS', Decimal('2500000'))),
+        }
+
     def _obtenir_taux_anciennete(self, annees):
         """Obtenir le taux d'ancienneté selon le barème"""
         if annees < 2:
@@ -669,12 +693,33 @@ class MoteurCalculPaie:
         self.montants['indemnites_forfaitaires'] = total_indemnites
         self.montants['salaire_base_hors_indemnites'] = self.montants['imposable']
 
-        # Plafond légal CGI = 25% du salaire brut
-        taux_plafond = Decimal('25')
-        plafond = self._arrondir(salaire_brut * taux_plafond / Decimal('100'))
+        # Récupérer les paramètres personnalisés de l'entreprise
+        from .formules import evaluer_formule as _evaluer
+        params = getattr(self.employe.entreprise, 'parametres_calcul_paie', None)
 
-        # Exonération retenue = min(total indemnités, plafond 25%)
-        exoneration_retenue = min(total_indemnites, plafond)
+        if params and params.mode_exoneration_indemnites == 'integrale':
+            # Exonération intégrale : toutes les indemnités sont exonérées
+            exoneration_retenue = total_indemnites
+            taux_plafond = Decimal('100')
+            plafond = total_indemnites
+        elif params and params.mode_exoneration_indemnites == 'formule' and params.formule_exoneration:
+            # Formule personnalisée
+            variables = self._construire_variables_formule()
+            try:
+                exoneration_retenue = _evaluer(params.formule_exoneration, variables)
+                exoneration_retenue = min(total_indemnites, exoneration_retenue)
+            except ValueError:
+                # Fallback plafond 25% si la formule échoue
+                exoneration_retenue = min(total_indemnites, self._arrondir(salaire_brut * Decimal('25') / Decimal('100')))
+            plafond = exoneration_retenue
+            taux_plafond = (plafond * Decimal('100') / salaire_brut).quantize(Decimal('0.01')) if salaire_brut else Decimal('25')
+        else:
+            # Mode par défaut : plafond % du brut (CGI)
+            pct = Decimal(str(params.plafond_exoneration_pct)) if params else Decimal('25')
+            taux_plafond = pct
+            plafond = self._arrondir(salaire_brut * pct / Decimal('100'))
+            exoneration_retenue = min(total_indemnites, plafond)
+
         depassement = max(Decimal('0'), total_indemnites - plafond)
 
         self.montants['plafond_indemnites'] = plafond
@@ -792,7 +837,25 @@ class MoteurCalculPaie:
         # Règle CGI Guinée : VF = Brut × 6% (base = salaire brut, sans déduction)
         taux_vf = self.constantes.get('TAUX_VF', Decimal('6.00'))
 
-        base_vf_nette = base_vf_ta  # base = brut directement
+        # Appliquer les paramètres personnalisés pour la base VF/TA
+        from .formules import evaluer_formule as _evaluer_vf
+        params_vf = getattr(self.employe.entreprise, 'parametres_calcul_paie', None)
+
+        if params_vf and params_vf.mode_base_vf == 'brut_moins_deduction':
+            # Brut − déduction fixe (si brut ≥ 2.5M : −150 000)
+            if base_vf_ta >= Decimal('2500000'):
+                base_vf_nette = base_vf_ta - Decimal('150000')
+            else:
+                base_vf_nette = base_vf_ta
+        elif params_vf and params_vf.mode_base_vf == 'formule' and params_vf.formule_base_vf:
+            variables_vf = self._construire_variables_formule()
+            variables_vf['brut'] = float(base_vf_ta)
+            try:
+                base_vf_nette = _evaluer_vf(params_vf.formule_base_vf, variables_vf)
+            except ValueError:
+                base_vf_nette = base_vf_ta  # fallback brut direct
+        else:
+            base_vf_nette = base_vf_ta  # base = brut directement
         self.montants['base_vf'] = base_vf_nette
         self.montants['deduction_vf'] = Decimal('0')
         self.montants['taux_vf'] = taux_vf
@@ -866,7 +929,20 @@ class MoteurCalculPaie:
         # Base imposable = gains non-forfaitaires - CNSS
         # + réintégration de l'excédent d'indemnités au-delà du plafond 25%
         depassement = self.montants.get('depassement_plafond_indemnites', Decimal('0'))
-        base_imposable = self.montants['imposable'] - self.montants['cnss_employe'] + depassement
+        base_imposable_defaut = self.montants['imposable'] - self.montants['cnss_employe'] + depassement
+
+        # Vérifier si une formule personnalisée de base RTS est configurée
+        from .formules import evaluer_formule as _evaluer_rts
+        params_rts = getattr(self.employe.entreprise, 'parametres_calcul_paie', None)
+
+        if params_rts and params_rts.utiliser_formule_base_rts and params_rts.formule_base_rts:
+            variables_rts = self._construire_variables_formule()
+            try:
+                base_imposable = _evaluer_rts(params_rts.formule_base_rts, variables_rts)
+            except ValueError:
+                base_imposable = base_imposable_defaut  # fallback calcul standard
+        else:
+            base_imposable = base_imposable_defaut
 
         # Exonération retenue = min(total indemnités, plafond 25%) pour affichage bulletin
         self.montants['abattement_forfaitaire'] = self.montants.get('exoneration_indemnites',
