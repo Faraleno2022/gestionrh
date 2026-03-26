@@ -243,8 +243,8 @@ class MoteurCalculPaie:
         # 2. Appliquer les retenues pour absences non payées
         self._appliquer_retenues_absences()
         
-        # 3. Calculer le brut
-        self.montants['brut'] = self.montants['total_gains'] - self.montants['retenue_absence']
+        # 3. Calculer le brut (arrondi à l'unité GNF)
+        self.montants['brut'] = self._arrondir(self.montants['total_gains'] - self.montants['retenue_absence'])
         
         # 3.1 Vérification: Salaire brut très faible ou nul
         plancher_cnss = self.constantes.get('PLANCHER_CNSS', Decimal('550000'))
@@ -273,8 +273,9 @@ class MoteurCalculPaie:
         # 6.1 Appliquer les rappels et manquements (hors base)
         self._appliquer_rappels_manquements()
         
-        # 7. Calculer le net (rappels et retenues trop-perçu inclus)
-        net_calcule = self.montants['brut'] - self.montants['total_retenues'] + self.montants['rappel_salaire'] - self.montants['retenue_trop_percu']
+        # 7. Calculer le net (rappels et retenues trop-perçu inclus) — arrondi à l'unité GNF
+        self.montants['total_retenues'] = self._arrondir(self.montants['total_retenues'])
+        net_calcule = self._arrondir(self.montants['brut'] - self.montants['total_retenues'] + self.montants['rappel_salaire'] - self.montants['retenue_trop_percu'])
         
         # 7.1 Protection: Empêcher le net négatif
         # Si les retenues dépassent le brut, on plafonne les retenues au brut
@@ -582,7 +583,7 @@ class MoteurCalculPaie:
         if heures_mensuelles <= 0:
             heures_mensuelles = Decimal('173.33')  # 40h x 52 semaines / 12 mois
         
-        salaire_horaire = salaire_base / heures_mensuelles
+        salaire_horaire = self._arrondir(salaire_base / heures_mensuelles)
         
         # Taux des heures supplémentaires selon le Code du Travail guinéen (Art. 221)
         TAUX_HS_30 = self.constantes.get('TAUX_HS_4PREM', Decimal('130'))      # 4 premières HS: +30% (130%)
@@ -686,8 +687,8 @@ class MoteurCalculPaie:
         Détection: utilise _est_indemnite_forfaitaire() pour classifier
         automatiquement les rubriques par code et libellé.
         """
-        # Totaliser les indemnités forfaitaires détectées
-        total_indemnites = sum(montant for _, montant, _ in self._indemnites_detectees)
+        # Totaliser les indemnités forfaitaires détectées (arrondi à l'unité)
+        total_indemnites = self._arrondir(sum(montant for _, montant, _ in self._indemnites_detectees))
         salaire_brut = self.montants['total_gains']
 
         self.montants['indemnites_forfaitaires'] = total_indemnites
@@ -706,7 +707,7 @@ class MoteurCalculPaie:
             # Formule personnalisée
             variables = self._construire_variables_formule()
             try:
-                exoneration_retenue = _evaluer(params.formule_exoneration, variables)
+                exoneration_retenue = self._arrondir(_evaluer(params.formule_exoneration, variables))
                 exoneration_retenue = min(total_indemnites, exoneration_retenue)
             except ValueError:
                 # Fallback plafond 25% si la formule échoue
@@ -720,7 +721,9 @@ class MoteurCalculPaie:
             plafond = self._arrondir(salaire_brut * pct / Decimal('100'))
             exoneration_retenue = min(total_indemnites, plafond)
 
-        depassement = max(Decimal('0'), total_indemnites - plafond)
+        # Arrondir exonération et dépassement pour cohérence (0 GNF d'écart)
+        exoneration_retenue = self._arrondir(exoneration_retenue)
+        depassement = self._arrondir(max(Decimal('0'), total_indemnites - plafond))
 
         self.montants['plafond_indemnites'] = plafond
         self.montants['exoneration_indemnites'] = exoneration_retenue
@@ -784,7 +787,7 @@ class MoteurCalculPaie:
             # Pas de cotisation CNSS si le salaire est quasi nul (absence totale, congé sans solde)
             base_cnss_plafonnee = Decimal('0')
         else:
-            base_cnss_plafonnee = max(min(base_cnss_gnf, plafond_cnss), plancher_cnss)
+            base_cnss_plafonnee = self._arrondir(max(min(base_cnss_gnf, plafond_cnss), plancher_cnss))
         
         # CNSS salarié (utiliser TAUX_CNSS_EMPLOYE au lieu de TAUX_CNSS_SALARIE)
         taux_cnss = self.constantes.get('TAUX_CNSS_EMPLOYE', Decimal('5.00'))
@@ -881,8 +884,8 @@ class MoteurCalculPaie:
                 base_vf_nette * taux_onfpp / Decimal('100')
             )
         
-        # Total charges patronales
-        self.montants['total_charges_patronales'] = (
+        # Total charges patronales (arrondi à l'unité GNF)
+        self.montants['total_charges_patronales'] = self._arrondir(
             self.montants['cnss_employeur'] +
             self.montants['versement_forfaitaire'] +
             self.montants['taxe_apprentissage'] +
@@ -929,7 +932,7 @@ class MoteurCalculPaie:
         # Base imposable = gains non-forfaitaires - CNSS
         # + réintégration de l'excédent d'indemnités au-delà du plafond 25%
         depassement = self.montants.get('depassement_plafond_indemnites', Decimal('0'))
-        base_imposable_defaut = self.montants['imposable'] - self.montants['cnss_employe'] + depassement
+        base_imposable_defaut = self._arrondir(self.montants['imposable'] - self.montants['cnss_employe'] + depassement)
 
         # Vérifier si une formule personnalisée de base RTS est configurée
         from .formules import evaluer_formule as _evaluer_rts
@@ -1140,9 +1143,9 @@ class MoteurCalculPaie:
                 montant_tranche = base_imposable - borne_inf
             
             if montant_tranche > 0:
-                irg_total += montant_tranche * taux / Decimal('100')
+                irg_total += self._arrondir(montant_tranche * taux / Decimal('100'))
         
-        return self._arrondir(irg_total)
+        return irg_total
     
     def _calculer_credits_impot(self):
         """Calculer les crédits d'impôt"""

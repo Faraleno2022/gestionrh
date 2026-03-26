@@ -120,7 +120,7 @@ def calculer_detail_tranches_rts(base_rts):
             base_tranche = base_rts - b_inf
         if base_tranche <= 0:
             continue
-        impot = (base_tranche * taux / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        impot = (base_tranche * taux / Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
         detail.append({
             'borne_inf': b_inf,
             'borne_sup': b_sup,
