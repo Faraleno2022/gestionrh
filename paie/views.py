@@ -800,8 +800,7 @@ def telecharger_bulletin_pdf(request, pk):
     base_rts_val = getattr(bulletin, 'base_rts', 0) or 0
     taux_eff_rts_val = getattr(bulletin, 'taux_effectif_rts', 0) or 0
     rts_base_str = f"{base_rts_val:,.0f}".replace(",", " ") if base_rts_val else "-"
-    rts_taux_str = f"{taux_eff_rts_val:.2f}%" if taux_eff_rts_val else "-"
-    retenues_data.append(["RTS (Barème progressif)", rts_base_str, rts_taux_str, f"{bulletin.irg:,.0f}".replace(",", " ")])
+    retenues_data.append(["RTS (Barème progressif)", rts_base_str, "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
     
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
@@ -902,7 +901,7 @@ def telecharger_bulletin_pdf(request, pk):
     p.setFillColor(colors.HexColor("#dc3545"))
     mid_x = width / 2
     p.drawString(2*cm, y - 1*cm, f"CNSS (5%): -{bulletin.cnss_employe:,.0f}".replace(",", " "))
-    p.drawString(mid_x, y - 1*cm, f"RTS ({taux_eff_rts_val:.2f}%): -{bulletin.irg:,.0f}".replace(",", " "))
+    p.drawString(mid_x, y - 1*cm, f"RTS: -{bulletin.irg:,.0f}".replace(",", " "))
     p.drawRightString(width - 2*cm, y - 1*cm, f"Total retenues: -{bulletin.cnss_employe + bulletin.irg:,.0f} GNF".replace(",", " "))
     
     offset_y = 1*cm
@@ -1339,8 +1338,7 @@ def telecharger_bulletin_public(request, token):
     base_rts_val = getattr(bulletin, 'base_rts', 0) or 0
     taux_eff_rts_val = getattr(bulletin, 'taux_effectif_rts', 0) or 0
     rts_base_str = f"{base_rts_val:,.0f}".replace(",", " ") if base_rts_val else "-"
-    rts_taux_str = f"{taux_eff_rts_val:.2f}%" if taux_eff_rts_val else "-"
-    retenues_data.append(["RTS (Barème progressif)", rts_base_str, rts_taux_str, f"{bulletin.irg:,.0f}".replace(",", " ")])
+    retenues_data.append(["RTS (Barème progressif)", rts_base_str, "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
     
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
@@ -1439,7 +1437,7 @@ def telecharger_bulletin_public(request, token):
     p.setFillColor(colors.HexColor("#dc3545"))
     mid_x = width / 2
     p.drawString(2*cm, y - 1*cm, f"CNSS (5%): -{bulletin.cnss_employe:,.0f}".replace(",", " "))
-    p.drawString(mid_x, y - 1*cm, f"RTS ({taux_eff_rts_val:.2f}%): -{bulletin.irg:,.0f}".replace(",", " "))
+    p.drawString(mid_x, y - 1*cm, f"RTS: -{bulletin.irg:,.0f}".replace(",", " "))
     p.drawRightString(width - 2*cm, y - 1*cm, f"Total retenues: -{bulletin.cnss_employe + bulletin.irg:,.0f} GNF".replace(",", " "))
     
     offset_y = 1*cm
