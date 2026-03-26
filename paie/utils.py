@@ -205,6 +205,27 @@ def _dessiner_footer(p, width, margin_left, margin_right, entreprise, emp, bulle
     p.setFillColor(colors.black)
 
 
+def _saut_page_si_necessaire(p, y, hauteur_necessaire, width, height, margin_top,
+                              margin_left, margin_right, footer_zone,
+                              entreprise, emp, bulletin):
+    """Si l'espace restant est insuffisant, dessine le footer, saute de page
+    et ajoute un mini en-tête de continuation."""
+    if y - hauteur_necessaire < footer_zone:
+        _dessiner_footer(p, width, margin_left, margin_right, entreprise, emp, bulletin)
+        p.showPage()
+        y = height - margin_top
+        p.setFont(_FONT_BOLD, 9)
+        p.setFillColor(colors.black)
+        p.drawString(margin_left, y, f"BULLETIN DE PAIE \u2014 {bulletin.numero_bulletin} (suite)")
+        p.setStrokeColor(colors.HexColor("#ce1126"))
+        p.setLineWidth(1)
+        p.line(margin_left, y - 0.15*cm, width - margin_right, y - 0.15*cm)
+        p.setStrokeColor(colors.black)
+        p.setLineWidth(0.5)
+        y -= 0.50*cm
+    return y
+
+
 def generer_bulletin_pdf(bulletin):
     """
     Génère le PDF d'un bulletin de paie et retourne les bytes du PDF.
@@ -499,12 +520,6 @@ def generer_bulletin_pdf(bulletin):
         y += 0.35*cm
     
     # === RETENUES ===
-    p.setFillColor(colors.HexColor("#dc3545"))
-    p.setFont(_FONT_BOLD, 9)
-    p.drawString(1.5*cm, y, "RETENUES ET COTISATIONS")
-    p.setFillColor(colors.black)
-    y -= 0.4*cm
-    
     retenues_data = [["Libellé", "Base", "Taux", "Montant"]]
     cnss_irg_codes = ['CNSS', 'IRG', 'RTS', 'IRS', 'IRPP']
     for r in retenues:
@@ -536,7 +551,19 @@ def generer_bulletin_pdf(bulletin):
             f"-{abattement_exo:,.0f}".replace(",", " ")
         ])
     retenues_data.append(["RTS (Impôt sur le revenu \u2013 barème progressif)", rts_base_str, "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
-    
+
+    # Vérifier espace avant de dessiner la section retenues
+    ret_table_height = len(retenues_data) * row_height
+    ret_section_height = ret_table_height + 0.7*cm
+    y = _saut_page_si_necessaire(p, y, ret_section_height, width, height, margin_top,
+                                  margin_left, margin_right, footer_zone, entreprise, emp, bulletin)
+
+    p.setFillColor(colors.HexColor("#dc3545"))
+    p.setFont(_FONT_BOLD, 9)
+    p.drawString(1.5*cm, y, "RETENUES ET COTISATIONS")
+    p.setFillColor(colors.black)
+    y -= 0.4*cm
+
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#dc3545")),
@@ -548,14 +575,19 @@ def generer_bulletin_pdf(bulletin):
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     
-    table_height = len(retenues_data) * row_height
     retenues_table.wrapOn(p, width, height)
-    retenues_table.drawOn(p, margin_left, y - table_height)
-    y -= table_height + 0.3*cm
+    retenues_table.drawOn(p, margin_left, y - ret_table_height)
+    y -= ret_table_height + 0.3*cm
 
     # === DÉTAIL CALCUL RTS (barème progressif) ===
     detail_rts = calculer_detail_tranches_rts(base_rts_val)
     if detail_rts:
+        # Estimer hauteur section RTS (titre + nb tranches + 2 lignes entête/total)
+        rts_est_rows = len(detail_rts) + 2
+        rts_est_height = rts_est_rows * 12 + 0.5*cm
+        y = _saut_page_si_necessaire(p, y, rts_est_height, width, height, margin_top,
+                                      margin_left, margin_right, footer_zone, entreprise, emp, bulletin)
+
         p.setFont(_FONT_BOLD, 7)
         p.setFillColor(colors.HexColor("#6c757d"))
         # Explication de la base imposable avec nature de l'abattement
@@ -620,6 +652,8 @@ def generer_bulletin_pdf(bulletin):
     has_trop_percu = trop_percu > 0
     extra_lines = (1 if has_rappel else 0) + (1 if has_trop_percu else 0)
     recap_height = 1.6*cm + extra_lines * 0.3*cm
+    y = _saut_page_si_necessaire(p, y, recap_height + 0.3*cm, width, height, margin_top,
+                                  margin_left, margin_right, footer_zone, entreprise, emp, bulletin)
     p.setStrokeColor(colors.HexColor("#ce1126"))
     p.setLineWidth(2)
     p.rect(margin_left, y - recap_height, width - 2*margin_left, recap_height, stroke=1, fill=0)
@@ -692,11 +726,8 @@ def generer_bulletin_pdf(bulletin):
     ch_table_h = len(charges_data) * ch_row_h
     # Espace nécessaire = tableau charges + note VF + footer (3.5cm)
     espace_necessaire = ch_table_h + 0.4*cm + footer_zone
-    if y - espace_necessaire < 0:
-        # Pas assez de place → nouvelle page
-        _dessiner_footer(p, width, margin_left, margin_right, entreprise, emp, bulletin)
-        p.showPage()
-        y = height - margin_top
+    y = _saut_page_si_necessaire(p, y, espace_necessaire, width, height, margin_top,
+                                  margin_left, margin_right, footer_zone, entreprise, emp, bulletin)
 
     charges_table = Table(charges_data, colWidths=[7*cm, 3.5*cm, 2*cm, 4.5*cm], rowHeights=ch_row_h)
     charges_table.setStyle(TableStyle([
@@ -725,6 +756,9 @@ def generer_bulletin_pdf(bulletin):
     p.setFillColor(colors.black)
 
     # === PIED DE PAGE (footer unique — positions absolues en bas de page) ===
+    # Si le contenu déborde dans la zone du footer, passer à une nouvelle page
+    if y < footer_zone:
+        p.showPage()
     _dessiner_footer(p, width, margin_left, margin_right, entreprise, emp, bulletin)
     
     # Finaliser le PDF
@@ -1087,6 +1121,18 @@ def generer_bulletin_pdf_sdbk(bulletin):
     # ════════════════════════════════════════════════════════════════════════
     # PIED RÉCAPITULATIF
     # ════════════════════════════════════════════════════════════════════════
+    # Vérifier espace pour le récap + signatures + pied de page (~6cm)
+    sdbk_footer_zone = 6.0 * cm
+    if y - sdbk_footer_zone < 0:
+        p.showPage()
+        y = height - 1.0 * cm
+        p.setFont(_FONT_BOLD, 9)
+        p.setFillColor(colors.black)
+        p.drawString(margin_x, y, f"BULLETIN DE PAIE \u2014 {bulletin.numero_bulletin} (suite)")
+        p.setLineWidth(1)
+        p.line(margin_x, y - 0.15 * cm, width - margin_x, y - 0.15 * cm)
+        y -= 0.50 * cm
+
     charge_sal = float(bulletin.cnss_employe) + float(bulletin.irg)
     charge_pat = vf + ta + onfpp + float(bulletin.cnss_employeur)
     avnat      = float(getattr(bulletin, 'avantage_nature', 0) or 0)
@@ -1155,6 +1201,12 @@ def generer_bulletin_pdf_sdbk(bulletin):
     # ════════════════════════════════════════════════════════════════════════
     # SIGNATURES
     # ════════════════════════════════════════════════════════════════════════
+    # Vérifier espace pour signatures + pied de page (~3.5cm)
+    sig_zone = 3.5 * cm
+    if y - sig_zone < 0:
+        p.showPage()
+        y = height - 1.5 * cm
+
     y -= 0.5 * cm
     p.setFont(_FONT_BOLD, 8)
     p.drawString(margin_x + 1 * cm, y, "Employeur")
