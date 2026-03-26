@@ -811,8 +811,18 @@ def telecharger_bulletin_pdf(request, pk):
     base_rts_val = getattr(bulletin, 'base_rts', 0) or 0
     taux_eff_rts_val = getattr(bulletin, 'taux_effectif_rts', 0) or 0
     rts_base_str = f"{base_rts_val:,.0f}".replace(",", " ") if base_rts_val else "-"
-    retenues_data.append(["RTS (Barème progressif)", rts_base_str, "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
-    
+    # Ligne indemnités exonérées (plafond 25%) si applicable
+    abattement_exo = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
+    if float(abattement_exo) > 0:
+        plafond_25_val = round(float(bulletin.salaire_brut) * 0.25)
+        retenues_data.append([
+            "Indemnités exonérées (plafond 25%)",
+            f"{plafond_25_val:,.0f}".replace(",", " "),
+            "25%",
+            f"-{abattement_exo:,.0f}".replace(",", " ")
+        ])
+    retenues_data.append(["RTS (Impôt sur le revenu \u2013 barème progressif)", rts_base_str, "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
+
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#dc3545")),
@@ -823,12 +833,12 @@ def telecharger_bulletin_pdf(request, pk):
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
-    
+
     table_height = len(retenues_data) * row_height
     retenues_table.wrapOn(p, width, height)
     retenues_table.drawOn(p, 1.5*cm, y - table_height)
     y -= table_height + 0.5*cm
-    
+
     # === DÉTAIL CALCUL RTS (barème progressif) ===
     from paie.utils import calculer_detail_tranches_rts
     detail_rts = calculer_detail_tranches_rts(base_rts_val)
@@ -839,9 +849,9 @@ def telecharger_bulletin_pdf(request, pk):
         abattement_val = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
         if float(abattement_val) > 0:
             p.drawString(1.5*cm, y,
-                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
-                f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− Exonération indemnités {abattement_val:,.0f} (plafond 25% = {round(float(bulletin.salaire_brut)*0.25):,.0f})"
+                f"DÉTAIL RTS \u2014 Base imposable: {base_rts_val:,.0f} = "
+                f"Brut {bulletin.salaire_brut:,.0f} \u2212 CNSS {bulletin.cnss_employe:,.0f} "
+                f"\u2212 Indemnités exonérées {abattement_val:,.0f} (plafond 25% du brut)"
                 .replace(",", " "))
         else:
             p.drawString(1.5*cm, y,
@@ -1391,8 +1401,18 @@ def telecharger_bulletin_public(request, token):
     base_rts_val = getattr(bulletin, 'base_rts', 0) or 0
     taux_eff_rts_val = getattr(bulletin, 'taux_effectif_rts', 0) or 0
     rts_base_str = f"{base_rts_val:,.0f}".replace(",", " ") if base_rts_val else "-"
-    retenues_data.append(["RTS (Barème progressif)", rts_base_str, "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
-    
+    # Ligne indemnités exonérées (plafond 25%) si applicable
+    abattement_exo = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
+    if float(abattement_exo) > 0:
+        plafond_25_val = round(float(bulletin.salaire_brut) * 0.25)
+        retenues_data.append([
+            "Indemnités exonérées (plafond 25%)",
+            f"{plafond_25_val:,.0f}".replace(",", " "),
+            "25%",
+            f"-{abattement_exo:,.0f}".replace(",", " ")
+        ])
+    retenues_data.append(["RTS (Impôt sur le revenu \u2013 barème progressif)", rts_base_str, "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
+
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     retenues_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#dc3545")),
@@ -1403,12 +1423,12 @@ def telecharger_bulletin_public(request, token):
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
-    
+
     table_height = len(retenues_data) * row_height
     retenues_table.wrapOn(p, width, height)
     retenues_table.drawOn(p, 1.5*cm, y - table_height)
     y -= table_height + 0.5*cm
-    
+
     # === DÉTAIL CALCUL RTS (barème progressif) ===
     from paie.utils import calculer_detail_tranches_rts
     detail_rts = calculer_detail_tranches_rts(base_rts_val)
@@ -1419,9 +1439,9 @@ def telecharger_bulletin_public(request, token):
         abattement_val = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
         if float(abattement_val) > 0:
             p.drawString(1.5*cm, y,
-                f"DÉTAIL RTS — Base imposable: {base_rts_val:,.0f} = "
-                f"Brut {bulletin.salaire_brut:,.0f} − CNSS {bulletin.cnss_employe:,.0f} "
-                f"− Exonération indemnités {abattement_val:,.0f} (plafond 25% = {round(float(bulletin.salaire_brut)*0.25):,.0f})"
+                f"DÉTAIL RTS \u2014 Base imposable: {base_rts_val:,.0f} = "
+                f"Brut {bulletin.salaire_brut:,.0f} \u2212 CNSS {bulletin.cnss_employe:,.0f} "
+                f"\u2212 Indemnités exonérées {abattement_val:,.0f} (plafond 25% du brut)"
                 .replace(",", " "))
         else:
             p.drawString(1.5*cm, y,
