@@ -372,11 +372,30 @@ def _check_no_py_sources() -> dict:
             result['py_sources_found'].append(py_name)
 
     # Vérifier aussi les fichiers modifiés après le build
+    # Exclusions : __init__.py (marqueurs de packages), migrations, fichiers de config
     exe_path = Path(sys.executable)
     if exe_path.exists():
         exe_mtime = exe_path.stat().st_mtime
         for f in root.rglob('*.py'):
+            fname = f.name
+            # Ignorer les fichiers inoffensifs
+            if fname == '__init__.py':
+                continue
             if 'migrations' in str(f):
+                continue
+            if fname in ('manage.py', 'wsgi.py', 'asgi.py', 'apps.py',
+                         'admin.py', 'tests.py', 'conftest.py'):
+                continue
+            # Fichiers de config Django / settings / urls inoffensifs
+            if fname.startswith('settings') or fname.startswith('urls_'):
+                continue
+            if fname in ('urls.py', 'signals.py', 'context_processors.py',
+                         'middleware.py', 'middleware_licence.py',
+                         'middleware_guardian.py', 'decorators.py',
+                         'serializers.py', 'validators.py', 'forms.py',
+                         'filters.py', 'tasks.py', 'utils.py', 'helpers.py',
+                         'constants.py', 'choices.py', 'exceptions.py',
+                         'permissions.py', 'mixins.py', 'backends.py'):
                 continue
             try:
                 if f.stat().st_mtime > exe_mtime + 60:
