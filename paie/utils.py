@@ -153,74 +153,78 @@ def generer_bulletin_pdf(bulletin):
     p = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    # Variables de position
-    y = height - 1*cm
-    
+    # Variables de position — marges optimisées pour éviter chevauchement
+    margin_top = 0.8*cm
+    margin_left = 1.2*cm
+    margin_right = 1.2*cm
+    footer_zone = 3.5*cm  # zone réservée en bas (signatures + badge + QR)
+    y = height - margin_top
+
     # === EN-TÊTE ===
     entreprise = bulletin.employe.entreprise
-    
+
     # Logo entreprise à gauche
     if entreprise and entreprise.logo:
         try:
             logo_path = entreprise.logo.path
             if os.path.exists(logo_path):
-                p.drawImage(logo_path, 1.5*cm, y - 2*cm, width=2*cm, height=2*cm, preserveAspectRatio=True)
+                p.drawImage(logo_path, margin_left, y - 1.8*cm, width=1.8*cm, height=1.8*cm, preserveAspectRatio=True)
         except:
             pass
-    
+
     # Titre centré
-    p.setFont(_FONT_BOLD, 11)
+    p.setFont(_FONT_BOLD, 10)
     p.drawCentredString(width/2, y, "RÉPUBLIQUE DE GUINÉE")
-    y -= 0.4*cm
-    p.setFont(_FONT_ITALIC, 8)
+    y -= 0.30*cm
+    p.setFont(_FONT_ITALIC, 7)
     p.drawCentredString(width/2, y, "Travail - Justice - Solidarité")
-    y -= 0.5*cm
-    
+    y -= 0.40*cm
+
     # Nom entreprise
-    p.setFont(_FONT_BOLD, 12)
+    p.setFont(_FONT_BOLD, 11)
     nom_entreprise = entreprise.nom_entreprise if entreprise else "ENTREPRISE"
     p.drawCentredString(width/2, y, nom_entreprise)
-    y -= 0.50*cm
-    # NIF et CNSS entreprise sous le nom (obligatoire légalement)
+    y -= 0.35*cm
+    # NIF et CNSS entreprise sous le nom
     if entreprise:
         nif_str = entreprise.nif or "Non renseigné"
         cnss_str = getattr(entreprise, 'num_cnss', None) or "Non renseigné"
-        p.setFont(_FONT_NORMAL, 7.5)
+        p.setFont(_FONT_NORMAL, 7)
         p.setFillColor(colors.HexColor("#444444"))
         p.drawCentredString(width/2, y, f"NIF: {nif_str}   |   CNSS Employeur: {cnss_str}")
         p.setFillColor(colors.black)
-    y -= 0.45*cm
+    y -= 0.35*cm
 
     # Titre bulletin
-    p.setFont(_FONT_BOLD, 14)
+    p.setFont(_FONT_BOLD, 12)
     p.drawCentredString(width/2, y, "BULLETIN DE PAIE")
-    y -= 0.4*cm
-    
+    y -= 0.30*cm
+
     # Ligne de séparation
     p.setStrokeColor(colors.HexColor("#ce1126"))
     p.setLineWidth(2)
-    p.line(1.5*cm, y, width - 1.5*cm, y)
-    y -= 0.6*cm
-    
+    p.line(margin_left, y, width - margin_right, y)
+    y -= 0.40*cm
+
     # Infos bulletin sur une ligne
-    p.setFont(_FONT_NORMAL, 9)
-    p.setFillColor(colors.black)
-    p.drawString(1.5*cm, y, f"N°: {bulletin.numero_bulletin}")
-    p.drawCentredString(width/2, y, f"Période: {bulletin.periode}")
-    p.drawRightString(width - 1.5*cm, y, f"Date: {bulletin.date_calcul.strftime('%d/%m/%Y') if bulletin.date_calcul else '-'}")
-    y -= 0.35*cm
-    # Dates de la période
     p.setFont(_FONT_NORMAL, 8)
+    p.setFillColor(colors.black)
+    p.drawString(margin_left, y, f"N°: {bulletin.numero_bulletin}")
+    p.drawCentredString(width/2, y, f"Période: {bulletin.periode}")
+    p.drawRightString(width - margin_right, y, f"Date: {bulletin.date_calcul.strftime('%d/%m/%Y') if bulletin.date_calcul else '-'}")
+    y -= 0.25*cm
+    # Dates de la période
+    p.setFont(_FONT_NORMAL, 7)
     periode_detail = f"Du {bulletin.periode.date_debut.strftime('%d/%m/%Y')} au {bulletin.periode.date_fin.strftime('%d/%m/%Y')}" if bulletin.periode.date_debut and bulletin.periode.date_fin else ""
     p.drawCentredString(width/2, y, periode_detail)
-    y -= 0.6*cm
-    
+    y -= 0.40*cm
+
     # === INFORMATIONS EMPLOYÉ ===
     p.setFillColor(colors.HexColor("#ce1126"))
-    p.setFont(_FONT_BOLD, 9)
-    p.drawString(1.5*cm, y, "INFORMATIONS EMPLOYÉ")
+    p.setFont(_FONT_BOLD, 8)
+    p.drawString(margin_left, y, "INFORMATIONS EMPLOYÉ")
     p.setFillColor(colors.black)
-    y -= 0.5*cm
+    y -= 0.35*cm
     
     emp = bulletin.employe
     
@@ -267,26 +271,26 @@ def generer_bulletin_pdf(bulletin):
     ]
     
     for row in infos_emp:
-        p.setFont(_FONT_BOLD, 8)
-        p.drawString(1.5*cm, y, row[0])
-        p.setFont(_FONT_NORMAL, 8)
-        p.drawString(4*cm, y, str(row[1]))
+        p.setFont(_FONT_BOLD, 7)
+        p.drawString(margin_left, y, row[0])
+        p.setFont(_FONT_NORMAL, 7)
+        p.drawString(3.8*cm, y, str(row[1]))
         if row[2]:
-            p.setFont(_FONT_BOLD, 8)
-            p.drawString(11*cm, y, row[2])
-            p.setFont(_FONT_NORMAL, 8)
-            p.drawString(14*cm, y, str(row[3]))
-        y -= 0.4*cm
-    
-    y -= 0.3*cm
-    
+            p.setFont(_FONT_BOLD, 7)
+            p.drawString(10.5*cm, y, row[2])
+            p.setFont(_FONT_NORMAL, 7)
+            p.drawString(13.5*cm, y, str(row[3]))
+        y -= 0.32*cm
+
+    y -= 0.15*cm
+
     # === GAINS ===
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont(_FONT_BOLD, 9)
-    p.drawString(1.5*cm, y, "GAINS ET RÉMUNÉRATIONS")
+    p.setFont(_FONT_BOLD, 8)
+    p.drawString(margin_left, y, "GAINS ET RÉMUNÉRATIONS")
     p.setFillColor(colors.black)
-    y -= 0.3*cm
-    
+    y -= 0.20*cm
+
     # Tableau des gains (5 colonnes avec Nbre pour les heures)
     gains_data = [["Libellé", "Nbre", "Base", "Taux", "Montant"]]
     for g in gains:
@@ -319,7 +323,7 @@ def generer_bulletin_pdf(bulletin):
         ])
     gains_data.append(["TOTAL BRUT", "", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " ")])
     
-    row_height = 14
+    row_height = 12
     gains_table = Table(gains_data, colWidths=[6.5*cm, 1.5*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
     gains_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#28a745")),
@@ -335,9 +339,9 @@ def generer_bulletin_pdf(bulletin):
     
     table_height = len(gains_data) * row_height
     gains_table.wrapOn(p, width, height)
-    gains_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.5*cm
-    
+    gains_table.drawOn(p, margin_left, y - table_height)
+    y -= table_height + 0.3*cm
+
     # === DÉTAIL HEURES SUPPLÉMENTAIRES ===
     hs_30 = getattr(bulletin, 'heures_supplementaires_30', 0) or 0
     hs_60 = getattr(bulletin, 'heures_supplementaires_60', 0) or 0
@@ -473,9 +477,9 @@ def generer_bulletin_pdf(bulletin):
     
     table_height = len(retenues_data) * row_height
     retenues_table.wrapOn(p, width, height)
-    retenues_table.drawOn(p, 1.5*cm, y - table_height)
-    y -= table_height + 0.5*cm
-    
+    retenues_table.drawOn(p, margin_left, y - table_height)
+    y -= table_height + 0.3*cm
+
     # === DÉTAIL CALCUL RTS (barème progressif) ===
     detail_rts = calculer_detail_tranches_rts(base_rts_val)
     if detail_rts:
@@ -532,7 +536,7 @@ def generer_bulletin_pdf(bulletin):
         rts_table_h = nb_rows * rts_row_h
         rts_table.wrapOn(p, width, height)
         rts_table.drawOn(p, 1.5*cm, y - rts_table_h)
-        y -= rts_table_h + 0.4*cm
+        y -= rts_table_h + 0.25*cm
     else:
         y -= 0.2*cm
     
@@ -542,43 +546,41 @@ def generer_bulletin_pdf(bulletin):
     has_rappel = rappel > 0
     has_trop_percu = trop_percu > 0
     extra_lines = (1 if has_rappel else 0) + (1 if has_trop_percu else 0)
-    recap_height = 2.1*cm + extra_lines * 0.4*cm
+    recap_height = 1.6*cm + extra_lines * 0.3*cm
     p.setStrokeColor(colors.HexColor("#ce1126"))
     p.setLineWidth(2)
-    p.rect(1.5*cm, y - recap_height, width - 3*cm, recap_height, stroke=1, fill=0)
-    
-    p.setFont(_FONT_BOLD, 10)
+    p.rect(margin_left, y - recap_height, width - 2*margin_left, recap_height, stroke=1, fill=0)
+
+    p.setFont(_FONT_BOLD, 9)
     p.setFillColor(colors.black)
-    p.drawString(2*cm, y - 0.5*cm, "SALAIRE BRUT:")
-    p.drawRightString(width - 2*cm, y - 0.5*cm, f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " "))
-    
+    p.drawString(margin_left + 0.3*cm, y - 0.35*cm, "SALAIRE BRUT:")
+    p.drawRightString(width - margin_right - 0.3*cm, y - 0.35*cm, f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " "))
+
     # CNSS et RTS alignés sur la même ligne
-    p.setFont(_FONT_NORMAL, 8)
+    p.setFont(_FONT_NORMAL, 7)
     p.setFillColor(colors.HexColor("#dc3545"))
     mid_x = width / 2
-    p.drawString(2*cm, y - 1*cm, f"CNSS (5%): -{bulletin.cnss_employe:,.0f}".replace(",", " "))
-    p.drawString(mid_x, y - 1*cm, f"RTS: -{bulletin.irg:,.0f}".replace(",", " "))
-    p.drawRightString(width - 2*cm, y - 1*cm, f"Total retenues: -{bulletin.cnss_employe + bulletin.irg:,.0f} GNF".replace(",", " "))
-    
-    offset_y = 1*cm
+    p.drawString(margin_left + 0.3*cm, y - 0.7*cm, f"CNSS (5%): -{bulletin.cnss_employe:,.0f}".replace(",", " "))
+    p.drawString(mid_x, y - 0.7*cm, f"RTS: -{bulletin.irg:,.0f}".replace(",", " "))
+    p.drawRightString(width - margin_right - 0.3*cm, y - 0.7*cm, f"Total retenues: -{bulletin.cnss_employe + bulletin.irg:,.0f} GNF".replace(",", " "))
+
+    offset_y = 0.7*cm
     if has_rappel:
-        offset_y += 0.4*cm
+        offset_y += 0.3*cm
         p.setFillColor(colors.HexColor("#007bff"))
-        p.drawString(2*cm, y - offset_y, "Rappel/Complément salaire précédent:")
-        p.drawRightString(width - 2*cm, y - offset_y, f"+ {rappel:,.0f} GNF".replace(",", " "))
+        p.drawString(margin_left + 0.3*cm, y - offset_y, f"Rappel: +{rappel:,.0f} GNF".replace(",", " "))
     if has_trop_percu:
-        offset_y += 0.4*cm
+        offset_y += 0.3*cm
         p.setFillColor(colors.HexColor("#dc3545"))
-        p.drawString(2*cm, y - offset_y, "Retenue trop-perçu salaire précédent:")
-        p.drawRightString(width - 2*cm, y - offset_y, f"- {trop_percu:,.0f} GNF".replace(",", " "))
-    
+        p.drawString(margin_left + 0.3*cm, y - offset_y, f"Retenue trop-perçu: -{trop_percu:,.0f} GNF".replace(",", " "))
+
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont(_FONT_BOLD, 11)
-    p.drawString(2*cm, y - offset_y - 0.7*cm, "NET À PAYER:")
-    p.drawRightString(width - 2*cm, y - offset_y - 0.7*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
+    p.setFont(_FONT_BOLD, 10)
+    p.drawString(margin_left + 0.3*cm, y - offset_y - 0.55*cm, "NET À PAYER:")
+    p.drawRightString(width - margin_right - 0.3*cm, y - offset_y - 0.55*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
     p.setFillColor(colors.black)
-    
-    y -= recap_height + 0.5*cm
+
+    y -= recap_height + 0.3*cm
     
     # === CHARGES PATRONALES ===
     vf = getattr(bulletin, 'versement_forfaitaire', 0) or 0
@@ -613,7 +615,7 @@ def generer_bulletin_pdf(bulletin):
     charges_data.append(["TOTAL CHARGES PATRONALES", "", "",
         f"{total_charges:,.0f} GNF".replace(",", " ")])
 
-    ch_row_h = 13
+    ch_row_h = 11
     charges_table = Table(charges_data, colWidths=[7*cm, 3.5*cm, 2*cm, 4.5*cm], rowHeights=ch_row_h)
     charges_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#fd7e14")),
