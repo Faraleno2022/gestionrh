@@ -262,7 +262,7 @@ def generer_bulletin_pdf(bulletin):
     margin_top = 0.8*cm
     margin_left = 1.2*cm
     margin_right = 1.2*cm
-    footer_zone = 2.3*cm  # zone réservée en bas (signatures + badge + QR)
+    footer_zone = 4.5*cm  # zone réservée en bas (footer absolu à 3.1cm + marge sécurité 1.4cm)
     y = height - margin_top
 
     # === EN-TÊTE ===
@@ -561,10 +561,11 @@ def generer_bulletin_pdf(bulletin):
     # Ligne indemnités exonérées (plafond 25%) si applicable
     abattement_exo = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
     if float(abattement_exo) > 0:
-        plafond_25_val = round(float(bulletin.salaire_brut) * 0.25)
+        # Utiliser abattement_exo (valeur stockée, ROUND_HALF_UP) pour Base ET Montant
+        # → élimine toute divergence d'arrondi entre les deux colonnes
         retenues_data.append([
             f"Indemnités exonérées (plafond 25%)",
-            f"{plafond_25_val:,.0f}".replace(",", " "),
+            f"{abattement_exo:,.0f}".replace(",", " "),
             "25%",
             f"-{abattement_exo:,.0f}".replace(",", " ")
         ])
@@ -742,8 +743,8 @@ def generer_bulletin_pdf(bulletin):
 
     ch_row_h = 11
     ch_table_h = len(charges_data) * ch_row_h
-    # Espace nécessaire = tableau charges + note VF (footer_zone déjà pris en compte par _saut_page)
-    espace_necessaire = ch_table_h + 0.4*cm
+    # Espace nécessaire = tableau charges + note VF + marge sécurité
+    espace_necessaire = ch_table_h + 0.8*cm
     y = _saut_page_si_necessaire(p, y, espace_necessaire, width, height, margin_top,
                                   margin_left, margin_right, footer_zone, entreprise, emp, bulletin)
 
@@ -773,13 +774,11 @@ def generer_bulletin_pdf(bulletin):
         y -= 0.20*cm
     p.setFillColor(colors.black)
 
-    # === PIED DE PAGE (footer unique — positions absolues en bas de page) ===
-    # Si le contenu déborde dans la zone du footer, sauter et dessiner le footer sur la nouvelle page
-    if y < footer_zone:
-        # Footer ne tient plus sur cette page → nouvelle page pour le footer
-        p.showPage()
+    # === PIED DE PAGE (footer unique — position absolue en bas de la dernière page) ===
+    # _saut_page_si_necessaire garantit que y >= footer_zone (4.5cm) > footer_top (2.15cm)
+    # → aucun chevauchement possible ; on dessine simplement le footer sur la page courante.
     _dessiner_footer(p, width, margin_left, margin_right, entreprise, emp, bulletin)
-    
+
     # Finaliser le PDF
     p.showPage()
     p.save()
