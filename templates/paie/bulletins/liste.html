@@ -88,6 +88,19 @@
                             - Page {{ bulletins.number }} sur {{ bulletins.paginator.num_pages }}
                             {% endif %}
                         </span>
+                        <div class="d-flex gap-2">
+                            {% if request.GET.periode %}
+                            <a href="{% url 'paie:bulletins_groupes_pdf' %}?periode_id={{ request.GET.periode }}"
+                               class="btn btn-danger btn-sm" target="_blank">
+                                <i class="fas fa-print me-1"></i>Imprimer tous les bulletins
+                            </a>
+                            {% elif request.GET.annee and request.GET.mois %}
+                            <a href="{% url 'paie:bulletins_groupes_pdf' %}?annee={{ request.GET.annee }}&mois={{ request.GET.mois }}"
+                               class="btn btn-danger btn-sm" target="_blank">
+                                <i class="fas fa-print me-1"></i>Imprimer tous les bulletins
+                            </a>
+                            {% endif %}
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover">

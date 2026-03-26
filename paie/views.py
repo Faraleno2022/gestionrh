@@ -2966,3 +2966,130 @@ def config_paie_entreprise(request):
         'modes_conges': ConfigurationPaieEntreprise.MODES_CONGES,
     })
 
+
+# ---------------------------------------------------------------------------
+# BULLETINS GROUPÉS PDF (impression multiple)
+# ---------------------------------------------------------------------------
+
+@login_required
+@entreprise_active_required
+@reauth_required
+def bulletins_groupes_pdf(request):
+    """
+    Génère un PDF unique contenant tous les bulletins d'une période (un par page).
+    URL: /paie/bulletins/groupe/pdf/?periode_id=X  OU  ?annee=X&mois=Y
+    Limite à 100 bulletins max.
+    """
+    from io import BytesIO
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas as rl_canvas
+        REPORTLAB_OK = True
+    except ImportError:
+        REPORTLAB_OK = False
+
+    if not REPORTLAB_OK:
+        messages.error(request, "ReportLab n'est pas disponible.")
+        return redirect('paie:liste_bulletins')
+
+    entreprise = request.user.entreprise
+    periode_id = request.GET.get('periode_id')
+    annee = request.GET.get('annee')
+    mois_param = request.GET.get('mois')
+
+    # Filtrer les bulletins
+    if periode_id:
+        periode = get_object_or_404(PeriodePaie, pk=periode_id, entreprise=entreprise)
+        bulletins_qs = BulletinPaie.objects.filter(
+            periode=periode,
+            employe__entreprise=entreprise,
+            statut_bulletin__in=['calcule', 'valide', 'paye'],
+        ).select_related('employe').order_by('employe__nom')
+    elif annee and mois_param:
+        bulletins_qs = BulletinPaie.objects.filter(
+            employe__entreprise=entreprise,
+            annee_paie=int(annee),
+            mois_paie=int(mois_param),
+            statut_bulletin__in=['calcule', 'valide', 'paye'],
+        ).select_related('employe').order_by('employe__nom')
+    else:
+        messages.error(request, "Veuillez préciser une période (periode_id ou annee+mois).")
+        return redirect('paie:liste_bulletins')
+
+    # Limite de 100 bulletins
+    total = bulletins_qs.count()
+    if total == 0:
+        messages.warning(request, "Aucun bulletin trouvé pour cette période.")
+        return redirect('paie:liste_bulletins')
+    if total > 100:
+        messages.warning(request, f"Trop de bulletins ({total}). Limité à 100.")
+        bulletins_qs = bulletins_qs[:100]
+
+    from .utils import generer_bulletin_pdf
+
+    # Générer chaque bulletin et les concaténer
+    try:
+        from PyPDF2 import PdfMerger
+        merger = PdfMerger()
+        for bulletin in bulletins_qs:
+            pdf_bytes = generer_bulletin_pdf(bulletin)
+            merger.append(BytesIO(pdf_bytes))
+        output = BytesIO()
+        merger.write(output)
+        merger.close()
+        output.seek(0)
+        pdf_final = output.read()
+    except ImportError:
+        # Fallback: concaténation simple page par page sans PyPDF2
+        # Utiliser reportlab pour créer un PDF multi-pages d'aperçu simplifié
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.units import cm
+
+        output = BytesIO()
+        doc = SimpleDocTemplate(output, pagesize=A4)
+        styles = getSampleStyleSheet()
+        elements = []
+        mois_noms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+
+        for i, bulletin in enumerate(bulletins_qs):
+            if i > 0:
+                elements.append(PageBreak())
+            elements.append(Paragraph(
+                f"<b>BULLETIN DE PAIE</b>",
+                styles['Title']
+            ))
+            mois_label = mois_noms[bulletin.mois_paie] if 1 <= bulletin.mois_paie <= 12 else str(bulletin.mois_paie)
+            elements.append(Paragraph(
+                f"{mois_label} {bulletin.annee_paie}",
+                styles['Heading2']
+            ))
+            elements.append(Spacer(1, 0.3*cm))
+            infos = [
+                f"Employé: {bulletin.employe.nom} {bulletin.employe.prenoms}",
+                f"Matricule: {bulletin.employe.matricule}",
+                f"N° Bulletin: {bulletin.numero_bulletin}",
+                f"Salaire Brut: {bulletin.salaire_brut:,.0f} GNF",
+                f"CNSS Salarié: {bulletin.cnss_employe:,.0f} GNF",
+                f"RTS: {bulletin.irg:,.0f} GNF",
+                f"Net à Payer: {bulletin.net_a_payer:,.0f} GNF",
+            ]
+            for info in infos:
+                elements.append(Paragraph(info, styles['Normal']))
+                elements.append(Spacer(1, 0.2*cm))
+
+        doc.build(elements)
+        output.seek(0)
+        pdf_final = output.read()
+
+    # Nom du fichier
+    if periode_id:
+        nom_fichier = f"bulletins_groupes_periode_{periode_id}.pdf"
+    else:
+        nom_fichier = f"bulletins_groupes_{annee}_{int(mois_param):02d}.pdf"
+
+    response = HttpResponse(pdf_final, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{nom_fichier}"'
+    return response
+

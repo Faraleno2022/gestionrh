@@ -6,6 +6,7 @@ from . import views_export
 from . import views_pret
 from . import views_frais
 from . import views_parametres
+from . import views_rapports
 
 app_name = 'paie'
 
@@ -121,4 +122,12 @@ urlpatterns = [
     path('parametres/calcul/tester-formule/', views_parametres.tester_formule_ajax, name='tester_formule'),
     path('parametres/calcul/valider-formule/', views_parametres.valider_formule_ajax, name='valider_formule'),
     path('parametres/calcul/historique/', views_parametres.historique_parametres_paie, name='historique_parametres'),
+
+    # Rapports avancés
+    path('rapports/masse-salariale/', views_rapports.rapport_masse_salariale, name='rapport_masse_salariale'),
+    path('rapports/masse-salariale/excel/', views_rapports.rapport_masse_salariale_excel, name='rapport_masse_salariale_excel'),
+    path('rapports/masse-salariale/pdf/', views_rapports.rapport_masse_salariale_pdf, name='rapport_masse_salariale_pdf'),
+
+    # Bulletins groupés (impression multiple)
+    path('bulletins/groupe/pdf/', views.bulletins_groupes_pdf, name='bulletins_groupes_pdf'),
 ]

@@ -5,6 +5,7 @@ from . import views_mission
 from . import views_reclamation
 from . import views_medical
 from . import views_import
+from . import views_absences
 
 app_name = 'employes'
 
@@ -108,4 +109,8 @@ urlpatterns = [
     path('medical/<int:pk>/supprimer/', views_medical.supprimer_visite, name='supprimer_visite'),
     path('medical/tableau-bord/', views_medical.tableau_bord_medical, name='tableau_bord_medical'),
     path('medical/employe/<int:employe_id>/', views_medical.suivi_medical_employe, name='suivi_medical_employe'),
+
+    # Tableau de bord absences
+    path('absences/tableau-de-bord/', views_absences.tableau_bord_absences, name='tableau_bord_absences'),
+    path('absences/tableau-de-bord/pdf/', views_absences.tableau_bord_absences_pdf, name='tableau_bord_absences_pdf'),
 ]
