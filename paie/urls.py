@@ -119,4 +119,6 @@ urlpatterns = [
     # Paramètres moteur de calcul (formules personnalisées)
     path('parametres/calcul/', views_parametres.parametres_calcul_paie, name='parametres_calcul'),
     path('parametres/calcul/tester-formule/', views_parametres.tester_formule_ajax, name='tester_formule'),
+    path('parametres/calcul/valider-formule/', views_parametres.valider_formule_ajax, name='valider_formule'),
+    path('parametres/calcul/historique/', views_parametres.historique_parametres_paie, name='historique_parametres'),
 ]

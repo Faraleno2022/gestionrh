@@ -444,6 +444,21 @@ def _apply_missing_columns():
     except Exception:
         pass  # table existe déjà
 
+    # Table historique paramètres paie
+    try:
+        cursor.execute('''CREATE TABLE IF NOT EXISTS historique_parametres_paie (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            parametres_id INTEGER,
+            modifie_par_id INTEGER,
+            date_modification DATETIME DEFAULT CURRENT_TIMESTAMP,
+            champ_modifie VARCHAR(100),
+            ancienne_valeur TEXT DEFAULT "",
+            nouvelle_valeur TEXT DEFAULT "",
+            raison VARCHAR(200) DEFAULT ""
+        )''')
+    except Exception:
+        pass
+
     conn.commit()
     conn.close()
     print("  Colonnes manquantes ajoutees + bareme RTS corrige (patch direct)")

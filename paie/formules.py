@@ -64,6 +64,92 @@ def evaluer_formule(formule: str, variables: dict) -> Decimal:
         raise ValueError(f"Erreur dans la formule '{formule}' : {exc}") from exc
 
 
+EXEMPLES_FORMULES = {
+    'exoneration': [
+        ('Plafond 25% du brut (CGI strict)', 'min(indemnites, brut * 0.25)'),
+        ('Plafond 30% du brut', 'min(indemnites, brut * 0.30)'),
+        ('Exonération conditionnelle 25%', 'indemnites if indemnites <= brut * 0.25 else brut * 0.25'),
+        ('Exonération intégrale', 'indemnites'),
+    ],
+    'base_vf': [
+        ('Brut direct (simplifié)', 'brut'),
+        ('Brut moins abattement fixe', 'brut - 150000 if brut >= 2500000 else brut'),
+        ('94% du brut', 'brut * 0.94'),
+        ('Brut moins CNSS', 'brut - cnss'),
+    ],
+    'base_rts': [
+        ('Formule standard (brut - CNSS - exo 25%)', 'brut - cnss - min(indemnites, brut * 0.25)'),
+        ('Avec plafond 30%', 'brut - cnss - min(indemnites, brut * 0.30)'),
+        ('Base simplifiée (brut - CNSS)', 'brut - cnss'),
+        ('Base avec abattement 10%', '(brut - cnss) * 0.90'),
+    ],
+}
+
+
+def valider_formule(formule: str) -> dict:
+    """
+    Valide une formule de paie sans l'évaluer définitivement.
+
+    Retourne un dictionnaire avec:
+      - ``valide`` (bool)
+      - ``erreurs`` (list[str]) : blocages empêchant l'utilisation
+      - ``avertissements`` (list[str]) : points d'attention non bloquants
+      - ``resultat_test`` (Decimal|None) : résultat sur valeurs-test si valide
+    """
+    erreurs = []
+    avertissements = []
+    resultat_test = None
+
+    if not formule or not formule.strip():
+        erreurs.append("La formule est vide.")
+        return {'valide': False, 'erreurs': erreurs, 'avertissements': avertissements, 'resultat_test': None}
+
+    formule_lower = formule.lower()
+
+    # Vérification mots interdits
+    for mot in MOTS_INTERDITS:
+        if mot in formule_lower:
+            erreurs.append(f"Mot interdit détecté : '{mot}'")
+
+    if erreurs:
+        return {'valide': False, 'erreurs': erreurs, 'avertissements': avertissements, 'resultat_test': None}
+
+    # Détection division par zéro potentielle
+    import re
+    if re.search(r'/\s*(0(?:[^.]|$)|\bbrut\b|\bsalaire_base\b)', formule_lower):
+        avertissements.append(
+            "Division potentielle par zéro détectée : vérifiez les diviseurs (ex. brut, salaire_base) "
+            "car ils peuvent valoir 0."
+        )
+
+    # Test avec valeurs d'exemple
+    test = tester_formule(formule)
+    if not test.get('succes'):
+        erreurs.append(test.get('erreur', 'Erreur d\'évaluation inconnue'))
+        return {'valide': False, 'erreurs': erreurs, 'avertissements': avertissements, 'resultat_test': None}
+
+    resultat_test = test['resultat']
+
+    # Vérification résultat positif (tester_formule retourne déjà max(0, …) mais on logue l'avert.)
+    if float(resultat_test) < 0:
+        avertissements.append("Le résultat calculé est négatif (sera ramené à 0).")
+
+    # Vérification plage réaliste (0 à 100 000 000 GNF)
+    PLAFOND_MAX = 100_000_000
+    if float(resultat_test) > PLAFOND_MAX:
+        avertissements.append(
+            f"Le résultat ({float(resultat_test):,.0f} GNF) dépasse le plafond "
+            f"réaliste de {PLAFOND_MAX:,.0f} GNF. Vérifiez la formule."
+        )
+
+    return {
+        'valide': True,
+        'erreurs': erreurs,
+        'avertissements': avertissements,
+        'resultat_test': resultat_test,
+    }
+
+
 def tester_formule(formule: str) -> dict:
     """
     Teste une formule avec des valeurs d'exemple.

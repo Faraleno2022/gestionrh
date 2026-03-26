@@ -1136,6 +1136,26 @@ class ParametresCalculPaie(models.Model):
         return f"Paramètres calcul paie — {self.entreprise.nom_entreprise}"
 
 
+class HistoriqueParametresPaie(models.Model):
+    """Historique des modifications des paramètres de calcul de paie"""
+    parametres = models.ForeignKey(ParametresCalculPaie, on_delete=models.CASCADE, related_name='historique')
+    modifie_par = models.ForeignKey('core.Utilisateur', on_delete=models.SET_NULL, null=True)
+    date_modification = models.DateTimeField(auto_now_add=True)
+    champ_modifie = models.CharField(max_length=100)
+    ancienne_valeur = models.TextField(blank=True)
+    nouvelle_valeur = models.TextField(blank=True)
+    raison = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        db_table = 'historique_parametres_paie'
+        ordering = ['-date_modification']
+        verbose_name = 'Historique paramètres paie'
+        verbose_name_plural = 'Historiques paramètres paie'
+
+    def __str__(self):
+        return f"Modification {self.champ_modifie} — {self.date_modification:%d/%m/%Y %H:%M}"
+
+
 # Import des modèles de frais
 from .models_frais import CategoriesFrais, NoteFrais, LigneFrais, BaremeFrais
 
