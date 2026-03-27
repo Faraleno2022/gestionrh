@@ -110,3 +110,6 @@ db.sqlite3
 
 # PDFs de test
 test_*.pdf
+.trial_start
+bulletin_corrige_CAMARA.pdf
+uwsgi.ini
