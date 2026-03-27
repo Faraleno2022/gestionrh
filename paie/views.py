@@ -996,7 +996,7 @@ def telecharger_bulletin_pdf(request, pk):
     charges_table.drawOn(p, 1.5*cm, y - ch_table_h)
     y -= ch_table_h + 0.15*cm
     # Note explicative déduction VF
-    if base_vf > 0:
+    if base_vf > 0 and y > 3.8*cm:
         brut_gnf = float(bulletin.salaire_brut)
         p.setFont(_FI, 6)
         p.setFillColor(colors.HexColor("#666666"))
@@ -1008,32 +1008,32 @@ def telecharger_bulletin_pdf(request, pk):
     
     # === PIED DE PAGE — signatures compactes + infos légales centrées ===
     p.setFont(_FB, 6)
-    p.drawString(1.5*cm, 3.20*cm, "L'Employeur")
-    p.drawRightString(width - 1.5*cm, 3.20*cm, "L'Employé(e)")
+    p.drawString(1.5*cm, 2.15*cm, "L'Employeur")
+    p.drawRightString(width - 1.5*cm, 2.15*cm, "L'Employé(e)")
     p.setFont(_FN, 5.5)
     if entreprise:
-        p.drawString(1.5*cm, 3.02*cm, entreprise.nom_entreprise or '')
-    p.drawRightString(width - 1.5*cm, 3.02*cm, f"{emp.nom} {emp.prenoms}")
+        p.drawString(1.5*cm, 1.93*cm, entreprise.nom_entreprise or '')
+    p.drawRightString(width - 1.5*cm, 1.93*cm, f"{emp.nom} {emp.prenoms}")
     p.setFont(_FN, 5)
-    p.drawString(1.5*cm, 2.86*cm, "Date et signature")
-    p.drawRightString(width - 1.5*cm, 2.86*cm, "Lu et approuvé, date et signature")
+    p.drawString(1.5*cm, 1.74*cm, "Date et signature")
+    p.drawRightString(width - 1.5*cm, 1.74*cm, "Lu et approuvé, date et signature")
     p.setDash(2, 2)
-    p.line(1.5*cm, 2.78*cm, 6.5*cm, 2.78*cm)
-    p.line(width - 6.5*cm, 2.78*cm, width - 1.5*cm, 2.78*cm)
+    p.line(1.5*cm, 1.67*cm, 6.5*cm, 1.67*cm)
+    p.line(width - 6.5*cm, 1.67*cm, width - 1.5*cm, 1.67*cm)
     p.setDash()
     p.setStrokeColor(colors.HexColor("#dee2e6"))
     p.setLineWidth(0.5)
-    p.line(1.5*cm, 2.60*cm, width - 1.5*cm, 2.60*cm)
+    p.line(1.5*cm, 1.60*cm, width - 1.5*cm, 1.60*cm)
     p.setStrokeColor(colors.black)
     p.setFont(_FN, 5)
     p.setFillColor(colors.HexColor("#555555"))
     if entreprise:
-        p.drawCentredString(width/2, 2.38*cm, f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
-        p.drawCentredString(width/2, 2.16*cm, f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
-    p.drawCentredString(width/2, 1.94*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
+        p.drawCentredString(width/2, 1.45*cm, f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
+        p.drawCentredString(width/2, 1.30*cm, f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
+    p.drawCentredString(width/2, 1.15*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
 
     # Badge conformité
-    badge_x, badge_y, badge_w, badge_h = 1.5*cm, 1.55*cm, 5.5*cm, 0.45*cm
+    badge_x, badge_y, badge_w, badge_h = 1.5*cm, 0.78*cm, 5.5*cm, 0.45*cm
     p.setFillColor(colors.HexColor("#198754"))
     p.roundRect(badge_x, badge_y, badge_w, badge_h, 3, stroke=0, fill=1)
     p.setFillColor(colors.white)
@@ -1044,9 +1044,9 @@ def telecharger_bulletin_pdf(request, pk):
     # QR Code (coin bas droit)
     try:
         from .utils import _generer_qr_code
-        qr_size = 1.8*cm
+        qr_size = 1.4*cm
         qr_x = width - 1.5*cm - qr_size
-        qr_y = 1.2*cm
+        qr_y = 0.30*cm
         qr_contenu = (
             f"BUL:{bulletin.numero_bulletin}|"
             f"EMP:{emp.nom} {emp.prenoms}|"
@@ -1594,7 +1594,7 @@ def telecharger_bulletin_public(request, token):
     charges_table.drawOn(p, 1.5*cm, y - ch_table_h)
     y -= ch_table_h + 0.15*cm
     # Note explicative déduction VF
-    if base_vf > 0:
+    if base_vf > 0 and y > 3.8*cm:
         brut_gnf = float(bulletin.salaire_brut)
         p.setFont(_FI, 6)
         p.setFillColor(colors.HexColor("#666666"))
@@ -1606,32 +1606,32 @@ def telecharger_bulletin_public(request, token):
     
     # === PIED DE PAGE — signatures compactes + infos légales centrées ===
     p.setFont(_FB, 6)
-    p.drawString(1.5*cm, 3.20*cm, "L'Employeur")
-    p.drawRightString(width - 1.5*cm, 3.20*cm, "L'Employé(e)")
+    p.drawString(1.5*cm, 2.15*cm, "L'Employeur")
+    p.drawRightString(width - 1.5*cm, 2.15*cm, "L'Employé(e)")
     p.setFont(_FN, 5.5)
     if entreprise:
-        p.drawString(1.5*cm, 3.02*cm, entreprise.nom_entreprise or '')
-    p.drawRightString(width - 1.5*cm, 3.02*cm, f"{emp.nom} {emp.prenoms}")
+        p.drawString(1.5*cm, 1.93*cm, entreprise.nom_entreprise or '')
+    p.drawRightString(width - 1.5*cm, 1.93*cm, f"{emp.nom} {emp.prenoms}")
     p.setFont(_FN, 5)
-    p.drawString(1.5*cm, 2.86*cm, "Date et signature")
-    p.drawRightString(width - 1.5*cm, 2.86*cm, "Lu et approuvé, date et signature")
+    p.drawString(1.5*cm, 1.74*cm, "Date et signature")
+    p.drawRightString(width - 1.5*cm, 1.74*cm, "Lu et approuvé, date et signature")
     p.setDash(2, 2)
-    p.line(1.5*cm, 2.78*cm, 6.5*cm, 2.78*cm)
-    p.line(width - 6.5*cm, 2.78*cm, width - 1.5*cm, 2.78*cm)
+    p.line(1.5*cm, 1.67*cm, 6.5*cm, 1.67*cm)
+    p.line(width - 6.5*cm, 1.67*cm, width - 1.5*cm, 1.67*cm)
     p.setDash()
     p.setStrokeColor(colors.HexColor("#dee2e6"))
     p.setLineWidth(0.5)
-    p.line(1.5*cm, 2.60*cm, width - 1.5*cm, 2.60*cm)
+    p.line(1.5*cm, 1.60*cm, width - 1.5*cm, 1.60*cm)
     p.setStrokeColor(colors.black)
     p.setFont(_FN, 5)
     p.setFillColor(colors.HexColor("#555555"))
     if entreprise:
-        p.drawCentredString(width/2, 2.38*cm, f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
-        p.drawCentredString(width/2, 2.16*cm, f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
-    p.drawCentredString(width/2, 1.94*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
+        p.drawCentredString(width/2, 1.45*cm, f"{entreprise.nom_entreprise} — {entreprise.adresse or ''} — Tél: {entreprise.telephone or ''}")
+        p.drawCentredString(width/2, 1.30*cm, f"NIF: {entreprise.nif or '-'} — CNSS: {entreprise.num_cnss or '-'}")
+    p.drawCentredString(width/2, 1.15*cm, f"Document généré le {timezone.now().strftime('%d/%m/%Y à %H:%M')}")
 
     # Badge conformité
-    badge_x, badge_y, badge_w, badge_h = 1.5*cm, 1.55*cm, 5.5*cm, 0.45*cm
+    badge_x, badge_y, badge_w, badge_h = 1.5*cm, 0.78*cm, 5.5*cm, 0.45*cm
     p.setFillColor(colors.HexColor("#198754"))
     p.roundRect(badge_x, badge_y, badge_w, badge_h, 3, stroke=0, fill=1)
     p.setFillColor(colors.white)
@@ -1642,9 +1642,9 @@ def telecharger_bulletin_public(request, token):
     # QR Code (coin bas droit)
     try:
         from .utils import _generer_qr_code
-        qr_size = 1.8*cm
+        qr_size = 1.4*cm
         qr_x = width - 1.5*cm - qr_size
-        qr_y = 1.2*cm
+        qr_y = 0.30*cm
         qr_contenu = (
             f"BUL:{bulletin.numero_bulletin}|"
             f"EMP:{emp.nom} {emp.prenoms}|"

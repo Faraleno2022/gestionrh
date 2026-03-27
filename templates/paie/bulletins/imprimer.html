@@ -472,37 +472,48 @@
 
     <!-- Charges Patronales -->
     <div class="section-title">CHARGES PATRONALES</div>
-    <table class="info-table">
+    <table class="detail-table">
+        <thead>
+            <tr>
+                <th style="width:50%;">Libellé</th>
+                <th class="text-right" style="width:20%;">Base</th>
+                <th class="text-center" style="width:10%;">Taux</th>
+                <th class="text-right" style="width:20%;">Montant</th>
+            </tr>
+        </thead>
         <tr>
-            <td>CNSS Employeur (18%):</td>
+            <td>CNSS Employeur</td>
+            <td class="text-right">{{ bulletin.salaire_brut|floatformat:0|intcomma }}</td>
+            <td class="text-center">18%</td>
             <td class="text-right"><strong>{{ bulletin.cnss_employeur|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
         <tr>
-            <td>Versement Forfaitaire VF (6%):</td>
+            <td>Versement Forfaitaire (VF)</td>
+            <td class="text-right">{{ bulletin.base_vf|default:bulletin.salaire_brut|floatformat:0|intcomma }}</td>
+            <td class="text-center">6%</td>
             <td class="text-right"><strong>{{ bulletin.versement_forfaitaire|default:0|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
-        {% if bulletin.base_vf %}
-        <tr style="background-color: #f9f9f9; font-size: 11pt;">
-            <td style="padding-left: 40px;"><em>(base de calcul)</em></td>
-            <td class="text-right">{{ bulletin.base_vf|floatformat:0|intcomma }} GNF</td>
-        </tr>
-        {% endif %}
         {% if bulletin.taxe_apprentissage and bulletin.taxe_apprentissage > 0 %}
         <tr>
-            <td>Taxe d'Apprentissage TA ({{ bulletin.taux_ta|default:"1.5" }}%) <small>{% if bulletin.nombre_salaries %}(effectif: {{ bulletin.nombre_salaries }} &lt;30){% endif %}</small>:</td>
+            <td>Taxe d'Apprentissage {% if bulletin.nombre_salaries %}(eff. {{ bulletin.nombre_salaries }} &lt;30){% endif %}</td>
+            <td class="text-right">{{ bulletin.base_vf|default:bulletin.salaire_brut|floatformat:0|intcomma }}</td>
+            <td class="text-center">{{ bulletin.taux_ta|default:"2" }}%</td>
             <td class="text-right"><strong>{{ bulletin.taxe_apprentissage|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
         {% endif %}
         {% if bulletin.contribution_onfpp and bulletin.contribution_onfpp > 0 %}
         <tr>
-            <td>Contribution ONFPP (1,5%) <small>{% if bulletin.nombre_salaries %}(effectif: {{ bulletin.nombre_salaries }} &ge;30){% endif %}</small>:</td>
+            <td>Contribution ONFPP {% if bulletin.nombre_salaries %}(eff. {{ bulletin.nombre_salaries }} &ge;30){% endif %}</td>
+            <td class="text-right">{{ bulletin.base_vf|default:bulletin.salaire_brut|floatformat:0|intcomma }}</td>
+            <td class="text-center">1.5%</td>
             <td class="text-right"><strong>{{ bulletin.contribution_onfpp|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
         {% endif %}
-        <tr style="border-top: 1px solid #333; font-weight: bold;">
-            <td>Total Charges Patronales:</td>
+        <tr class="total-row">
+            <td colspan="3"><strong>TOTAL CHARGES PATRONALES</strong></td>
             <td class="text-right"><strong>{{ bulletin.total_charges_patronales|floatformat:0|intcomma }} GNF</strong></td>
         </tr>
+        </tbody>
     </table>
 
     <!-- Zone de signatures -->
