@@ -721,8 +721,9 @@ class MoteurCalculPaie:
             plafond = (salaire_brut * pct / Decimal('100')).quantize(Decimal('1'), rounding=ROUND_FLOOR)
             exoneration_retenue = min(total_indemnites, plafond)
 
-        # Arrondir exonération et dépassement pour cohérence (0 GNF d'écart)
-        exoneration_retenue = self._arrondir(exoneration_retenue)
+        # Dépassement : total_indemnites - plafond (plafond déjà ROUND_FLOOR → entier)
+        # NE PAS réarrondir exoneration_retenue : elle est min(total_indemnites, plafond)
+        # → plafond est ROUND_FLOOR (entier), donc exoneration_retenue est déjà entier
         depassement = self._arrondir(max(Decimal('0'), total_indemnites - plafond))
 
         self.montants['plafond_indemnites'] = plafond
