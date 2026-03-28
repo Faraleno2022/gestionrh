@@ -372,21 +372,42 @@ def _check_no_py_sources() -> dict:
             result['py_sources_found'].append(py_name)
 
     # Vérifier aussi les fichiers modifiés après le build
-    # Exclusions : __init__.py (marqueurs de packages), migrations, fichiers de config
+    # Seuls les répertoires applicatifs sont vérifiés.
+    # Les bibliothèques tierces (django, rest_framework, etc.) bundlées par
+    # PyInstaller ne sont pas du code applicatif et ne doivent pas déclencher
+    # de blocage.
+    APP_DIRS = {
+        'core', 'gestionnaire_rh', 'paie', 'employes', 'contrats',
+        'formation', 'temps_travail', 'recrutement', 'comptabilite',
+        'dashboard', 'payments', 'portail', 'conges',
+    }
     exe_path = Path(sys.executable)
     if exe_path.exists():
         exe_mtime = exe_path.stat().st_mtime
         for f in root.rglob('*.py'):
+            # Ne vérifier que les fichiers dans nos répertoires applicatifs
+            try:
+                rel = f.relative_to(root)
+            except ValueError:
+                continue
+            parts = rel.parts
+            if not parts:
+                continue
+            # Fichiers à la racine de _internal (ex: manage.py) → ignorer
+            if len(parts) == 1:
+                continue
+            # Premier répertoire doit être un de nos apps
+            if parts[0] not in APP_DIRS:
+                continue
             fname = f.name
             # Ignorer les fichiers inoffensifs
             if fname == '__init__.py':
                 continue
-            if 'migrations' in str(f):
+            if 'migrations' in str(rel):
                 continue
             if fname in ('manage.py', 'wsgi.py', 'asgi.py', 'apps.py',
                          'admin.py', 'tests.py', 'conftest.py'):
                 continue
-            # Fichiers de config Django / settings / urls inoffensifs
             if fname.startswith('settings') or fname.startswith('urls_'):
                 continue
             if fname in ('urls.py', 'signals.py', 'context_processors.py',
@@ -400,9 +421,7 @@ def _check_no_py_sources() -> dict:
             try:
                 if f.stat().st_mtime > exe_mtime + 60:
                     result['clean'] = False
-                    result['py_sources_found'].append(
-                        str(f.relative_to(root))
-                    )
+                    result['py_sources_found'].append(str(rel))
             except Exception:
                 pass
 
