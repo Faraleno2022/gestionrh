@@ -811,16 +811,8 @@ def telecharger_bulletin_pdf(request, pk):
     base_rts_val = getattr(bulletin, 'base_rts', 0) or 0
     taux_eff_rts_val = getattr(bulletin, 'taux_effectif_rts', 0) or 0
     rts_base_str = f"{base_rts_val:,.0f}".replace(",", " ") if base_rts_val else "-"
-    # Ligne indemnités exonérées (plafond 25%) si applicable
-    abattement_exo = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
-    if float(abattement_exo) > 0:
-        plafond_25_val = round(float(bulletin.salaire_brut) * 0.25)
-        retenues_data.append([
-            "Indemnités exonérées (plafond 25%)",
-            f"{plafond_25_val:,.0f}".replace(",", " "),
-            "25%",
-            f"-{abattement_exo:,.0f}".replace(",", " ")
-        ])
+    # Note: l'abattement forfaitaire (exonération 25%) est un ajustement fiscal,
+    # pas une retenue réelle → affiché uniquement dans la section DÉTAIL RTS.
     retenues_data.append(["RTS (Impôt sur le revenu \u2013 barème progressif)", rts_base_str, "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
 
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
@@ -1401,16 +1393,8 @@ def telecharger_bulletin_public(request, token):
     base_rts_val = getattr(bulletin, 'base_rts', 0) or 0
     taux_eff_rts_val = getattr(bulletin, 'taux_effectif_rts', 0) or 0
     rts_base_str = f"{base_rts_val:,.0f}".replace(",", " ") if base_rts_val else "-"
-    # Ligne indemnités exonérées (plafond 25%) si applicable
-    abattement_exo = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
-    if float(abattement_exo) > 0:
-        plafond_25_val = round(float(bulletin.salaire_brut) * 0.25)
-        retenues_data.append([
-            "Indemnités exonérées (plafond 25%)",
-            f"{plafond_25_val:,.0f}".replace(",", " "),
-            "25%",
-            f"-{abattement_exo:,.0f}".replace(",", " ")
-        ])
+    # Note: l'abattement forfaitaire (exonération 25%) est un ajustement fiscal,
+    # pas une retenue réelle → affiché uniquement dans la section DÉTAIL RTS.
     retenues_data.append(["RTS (Impôt sur le revenu \u2013 barème progressif)", rts_base_str, "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
 
     retenues_table = Table(retenues_data, colWidths=[8*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)

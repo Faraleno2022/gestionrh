@@ -558,17 +558,8 @@ def generer_bulletin_pdf(bulletin):
     base_rts_val = getattr(bulletin, 'base_rts', 0) or 0
     taux_eff_rts_val = getattr(bulletin, 'taux_effectif_rts', 0) or 0
     rts_base_str = f"{base_rts_val:,.0f}".replace(",", " ") if base_rts_val else "-"
-    # Ligne indemnités exonérées (plafond 25%) si applicable
-    abattement_exo = getattr(bulletin, 'abattement_forfaitaire', 0) or 0
-    if float(abattement_exo) > 0:
-        # Utiliser abattement_exo (valeur stockée, ROUND_HALF_UP) pour Base ET Montant
-        # → élimine toute divergence d'arrondi entre les deux colonnes
-        retenues_data.append([
-            f"Indemnités exonérées (plafond 25%)",
-            f"{abattement_exo:,.0f}".replace(",", " "),
-            "25%",
-            f"-{abattement_exo:,.0f}".replace(",", " ")
-        ])
+    # Note: l'abattement forfaitaire (exonération 25%) est un ajustement fiscal,
+    # pas une retenue réelle → affiché uniquement dans la section DÉTAIL RTS.
     retenues_data.append(["RTS (Impôt sur le revenu \u2013 barème progressif)", rts_base_str, f"moy. {taux_eff_rts_val:.2f}%" if taux_eff_rts_val else "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
 
     # Vérifier espace avant de dessiner la section retenues
