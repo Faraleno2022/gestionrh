@@ -212,7 +212,13 @@
                         </tr>
                         {% if bulletin.base_rts %}
                         <tr class="small text-muted">
-                            <td colspan="2">Base RTS: {{ bulletin.base_rts|floatformat:0|intcomma }} GNF | Taux eff.: {{ bulletin.taux_effectif_rts|floatformat:2 }}%</td>
+                            <td colspan="2">
+                                Base RTS: {{ bulletin.base_rts|floatformat:0|intcomma }} GNF |
+                                Taux moyen: {{ bulletin.taux_effectif_rts|floatformat:2 }}%
+                                {% if bulletin.abattement_forfaitaire %}
+                                 | Exo. 25%: {{ bulletin.abattement_forfaitaire|floatformat:0|intcomma }} GNF
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endif %}
                         <tr class="border-top">
@@ -238,20 +244,32 @@
                             <td>CNSS Employeur (18%)</td>
                             <td class="text-end"><strong>{{ bulletin.cnss_employeur|floatformat:0|intcomma }} GNF</strong></td>
                         </tr>
+                        <tr class="small text-muted">
+                            <td colspan="2" class="pt-0">Base CNSS: plafond 2 500 000 GNF</td>
+                        </tr>
                         <tr>
                             <td>Versement Forfaitaire VF (6%)</td>
                             <td class="text-end"><strong>{{ bulletin.versement_forfaitaire|default:0|floatformat:0|intcomma }} GNF</strong></td>
                         </tr>
+                        <tr class="small text-muted">
+                            <td colspan="2" class="pt-0">Base VF: {{ bulletin.base_vf|default:bulletin.salaire_brut|floatformat:0|intcomma }} GNF</td>
+                        </tr>
                         {% if bulletin.taxe_apprentissage and bulletin.taxe_apprentissage > 0 %}
                         <tr>
-                            <td>Taxe d'Apprentissage TA (2%) <span class="badge bg-secondary">&lt;30 sal.</span></td>
+                            <td>Taxe d'Apprentissage TA ({{ bulletin.taux_ta|default:"2" }}%) <span class="badge bg-secondary">&lt;30 sal.</span></td>
                             <td class="text-end"><strong>{{ bulletin.taxe_apprentissage|floatformat:0|intcomma }} GNF</strong></td>
+                        </tr>
+                        <tr class="small text-muted">
+                            <td colspan="2" class="pt-0">Base TA: {{ bulletin.base_vf|default:bulletin.salaire_brut|floatformat:0|intcomma }} GNF</td>
                         </tr>
                         {% endif %}
                         {% if bulletin.contribution_onfpp and bulletin.contribution_onfpp > 0 %}
                         <tr>
                             <td>Contribution ONFPP (1,5%) <span class="badge bg-secondary">&ge;30 sal.</span></td>
                             <td class="text-end"><strong>{{ bulletin.contribution_onfpp|floatformat:0|intcomma }} GNF</strong></td>
+                        </tr>
+                        <tr class="small text-muted">
+                            <td colspan="2" class="pt-0">Base ONFPP: {{ bulletin.base_vf|default:bulletin.salaire_brut|floatformat:0|intcomma }} GNF</td>
                         </tr>
                         {% endif %}
                         <tr class="border-top">

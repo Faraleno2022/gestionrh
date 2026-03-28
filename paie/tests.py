@@ -316,3 +316,184 @@ class ExonerationStagiaireTests(SimpleTestCase):
     def test_cdi_non_exonere(self):
         """CDI jamais exonéré même si salaire faible"""
         self.assertFalse(self._est_exonere('CDI', Decimal('800000'), 3))
+
+
+# ======================================================================
+# TESTS MOTEUR DE FORMULES (simpleeval + phases)
+# ======================================================================
+
+class FormuleSecuriteTests(SimpleTestCase):
+    """Tests de sécurité du moteur de formules (simpleeval)"""
+
+    def _vars(self):
+        return {
+            'brut': 5690002, 'cnss': 125000, 'indemnites': 2200000,
+            'salaire_base': 3000000, 'primes': 400000, 'heures_sup': 90002,
+            'total_gains': 5690002, 'total_retenues': 316400,
+            'cnss_base': 2500000, 'net': 5373602,
+            'anciennete_mois': 24, 'anciennete_ans': 2,
+            'nb_enfants': 2, 'nb_conjoints': 1, 'plafond_cnss': 2500000,
+        }
+
+    def test_formule_basique(self):
+        """Formule simple fonctionne"""
+        from paie.formules import evaluer_formule
+        r = evaluer_formule('brut * 0.25', self._vars())
+        self.assertEqual(r, Decimal('1422500.5'))
+
+    def test_formule_min_max(self):
+        """min/max fonctionnent"""
+        from paie.formules import evaluer_formule
+        r = evaluer_formule('min(indemnites, brut * 0.25)', self._vars())
+        self.assertEqual(r, Decimal('1422500.5'))
+
+    def test_formule_ternaire(self):
+        """Opérateur ternaire if/else fonctionne"""
+        from paie.formules import evaluer_formule
+        r = evaluer_formule('indemnites if indemnites <= brut * 0.25 else brut * 0.25', self._vars())
+        self.assertEqual(r, Decimal('1422500.5'))
+
+    def test_injection_import_bloquee(self):
+        """Tentative d'import bloquée"""
+        from paie.formules import evaluer_formule
+        with self.assertRaises(ValueError):
+            evaluer_formule('__import__("os").system("whoami")', self._vars())
+
+    def test_injection_builtins_bloquee(self):
+        """Accès aux builtins bloqué"""
+        from paie.formules import evaluer_formule
+        with self.assertRaises(ValueError):
+            evaluer_formule('__builtins__', self._vars())
+
+    def test_formule_vide(self):
+        """Formule vide lève ValueError"""
+        from paie.formules import evaluer_formule
+        with self.assertRaises(ValueError):
+            evaluer_formule('', self._vars())
+
+    def test_resultat_negatif_ramene_a_zero(self):
+        """Résultat négatif ramené à 0"""
+        from paie.formules import evaluer_formule
+        r = evaluer_formule('salaire_base - brut', self._vars())
+        self.assertEqual(r, Decimal('0'))
+
+    def test_division_par_zero_retourne_zero(self):
+        """Division par zéro retourne 0"""
+        from paie.formules import evaluer_formule
+        r = evaluer_formule('brut / 0', self._vars())
+        self.assertEqual(r, Decimal('0'))
+
+
+class FormulePhaseTests(SimpleTestCase):
+    """Tests des phases de calcul du moteur de formules"""
+
+    def _vars(self):
+        return {
+            'brut': 5000000, 'cnss': 125000, 'salaire_base': 3000000,
+            'total_gains': 5000000, 'total_retenues': 300000, 'net': 4700000,
+            'anciennete_mois': 24, 'anciennete_ans': 2,
+            'nb_enfants': 0, 'nb_conjoints': 0, 'plafond_cnss': 2500000,
+            'indemnites': 0, 'primes': 0, 'heures_sup': 0, 'cnss_base': 2500000,
+        }
+
+    def test_phase_gains_salaire_base_ok(self):
+        """Phase gains : salaire_base accessible"""
+        from paie.formules import evaluer_formule
+        r = evaluer_formule('salaire_base * 0.10', self._vars(), phase='gains')
+        self.assertEqual(r, Decimal('300000.0'))
+
+    def test_phase_gains_brut_bloque(self):
+        """Phase gains : brut non accessible"""
+        from paie.formules import evaluer_formule
+        with self.assertRaises(ValueError):
+            evaluer_formule('brut * 0.10', self._vars(), phase='gains')
+
+    def test_phase_cotisations_brut_ok(self):
+        """Phase cotisations : brut accessible"""
+        from paie.formules import evaluer_formule
+        r = evaluer_formule('brut * 0.05', self._vars(), phase='cotisations')
+        self.assertEqual(r, Decimal('250000.0'))
+
+    def test_phase_cotisations_cnss_bloque(self):
+        """Phase cotisations : cnss non accessible (pas encore calculé)"""
+        from paie.formules import evaluer_formule
+        with self.assertRaises(ValueError):
+            evaluer_formule('cnss * 2', self._vars(), phase='cotisations')
+
+    def test_phase_fiscal_cnss_ok(self):
+        """Phase fiscal : cnss accessible"""
+        from paie.formules import evaluer_formule
+        r = evaluer_formule('brut - cnss', self._vars(), phase='fiscal')
+        self.assertEqual(r, Decimal('4875000.0'))
+
+    def test_phase_retenues_net_bloque(self):
+        """Phase retenues : net non accessible"""
+        from paie.formules import evaluer_formule
+        with self.assertRaises(ValueError):
+            evaluer_formule('net * 0.10', self._vars(), phase='retenues')
+
+    def test_phase_net_tout_accessible(self):
+        """Phase net : toutes variables accessibles"""
+        from paie.formules import evaluer_formule
+        r = evaluer_formule('net * 0.10', self._vars(), phase='net')
+        self.assertEqual(r, Decimal('470000.0'))
+
+    def test_sans_phase_tout_accessible(self):
+        """Sans phase : toutes variables accessibles (rétrocompatibilité)"""
+        from paie.formules import evaluer_formule
+        r = evaluer_formule('net * 0.10', self._vars())
+        self.assertEqual(r, Decimal('470000.0'))
+
+
+class BulletinCasReferenceTests(SimpleTestCase):
+    """Test du cas de référence validé manuellement (bulletin employé type)
+
+    Brut: 5 690 002 GNF
+    Salaire base: 3 000 000  |  Cherté de vie: 900 000  |  Logement: 600 000
+    Transport: 700 000  |  Prime: 400 000  |  HS: 90 002
+    CNSS salarié: 125 000  |  RTS: 191 400  |  Net: 5 373 602
+    """
+
+    BRUT = Decimal('5690002')
+    CNSS_EMP = Decimal('125000')
+    RTS = Decimal('191400')
+    NET = Decimal('5373602')
+    VF = Decimal('341400')
+    TA = Decimal('113800')
+    CNSS_PAT = Decimal('450000')
+
+    def test_brut(self):
+        base = Decimal('3000000')
+        cherte = Decimal('900000')
+        logement = Decimal('600000')
+        transport = Decimal('700000')
+        prime = Decimal('400000')
+        hs = Decimal('90002')
+        self.assertEqual(base + cherte + logement + transport + prime + hs, self.BRUT)
+
+    def test_cnss_employe(self):
+        plafond = Decimal('2500000')
+        self.assertEqual(plafond * Decimal('5') / Decimal('100'), self.CNSS_EMP)
+
+    def test_net_a_payer(self):
+        self.assertEqual(self.BRUT - self.CNSS_EMP - self.RTS, self.NET)
+
+    def test_vf(self):
+        self.assertEqual(
+            (self.BRUT * Decimal('6') / Decimal('100')).quantize(Decimal('1')),
+            self.VF
+        )
+
+    def test_ta(self):
+        self.assertEqual(
+            (self.BRUT * Decimal('2') / Decimal('100')).quantize(Decimal('1')),
+            self.TA
+        )
+
+    def test_cnss_patronale(self):
+        plafond = Decimal('2500000')
+        self.assertEqual(plafond * Decimal('18') / Decimal('100'), self.CNSS_PAT)
+
+    def test_total_charges_patronales(self):
+        self.assertEqual(self.CNSS_PAT + self.VF + self.TA, Decimal('905200'))
+

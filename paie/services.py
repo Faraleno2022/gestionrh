@@ -116,6 +116,7 @@ class MoteurCalculPaie:
             statut_employe='actif'
         ).count() if employe.entreprise else 0
         self.constantes = self._charger_constantes()
+        self._appliquer_config_entreprise()
         self.tranches_irg = self._charger_tranches_irg()
         
         # Devise de paie de l'employé et service de conversion
@@ -124,9 +125,52 @@ class MoteurCalculPaie:
         self.date_conversion = date(self.periode.annee, self.periode.mois, 1)
     
     def _charger_constantes(self):
-        """Charger les constantes actives (avec cache)"""
-        return PayrollCacheService.get_constantes()
-    
+        """Charger les constantes actives à la date de la période (avec cache)."""
+        date_ref = date(self.periode.annee, self.periode.mois, 1)
+        return PayrollCacheService.get_constantes(date_reference=date_ref)
+
+    def _appliquer_config_entreprise(self):
+        """Surcharge les constantes globales avec la config entreprise si elle existe.
+
+        Permet à chaque entreprise d'avoir ses propres taux CNSS, VF, TA, HS
+        via l'interface /paie/configuration/ sans toucher aux constantes globales.
+        """
+        from .models import ConfigurationPaieEntreprise
+        try:
+            config = self.employe.entreprise.config_paie
+        except (AttributeError, ConfigurationPaieEntreprise.DoesNotExist):
+            return
+
+        # Mapping champ ConfigurationPaieEntreprise -> clé Constante
+        mapping = {
+            'taux_cnss_employe': 'TAUX_CNSS_EMPLOYE',
+            'taux_cnss_employeur': 'TAUX_CNSS_EMPLOYEUR',
+            'plafond_cnss': 'PLAFOND_CNSS',
+            'plancher_cnss': 'PLANCHER_CNSS',
+            'taux_versement_forfaitaire': 'TAUX_VF',
+            'taux_taxe_apprentissage': 'TAUX_TA',
+            'taux_onfpp': 'TAUX_ONFPP',
+        }
+        # HS : ConfigPaie stocke la majoration (30%), le moteur attend le coefficient (130%)
+        mapping_hs = {
+            'taux_hs_4_premieres': 'TAUX_HS_4PREM',
+            'taux_hs_au_dela': 'TAUX_HS_AUDELA',
+            'taux_hs_nuit': 'TAUX_HS_NUIT',
+            'taux_hs_dimanche': 'TAUX_HS_FERIE_JOUR',
+            'taux_hs_ferie_nuit': 'TAUX_HS_FERIE_NUIT',
+        }
+
+        for champ, cle in mapping.items():
+            valeur = getattr(config, champ, None)
+            if valeur is not None:
+                self.constantes[cle] = Decimal(str(valeur))
+
+        for champ, cle in mapping_hs.items():
+            valeur = getattr(config, champ, None)
+            if valeur is not None:
+                # Majoration (30) → coefficient (130)
+                self.constantes[cle] = Decimal(str(valeur)) + Decimal('100')
+
     def _charger_tranches_irg(self):
         """Charger le barème RTS (avec cache et fallback année précédente)"""
         # Récupérer depuis le cache pour l'année en cours
@@ -135,34 +179,39 @@ class MoteurCalculPaie:
         if tranches_data:
             return tranches_data
         
-        # Fallback: requête directe pour l'année en cours
+        # Fallback: requête directe pour l'année en cours (officiels uniquement)
         tranches = list(TrancheRTS.objects.filter(
             annee_validite=self.periode.annee,
-            actif=True
+            actif=True,
+            type_bareme='officiel',
         ).order_by('numero_tranche').values(
-            'numero_tranche', 'borne_inferieure', 
+            'numero_tranche', 'borne_inferieure',
             'borne_superieure', 'taux_irg'
         ))
-        
+
         # Si pas de tranches pour l'année en cours, chercher l'année précédente
         if not tranches:
             tranches = list(TrancheRTS.objects.filter(
                 annee_validite=self.periode.annee - 1,
-                actif=True
+                actif=True,
+                type_bareme='officiel',
             ).order_by('numero_tranche').values(
-                'numero_tranche', 'borne_inferieure', 
+                'numero_tranche', 'borne_inferieure',
                 'borne_superieure', 'taux_irg'
             ))
-        
+
         # Dernier recours: chercher la dernière année disponible
         if not tranches:
-            derniere_annee = TrancheRTS.objects.filter(actif=True).order_by('-annee_validite').values_list('annee_validite', flat=True).first()
+            derniere_annee = TrancheRTS.objects.filter(
+                actif=True, type_bareme='officiel'
+            ).order_by('-annee_validite').values_list('annee_validite', flat=True).first()
             if derniere_annee:
                 tranches = list(TrancheRTS.objects.filter(
                     annee_validite=derniere_annee,
-                    actif=True
+                    actif=True,
+                    type_bareme='officiel',
                 ).order_by('numero_tranche').values(
-                    'numero_tranche', 'borne_inferieure', 
+                    'numero_tranche', 'borne_inferieure',
                     'borne_superieure', 'taux_irg'
                 ))
         
@@ -208,6 +257,10 @@ class MoteurCalculPaie:
             'salaire_base': float(self.montants.get('salaire_base', Decimal('0'))),
             'primes': float(self.montants.get('total_primes', Decimal('0'))),
             'heures_sup': float(self.montants.get('total_heures_sup', Decimal('0'))),
+            'total_gains': float(self.montants.get('total_gains', Decimal('0'))),
+            'total_retenues': float(self.montants.get('total_retenues', Decimal('0'))),
+            'cnss_base': float(self.montants.get('cnss_base', Decimal('0'))),
+            'net': float(self.montants.get('net_a_payer', Decimal('0'))),
             'anciennete_mois': anciennete_mois,
             'anciennete_ans': anciennete_mois // 12,
             'nb_enfants': int(getattr(employe, 'nombre_enfants', 0) or 0),
@@ -470,8 +523,8 @@ class MoteurCalculPaie:
                 if element.rubrique.code_rubrique in codes_hors_base:
                     continue
                 
-                montant = self._calculer_element(element)
-                
+                montant = self._calculer_element(element, phase='gains')
+
                 self.lignes.append({
                     'rubrique': element.rubrique,
                     'base': element.montant or Decimal('0'),
@@ -480,9 +533,9 @@ class MoteurCalculPaie:
                     'montant': montant,
                     'ordre': element.rubrique.ordre_affichage
                 })
-                
+
                 self.montants['total_gains'] += montant
-                
+
                 # CNSS: le flag soumis_cnss de la rubrique détermine l'inclusion
                 if element.rubrique.soumis_cnss:
                     self.montants['cnss_base'] += montant
@@ -502,13 +555,26 @@ class MoteurCalculPaie:
         # Appliquer l'exonération RTS des indemnités forfaitaires (intégrale, CGI Guinée)
         self._appliquer_exoneration_indemnites_forfaitaires()
     
-    def _calculer_element(self, element):
-        """Calculer le montant d'un élément"""
+    def _calculer_element(self, element, phase=None):
+        """Calculer le montant d'un élément (montant fixe, taux, ou formule).
+
+        :param phase: Phase de calcul (gains/cotisations/fiscal/retenues/net)
+                      pour restreindre les variables accessibles dans les formules.
+        """
         if element.montant:
             return self._arrondir(element.montant)
         elif element.taux and element.base_calcul:
             base = self._obtenir_base_calcul(element.base_calcul)
             return self._arrondir(base * element.taux / Decimal('100'))
+        elif element.rubrique.mode_calcul == 'formule' and element.rubrique.formule_calcul:
+            from .formules import evaluer_formule
+            variables = self._construire_variables_formule()
+            try:
+                return self._arrondir(evaluer_formule(
+                    element.rubrique.formule_calcul, variables, phase=phase
+                ))
+            except ValueError:
+                return Decimal('0')
         return Decimal('0')
     
     def _obtenir_base_calcul(self, code_base):
@@ -870,7 +936,8 @@ class MoteurCalculPaie:
         # TA et ONFPP sont mutuellement exclusifs selon le nombre de salariés:
         # - Moins de 30 salariés: TA (2%) sur brut
         # - 30 salariés ou plus: ONFPP (1,5%) sur brut
-        if self.nb_salaries < 30:
+        seuil_ta_onfpp = int(self.constantes.get('SEUIL_TA_ONFPP', Decimal('30')))
+        if self.nb_salaries < seuil_ta_onfpp:
             taux_ta = self.constantes.get('TAUX_TA', Decimal('2.00'))
             self.montants['base_ta'] = base_vf_nette
             self.montants['taux_ta'] = taux_ta
@@ -898,20 +965,29 @@ class MoteurCalculPaie:
     
     def _calculer_autres_cotisations(self):
         """Calculer les autres cotisations (mutuelle, retraite, etc.)"""
+        # Calculer les bornes du mois pour filtrer par date
+        dernier_jour = calendar.monthrange(self.periode.annee, self.periode.mois)[1]
+        fin_mois = date(self.periode.annee, self.periode.mois, dernier_jour)
+        debut_mois = date(self.periode.annee, self.periode.mois, 1)
+
         # Récupérer les éléments de retenue de type cotisation
         elements_cotis = ElementSalaire.objects.filter(
             employe=self.employe,
-            rubrique__type_rubrique='retenue',
+            rubrique__type_rubrique__in=['retenue', 'cotisation'],
             rubrique__code_rubrique__in=[
                 'RETRAITE_COMPL_SAL', 'ASSUR_SANTE_COMPL',
                 'FONDS_SOLID_TELECOM', 'COTIS_SYNDICAT_PROG',
                 'MUTUELLE_ENT'
             ],
-            actif=True
+            actif=True,
+            date_debut__lte=fin_mois
+        ).filter(
+            models.Q(date_fin__isnull=True) |
+            models.Q(date_fin__gte=debut_mois)
         ).select_related('rubrique')
         
         for element in elements_cotis:
-            montant = self._calculer_element(element)
+            montant = self._calculer_element(element, phase='cotisations')
             
             self.lignes.append({
                 'rubrique': element.rubrique,
@@ -1083,9 +1159,9 @@ class MoteurCalculPaie:
     
     def _calculer_abattement_professionnel(self, base):
         """Calculer l'abattement professionnel (5% plafonné)"""
-        taux_abattement = Decimal('5.00')
-        plafond = Decimal('1000000')
-        
+        taux_abattement = self.constantes.get('TAUX_ABATTEMENT_PRO', Decimal('5.00'))
+        plafond = self.constantes.get('PLAFOND_ABATTEMENT_PRO', Decimal('1000000'))
+
         abattement = base * taux_abattement / Decimal('100')
         return min(abattement, plafond)
     
@@ -1156,22 +1232,46 @@ class MoteurCalculPaie:
     
     def _calculer_autres_retenues(self):
         """Calculer les autres retenues (avances, prêts, etc.)"""
-        # Récupérer les éléments de retenue non-cotisation
+        # Codes déjà traités par CNSS, RTS et rappels/manquements — à exclure
+        codes_deja_traites = [
+            'RAPPEL_SALAIRE', 'COMPLEMENT_SALAIRE',
+            'RETENUE_TROP_PERCU', 'MANQUEMENT_SALAIRE',
+        ]
+
+        # Calculer les bornes du mois pour filtrer par date
+        dernier_jour = calendar.monthrange(self.periode.annee, self.periode.mois)[1]
+        fin_mois = date(self.periode.annee, self.periode.mois, dernier_jour)
+        debut_mois = date(self.periode.annee, self.periode.mois, 1)
+
+        # Récupérer TOUTES les retenues actives, sauf celles déjà traitées
+        # et sauf les cotisations (traitées dans _calculer_autres_cotisations)
         elements_retenues = ElementSalaire.objects.filter(
             employe=self.employe,
             rubrique__type_rubrique='retenue',
+            actif=True,
+            date_debut__lte=fin_mois
+        ).filter(
+            models.Q(date_fin__isnull=True) |
+            models.Q(date_fin__gte=debut_mois)
+        ).exclude(
+            rubrique__code_rubrique__in=codes_deja_traites
+        ).exclude(
+            # Exclure les rubriques CNSS (déjà calculées dans _calculer_cotisations_sociales)
+            rubrique__code_rubrique__icontains='CNSS'
+        ).exclude(
+            # Exclure les rubriques RTS/IRG (déjà calculées dans _calculer_irg)
+            rubrique__code_rubrique__iregex=r'(IRS|IRG|RTS|IRPP)'
+        ).exclude(
+            # Exclure cotisations déjà traitées dans _calculer_autres_cotisations
             rubrique__code_rubrique__in=[
-                'AVANCE_SAL', 'AVANCE_SAL_REGUL', 'RET_SYNDICAT',
-                'PRET_LOGEMENT', 'PRET_LOGEMENT_REMBOURS',
-                'RET_DISCIPLINAIRE', 'RET_DISCIPL_LEGER',
-                'COTIS_ORDRE_PROF', 'EPARGNE_RETRAITE_VOL',
-                'PLAN_EPARGNE_SAL', 'MUTUELLE_SUPP_VOL'
-            ],
-            actif=True
+                'RETRAITE_COMPL_SAL', 'ASSUR_SANTE_COMPL',
+                'FONDS_SOLID_TELECOM', 'COTIS_SYNDICAT_PROG',
+                'MUTUELLE_ENT'
+            ]
         ).select_related('rubrique')
         
         for element in elements_retenues:
-            montant = element.montant or Decimal('0')
+            montant = self._calculer_element(element, phase='retenues')
             
             self.lignes.append({
                 'rubrique': element.rubrique,
@@ -1190,11 +1290,20 @@ class MoteurCalculPaie:
         du mois précédent. Ces montants ne sont PAS inclus dans la base de calcul
         (CNSS, RTS, VF, TA, ONFPP) — ils affectent uniquement le net à payer.
         """
+        # Calculer les bornes du mois pour filtrer par date
+        dernier_jour = calendar.monthrange(self.periode.annee, self.periode.mois)[1]
+        fin_mois = date(self.periode.annee, self.periode.mois, dernier_jour)
+        debut_mois = date(self.periode.annee, self.periode.mois, 1)
+
         elements_rappels = ElementSalaire.objects.filter(
             employe=self.employe,
             rubrique__type_rubrique='gain',
             rubrique__code_rubrique__in=['RAPPEL_SALAIRE', 'COMPLEMENT_SALAIRE'],
-            actif=True
+            actif=True,
+            date_debut__lte=fin_mois
+        ).filter(
+            models.Q(date_fin__isnull=True) |
+            models.Q(date_fin__gte=debut_mois)
         ).select_related('rubrique')
         
         for element in elements_rappels:
@@ -1214,7 +1323,11 @@ class MoteurCalculPaie:
             employe=self.employe,
             rubrique__type_rubrique='retenue',
             rubrique__code_rubrique__in=['RETENUE_TROP_PERCU', 'MANQUEMENT_SALAIRE'],
-            actif=True
+            actif=True,
+            date_debut__lte=fin_mois
+        ).filter(
+            models.Q(date_fin__isnull=True) |
+            models.Q(date_fin__gte=debut_mois)
         ).select_related('rubrique')
         
         for element in elements_trop_percu:
@@ -1229,7 +1342,36 @@ class MoteurCalculPaie:
                     'montant': montant,
                     'ordre': element.rubrique.ordre_affichage
                 })
-    
+
+    def _construire_snapshot(self):
+        """Construit un snapshot JSON des paramètres utilisés pour ce calcul.
+
+        Permet de reproduire exactement le même calcul ultérieurement,
+        même si les constantes ou le barème RTS changent entre-temps.
+        """
+        # Constantes utilisées (déjà surchargées par config entreprise)
+        constantes_snapshot = {
+            k: str(v) for k, v in self.constantes.items()
+        }
+
+        # Barème RTS
+        bareme_rts = []
+        for t in self.tranches_irg:
+            bareme_rts.append({
+                'tranche': t.get('numero_tranche'),
+                'min': str(t.get('borne_inferieure', 0)),
+                'max': str(t.get('borne_superieure', '')),
+                'taux': str(t.get('taux_irg', 0)),
+            })
+
+        return {
+            'version': '1.0',
+            'constantes': constantes_snapshot,
+            'bareme_rts': bareme_rts,
+            'nb_salaries': self.nb_salaries,
+            'devise': str(self.devise_employe) if self.devise_employe else None,
+        }
+
     @transaction.atomic
     def generer_bulletin(self, utilisateur=None):
         """Générer le bulletin de paie dans la base de données"""
@@ -1289,6 +1431,9 @@ class MoteurCalculPaie:
         bulletin_data['abattement_forfaitaire'] = self.montants.get('abattement_forfaitaire', Decimal('0'))
         bulletin_data['base_vf'] = self.montants.get('base_vf', Decimal('0'))
         bulletin_data['nombre_salaries'] = self.nb_salaries
+
+        # Snapshot des paramètres figés pour audit et reproductibilité
+        bulletin_data['snapshot_parametres'] = self._construire_snapshot()
         
         # ✨ NOUVEAU: Calculer et créer automatiquement les congés acquis
         # Cela crée/met à jour le SoldeConge avec ancienneté-based calculation

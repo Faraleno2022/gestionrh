@@ -7,6 +7,7 @@ from . import views_pret
 from . import views_frais
 from . import views_parametres
 from . import views_rapports
+from . import views_simulation
 
 app_name = 'paie'
 
@@ -84,8 +85,16 @@ urlpatterns = [
     path('historique/telecharger-masse/', views.telecharger_bulletins_masse, name='telecharger_bulletins_masse'),
     path('attestation/<int:employe_id>/', views.attestation_salaire, name='attestation_salaire'),
     
-    # Simulation de paie
+    # Simulation de paie (simple)
     path('simulation/', views.simulation_paie, name='simulation_paie'),
+
+    # Simulation fiscale comparative multi-barèmes
+    path('simulation/comparative/', views_simulation.simulation_comparative, name='simulation_comparative'),
+    path('simulation/historique/', views_simulation.historique_simulations, name='historique_simulations'),
+    path('simulation/historique/<int:pk>/', views_simulation.detail_simulation, name='detail_simulation'),
+    path('simulation/historique/<int:pk>/supprimer/', views_simulation.supprimer_simulation, name='supprimer_simulation'),
+    path('simulation/historique/<int:pk>/csv/', views_simulation.export_simulation_csv, name='export_simulation_csv'),
+    path('api/baremes-disponibles/', views_simulation.api_baremes_disponibles, name='api_baremes_disponibles'),
     
     # Gestion des prêts
     path('prets/', views_pret.liste_prets, name='liste_prets'),
@@ -122,6 +131,16 @@ urlpatterns = [
     path('parametres/calcul/tester-formule/', views_parametres.tester_formule_ajax, name='tester_formule'),
     path('parametres/calcul/valider-formule/', views_parametres.valider_formule_ajax, name='valider_formule'),
     path('parametres/calcul/historique/', views_parametres.historique_parametres_paie, name='historique_parametres'),
+
+    # Constantes de paie
+    path('parametres/constantes/', views_parametres.liste_constantes, name='liste_constantes'),
+    path('parametres/constantes/<int:pk>/modifier/', views_parametres.modifier_constante, name='modifier_constante'),
+
+    # Barème RTS
+    path('parametres/bareme-rts/', views_parametres.liste_tranches_rts, name='liste_tranches_rts'),
+    path('parametres/bareme-rts/ajouter/', views_parametres.ajouter_tranche_rts, name='ajouter_tranche_rts'),
+    path('parametres/bareme-rts/<int:pk>/modifier/', views_parametres.modifier_tranche_rts, name='modifier_tranche_rts'),
+    path('parametres/bareme-rts/dupliquer/', views_parametres.dupliquer_bareme_rts, name='dupliquer_bareme_rts'),
 
     # Rapports avancés
     path('rapports/masse-salariale/', views_rapports.rapport_masse_salariale, name='rapport_masse_salariale'),

@@ -569,7 +569,7 @@ def generer_bulletin_pdf(bulletin):
             "25%",
             f"-{abattement_exo:,.0f}".replace(",", " ")
         ])
-    retenues_data.append(["RTS (Impôt sur le revenu \u2013 barème progressif)", rts_base_str, "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
+    retenues_data.append(["RTS (Impôt sur le revenu \u2013 barème progressif)", rts_base_str, f"moy. {taux_eff_rts_val:.2f}%" if taux_eff_rts_val else "-", f"{bulletin.irg:,.0f}".replace(",", " ")])
 
     # Vérifier espace avant de dessiner la section retenues
     ret_table_height = len(retenues_data) * row_height
@@ -1059,7 +1059,7 @@ def generer_bulletin_pdf_sdbk(bulletin):
     # ── RTS ──
     base_rts = float(getattr(bulletin, 'base_rts', 0) or 0)
     taux_rts = float(getattr(bulletin, 'taux_effectif_rts', 0) or 0)
-    td.append(['', 'RTS (Imp\u00f4t sur le revenu)', '', _fmt(base_rts), '', '', _fmt0(bulletin.irg), '', '', ''])
+    td.append(['', f'RTS (Imp\u00f4t sur le revenu \u2013 moy. {taux_rts:.2f}%)' if taux_rts else 'RTS (Imp\u00f4t sur le revenu)', '', _fmt(base_rts), '', '', _fmt0(bulletin.irg), '', '', ''])
 
     # ── Versement Forfaitaire ──
     vf    = float(getattr(bulletin, 'versement_forfaitaire', 0) or 0)

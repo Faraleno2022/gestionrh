@@ -2,6 +2,7 @@
 Vues pour les paramètres de calcul de paie personnalisés.
 """
 import json
+import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -235,3 +236,245 @@ def valider_formule_ajax(request):
     if resultat.get('resultat_test') is not None:
         resultat['resultat_test'] = float(resultat['resultat_test'])
     return JsonResponse(resultat)
+
+
+# ---------------------------------------------------------------------------
+# CONSTANTES DE PAIE — liste + modification
+# ---------------------------------------------------------------------------
+
+@login_required
+@entreprise_active_required
+def liste_constantes(request):
+    """Liste des constantes de paie avec filtre par catégorie."""
+    from .models import Constante
+
+    categorie = request.GET.get('categorie', '')
+    qs = Constante.objects.all()
+    if categorie:
+        qs = qs.filter(categorie=categorie)
+
+    return render(request, 'paie/constantes/liste.html', {
+        'constantes': qs,
+        'categorie_active': categorie,
+        'categories': Constante.CATEGORIES,
+        'peut_modifier': _utilisateur_peut_modifier(request.user),
+    })
+
+
+@login_required
+@entreprise_active_required
+@reauth_required
+def modifier_constante(request, pk):
+    """Modifier la valeur d'une constante de paie."""
+    from decimal import Decimal
+    from .models import Constante
+
+    constante = get_object_or_404(Constante, pk=pk)
+
+    if not _utilisateur_peut_modifier(request.user):
+        messages.error(request, "Droits insuffisants pour modifier les constantes.")
+        return redirect('paie:liste_constantes')
+
+    if request.method == 'POST':
+        ancienne_valeur = constante.valeur
+        try:
+            nouvelle_valeur = Decimal(request.POST.get('valeur', '0'))
+        except Exception:
+            messages.error(request, "Valeur invalide.")
+            return redirect('paie:modifier_constante', pk=pk)
+
+        constante.valeur = nouvelle_valeur
+        constante.save()
+
+        messages.success(
+            request,
+            f"Constante {constante.code} modifiée : {ancienne_valeur} → {nouvelle_valeur}"
+        )
+        return redirect('paie:liste_constantes')
+
+    return render(request, 'paie/constantes/modifier.html', {
+        'constante': constante,
+    })
+
+
+# ---------------------------------------------------------------------------
+# BARÈME RTS — liste, ajout, modification, duplication
+# ---------------------------------------------------------------------------
+
+@login_required
+@entreprise_active_required
+def liste_tranches_rts(request):
+    """Barème RTS par année, avec simulation inline et filtre type_bareme."""
+    from .models import TrancheRTS
+
+    annee = request.GET.get('annee', '')
+    if annee:
+        try:
+            annee = int(annee)
+        except ValueError:
+            annee = datetime.date.today().year
+    else:
+        annee = datetime.date.today().year
+
+    type_filtre = request.GET.get('type', '')  # officiel / simulation / test / '' (tous)
+
+    qs = TrancheRTS.objects.filter(annee_validite=annee)
+    if type_filtre:
+        qs = qs.filter(type_bareme=type_filtre)
+    tranches = qs.order_by('numero_tranche')
+
+    annees_dispo = (
+        TrancheRTS.objects.values_list('annee_validite', flat=True)
+        .distinct().order_by('-annee_validite')
+    )
+
+    return render(request, 'paie/tranches_rts/liste.html', {
+        'tranches': tranches,
+        'annee_active': annee,
+        'annees_dispo': annees_dispo,
+        'type_filtre': type_filtre,
+        'types_bareme': TrancheRTS.TYPES_BAREME,
+        'peut_modifier': _utilisateur_peut_modifier(request.user),
+    })
+
+
+@login_required
+@entreprise_active_required
+@reauth_required
+def ajouter_tranche_rts(request):
+    """Ajouter une tranche au barème RTS."""
+    from decimal import Decimal
+    from .models import TrancheRTS
+
+    if not _utilisateur_peut_modifier(request.user):
+        messages.error(request, "Droits insuffisants.")
+        return redirect('paie:liste_tranches_rts')
+
+    if request.method == 'POST':
+        try:
+            type_bareme = request.POST.get('type_bareme', 'officiel')
+            if type_bareme not in ('officiel', 'simulation', 'test'):
+                type_bareme = 'officiel'
+            TrancheRTS.objects.create(
+                numero_tranche=int(request.POST.get('numero_tranche', 1)),
+                borne_inferieure=Decimal(request.POST.get('borne_inferieure', '0')),
+                borne_superieure=Decimal(request.POST.get('borne_superieure', '0')) or None,
+                taux_irg=Decimal(request.POST.get('taux', '0')),
+                annee_validite=int(request.POST.get('annee', datetime.date.today().year)),
+                date_debut_validite=datetime.date(
+                    int(request.POST.get('annee', datetime.date.today().year)), 1, 1
+                ),
+                type_bareme=type_bareme,
+                actif=True,
+            )
+            messages.success(request, "Tranche ajoutée avec succès.")
+        except Exception as e:
+            messages.error(request, f"Erreur : {e}")
+        return redirect('paie:liste_tranches_rts')
+
+    annee = request.GET.get('annee', datetime.date.today().year)
+    return render(request, 'paie/tranches_rts/ajouter.html', {
+        'annee': annee,
+    })
+
+
+@login_required
+@entreprise_active_required
+@reauth_required
+def modifier_tranche_rts(request, pk):
+    """Modifier une tranche du barème RTS."""
+    from decimal import Decimal
+    from .models import TrancheRTS
+
+    tranche = get_object_or_404(TrancheRTS, pk=pk)
+
+    if not _utilisateur_peut_modifier(request.user):
+        messages.error(request, "Droits insuffisants.")
+        return redirect('paie:liste_tranches_rts')
+
+    if request.method == 'POST':
+        try:
+            tranche.numero_tranche = int(request.POST.get('numero_tranche', tranche.numero_tranche))
+            tranche.borne_inferieure = Decimal(request.POST.get('borne_inferieure', '0'))
+            bs = request.POST.get('borne_superieure', '').strip()
+            tranche.borne_superieure = Decimal(bs) if bs else None
+            tranche.taux_irg = Decimal(request.POST.get('taux', '0'))
+            type_bareme = request.POST.get('type_bareme', tranche.type_bareme)
+            if type_bareme in ('officiel', 'simulation', 'test'):
+                tranche.type_bareme = type_bareme
+            tranche.actif = request.POST.get('actif') == 'on'
+            tranche.save()
+            messages.success(request, f"Tranche {tranche.numero_tranche} modifiée.")
+        except Exception as e:
+            messages.error(request, f"Erreur : {e}")
+        return redirect('paie:liste_tranches_rts')
+
+    return render(request, 'paie/tranches_rts/modifier.html', {
+        'tranche': tranche,
+    })
+
+
+@login_required
+@entreprise_active_required
+@reauth_required
+def dupliquer_bareme_rts(request):
+    """Dupliquer le barème RTS d'une année vers une autre."""
+    from .models import TrancheRTS
+
+    if not _utilisateur_peut_modifier(request.user):
+        messages.error(request, "Droits insuffisants.")
+        return redirect('paie:liste_tranches_rts')
+
+    if request.method == 'POST':
+        try:
+            annee_source = int(request.POST.get('annee_source', 0))
+            annee_cible = int(request.POST.get('annee_cible', 0))
+
+            if annee_source == annee_cible:
+                messages.error(request, "L'année source et cible doivent être différentes.")
+                return redirect('paie:liste_tranches_rts')
+
+            tranches_source = TrancheRTS.objects.filter(
+                annee_validite=annee_source, actif=True, type_bareme='officiel'
+            )
+            if not tranches_source.exists():
+                messages.error(request, f"Aucune tranche officielle trouvée pour {annee_source}.")
+                return redirect('paie:liste_tranches_rts')
+
+            # Supprimer les tranches officielles existantes pour l'année cible
+            nb_sup = TrancheRTS.objects.filter(
+                annee_validite=annee_cible, type_bareme='officiel'
+            ).delete()[0]
+
+            nb_crees = 0
+            for t in tranches_source:
+                TrancheRTS.objects.create(
+                    numero_tranche=t.numero_tranche,
+                    borne_inferieure=t.borne_inferieure,
+                    borne_superieure=t.borne_superieure,
+                    taux_irg=t.taux_irg,
+                    annee_validite=annee_cible,
+                    date_debut_validite=datetime.date(annee_cible, 1, 1),
+                    type_bareme='officiel',
+                    actif=True,
+                )
+                nb_crees += 1
+
+            messages.success(
+                request,
+                f"Barème {annee_source} dupliqué vers {annee_cible} ({nb_crees} tranches créées)."
+            )
+        except Exception as e:
+            messages.error(request, f"Erreur : {e}")
+
+        return redirect('paie:liste_tranches_rts')
+
+    annees_dispo = (
+        TrancheRTS.objects.values_list('annee_validite', flat=True)
+        .distinct().order_by('-annee_validite')
+    )
+    annee_courante = datetime.date.today().year
+    return render(request, 'paie/tranches_rts/dupliquer.html', {
+        'annees_dispo': annees_dispo,
+        'annee_suivante': annee_courante + 1,
+    })

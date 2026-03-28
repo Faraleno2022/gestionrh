@@ -1,19 +1,52 @@
 """
-Moteur d'évaluation de formules de paie — sécurisé (sans exec/import).
+Moteur d'évaluation de formules de paie — sécurisé via simpleeval.
+
+Aucun eval()/exec() — utilise simpleeval qui ne permet pas :
+  - import, accès fichier, accès réseau
+  - accès à __builtins__, os, sys, subprocess
+  - boucles infinies (limité en profondeur)
 
 Variables disponibles dans les formules :
   brut, cnss, indemnites, salaire_base, primes, heures_sup,
+  total_gains, total_retenues, cnss_base, net,
   anciennete_mois, anciennete_ans, nb_enfants, nb_conjoints, plafond_cnss
+
+Phases de calcul (restreignent les variables accessibles) :
+  gains       → salaire_base, anciennete_*, nb_*, plafond_cnss
+  cotisations → + brut, total_gains, cnss_base, indemnites, primes, heures_sup
+  fiscal      → + cnss
+  retenues    → + total_retenues (tout sauf net)
+  net         → toutes les variables
 """
-import math
+import re
 from decimal import Decimal
+
+from simpleeval import simple_eval, NameNotDefined, InvalidExpression
+
+# ---------------------------------------------------------------------------
+# Variables & phases
+# ---------------------------------------------------------------------------
 
 VARIABLES_AUTORISEES = {
     'brut', 'cnss', 'indemnites', 'salaire_base', 'primes',
-    'heures_sup', 'anciennete_mois', 'anciennete_ans',
+    'heures_sup', 'total_gains', 'total_retenues', 'cnss_base', 'net',
+    'anciennete_mois', 'anciennete_ans',
     'nb_enfants', 'nb_conjoints', 'plafond_cnss',
 }
 
+_VARS_EMPLOYE = {'salaire_base', 'anciennete_mois', 'anciennete_ans',
+                 'nb_enfants', 'nb_conjoints', 'plafond_cnss'}
+VARIABLES_PAR_PHASE = {
+    'gains':       _VARS_EMPLOYE,
+    'cotisations': _VARS_EMPLOYE | {'brut', 'total_gains', 'cnss_base',
+                                     'indemnites', 'primes', 'heures_sup'},
+    'fiscal':      _VARS_EMPLOYE | {'brut', 'total_gains', 'cnss_base',
+                                     'indemnites', 'primes', 'heures_sup', 'cnss'},
+    'retenues':    VARIABLES_AUTORISEES - {'net'},
+    'net':         VARIABLES_AUTORISEES,
+}
+
+# Fonctions autorisées dans les formules
 FONCTIONS_AUTORISEES = {
     'min': min,
     'max': max,
@@ -23,7 +56,7 @@ FONCTIONS_AUTORISEES = {
     'float': float,
 }
 
-# Mots interdits dans les formules (protection injection)
+# Mots interdits dans les formules (double sécurité en plus de simpleeval)
 MOTS_INTERDITS = [
     'import', 'exec', 'eval', 'open', 'file', '__',
     'os', 'sys', 'subprocess', 'builtins', 'globals',
@@ -32,14 +65,18 @@ MOTS_INTERDITS = [
 ]
 
 
-def evaluer_formule(formule: str, variables: dict) -> Decimal:
+# ---------------------------------------------------------------------------
+# Évaluation sécurisée
+# ---------------------------------------------------------------------------
+
+def evaluer_formule(formule: str, variables: dict, phase: str = None) -> Decimal:
     """
-    Évalue une formule de paie de manière sécurisée.
+    Évalue une formule de paie via simpleeval (sandboxé, pas de eval/exec).
 
-    Retourne le résultat en Decimal (>= 0), ou lève ValueError si erreur.
-
-    :param formule: Expression Python simple (ex: ``brut * 0.25``)
+    :param formule: Expression simple (ex: ``brut * 0.25``, ``min(indemnites, brut * 0.25)``)
     :param variables: Dictionnaire des valeurs (clés = noms de variables)
+    :param phase: Phase de calcul (gains/cotisations/fiscal/retenues/net).
+                  Restreint les variables accessibles pour éviter les dépendances circulaires.
     :raises ValueError: Si la formule est vide, contient des mots interdits ou est invalide
     """
     if not formule or not formule.strip():
@@ -50,19 +87,39 @@ def evaluer_formule(formule: str, variables: dict) -> Decimal:
         if mot in formule_lower:
             raise ValueError(f"Mot interdit dans la formule : '{mot}'")
 
-    # Construire le namespace d'évaluation
-    namespace = dict(FONCTIONS_AUTORISEES)
-    for var in VARIABLES_AUTORISEES:
-        namespace[var] = float(variables.get(var, 0))
+    # Déterminer les variables accessibles selon la phase
+    vars_autorisees = VARIABLES_PAR_PHASE.get(phase, VARIABLES_AUTORISEES) if phase else VARIABLES_AUTORISEES
+
+    # Construire le namespace filtré
+    names = {}
+    for var in vars_autorisees:
+        names[var] = float(variables.get(var, 0))
 
     try:
-        resultat = eval(formule, {"__builtins__": {}}, namespace)  # noqa: S307
+        resultat = simple_eval(
+            formule,
+            names=names,
+            functions=FONCTIONS_AUTORISEES,
+        )
         return Decimal(str(max(0.0, float(resultat))))
     except ZeroDivisionError:
         return Decimal('0')
+    except NameNotDefined as exc:
+        if phase:
+            raise ValueError(
+                f"Variable indisponible en phase '{phase}' dans la formule '{formule}'. "
+                f"Variables autorisées : {', '.join(sorted(vars_autorisees))}"
+            ) from exc
+        raise ValueError(f"Erreur dans la formule '{formule}' : {exc}") from exc
+    except (InvalidExpression, SyntaxError, TypeError) as exc:
+        raise ValueError(f"Formule invalide '{formule}' : {exc}") from exc
     except Exception as exc:
         raise ValueError(f"Erreur dans la formule '{formule}' : {exc}") from exc
 
+
+# ---------------------------------------------------------------------------
+# Exemples de formules (aide UI)
+# ---------------------------------------------------------------------------
 
 EXEMPLES_FORMULES = {
     'exoneration': [
@@ -85,6 +142,10 @@ EXEMPLES_FORMULES = {
     ],
 }
 
+
+# ---------------------------------------------------------------------------
+# Validation & test
+# ---------------------------------------------------------------------------
 
 def valider_formule(formule: str) -> dict:
     """
@@ -115,7 +176,6 @@ def valider_formule(formule: str) -> dict:
         return {'valide': False, 'erreurs': erreurs, 'avertissements': avertissements, 'resultat_test': None}
 
     # Détection division par zéro potentielle
-    import re
     if re.search(r'/\s*(0(?:[^.]|$)|\bbrut\b|\bsalaire_base\b)', formule_lower):
         avertissements.append(
             "Division potentielle par zéro détectée : vérifiez les diviseurs (ex. brut, salaire_base) "
@@ -125,16 +185,14 @@ def valider_formule(formule: str) -> dict:
     # Test avec valeurs d'exemple
     test = tester_formule(formule)
     if not test.get('succes'):
-        erreurs.append(test.get('erreur', 'Erreur d\'évaluation inconnue'))
+        erreurs.append(test.get('erreur', "Erreur d'évaluation inconnue"))
         return {'valide': False, 'erreurs': erreurs, 'avertissements': avertissements, 'resultat_test': None}
 
     resultat_test = test['resultat']
 
-    # Vérification résultat positif (tester_formule retourne déjà max(0, …) mais on logue l'avert.)
     if float(resultat_test) < 0:
         avertissements.append("Le résultat calculé est négatif (sera ramené à 0).")
 
-    # Vérification plage réaliste (0 à 100 000 000 GNF)
     PLAFOND_MAX = 100_000_000
     if float(resultat_test) > PLAFOND_MAX:
         avertissements.append(
@@ -165,6 +223,10 @@ def tester_formule(formule: str) -> dict:
         'salaire_base': 2_000_000,
         'primes': 300_000,
         'heures_sup': 150_000,
+        'total_gains': 3_000_000,
+        'total_retenues': 316_400,
+        'cnss_base': 2_500_000,
+        'net': 2_683_600,
         'anciennete_mois': 24,
         'anciennete_ans': 2,
         'nb_enfants': 2,

@@ -184,6 +184,12 @@ class BulletinPaie(models.Model):
     statut_bulletin = models.CharField(max_length=20, choices=STATUTS, default='brouillon')
     date_calcul = models.DateTimeField(blank=True, null=True)
     observations = models.TextField(blank=True, null=True)
+
+    # Snapshot des paramètres figés au moment du calcul (audit + reproductibilité)
+    snapshot_parametres = models.JSONField(
+        blank=True, null=True,
+        help_text='Paramètres figés au calcul : constantes, barème RTS, config entreprise'
+    )
     
     # Token pour accès public au PDF
     token_public = models.CharField(max_length=64, blank=True, null=True, unique=True,
@@ -207,6 +213,43 @@ class BulletinPaie(models.Model):
     
     def __str__(self):
         return f"{self.numero_bulletin} - {self.employe.nom} {self.employe.prenoms}"
+
+    # --- Verrouillage des bulletins validés ---
+    STATUTS_VERROUILLES = ('valide', 'paye')
+    # Champs modifiables même sur un bulletin verrouillé (token, observations)
+    _CHAMPS_TOUJOURS_MODIFIABLES = frozenset({
+        'token_public', 'observations', 'statut_bulletin',
+    })
+
+    @property
+    def est_verrouille(self):
+        """True si le bulletin est validé ou payé (non modifiable)."""
+        return self.statut_bulletin in self.STATUTS_VERROUILLES
+
+    def save(self, *args, **kwargs):
+        """Empêche la modification d'un bulletin verrouillé sauf champs autorisés."""
+        if self.pk and self.est_verrouille:
+            update_fields = kwargs.get('update_fields')
+            if update_fields:
+                champs_interdits = set(update_fields) - self._CHAMPS_TOUJOURS_MODIFIABLES
+                if champs_interdits:
+                    raise PermissionError(
+                        f"Bulletin {self.numero_bulletin} verrouillé (statut={self.statut_bulletin}). "
+                        f"Impossible de modifier : {', '.join(sorted(champs_interdits))}"
+                    )
+            else:
+                # save() complet sur bulletin verrouillé → vérifier si c'est un changement de statut
+                if self.pk:
+                    try:
+                        ancien = BulletinPaie.objects.only('statut_bulletin').get(pk=self.pk)
+                        if ancien.statut_bulletin in self.STATUTS_VERROUILLES and self.statut_bulletin in self.STATUTS_VERROUILLES:
+                            raise PermissionError(
+                                f"Bulletin {self.numero_bulletin} verrouillé (statut={ancien.statut_bulletin}). "
+                                f"Recalculez la période pour le débloquer."
+                            )
+                    except BulletinPaie.DoesNotExist:
+                        pass
+        super().save(*args, **kwargs)
     
     def generer_token_public(self):
         """Génère un token unique pour l'accès public au PDF"""
@@ -216,6 +259,11 @@ class BulletinPaie(models.Model):
             self.save(update_fields=['token_public'])
         return self.token_public
     
+    @property
+    def total_charges_patronales(self):
+        """Total des charges patronales (CNSS + VF + TA ou ONFPP)"""
+        return (self.cnss_employeur or 0) + (self.versement_forfaitaire or 0) + (self.taxe_apprentissage or 0) + (self.contribution_onfpp or 0)
+
     @property
     def rts(self):
         """Alias RTS pour irg (Retenue à la Source = ancien IRG)"""
@@ -348,12 +396,22 @@ class Constante(models.Model):
 
 class TrancheRTS(models.Model):
     """Tranches du barème RTS"""
+    TYPES_BAREME = (
+        ('officiel', 'Officiel (en vigueur)'),
+        ('simulation', 'Simulation'),
+        ('test', 'Test'),
+    )
+
     numero_tranche = models.IntegerField()
     borne_inferieure = models.DecimalField(max_digits=15, decimal_places=2)
     borne_superieure = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, help_text="Null = illimité")
     # Champ historique IRG – alias taux_rts utilisé côté métier (Option C)
     taux_irg = models.DecimalField(max_digits=5, decimal_places=2, help_text="Taux en %")
     annee_validite = models.IntegerField()
+    type_bareme = models.CharField(
+        max_length=20, choices=TYPES_BAREME, default='officiel',
+        help_text='Officiel = utilisé pour les bulletins, Simulation/Test = comparaison uniquement'
+    )
     date_debut_validite = models.DateField()
     date_fin_validite = models.DateField(null=True, blank=True)
     actif = models.BooleanField(default=True)

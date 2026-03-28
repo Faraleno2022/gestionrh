@@ -31,25 +31,37 @@ class PayrollCacheService:
     PREFIX_EMPLOYE = 'paie:employe'
     
     @classmethod
-    def get_constantes(cls, force_refresh: bool = False) -> Dict[str, Decimal]:
+    def get_constantes(cls, force_refresh: bool = False, date_reference=None) -> Dict[str, Decimal]:
         """
-        Récupère les constantes de paie avec cache.
-        
+        Récupère les constantes de paie avec cache, filtrées par date de validité.
+
+        :param date_reference: Date pour filtrer par validité (date_debut <= ref <= date_fin).
+                               Si None, retourne toutes les constantes actives (compatibilité).
         Returns:
             Dict mapping code -> valeur
         """
-        cache_key = cls.PREFIX_CONSTANTES
-        
+        suffix = f":{date_reference.isoformat()}" if date_reference else ""
+        cache_key = f"{cls.PREFIX_CONSTANTES}{suffix}"
+
         if not force_refresh:
             cached = cache.get(cache_key)
             if cached is not None:
                 return cached
-        
+
+        from django.db import models as _m
         from .models import Constante
+
+        qs = Constante.objects.filter(actif=True)
+        if date_reference:
+            qs = qs.filter(date_debut_validite__lte=date_reference).filter(
+                _m.Q(date_fin_validite__isnull=True) |
+                _m.Q(date_fin_validite__gte=date_reference)
+            )
+
         constantes = {}
-        for const in Constante.objects.filter(actif=True).only('code', 'valeur'):
+        for const in qs.only('code', 'valeur'):
             constantes[const.code] = const.valeur
-        
+
         cache.set(cache_key, constantes, cls.CACHE_TIMEOUT_CONSTANTES)
         return constantes
     
@@ -75,35 +87,40 @@ class PayrollCacheService:
         tranches = list(
             TrancheRTS.objects.filter(
                 annee_validite=annee,
-                actif=True
+                actif=True,
+                type_bareme='officiel',
             ).order_by('numero_tranche').values(
-                'numero_tranche', 'borne_inferieure', 
+                'numero_tranche', 'borne_inferieure',
                 'borne_superieure', 'taux_irg'
             )
         )
-        
+
         # Fallback: année précédente si pas de tranches pour l'année demandée
         if not tranches:
             tranches = list(
                 TrancheRTS.objects.filter(
                     annee_validite=annee - 1,
-                    actif=True
+                    actif=True,
+                    type_bareme='officiel',
                 ).order_by('numero_tranche').values(
-                    'numero_tranche', 'borne_inferieure', 
+                    'numero_tranche', 'borne_inferieure',
                     'borne_superieure', 'taux_irg'
                 )
             )
-        
+
         # Dernier recours: dernière année disponible
         if not tranches:
-            derniere_annee = TrancheRTS.objects.filter(actif=True).order_by('-annee_validite').values_list('annee_validite', flat=True).first()
+            derniere_annee = TrancheRTS.objects.filter(
+                actif=True, type_bareme='officiel'
+            ).order_by('-annee_validite').values_list('annee_validite', flat=True).first()
             if derniere_annee:
                 tranches = list(
                     TrancheRTS.objects.filter(
                         annee_validite=derniere_annee,
-                        actif=True
+                        actif=True,
+                        type_bareme='officiel',
                     ).order_by('numero_tranche').values(
-                        'numero_tranche', 'borne_inferieure', 
+                        'numero_tranche', 'borne_inferieure',
                         'borne_superieure', 'taux_irg'
                     )
                 )
