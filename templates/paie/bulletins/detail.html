@@ -221,6 +221,18 @@
                             </td>
                         </tr>
                         {% endif %}
+                        {% for ligne in retenues %}
+                        {% if ligne.rubrique.type_rubrique == 'retenue' %}
+                        <tr>
+                            <td class="text-muted">{{ ligne.rubrique.nom }} :</td>
+                            <td class="text-end text-danger">- {{ ligne.montant|floatformat:0|intcomma }} GNF</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                        <tr class="border-top">
+                            <td><strong>Total retenues :</strong></td>
+                            <td class="text-end text-danger"><strong>- {{ bulletin.total_retenues|floatformat:0|intcomma }} GNF</strong></td>
+                        </tr>
                         <tr class="border-top">
                             <th><h4>Net à Payer :</h4></th>
                             <td class="text-end"><h4 class="text-success">{{ bulletin.net_a_payer|floatformat:0|intcomma }} GNF</h4></td>
