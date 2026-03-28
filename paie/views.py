@@ -923,7 +923,7 @@ def telecharger_bulletin_pdf(request, pk):
     mid_x = width / 2
     p.drawString(2*cm, y - 1*cm, f"CNSS (5%): -{bulletin.cnss_employe:,.0f}".replace(",", " "))
     p.drawString(mid_x, y - 1*cm, f"RTS: -{bulletin.irg:,.0f}".replace(",", " "))
-    p.drawRightString(width - 2*cm, y - 1*cm, f"Total retenues: -{bulletin.cnss_employe + bulletin.irg:,.0f} GNF".replace(",", " "))
+    p.drawRightString(width - 2*cm, y - 1*cm, f"Total retenues: -{bulletin.total_retenues:,.0f} GNF".replace(",", " "))
     
     offset_y = 1*cm
     if has_rappel:
@@ -1511,7 +1511,7 @@ def telecharger_bulletin_public(request, token):
     mid_x = width / 2
     p.drawString(2*cm, y - 1*cm, f"CNSS (5%): -{bulletin.cnss_employe:,.0f}".replace(",", " "))
     p.drawString(mid_x, y - 1*cm, f"RTS: -{bulletin.irg:,.0f}".replace(",", " "))
-    p.drawRightString(width - 2*cm, y - 1*cm, f"Total retenues: -{bulletin.cnss_employe + bulletin.irg:,.0f} GNF".replace(",", " "))
+    p.drawRightString(width - 2*cm, y - 1*cm, f"Total retenues: -{bulletin.total_retenues:,.0f} GNF".replace(",", " "))
     
     offset_y = 1*cm
     
