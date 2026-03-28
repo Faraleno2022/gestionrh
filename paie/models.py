@@ -261,6 +261,8 @@ class BulletinPaie(models.Model):
     
     @property
     def total_charges_patronales(self):
+        """Total des charges patronales (CNSS + VF + TA ou ONFPP)"""
+        return (self.cnss_employeur or 0) + (self.versement_forfaitaire or 0) + (self.taxe_apprentissage or 0) + (self.contribution_onfpp or 0)
 
     @property
     def total_retenues(self):
@@ -270,8 +272,6 @@ class BulletinPaie(models.Model):
         rappel = self.rappel_salaire or 0
         trop_percu = self.retenue_trop_percu or 0
         return brut + rappel - trop_percu - net
-        """Total des charges patronales (CNSS + VF + TA ou ONFPP)"""
-        return (self.cnss_employeur or 0) + (self.versement_forfaitaire or 0) + (self.taxe_apprentissage or 0) + (self.contribution_onfpp or 0)
 
     @property
     def rts(self):
