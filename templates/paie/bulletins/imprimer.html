@@ -473,6 +473,10 @@
             </tr>
             {% endif %}
             <tr style="border-top: 2px solid #d62828;">
+                <td>Total retenues</td>
+                <td class="text-right" style="color: #d62828;">- {{ bulletin.total_retenues|floatformat:0|intcomma }} GNF</td>
+            </tr>
+            <tr style="border-top: 2px solid #d62828;">
                 <td style="font-size: 14pt; padding-top: 10px;"><strong>NET À PAYER</strong></td>
                 <td class="text-right" style="font-size: 14pt; color: #28a745; padding-top: 10px;">
                     <strong>{{ bulletin.net_a_payer|floatformat:0|intcomma }} GNF</strong>
