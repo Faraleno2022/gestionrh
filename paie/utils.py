@@ -692,7 +692,7 @@ def generer_bulletin_pdf(bulletin):
         p.drawString(margin_left + 0.3*cm, y - offset_y, f"Retenue trop-perçu: -{trop_percu:,.0f} GNF".replace(",", " "))
 
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont(_FONT_BOLD, 10)
+    p.setFont(_FONT_BOLD, 14)
     p.drawString(margin_left + 0.3*cm, y - offset_y - 0.55*cm, "NET À PAYER:")
     p.drawRightString(width - margin_right - 0.3*cm, y - offset_y - 0.55*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
     p.setFillColor(colors.black)

@@ -930,7 +930,7 @@ def telecharger_bulletin_pdf(request, pk):
         p.drawRightString(width - 2*cm, y - offset_y, f"- {trop_percu:,.0f} GNF".replace(",", " "))
     
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont(_FB, 11)
+    p.setFont(_FB, 14)
     p.drawString(2*cm, y - offset_y - 0.7*cm, "NET À PAYER:")
     p.drawRightString(width - 2*cm, y - offset_y - 0.7*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
     p.setFillColor(colors.black)
@@ -1520,7 +1520,7 @@ def telecharger_bulletin_public(request, token):
         p.drawRightString(width - 2*cm, y - offset_y, f"- {trop_percu:,.0f} GNF".replace(",", " "))
     
     p.setFillColor(colors.HexColor("#28a745"))
-    p.setFont(_FB, 11)
+    p.setFont(_FB, 14)
     p.drawString(2*cm, y - offset_y - 0.7*cm, "NET À PAYER:")
     p.drawRightString(width - 2*cm, y - offset_y - 0.7*cm, f"{bulletin.net_a_payer:,.0f} GNF".replace(",", " "))
     p.setFillColor(colors.black)
