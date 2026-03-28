@@ -32,6 +32,16 @@ from .forms_base import (
     ReglementForm,
 )
 
+# Formulaires d'audit et conformité
+from .audit_forms import (
+    RapportAuditForm,
+    AlerteNonConformiteForm,
+    ReglesConformiteForm,
+    ConformiteCheckForm,
+    RapportAuditFilterForm,
+    AlerteFilterForm,
+)
+
 __all__ = [
     # Base
     'ComptaBaseForm',
@@ -58,4 +68,11 @@ __all__ = [
     'TiersForm',
     'FactureForm',
     'ReglementForm',
+    # Audit & conformité
+    'RapportAuditForm',
+    'AlerteNonConformiteForm',
+    'ReglesConformiteForm',
+    'ConformiteCheckForm',
+    'RapportAuditFilterForm',
+    'AlerteFilterForm',
 ]

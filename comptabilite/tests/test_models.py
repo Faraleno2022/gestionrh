@@ -15,12 +15,12 @@ from decimal import Decimal
 from datetime import date, timedelta
 import logging
 
-from .models import (
+from comptabilite.models import (
     CompteBancaire, RapprochementBancaire, OperationBancaire,
     ExerciceComptable, EcritureComptable, EcartBancaire
 )
-from .services.rapprochement import RapprochementService
-from .utils.helpers import (
+from comptabilite.services.rapprochement_service import RapprochementService
+from comptabilite.utils.helpers import (
     MontantFormatter, ComptesUtils, EcritureUtils,
     RapprochementUtils, DeviseUtils, ExerciceUtils
 )
