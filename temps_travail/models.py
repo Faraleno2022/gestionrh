@@ -83,6 +83,12 @@ class Conge(models.Model):
         verbose_name = 'Congé'
         verbose_name_plural = 'Congés'
         ordering = ['-date_debut']
+        indexes = [
+            models.Index(fields=['employe', 'statut_demande'], name='idx_conge_emp_statut'),
+            models.Index(fields=['date_debut', 'date_fin'], name='idx_conge_dates'),
+            models.Index(fields=['statut_demande'], name='idx_conge_statut'),
+            models.Index(fields=['employe', 'annee_reference'], name='idx_conge_emp_annee'),
+        ]
     
     def __str__(self):
         return f"{self.employe.nom_complet} - {self.get_type_conge_display()} ({self.date_debut})"
@@ -188,6 +194,10 @@ class Pointage(models.Model):
         verbose_name_plural = 'Pointages'
         unique_together = ['employe', 'date_pointage']
         ordering = ['-date_pointage']
+        indexes = [
+            models.Index(fields=['date_pointage', 'statut_pointage'], name='idx_pointage_date_statut'),
+            models.Index(fields=['employe', 'date_pointage'], name='idx_pointage_emp_date'),
+        ]
     
     def __str__(self):
         return f"{self.employe.nom_complet} - {self.date_pointage}"
@@ -235,6 +245,10 @@ class Absence(models.Model):
         verbose_name = 'Absence'
         verbose_name_plural = 'Absences'
         ordering = ['-date_absence']
+        indexes = [
+            models.Index(fields=['employe', 'date_absence'], name='idx_absence_emp_date'),
+            models.Index(fields=['date_absence'], name='idx_absence_date'),
+        ]
     
     def __str__(self):
         return f"{self.employe.nom} {self.employe.prenoms} - {self.get_type_absence_display()} ({self.date_absence})"

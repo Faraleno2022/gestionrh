@@ -93,6 +93,12 @@ class Contrat(models.Model):
         verbose_name = 'Contrat'
         verbose_name_plural = 'Contrats'
         ordering = ['-date_debut']
+        indexes = [
+            models.Index(fields=['employe', 'statut'], name='idx_contrat_emp_statut'),
+            models.Index(fields=['date_fin'], name='idx_contrat_date_fin'),
+            models.Index(fields=['date_debut'], name='idx_contrat_date_debut'),
+            models.Index(fields=['statut'], name='idx_contrat_statut'),
+        ]
     
     def __str__(self):
         return f"{self.numero_contrat} - {self.employe.nom} {self.employe.prenoms}"
@@ -141,6 +147,9 @@ class AvantageContrat(models.Model):
         db_table = 'avantages_contrats'
         verbose_name = 'Avantage contrat'
         verbose_name_plural = 'Avantages contrats'
+        indexes = [
+            models.Index(fields=['contrat', 'type_avantage'], name='idx_avantage_contrat_type'),
+        ]
     
     def __str__(self):
         return f"{self.contrat.numero_contrat} - {self.get_type_avantage_display()}"
@@ -176,6 +185,10 @@ class AlerteContrat(models.Model):
         verbose_name = 'Alerte contrat'
         verbose_name_plural = 'Alertes contrats'
         ordering = ['date_echeance']
+        indexes = [
+            models.Index(fields=['contrat', 'statut'], name='idx_alerte_contrat_statut'),
+            models.Index(fields=['date_echeance'], name='idx_alerte_echeance'),
+        ]
     
     def __str__(self):
         return f"{self.contrat.numero_contrat} - {self.titre}"

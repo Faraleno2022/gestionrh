@@ -75,9 +75,15 @@ class EmployeListView(LoginRequiredMixin, ListView):
         context['service_filter'] = self.request.GET.get('service', '')
         context['sexe_filter'] = self.request.GET.get('sexe', '')
         
-        # Statistiques rapides
-        context['total_employes'] = self.get_queryset().count()
-        context['employes_actifs'] = self.get_queryset().filter(statut_employe='actif').count()
+        # Statistiques rapides (1 requête agrégée au lieu de 2)
+        from django.db.models import Q, Count
+        qs = self.get_queryset()
+        agg = qs.aggregate(
+            total=Count('id'),
+            actifs=Count('id', filter=Q(statut_employe='actif')),
+        )
+        context['total_employes'] = agg['total']
+        context['employes_actifs'] = agg['actifs']
         
         # Services pour le filtre
         from core.models import Service

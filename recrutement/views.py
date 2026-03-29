@@ -17,42 +17,45 @@ from core.decorators import entreprise_active_required
 @entreprise_active_required
 def recrutement_home(request):
     """Vue d'accueil du module recrutement"""
-    # Statistiques
+    entreprise = request.user.entreprise
+
+    # Statistiques agrégées — 2 requêtes au lieu de 4
+    cand_stats = Candidature.objects.filter(
+        offre__entreprise=entreprise,
+    ).aggregate(
+        recues=Count('id', filter=Q(statut_candidature='recue')),
+        retenues=Count('id', filter=Q(statut_candidature='retenue')),
+    )
     stats = {
         'offres_ouvertes': OffreEmploi.objects.filter(
-            entreprise=request.user.entreprise,
-            statut_offre='ouverte'
+            entreprise=entreprise, statut_offre='ouverte'
         ).count(),
-        'candidatures_recues': Candidature.objects.filter(
-            offre__entreprise=request.user.entreprise,
-            statut_candidature='recue'
-        ).count(),
+        'candidatures_recues': cand_stats['recues'] or 0,
+        'candidatures_retenues': cand_stats['retenues'] or 0,
         'entretiens_prevus': EntretienRecrutement.objects.filter(
-            candidature__offre__entreprise=request.user.entreprise,
+            candidature__offre__entreprise=entreprise,
             date_entretien__gte=timezone.now()
         ).count(),
-        'candidatures_retenues': Candidature.objects.filter(
-            offre__entreprise=request.user.entreprise,
-            statut_candidature='retenue'
-        ).count(),
     }
-    
+
     # Offres récentes
     offres_recentes = OffreEmploi.objects.filter(
-        entreprise=request.user.entreprise,
-        statut_offre='ouverte'
-    )[:5]
-    
+        entreprise=entreprise, statut_offre='ouverte'
+    ).only('id', 'reference_offre', 'intitule_poste', 'date_publication', 'statut_offre')[:5]
+
     # Candidatures récentes
     candidatures_recentes = Candidature.objects.filter(
-        offre__entreprise=request.user.entreprise
+        offre__entreprise=entreprise
+    ).select_related('offre').only(
+        'id', 'numero_candidature', 'nom', 'prenoms', 'date_candidature',
+        'statut_candidature', 'offre__intitule_poste'
     )[:5]
-    
+
     # Prochains entretiens
     prochains_entretiens = EntretienRecrutement.objects.filter(
-        candidature__offre__entreprise=request.user.entreprise,
+        candidature__offre__entreprise=entreprise,
         date_entretien__gte=timezone.now()
-    ).order_by('date_entretien')[:5]
+    ).select_related('candidature', 'candidature__offre').order_by('date_entretien')[:5]
     
     return render(request, 'recrutement/home.html', {
         'stats': stats,

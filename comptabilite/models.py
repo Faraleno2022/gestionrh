@@ -152,6 +152,11 @@ class EcritureComptable(models.Model):
         verbose_name = 'Écriture comptable'
         verbose_name_plural = 'Écritures comptables'
         ordering = ['-date_ecriture', '-numero_ecriture']
+        indexes = [
+            models.Index(fields=['journal', 'date_ecriture'], name='idx_ecriture_journal_date'),
+            models.Index(fields=['entreprise', 'date_ecriture'], name='idx_ecriture_ent_date'),
+            models.Index(fields=['exercice'], name='idx_ecriture_exercice'),
+        ]
     
     def __str__(self):
         return f"{self.numero_ecriture} - {self.libelle}"
@@ -256,6 +261,11 @@ class Facture(models.Model):
         verbose_name = 'Facture'
         verbose_name_plural = 'Factures'
         ordering = ['-date_facture']
+        indexes = [
+            models.Index(fields=['tiers', 'date_facture'], name='idx_facture_tiers_date'),
+            models.Index(fields=['statut'], name='idx_facture_statut'),
+            models.Index(fields=['date_echeance'], name='idx_facture_echeance'),
+        ]
     
     def __str__(self):
         return f"{self.numero} - {self.tiers.raison_sociale}"

@@ -73,13 +73,17 @@ def paie_home(request):
     }
     
     if periode_actuelle:
-        bulletins = BulletinPaie.objects.filter(
+        agg = BulletinPaie.objects.filter(
             periode=periode_actuelle,
             employe__entreprise=request.user.entreprise,
+        ).aggregate(
+            nb=Count('id'),
+            total_brut=Sum('salaire_brut'),
+            total_net=Sum('net_a_payer'),
         )
-        stats['bulletins_mois'] = bulletins.count()
-        stats['montant_total_brut'] = bulletins.aggregate(Sum('salaire_brut'))['salaire_brut__sum'] or 0
-        stats['montant_total_net'] = bulletins.aggregate(Sum('net_a_payer'))['net_a_payer__sum'] or 0
+        stats['bulletins_mois'] = agg['nb'] or 0
+        stats['montant_total_brut'] = agg['total_brut'] or 0
+        stats['montant_total_net'] = agg['total_net'] or 0
     
     return render(request, 'paie/home.html', {'stats': stats})
 

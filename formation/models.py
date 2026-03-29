@@ -111,6 +111,10 @@ class SessionFormation(models.Model):
         verbose_name = 'Session de Formation'
         verbose_name_plural = 'Sessions de Formation'
         ordering = ['-date_debut']
+        indexes = [
+            models.Index(fields=['formation', 'statut'], name='idx_session_form_statut'),
+            models.Index(fields=['date_debut'], name='idx_session_date_debut'),
+        ]
     
     def __str__(self):
         return f"{self.reference_session} - {self.formation.intitule}"
@@ -145,6 +149,10 @@ class InscriptionFormation(models.Model):
         verbose_name_plural = 'Inscriptions Formation'
         unique_together = ['session', 'employe']
         ordering = ['-date_inscription']
+        indexes = [
+            models.Index(fields=['session', 'statut'], name='idx_inscription_sess_stat'),
+            models.Index(fields=['employe'], name='idx_inscription_employe'),
+        ]
     
     def __str__(self):
         return f"{self.employe} - {self.session.formation.intitule}"

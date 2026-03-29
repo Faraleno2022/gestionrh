@@ -16,22 +16,24 @@ from core.decorators import entreprise_active_required
 @entreprise_active_required
 def formation_home(request):
     """Vue d'accueil du module formation"""
-    # Statistiques
+    entreprise = request.user.entreprise
+
+    # Sessions agrégées en 1 requête au lieu de 2
+    session_stats = SessionFormation.objects.filter(
+        formation__entreprise=entreprise,
+    ).aggregate(
+        planifiees=Count('id', filter=Q(statut='planifiee')),
+        en_cours=Count('id', filter=Q(statut='en_cours')),
+    )
+
     stats = {
         'total_formations': CatalogueFormation.objects.filter(
-            entreprise=request.user.entreprise,
-            actif=True
+            entreprise=entreprise, actif=True
         ).count(),
-        'sessions_planifiees': SessionFormation.objects.filter(
-            formation__entreprise=request.user.entreprise,
-            statut='planifiee'
-        ).count(),
-        'sessions_en_cours': SessionFormation.objects.filter(
-            formation__entreprise=request.user.entreprise,
-            statut='en_cours'
-        ).count(),
+        'sessions_planifiees': session_stats['planifiees'] or 0,
+        'sessions_en_cours': session_stats['en_cours'] or 0,
         'total_participants': InscriptionFormation.objects.filter(
-            session__formation__entreprise=request.user.entreprise,
+            session__formation__entreprise=entreprise,
             statut__in=['inscrit', 'confirme', 'present']
         ).count(),
     }

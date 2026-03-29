@@ -23,35 +23,39 @@ from core.decorators import entreprise_active_required
 def temps_travail_home(request):
     """Vue d'accueil du module temps de travail"""
     today = date.today()
-    
-    # Statistiques du jour
+    entreprise = request.user.entreprise
+
+    # Statistiques agrégées en 1 requête (pointages)
+    pointage_stats = Pointage.objects.filter(
+        date_pointage=today,
+        employe__entreprise=entreprise,
+    ).aggregate(
+        presents=Count('id', filter=Q(statut_pointage='present')),
+        absents=Count('id', filter=Q(statut_pointage='absent')),
+    )
+
+    total_employes = Employe.objects.filter(
+        entreprise=entreprise, statut_employe='actif'
+    ).count()
+
+    # Congés agrégés en 1 requête
+    conge_stats = Conge.objects.filter(
+        employe__entreprise=entreprise,
+    ).aggregate(
+        en_conge=Count('id', filter=Q(
+            date_debut__lte=today, date_fin__gte=today, statut_demande='approuve'
+        )),
+        attente=Count('id', filter=Q(statut_demande='en_attente')),
+    )
+
     stats = {
-        'total_employes': Employe.objects.filter(
-            entreprise=request.user.entreprise,
-            statut_employe='actif'
-        ).count(),
-        'presents_aujourdhui': Pointage.objects.filter(
-            date_pointage=today,
-            statut_pointage='present',
-            employe__entreprise=request.user.entreprise,
-        ).count(),
-        'absents_aujourdhui': Pointage.objects.filter(
-            date_pointage=today,
-            statut_pointage='absent',
-            employe__entreprise=request.user.entreprise,
-        ).count(),
-        'en_conge': Conge.objects.filter(
-            date_debut__lte=today,
-            date_fin__gte=today,
-            statut_demande='approuve',
-            employe__entreprise=request.user.entreprise,
-        ).count(),
-        'demandes_conge_attente': Conge.objects.filter(
-            statut_demande='en_attente',
-            employe__entreprise=request.user.entreprise,
-        ).count(),
+        'total_employes': total_employes,
+        'presents_aujourdhui': pointage_stats['presents'] or 0,
+        'absents_aujourdhui': pointage_stats['absents'] or 0,
+        'en_conge': conge_stats['en_conge'] or 0,
+        'demandes_conge_attente': conge_stats['attente'] or 0,
     }
-    
+
     # Taux de présence
     if stats['total_employes'] > 0:
         stats['taux_presence'] = round(
@@ -62,7 +66,7 @@ def temps_travail_home(request):
     
     # Prochains jours fériés
     prochains_feries = JourFerie.objects.filter(
-        entreprise=request.user.entreprise,
+        entreprise=entreprise,
         date_jour_ferie__gte=today
     ).order_by('date_jour_ferie')[:5]
     

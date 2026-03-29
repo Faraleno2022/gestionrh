@@ -63,6 +63,11 @@ class OffreEmploi(models.Model):
         verbose_name = 'Offre d\'emploi'
         verbose_name_plural = 'Offres d\'emploi'
         ordering = ['-date_publication']
+        indexes = [
+            models.Index(fields=['entreprise', 'statut_offre'], name='idx_offre_ent_statut'),
+            models.Index(fields=['date_publication'], name='idx_offre_date_pub'),
+            models.Index(fields=['date_limite_candidature'], name='idx_offre_date_limite'),
+        ]
     
     def __str__(self):
         return f"{self.reference_offre} - {self.intitule_poste}"
@@ -106,6 +111,10 @@ class Candidature(models.Model):
         verbose_name = 'Candidature'
         verbose_name_plural = 'Candidatures'
         ordering = ['-date_candidature']
+        indexes = [
+            models.Index(fields=['offre', 'statut_candidature'], name='idx_cand_offre_statut'),
+            models.Index(fields=['date_candidature'], name='idx_cand_date'),
+        ]
     
     def __str__(self):
         return f"{self.numero_candidature} - {self.nom} {self.prenoms}"
@@ -146,6 +155,10 @@ class EntretienRecrutement(models.Model):
         verbose_name = 'Entretien de recrutement'
         verbose_name_plural = 'Entretiens de recrutement'
         ordering = ['-date_entretien']
+        indexes = [
+            models.Index(fields=['candidature', 'date_entretien'], name='idx_entretien_cand_date'),
+            models.Index(fields=['date_entretien'], name='idx_entretien_date'),
+        ]
     
     def __str__(self):
         return f"{self.candidature.nom} {self.candidature.prenoms} - {self.get_type_entretien_display()}"
