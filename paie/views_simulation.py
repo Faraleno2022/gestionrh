@@ -330,6 +330,8 @@ def api_optimiser_net(request):
 
     if enveloppe <= 0:
         return JsonResponse({'error': 'Enveloppe doit être > 0'}, status=400)
+    if enveloppe > Decimal('999999999'):
+        return JsonResponse({'error': 'Montant irréaliste'}, status=400)
 
     nb_salaries = Employe.objects.filter(
         entreprise=request.user.entreprise, statut_employe='actif'
@@ -357,11 +359,22 @@ def api_scenario_augmentation(request):
 
     brut = _parse(str(body.get('brut', '0')))
     indemnites = _parse(str(body.get('indemnites', '0')))
-    pourcentage = float(body.get('pourcentage', 10))
+    try:
+        pourcentage = float(body.get('pourcentage', 10))
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Pourcentage invalide'}, status=400)
     baremes_ids = body.get('baremes_ids', ['fallback'])
+    if not isinstance(baremes_ids, list) or len(baremes_ids) > 5:
+        return JsonResponse({'error': 'baremes_ids invalide (liste, max 5)'}, status=400)
 
     if brut <= 0:
         return JsonResponse({'error': 'Brut doit être > 0'}, status=400)
+    if brut > Decimal('999999999'):
+        return JsonResponse({'error': 'Montant irréaliste'}, status=400)
+    if indemnites < 0:
+        return JsonResponse({'error': 'Indemnités ne peuvent pas être négatives'}, status=400)
+    if indemnites > brut:
+        return JsonResponse({'error': 'Indemnités ne peuvent pas dépasser le brut'}, status=400)
     if not (-50 <= pourcentage <= 100):
         return JsonResponse({'error': 'Pourcentage doit être entre -50% et +100%'}, status=400)
 

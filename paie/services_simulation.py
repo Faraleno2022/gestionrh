@@ -374,6 +374,7 @@ def optimiser_net(
     # Scénario 1 : Tout en brut (indemnités = 0)
     r_brut_pur = calculer_un_bareme(enveloppe, Decimal('0'), tranches, constantes, nb_salaries)
     r_brut_pur['scenario'] = 'Tout en brut (0 indemnités)'
+    r_brut_pur['conforme_25'] = True
 
     # Scénario 2 : Optimal 25% (indemnités = 25% du brut)
     brut_optimal = _floor_gnf(enveloppe * Decimal('100') / Decimal('125'))
@@ -383,6 +384,7 @@ def optimiser_net(
         tranches, constantes, nb_salaries
     )
     r_optimal['scenario'] = 'Optimal (indemnités = 25% du brut)'
+    r_optimal['conforme_25'] = True
 
     # Scénario 3 : 30% indemnités (au-delà du plafond, pour montrer l'effet)
     brut_30 = _floor_gnf(enveloppe * Decimal('100') / Decimal('130'))
@@ -391,13 +393,18 @@ def optimiser_net(
         Decimal(str(brut_30)), Decimal(str(indem_30)),
         tranches, constantes, nb_salaries
     )
-    r_30['scenario'] = 'Indemnités 30% du brut (dépasse plafond)'
+    r_30['scenario'] = 'Indemnités 30% du brut (⚠ dépasse plafond CGI)'
+    r_30['conforme_25'] = False
 
     scenarios = [r_brut_pur, r_optimal, r_30]
 
-    # Trouver le meilleur net
-    meilleur = max(scenarios, key=lambda s: s['net'])
+    # Trouver le meilleur net PARMI LES SCÉNARIOS CONFORMES (≤ 25%)
+    conformes = [s for s in scenarios if s.get('conforme_25', True)]
+    meilleur = max(conformes, key=lambda s: s['net'])
     economie_vs_brut_pur = meilleur['net'] - r_brut_pur['net']
+
+    gain_mensuel = economie_vs_brut_pur
+    gain_annuel = gain_mensuel * 12
 
     return {
         'enveloppe_totale': int(enveloppe),
@@ -409,7 +416,15 @@ def optimiser_net(
             'net': meilleur['net'],
             'rts': meilleur['rts'],
             'economie_rts': r_brut_pur['rts'] - meilleur['rts'],
-            'gain_net': economie_vs_brut_pur,
+            'gain_net': gain_mensuel,
+            'gain_net_annuel': gain_annuel,
+        },
+        'meta': {
+            'plafond_exoneration': 0.25,
+            'plafond_cnss': int(constantes.get('PLAFOND_CNSS', 2500000)),
+            'taux_cnss_employe': float(constantes.get('TAUX_CNSS_EMPLOYE', 5)),
+            'taux_cnss_employeur': float(constantes.get('TAUX_CNSS_EMPLOYEUR', 18)),
+            'regle': 'Indemnités exonérées dans la limite de 25% du brut (CGI Guinée)',
         },
     }
 
@@ -455,9 +470,16 @@ def simuler_scenario_augmentation(
             'cout_total_apres': b['brut'] + b['total_charges_pat'],
         })
 
+    constantes = _charger_constantes()
     return {
         'pourcentage': float(pct),
         'brut_actuel': int(brut),
         'nouveau_brut': nouveau_brut,
         'comparaison': comparaison,
+        'meta': {
+            'plafond_exoneration': 0.25,
+            'plafond_cnss': int(constantes.get('PLAFOND_CNSS', 2500000)),
+            'taux_cnss_employe': float(constantes.get('TAUX_CNSS_EMPLOYE', 5)),
+            'taux_cnss_employeur': float(constantes.get('TAUX_CNSS_EMPLOYEUR', 18)),
+        },
     }

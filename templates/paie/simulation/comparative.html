@@ -659,18 +659,22 @@ Exonérées à hauteur de 25% du brut (CGI Art. 93)" data-bs-toggle="tooltip"></
       var rec = data.recommandation;
 
       var html = '<div class="row g-3 mb-3">';
-      html += '<div class="col-md-4"><div class="hero-stat optim-card rounded p-3">';
-      html += '<div class="label">Recommandation</div>';
+      html += '<div class="col-md-3"><div class="hero-stat optim-card rounded p-3">';
+      html += '<div class="label">Net optimal / mois</div>';
       html += '<div class="value text-success">' + fmt(rec.net) + '</div>';
-      html += '<div class="small text-muted">Net optimal</div></div></div>';
-      html += '<div class="col-md-4"><div class="hero-stat border rounded p-3">';
+      html += '<div class="small text-muted">Recommandation</div></div></div>';
+      html += '<div class="col-md-3"><div class="hero-stat border rounded p-3">';
       html += '<div class="label">Économie RTS</div>';
       html += '<div class="value text-danger">-' + fmt(rec.economie_rts) + '</div>';
-      html += '<div class="small text-muted">Impôt en moins</div></div></div>';
-      html += '<div class="col-md-4"><div class="hero-stat border rounded p-3">';
-      html += '<div class="label">Gain Net</div>';
+      html += '<div class="small text-muted">Impôt en moins / mois</div></div></div>';
+      html += '<div class="col-md-3"><div class="hero-stat border rounded p-3">';
+      html += '<div class="label">Gain Net / mois</div>';
       html += '<div class="value text-success">+' + fmt(rec.gain_net) + '</div>';
       html += '<div class="small text-muted">vs tout en brut</div></div></div>';
+      html += '<div class="col-md-3"><div class="hero-stat border border-success rounded p-3" style="background:#e8f5e9">';
+      html += '<div class="label">Gain Net / an</div>';
+      html += '<div class="value text-success fs-4">+' + fmt(rec.gain_net_annuel) + '</div>';
+      html += '<div class="small fw-bold text-success">' + fmt(rec.gain_net_annuel) + ' GNF / an</div></div></div>';
       html += '</div>';
 
       html += '<div class="alert alert-success mb-3"><i class="fas fa-lightbulb me-2"></i>';
@@ -688,9 +692,12 @@ Exonérées à hauteur de 25% du brut (CGI Art. 93)" data-bs-toggle="tooltip"></
       var bestNet = rec.net;
       data.scenarios.forEach(function(s) {
         var rowClass = (s.net === bestNet) ? 'scenario-best' : 'scenario-row';
+        var nonConforme = (s.conforme_25 === false);
+        if (nonConforme) rowClass = 'table-warning';
         html += '<tr class="' + rowClass + '">';
         html += '<td>' + s.scenario;
-        if (s.net === bestNet) html += ' <span class="badge bg-success ms-1">Optimal</span>';
+        if (s.net === bestNet && !nonConforme) html += ' <span class="badge bg-success ms-1">Optimal</span>';
+        if (nonConforme) html += ' <span class="badge bg-warning text-dark ms-1">&#9888; Non conforme</span>';
         html += '</td>';
         html += '<td class="text-end">' + fmt(s.brut) + '</td>';
         html += '<td class="text-end">' + fmt(s.total_indemnites) + '</td>';
@@ -700,6 +707,17 @@ Exonérées à hauteur de 25% du brut (CGI Art. 93)" data-bs-toggle="tooltip"></
         html += '</tr>';
       });
       html += '</tbody></table></div>';
+
+      // Meta traceability
+      if (data.meta) {
+        html += '<div class="mt-2 small text-muted border-top pt-2">';
+        html += '<i class="fas fa-shield-alt me-1"></i>';
+        html += '<strong>Règle :</strong> ' + (data.meta.regle || 'Exonération \u2264 25% brut') + ' | ';
+        html += 'Plafond CNSS : ' + fmt(data.meta.plafond_cnss) + ' GNF | ';
+        html += 'CNSS employé : ' + data.meta.taux_cnss_employe + '% | ';
+        html += 'CNSS employeur : ' + data.meta.taux_cnss_employeur + '%';
+        html += '</div>';
+      }
 
       html += '<div class="mt-3 text-end"><button class="btn btn-success btn-sm" onclick="';
       html += 'document.getElementById(\'idBrut\').value=\'' + rec.brut.toLocaleString('fr-GN') + '\';';
@@ -766,8 +784,10 @@ Exonérées à hauteur de 25% du brut (CGI Art. 93)" data-bs-toggle="tooltip"></
         html += '<td class="text-end fw-bold">' + fmt(c.cout_total_apres) + '</td>';
         html += '</tr>';
         html += '<tr class="table-light"><td colspan="7" class="small text-center">';
-        html += 'Δ Net : <span class="' + (c.delta_net >= 0 ? 'delta-positive' : 'delta-negative') + '">';
-        html += (c.delta_net >= 0 ? '+' : '') + fmt(c.delta_net) + '</span>';
+        html += '\u0394 Net : <span class="' + (c.delta_net >= 0 ? 'delta-positive' : 'delta-negative') + ' fw-bold">';
+        html += (c.delta_net >= 0 ? '+' : '') + fmt(c.delta_net) + ' /mois</span>';
+        html += ' &rarr; <strong class="' + (c.delta_net >= 0 ? 'text-success' : 'text-danger') + '">';
+        html += (c.delta_net >= 0 ? '+' : '') + fmt(c.delta_net * 12) + ' /an</strong>';
         html += ' | Δ RTS : <span class="' + (c.delta_rts > 0 ? 'delta-negative' : 'delta-positive') + '">';
         html += (c.delta_rts >= 0 ? '+' : '') + fmt(c.delta_rts) + '</span>';
         html += ' | Δ Charges : <span class="' + (c.delta_charges > 0 ? 'delta-negative' : 'delta-positive') + '">';
