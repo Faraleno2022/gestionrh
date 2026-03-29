@@ -107,7 +107,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [INTERNAL_DIR / 'templates'] if PYINSTALLER_MODE else [BASE_DIR / 'templates'],
-        'APP_DIRS': True,  # Toujours activer pour trouver les templates des apps
+        'APP_DIRS': not PYINSTALLER_MODE,  # Désactivé en mode PyInstaller (cached.Loader utilisé)
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -116,6 +116,16 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.company_info',
             ],
+            **(
+                {
+                    'loaders': [
+                        ('django.template.loaders.cached.Loader', [
+                            'django.template.loaders.filesystem.Loader',
+                            'django.template.loaders.app_directories.Loader',
+                        ]),
+                    ],
+                } if PYINSTALLER_MODE else {}
+            ),
         },
     },
 ]
@@ -295,7 +305,7 @@ else:
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_AGE = 3600  # 1 hour
-SESSION_SAVE_EVERY_REQUEST = True
+SESSION_SAVE_EVERY_REQUEST = False  # Sauvegarder la session uniquement quand modifiée
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # CSRF Protection
@@ -391,7 +401,10 @@ FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 ALLOWED_UPLOAD_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx']
 
 # Database Performance & Security
-if not DEBUG:
+if PYINSTALLER_MODE:
+    # Mode offline : connexion persistante (un seul utilisateur local)
+    DATABASES['default']['CONN_MAX_AGE'] = None  # Connexion persistante
+elif not DEBUG:
     DATABASES['default']['CONN_MAX_AGE'] = 600  # Connexions persistantes 10 min
     DATABASES['default']['OPTIONS'] = {
         'connect_timeout': 10,

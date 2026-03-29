@@ -11,7 +11,7 @@ from django.contrib import messages
 
 # ─── Cache en mémoire pour éviter une lecture de fichier à chaque requête ─────
 _license_cache = {'valid': None, 'checked_at': 0, 'days_left': 0, 'trial': False}
-_CACHE_TTL = 300   # 5 minutes
+_CACHE_TTL = 1800  # 30 minutes (licence vérifiée au démarrage)
 
 
 def _check_license_cached() -> dict:
@@ -95,7 +95,7 @@ class LicenceMiddleware:
         path = request.path
 
         # Toujours autoriser les ressources statiques
-        if any(path.startswith(p) for p in self.EXEMPT_PREFIXES):
+        if path.startswith(('/static/', '/media/', '/favicon')):
             return self.get_response(request)
 
         # Autoriser la page d'accueil et login

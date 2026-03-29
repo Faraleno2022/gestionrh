@@ -24,7 +24,7 @@ _guardian_cache = {
     'reason': '',
     'checked_at': 0,
 }
-_CACHE_TTL = 600  # 10 minutes
+_CACHE_TTL = 3600  # 1 heure (vérifié au démarrage, inutile de re-scanner souvent)
 
 
 # ─── Page HTML de blocage sécurité ─────────────────────────────────────────────
@@ -91,6 +91,10 @@ class ProjectIntegrityMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Fichiers statiques/media → toujours servir immédiatement
+        if request.path.startswith(('/static/', '/media/', '/favicon')):
+            return self.get_response(request)
+
         global _guardian_cache
         now = time.time()
 

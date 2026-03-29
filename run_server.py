@@ -262,7 +262,7 @@ def check_license():
 # ─── Ouverture du navigateur ──────────────────────────────────────────────────
 def open_browser():
     """Ouvre le navigateur après un délai — privilégie un navigateur moderne."""
-    time.sleep(3)
+    time.sleep(1.5)
     url = 'http://127.0.0.1:8000/'
 
     # Chemins potentiels vers des navigateurs modernes (Chrome, Edge Chromium)

@@ -62,6 +62,9 @@ class SQLInjectionProtectionMiddleware:
         self.patterns = [re.compile(pattern, re.IGNORECASE) for pattern in self.SQL_PATTERNS]
 
     def __call__(self, request):
+        # Fichiers statiques/media → pas de paramètres utilisateur, skip
+        if request.path.startswith(('/static/', '/media/', '/favicon')):
+            return self.get_response(request)
         # Vérifier les paramètres GET
         for key, value in request.GET.items():
             if self._contains_sql_injection(value):
@@ -108,6 +111,9 @@ class XSSProtectionMiddleware:
         self.patterns = [re.compile(pattern, re.IGNORECASE) for pattern in self.XSS_PATTERNS]
 
     def __call__(self, request):
+        # Fichiers statiques/media → pas de paramètres utilisateur, skip
+        if request.path.startswith(('/static/', '/media/', '/favicon')):
+            return self.get_response(request)
         # Vérifier les paramètres GET
         for key, value in request.GET.items():
             if self._contains_xss(value):
@@ -170,6 +176,10 @@ class RequestLoggingMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Ne pas logger les requêtes statiques/media
+        if request.path.startswith(('/static/', '/media/', '/favicon')):
+            return self.get_response(request)
+
         # Log avant traitement
         if getattr(settings, 'SECURITY_LOGGING_ENABLED', True):
             logger.info(
