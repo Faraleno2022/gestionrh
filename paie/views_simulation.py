@@ -2,6 +2,7 @@
 Vues du module de simulation fiscale comparative multi-barèmes
 """
 import csv
+import json
 from decimal import Decimal, InvalidOperation
 from datetime import date
 
@@ -10,12 +11,17 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_POST
 
 from employes.models import Employe
+from contrats.models import Contrat
+from paie.models import BulletinPaie
 from paie.models_simulation import SimulationFiscale
 from paie.services_simulation import (
     simuler_multi_baremes,
     get_baremes_disponibles,
+    optimiser_net,
+    simuler_scenario_augmentation,
     _charger_constantes,
 )
 
@@ -153,6 +159,14 @@ def simulation_comparative(request):
             nb_salaries=nb_salaries,
         )
 
+        # Calculer les deltas vs premier barème et le coût employeur
+        if resultats:
+            ref = resultats[0]
+            for r in resultats:
+                r['delta_net'] = r['net'] - ref['net']
+                r['delta_rts'] = r['rts'] - ref['rts']
+                r['cout_employeur'] = r['brut'] + r['total_charges_pat']
+
         form_data = {
             'salaire_brut':      brut_raw,
             'total_indemnites':  indemnites_raw,
@@ -250,3 +264,112 @@ def export_simulation_csv(request, pk):
 def api_baremes_disponibles(request):
     """API JSON : liste des barèmes disponibles (pour rechargement dynamique)."""
     return JsonResponse({'baremes': get_baremes_disponibles()})
+
+
+# ---------------------------------------------------------------------------
+# API : données employé (salaire du contrat + dernier bulletin)
+# ---------------------------------------------------------------------------
+
+@login_required
+def api_employe_salaire(request, pk):
+    """Retourne brut et indemnités d'un employé (contrat actif + dernier bulletin)."""
+    entreprise = request.user.entreprise
+    try:
+        emp = Employe.objects.get(pk=pk, entreprise=entreprise)
+    except Employe.DoesNotExist:
+        return JsonResponse({'error': 'Employé introuvable'}, status=404)
+
+    data = {'employe': f'{emp.nom} {emp.prenoms}', 'brut': 0, 'indemnites': 0, 'source': ''}
+
+    # Dernier bulletin calculé/validé/payé
+    dernier_bulletin = (
+        BulletinPaie.objects
+        .filter(employe=emp, statut_bulletin__in=['calcule', 'valide', 'paye'])
+        .order_by('-annee_paie', '-mois_paie')
+        .first()
+    )
+    if dernier_bulletin:
+        data['brut'] = int(dernier_bulletin.salaire_brut)
+        # Indemnités = brut - salaire_base (approximation)
+        base = int(dernier_bulletin.salaire_base or 0)
+        data['indemnites'] = max(0, data['brut'] - base)
+        data['source'] = f'Bulletin {dernier_bulletin.mois_paie:02d}/{dernier_bulletin.annee_paie}'
+    else:
+        # Fallback : contrat actif
+        contrat = (
+            Contrat.objects
+            .filter(employe=emp, statut='actif')
+            .order_by('-date_debut')
+            .first()
+        )
+        if contrat and contrat.salaire_base:
+            data['brut'] = int(contrat.salaire_base)
+            data['source'] = 'Contrat actif'
+
+    return JsonResponse(data)
+
+
+# ---------------------------------------------------------------------------
+# API : optimiser le net
+# ---------------------------------------------------------------------------
+
+@login_required
+@require_POST
+def api_optimiser_net(request):
+    """
+    Trouve la répartition brut/indemnités optimale pour maximiser le net.
+    Body JSON : {enveloppe, bareme_id?}
+    """
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        body = request.POST
+
+    enveloppe = _parse(str(body.get('enveloppe', '0')))
+    bareme_id = str(body.get('bareme_id', 'fallback')).strip()
+
+    if enveloppe <= 0:
+        return JsonResponse({'error': 'Enveloppe doit être > 0'}, status=400)
+
+    nb_salaries = Employe.objects.filter(
+        entreprise=request.user.entreprise, statut_employe='actif'
+    ).count()
+
+    result = optimiser_net(enveloppe, bareme_id, nb_salaries=nb_salaries)
+    return JsonResponse(result)
+
+
+# ---------------------------------------------------------------------------
+# API : simulation scénario augmentation
+# ---------------------------------------------------------------------------
+
+@login_required
+@require_POST
+def api_scenario_augmentation(request):
+    """
+    Simule l'impact d'une augmentation (%).
+    Body JSON : {brut, indemnites, pourcentage, baremes_ids[]}
+    """
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        body = request.POST
+
+    brut = _parse(str(body.get('brut', '0')))
+    indemnites = _parse(str(body.get('indemnites', '0')))
+    pourcentage = float(body.get('pourcentage', 10))
+    baremes_ids = body.get('baremes_ids', ['fallback'])
+
+    if brut <= 0:
+        return JsonResponse({'error': 'Brut doit être > 0'}, status=400)
+    if not (-50 <= pourcentage <= 100):
+        return JsonResponse({'error': 'Pourcentage doit être entre -50% et +100%'}, status=400)
+
+    nb_salaries = Employe.objects.filter(
+        entreprise=request.user.entreprise, statut_employe='actif'
+    ).count()
+
+    result = simuler_scenario_augmentation(
+        brut, indemnites, pourcentage, baremes_ids, nb_salaries=nb_salaries
+    )
+    return JsonResponse(result)

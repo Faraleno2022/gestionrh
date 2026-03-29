@@ -324,3 +324,140 @@ def simuler_multi_baremes(
         resultats.append(result)
 
     return resultats
+
+
+# ---------------------------------------------------------------------------
+# Optimisation du net (aide à la décision)
+# ---------------------------------------------------------------------------
+
+def optimiser_net(
+    enveloppe_totale,
+    bareme_id: str = None,
+    annee_ref: int = None,
+    nb_salaries: int = 0,
+) -> dict:
+    """
+    Trouve la répartition brut / indemnités qui maximise le net à payer
+    pour une enveloppe salariale totale donnée (brut + indemnités).
+
+    Stratégie : les indemnités sont exonérées jusqu'à 25% du brut.
+    L'optimal est donc : indemnités = 25% du brut, soit :
+      brut_optimal = enveloppe / 1.25
+      indemnités_optimal = enveloppe - brut_optimal
+
+    On compare aussi avec le scénario "tout en brut" (indemnités=0)
+    et le scénario actuel si fourni.
+
+    Retourne un dict avec scenarios[] et recommandation.
+    """
+    if annee_ref is None:
+        annee_ref = date.today().year
+
+    enveloppe = Decimal(str(enveloppe_totale))
+    constantes = _charger_constantes()
+
+    # Charger le barème
+    if bareme_id and bareme_id != BAREME_FALLBACK_ID:
+        parts = bareme_id.split('-', 1)
+        try:
+            annee = int(parts[0])
+            type_b = parts[1] if len(parts) > 1 else 'officiel'
+        except (ValueError, IndexError):
+            annee = annee_ref
+            type_b = 'officiel'
+        tranches = _charger_tranches_db(annee, type_b)
+        if not tranches:
+            tranches = list(BAREME_CGI_REFERENCE)
+    else:
+        tranches = list(BAREME_CGI_REFERENCE)
+
+    # Scénario 1 : Tout en brut (indemnités = 0)
+    r_brut_pur = calculer_un_bareme(enveloppe, Decimal('0'), tranches, constantes, nb_salaries)
+    r_brut_pur['scenario'] = 'Tout en brut (0 indemnités)'
+
+    # Scénario 2 : Optimal 25% (indemnités = 25% du brut)
+    brut_optimal = _floor_gnf(enveloppe * Decimal('100') / Decimal('125'))
+    indem_optimal = int(enveloppe) - brut_optimal
+    r_optimal = calculer_un_bareme(
+        Decimal(str(brut_optimal)), Decimal(str(indem_optimal)),
+        tranches, constantes, nb_salaries
+    )
+    r_optimal['scenario'] = 'Optimal (indemnités = 25% du brut)'
+
+    # Scénario 3 : 30% indemnités (au-delà du plafond, pour montrer l'effet)
+    brut_30 = _floor_gnf(enveloppe * Decimal('100') / Decimal('130'))
+    indem_30 = int(enveloppe) - brut_30
+    r_30 = calculer_un_bareme(
+        Decimal(str(brut_30)), Decimal(str(indem_30)),
+        tranches, constantes, nb_salaries
+    )
+    r_30['scenario'] = 'Indemnités 30% du brut (dépasse plafond)'
+
+    scenarios = [r_brut_pur, r_optimal, r_30]
+
+    # Trouver le meilleur net
+    meilleur = max(scenarios, key=lambda s: s['net'])
+    economie_vs_brut_pur = meilleur['net'] - r_brut_pur['net']
+
+    return {
+        'enveloppe_totale': int(enveloppe),
+        'scenarios': scenarios,
+        'recommandation': {
+            'scenario': meilleur['scenario'],
+            'brut': meilleur['brut'],
+            'indemnites': meilleur['total_indemnites'],
+            'net': meilleur['net'],
+            'rts': meilleur['rts'],
+            'economie_rts': r_brut_pur['rts'] - meilleur['rts'],
+            'gain_net': economie_vs_brut_pur,
+        },
+    }
+
+
+def simuler_scenario_augmentation(
+    brut_actuel,
+    indemnites_actuelles,
+    pourcentage_augmentation: float,
+    baremes_ids: list,
+    annee_ref: int = None,
+    nb_salaries: int = 0,
+) -> dict:
+    """
+    Simule l'impact d'une augmentation (%) sur le brut.
+    Compare avant/après sur chaque barème.
+    """
+    brut = Decimal(str(brut_actuel))
+    indemnites = Decimal(str(indemnites_actuelles))
+    pct = Decimal(str(pourcentage_augmentation))
+
+    nouveau_brut = _half_up(brut * (Decimal('100') + pct) / Decimal('100'))
+    nouvelles_indemnites = _half_up(indemnites * (Decimal('100') + pct) / Decimal('100'))
+
+    avant = simuler_multi_baremes(brut, indemnites, baremes_ids, annee_ref, nb_salaries)
+    apres = simuler_multi_baremes(
+        Decimal(str(nouveau_brut)), Decimal(str(nouvelles_indemnites)),
+        baremes_ids, annee_ref, nb_salaries
+    )
+
+    comparaison = []
+    for a, b in zip(avant, apres):
+        comparaison.append({
+            'bareme_label': a['bareme_label'],
+            'avant': {'brut': a['brut'], 'rts': a['rts'], 'net': a['net'],
+                      'total_charges_pat': a['total_charges_pat']},
+            'apres': {'brut': b['brut'], 'rts': b['rts'], 'net': b['net'],
+                      'total_charges_pat': b['total_charges_pat']},
+            'delta_brut': b['brut'] - a['brut'],
+            'delta_rts': b['rts'] - a['rts'],
+            'delta_net': b['net'] - a['net'],
+            'delta_charges': b['total_charges_pat'] - a['total_charges_pat'],
+            'cout_total_avant': a['brut'] + a['total_charges_pat'],
+            'cout_total_apres': b['brut'] + b['total_charges_pat'],
+        })
+
+    return {
+        'pourcentage': float(pct),
+        'brut_actuel': int(brut),
+        'nouveau_brut': nouveau_brut,
+        'comparaison': comparaison,
+    }

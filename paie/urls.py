@@ -95,6 +95,9 @@ urlpatterns = [
     path('simulation/historique/<int:pk>/supprimer/', views_simulation.supprimer_simulation, name='supprimer_simulation'),
     path('simulation/historique/<int:pk>/csv/', views_simulation.export_simulation_csv, name='export_simulation_csv'),
     path('api/baremes-disponibles/', views_simulation.api_baremes_disponibles, name='api_baremes_disponibles'),
+    path('api/employe-salaire/<int:pk>/', views_simulation.api_employe_salaire, name='api_employe_salaire'),
+    path('api/optimiser-net/', views_simulation.api_optimiser_net, name='api_optimiser_net'),
+    path('api/scenario-augmentation/', views_simulation.api_scenario_augmentation, name='api_scenario_augmentation'),
     
     # Gestion des prêts
     path('prets/', views_pret.liste_prets, name='liste_prets'),
