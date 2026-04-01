@@ -3702,6 +3702,7 @@ def api_decomposer_brut(request):
 def api_creer_elements_lot(request, employe_id):
     """
     Crée en lot les éléments de salaire issus de la décomposition du brut.
+    Sécurisé : permissions, validation dates/montants, anti-doublon, audit.
 
     POST JSON :
         { "elements": [
@@ -3709,7 +3710,8 @@ def api_creer_elements_lot(request, employe_id):
             {"rubrique_id": 8, "montant": 825000},
             ...
           ],
-          "date_debut": "2026-04-01"
+          "date_debut": "2026-04-01",
+          "simulation_id": null       ← optionnel, relie à une simulation sauvegardée
         }
     """
     employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
@@ -3720,13 +3722,40 @@ def api_creer_elements_lot(request, employe_id):
         return JsonResponse({'error': 'JSON invalide'}, status=400)
 
     elements_data = data.get('elements', [])
-    date_debut = data.get('date_debut', str(date.today()))
+    date_debut_str = data.get('date_debut', str(date.today()))
+    simulation_id = data.get('simulation_id', None)
 
     if not elements_data:
         return JsonResponse({'error': 'Aucun élément à créer'}, status=400)
 
+    # ── Validation de la date ──
+    try:
+        if isinstance(date_debut_str, str):
+            date_debut_obj = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
+        else:
+            date_debut_obj = date.today()
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Format de date invalide (attendu : AAAA-MM-JJ)'}, status=400)
+
+    # ── Vérification anti-doublon (idempotence) ──
+    # Si la dernière création en lot date de < 5 secondes, refuser
+    from .models import ElementSalaire, SimulationPaie
+    dernier_element = ElementSalaire.objects.filter(
+        employe=employe, actif=True
+    ).order_by('-id').first()
+    if dernier_element and hasattr(dernier_element, 'date_debut'):
+        from django.utils import timezone as tz
+        # Vérifier qu'il n'y a pas eu de création dans les 3 dernières secondes
+        import time
+        cache_key = f'lot_creation_{employe_id}'
+        from django.core.cache import cache
+        if cache.get(cache_key):
+            return JsonResponse({'error': 'Création en cours, veuillez patienter quelques secondes'}, status=429)
+        cache.set(cache_key, True, 5)  # bloque pendant 5 secondes
+
     crees = []
     erreurs = []
+    total_montant = 0
 
     with transaction.atomic():
         for item in elements_data:
@@ -3734,6 +3763,16 @@ def api_creer_elements_lot(request, employe_id):
             montant = item.get('montant', 0)
 
             if not rubrique_id or not montant:
+                continue
+
+            # ── Validation montant ──
+            try:
+                montant_decimal = Decimal(str(int(montant)))
+                if montant_decimal <= 0 or montant_decimal > 500000000:
+                    erreurs.append(f'Montant invalide pour rubrique {rubrique_id}')
+                    continue
+            except (InvalidOperation, ValueError, TypeError):
+                erreurs.append(f'Montant non numérique pour rubrique {rubrique_id}')
                 continue
 
             try:
@@ -3744,13 +3783,13 @@ def api_creer_elements_lot(request, employe_id):
                 # Désactiver un éventuel élément existant sur la même rubrique
                 ElementSalaire.objects.filter(
                     employe=employe, rubrique=rubrique, actif=True
-                ).update(actif=False, date_fin=date_debut)
+                ).update(actif=False, date_fin=date_debut_str)
 
                 elem = ElementSalaire.objects.create(
                     employe=employe,
                     rubrique=rubrique,
-                    montant=Decimal(str(montant)),
-                    date_debut=date_debut,
+                    montant=montant_decimal,
+                    date_debut=date_debut_obj,
                     actif=True,
                     recurrent=True,
                 )
@@ -3759,10 +3798,23 @@ def api_creer_elements_lot(request, employe_id):
                     'rubrique': rubrique.libelle_rubrique,
                     'montant': int(elem.montant),
                 })
+                total_montant += int(elem.montant)
             except RubriquePaie.DoesNotExist:
-                erreurs.append(f'Rubrique ID {rubrique_id} introuvable')
-            except Exception as e:
-                erreurs.append(str(e))
+                erreurs.append(f'Rubrique introuvable ou non autorisée')
+            except Exception:
+                erreurs.append('Erreur lors de la création d\'un élément')
+
+        # ── Marquer la simulation comme appliquée ──
+        if simulation_id and crees:
+            try:
+                sim = SimulationPaie.objects.get(
+                    pk=simulation_id, entreprise=request.user.entreprise
+                )
+                sim.appliquee = True
+                sim.date_application = timezone.now()
+                sim.save(update_fields=['appliquee', 'date_application'])
+            except SimulationPaie.DoesNotExist:
+                pass
 
     return JsonResponse({
         'success': len(crees) > 0,
@@ -3828,6 +3880,33 @@ def api_impact_fiscal(request):
         constantes,
     )
 
+    # ── Indicateur de conformité fiscale ──
+    avertissements = []
+    conformite = 'conforme'  # conforme / a_verifier / non_conforme
+
+    if result['depasse'] > 0:
+        avertissements.append(f"Dépassement exonération : +{result['depasse']:,} GNF au-dessus du plafond 25%")
+        conformite = 'a_verifier'
+
+    if indem_val > brut_val * Decimal('0.75'):
+        avertissements.append("Indemnités > 75% du brut — structure inhabituelle")
+        conformite = 'non_conforme'
+    elif indem_val > brut_val * Decimal('0.50'):
+        avertissements.append("Indemnités > 50% du brut — vérifier la justification")
+        if conformite == 'conforme':
+            conformite = 'a_verifier'
+
+    base_rts = result['base_rts']
+    if base_rts <= 0:
+        avertissements.append("Base RTS nulle — aucun impôt RTS applicable")
+        if conformite == 'conforme':
+            conformite = 'a_verifier'
+
+    if brut_val < 550000:
+        avertissements.append("Brut inférieur au plancher CNSS (550 000 GNF)")
+        if conformite == 'conforme':
+            conformite = 'a_verifier'
+
     return JsonResponse({
         'brut': result['brut'],
         'indemnites': indem_val,
@@ -3847,6 +3926,9 @@ def api_impact_fiscal(request):
             'total': result['total_charges_pat'],
         },
         'detail_tranches': result['detail_tranches'],
+        # Conformité
+        'conformite': conformite,
+        'avertissements': avertissements,
         # Traçabilité : règles appliquées
         'regles': {
             'cnss_formule': f"min({result['brut']:,}, {int(constantes.get('PLAFOND_CNSS', 2500000)):,}) × {float(constantes.get('TAUX_CNSS_EMPLOYE', 5))}%",
@@ -4102,6 +4184,146 @@ def api_optimiser_decomposition(request):
 
 
 # ============================================================================
+# VALIDATION AVANT CRÉATION (étape de confirmation)
+# ============================================================================
+
+@login_required
+@entreprise_active_required
+@require_POST
+def api_valider_simulation(request):
+    """
+    POST JSON → valide une simulation et retourne un résumé + avertissements.
+    L'utilisateur doit confirmer avant la création en lot.
+
+    Entrée : { "brut": 5500000, "composantes": [...], "employe_id": 123 }
+    Sortie : { "valide": true/false, "resume": [...], "avertissements": [...],
+               "conformite": "conforme", "simulation_id": 42 }
+    """
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON invalide'}, status=400)
+
+    brut_val = int(data.get('brut', 0))
+    composantes = data.get('composantes', [])
+    employe_id = data.get('employe_id', None)
+
+    if brut_val <= 0 or not composantes:
+        return JsonResponse({'error': 'Données insuffisantes'}, status=400)
+
+    # ── Recalculer côté serveur (ne pas faire confiance au JS) ──
+    from .services_simulation import calculer_un_bareme, _charger_constantes, BAREME_CGI_REFERENCE, _charger_tranches_db
+    constantes = _charger_constantes()
+    annee = date.today().year
+    tranches = _charger_tranches_db(annee, 'officiel')
+    if not tranches:
+        tranches = list(BAREME_CGI_REFERENCE)
+
+    total_indem = sum(c.get('montant', 0) for c in composantes if c.get('cle') != 'salaire_base')
+    result = calculer_un_bareme(
+        Decimal(str(brut_val)),
+        Decimal(str(total_indem)),
+        tranches,
+        constantes,
+    )
+
+    # ── Vérifications de conformité ──
+    avertissements = []
+    conformite = 'conforme'
+
+    # 1. Vérifier somme = brut
+    total_comp = sum(c.get('montant', 0) for c in composantes)
+    ecart = abs(total_comp - brut_val)
+    if ecart > 1:
+        avertissements.append(f"⚠ Écart de cohérence : somme composantes ({total_comp:,}) ≠ brut ({brut_val:,})")
+        conformite = 'non_conforme'
+
+    # 2. Dépassement exonération
+    if result['depasse'] > 0:
+        avertissements.append(f"⚠ Dépassement exonération : +{result['depasse']:,} GNF au-dessus du plafond 25%")
+        if conformite == 'conforme':
+            conformite = 'a_verifier'
+
+    # 3. Indemnités anormalement élevées
+    if total_indem > brut_val * 0.75:
+        avertissements.append("⚠ Indemnités > 75% du brut — structure fiscalement risquée")
+        conformite = 'non_conforme'
+    elif total_indem > brut_val * 0.50:
+        avertissements.append("⚠ Indemnités > 50% du brut — vérifier la justification")
+        if conformite == 'conforme':
+            conformite = 'a_verifier'
+
+    # 4. Salaire de base trop faible
+    base = next((c.get('montant', 0) for c in composantes if c.get('cle') == 'salaire_base'), 0)
+    if base < brut_val * 0.30:
+        avertissements.append("⚠ Salaire de base < 30% du brut — peut être contesté par l'administration fiscale")
+        if conformite == 'conforme':
+            conformite = 'a_verifier'
+
+    # 5. Brut sous plancher CNSS
+    if brut_val < 550000:
+        avertissements.append("⚠ Brut inférieur au plancher CNSS (550 000 GNF)")
+        if conformite == 'conforme':
+            conformite = 'a_verifier'
+
+    # 6. Vérifier que l'employé appartient bien à l'entreprise
+    employe_nom = ''
+    if employe_id:
+        try:
+            employe = Employe.objects.get(pk=employe_id, entreprise=request.user.entreprise)
+            employe_nom = str(employe)
+        except Employe.DoesNotExist:
+            return JsonResponse({'error': 'Employé introuvable ou non autorisé'}, status=403)
+
+    # ── Résumé ──
+    resume = []
+    for c in composantes:
+        resume.append({
+            'label': c.get('label', c.get('cle', '')),
+            'pct': c.get('pct', 0),
+            'montant': c.get('montant', 0),
+        })
+
+    # ── Sauvegarder la simulation (reproductibilité) ──
+    from .models import SimulationPaie
+    sim = SimulationPaie.objects.create(
+        entreprise=request.user.entreprise,
+        employe_id=employe_id,
+        utilisateur=request.user,
+        brut=Decimal(str(brut_val)),
+        composantes=composantes,
+        impact={
+            'cnss': result['cnss'],
+            'rts': result['rts'],
+            'net': result['net'],
+            'taux_effectif': result['taux_effectif'],
+            'base_rts': result['base_rts'],
+            'plafond_exon': result['plafond_exon'],
+            'exon': result['exon'],
+            'depasse': result['depasse'],
+            'detail_tranches': result['detail_tranches'],
+        },
+        conformite=conformite,
+        avertissements=avertissements,
+    )
+
+    return JsonResponse({
+        'valide': conformite != 'non_conforme',
+        'conformite': conformite,
+        'avertissements': avertissements,
+        'resume': resume,
+        'impact_serveur': {
+            'cnss': result['cnss'],
+            'rts': result['rts'],
+            'net': result['net'],
+            'taux_effectif': result['taux_effectif'],
+        },
+        'simulation_id': sim.pk,
+        'employe_nom': employe_nom,
+    })
+
+
+# ============================================================================
 # FICHE DE SIMULATION PDF
 # Génère un PDF professionnel résumant la structuration salariale
 # ============================================================================
@@ -4111,12 +4333,11 @@ def api_optimiser_decomposition(request):
 def api_simulation_pdf(request):
     """
     POST JSON → génère un PDF de simulation salariale.
+    Recalcul côté serveur pour garantir la fiabilité des chiffres.
 
     Entrée :
         { "brut": 5500000,
           "composantes": [{"cle": "salaire_base", "label": "...", "pct": 60, "montant": 3300000}, ...],
-          "impact": { "cnss": ..., "rts": ..., "net": ..., "base_rts": ..., "taux_effectif": ...,
-                      "plafond_exon": ..., "exon": ..., "depasse": ..., "detail_tranches": [...] },
           "comparaison": [...],  ← optionnel
           "gain": {...},         ← optionnel
           "employe_nom": "..."   ← optionnel
@@ -4132,14 +4353,40 @@ def api_simulation_pdf(request):
 
     brut = int(data.get('brut', 0))
     composantes = data.get('composantes', [])
-    impact = data.get('impact', {})
     comparaison = data.get('comparaison', None)
     gain = data.get('gain', None)
-    employe_nom = data.get('employe_nom', '')
-    regles = data.get('regles', {})
+    employe_nom = str(data.get('employe_nom', ''))[:200]  # sanitize
 
     if brut <= 0 or not composantes:
         return JsonResponse({'error': 'Données insuffisantes'}, status=400)
+
+    # ── RECALCUL CÔTÉ SERVEUR (ne pas faire confiance aux données JS) ──
+    from .services_simulation import calculer_un_bareme, _charger_constantes, BAREME_CGI_REFERENCE, _charger_tranches_db
+    constantes = _charger_constantes()
+    annee = date.today().year
+    tranches_bareme = _charger_tranches_db(annee, 'officiel')
+    if not tranches_bareme:
+        tranches_bareme = list(BAREME_CGI_REFERENCE)
+
+    total_indem = sum(c.get('montant', 0) for c in composantes if c.get('cle') != 'salaire_base')
+    impact = calculer_un_bareme(
+        Decimal(str(brut)),
+        Decimal(str(total_indem)),
+        tranches_bareme,
+        constantes,
+    )
+    # Utiliser les valeurs recalculées
+    impact_data = {
+        'cnss': impact['cnss'],
+        'rts': impact['rts'],
+        'net': impact['net'],
+        'taux_effectif': impact['taux_effectif'],
+        'base_rts': impact['base_rts'],
+        'plafond_exon': impact['plafond_exon'],
+        'exon': impact['exon'],
+        'depasse': impact['depasse'],
+        'detail_tranches': impact['detail_tranches'],
+    }
 
     import io
     import os
@@ -4225,15 +4472,15 @@ def api_simulation_pdf(request):
 
     fisc_data = [
         ['Rubrique', 'Montant (GNF)', 'Détail'],
-        ['CNSS Employé (5%)', fmtgnf(impact.get('cnss', 0)),
+        ['CNSS Employé (5%)', fmtgnf(impact_data.get('cnss', 0)),
          f"Plafond: 2 500 000 GNF"],
-        ['Indemnités exonérées', fmtgnf(impact.get('exon', 0)),
-         f"Plafond 25% = {fmtgnf(impact.get('plafond_exon', 0))} GNF"],
-        ['Base imposable RTS', fmtgnf(impact.get('base_rts', 0)),
+        ['Indemnités exonérées', fmtgnf(impact_data.get('exon', 0)),
+         f"Plafond 25% = {fmtgnf(impact_data.get('plafond_exon', 0))} GNF"],
+        ['Base imposable RTS', fmtgnf(impact_data.get('base_rts', 0)),
          f"Brut − CNSS − Exon + Dépasse"],
-        ['RTS (impôt)', fmtgnf(impact.get('rts', 0)),
-         f"Taux effectif: {impact.get('taux_effectif', 0)}%"],
-        ['NET À PAYER', fmtgnf(impact.get('net', 0)),
+        ['RTS (impôt)', fmtgnf(impact_data.get('rts', 0)),
+         f"Taux effectif: {impact_data.get('taux_effectif', 0)}%"],
+        ['NET À PAYER', fmtgnf(impact_data.get('net', 0)),
          f"Brut − CNSS − RTS"],
     ]
 
@@ -4255,7 +4502,7 @@ def api_simulation_pdf(request):
     y -= th2 + 0.8 * cm
 
     # ── Détail RTS par tranches ──
-    detail_tranches = impact.get('detail_tranches', [])
+    detail_tranches = impact_data.get('detail_tranches', [])
     if detail_tranches:
         p.setFont(_FB, 10)
         p.drawString(1.5 * cm, y, "3. Détail RTS par tranches (barème progressif)")

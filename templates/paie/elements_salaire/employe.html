@@ -214,6 +214,17 @@
                 </div>
             </div>
 
+            <!-- ════════ INDICATEUR DE CONFORMITÉ ════════ -->
+            <div id="decomp_conformite_zone" style="display:none;" class="mb-3">
+                <div id="decomp_conformite_badge" class="alert py-2 px-3 d-flex align-items-center gap-2">
+                    <span id="decomp_conformite_icon"></span>
+                    <strong id="decomp_conformite_text"></strong>
+                </div>
+                <div id="decomp_avertissements_zone" style="display:none;">
+                    <ul id="decomp_avertissements_list" class="list-unstyled mb-0 small text-danger"></ul>
+                </div>
+            </div>
+
             <!-- Gain d'optimisation (affiché après optimisation) -->
             <div id="decomp_gain_zone" class="alert alert-success border-success" style="display:none;">
                 <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -329,6 +340,61 @@
         <div id="decomp_erreur" class="alert alert-danger mt-3" style="display:none;"></div>
         <div id="decomp_succes" class="alert alert-success mt-3" style="display:none;"></div>
     </div>
+    </div>
+</div>
+
+<!-- ════════ MODAL DE VALIDATION AVANT CRÉATION ════════ -->
+<div class="modal fade" id="decomp_modal_validation" tabindex="-1" aria-labelledby="decomp_modal_title" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="decomp_modal_title">
+                    <i class="bi bi-shield-check"></i> Validation de la simulation
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Conformité -->
+                <div id="modal_conformite_badge" class="alert py-2 px-3 mb-3 d-flex align-items-center gap-2">
+                    <span id="modal_conformite_icon"></span>
+                    <strong id="modal_conformite_text"></strong>
+                </div>
+
+                <!-- Avertissements -->
+                <div id="modal_avertissements" style="display:none;" class="mb-3">
+                    <h6 class="fw-bold text-danger"><i class="bi bi-exclamation-triangle"></i> Avertissements</h6>
+                    <ul id="modal_avertissements_list" class="mb-0 small"></ul>
+                </div>
+
+                <!-- Résumé des composantes -->
+                <h6 class="fw-bold"><i class="bi bi-list-check"></i> Éléments à créer</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered mb-3">
+                        <thead class="table-light">
+                            <tr><th>Composante</th><th class="text-center">%</th><th class="text-end">Montant (GNF)</th></tr>
+                        </thead>
+                        <tbody id="modal_resume_body"></tbody>
+                    </table>
+                </div>
+
+                <!-- Impact serveur -->
+                <h6 class="fw-bold"><i class="bi bi-calculator"></i> Impact fiscal (recalculé serveur)</h6>
+                <div class="row text-center mb-3 g-2">
+                    <div class="col"><span class="small text-muted">CNSS</span><br><strong id="modal_cnss">—</strong></div>
+                    <div class="col"><span class="small text-muted">RTS</span><br><strong id="modal_rts" class="text-danger">—</strong></div>
+                    <div class="col"><span class="small text-muted">Net</span><br><strong id="modal_net" class="text-success">—</strong></div>
+                    <div class="col"><span class="small text-muted">Taux eff.</span><br><strong id="modal_taux">—</strong></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Annuler
+                </button>
+                <button type="button" class="btn btn-success btn-lg" id="decomp_btn_confirmer">
+                    <i class="bi bi-check-circle-fill"></i> Confirmer la création
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -492,8 +558,9 @@
 {% block extra_js %}
 <script>
 // ══════════════════════════════════════════════════════════════════════
-// MOTEUR DE STRUCTURATION SALARIALE INTELLIGENT v3
+// MOTEUR DE STRUCTURATION SALARIALE INTELLIGENT v4
 // Sliders + Verrous + Impact fiscal + Traçabilité + Comparaison + PDF
+// + Conformité + Validation modale + Reproductibilité
 // ══════════════════════════════════════════════════════════════════════
 (function () {
     'use strict';
@@ -504,18 +571,22 @@
     var IMPACT_URL    = "{% url 'paie:api_impact_fiscal' %}";
     var OPTIMISER_URL = "{% url 'paie:api_optimiser_decomposition' %}";
     var PDF_URL       = "{% url 'paie:api_simulation_pdf' %}";
+    var VALIDER_URL   = "{% url 'paie:api_valider_simulation' %}";
     var CSRF          = "{{ csrf_token }}";
+    var EMPLOYE_ID    = {{ employe.id }};
 
     // DOM
-    var btnCalc     = document.getElementById('decomp_btn_calculer');
-    var btnCreer    = document.getElementById('decomp_btn_creer');
-    var btnOptim    = document.getElementById('decomp_btn_optimiser');
-    var btnPdf      = document.getElementById('decomp_btn_pdf');
-    var divSliders  = document.getElementById('decomp_sliders');
-    var divErr      = document.getElementById('decomp_erreur');
-    var divOk       = document.getElementById('decomp_succes');
-    var divGain     = document.getElementById('decomp_gain_zone');
-    var divCompar   = document.getElementById('decomp_comparaison_zone');
+    var btnCalc      = document.getElementById('decomp_btn_calculer');
+    var btnCreer     = document.getElementById('decomp_btn_creer');
+    var btnOptim     = document.getElementById('decomp_btn_optimiser');
+    var btnPdf       = document.getElementById('decomp_btn_pdf');
+    var btnConfirmer = document.getElementById('decomp_btn_confirmer');
+    var divSliders   = document.getElementById('decomp_sliders');
+    var divErr       = document.getElementById('decomp_erreur');
+    var divOk        = document.getElementById('decomp_succes');
+    var divGain      = document.getElementById('decomp_gain_zone');
+    var divCompar    = document.getElementById('decomp_comparaison_zone');
+    var divConf      = document.getElementById('decomp_conformite_zone');
 
     // Date par défaut
     var dateInput = document.getElementById('decomp_date');
@@ -526,9 +597,11 @@
     var rubriquesData = {};
     var composantes = [];
     var impactTimer = null;
-    var lastImpactData = null;      // dernière réponse impact fiscal
-    var lastComparaison = null;     // dernière comparaison
-    var lastGain = null;            // dernier gain
+    var lastImpactData = null;
+    var lastComparaison = null;
+    var lastGain = null;
+    var lastSimulationId = null;    // ID de la simulation sauvegardée
+    var pendingElements = null;     // éléments en attente de confirmation
 
     // Constantes visuelles
     var COLORS = {
@@ -545,6 +618,11 @@
         logement: 'decomp_pct_logement', cherte_vie: 'decomp_pct_cherte'
     };
     var CLES = ['salaire_base', 'transport', 'logement', 'cherte_vie'];
+    var CONF_MAP = {
+        'conforme':      {cls: 'alert-success', icon: '<i class="bi bi-check-circle-fill text-success fs-5"></i>', text: 'Conforme fiscalement'},
+        'a_verifier':    {cls: 'alert-warning', icon: '<i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>', text: 'À vérifier'},
+        'non_conforme':  {cls: 'alert-danger',  icon: '<i class="bi bi-x-circle-fill text-danger fs-5"></i>', text: 'Non conforme'}
+    };
 
     // ── Helpers ──────────────────────────────────────────────────────
     function fmt(n) {
@@ -559,7 +637,7 @@
             headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
             body: JSON.stringify(body)
         }).then(function(r) {
-            if (r.headers.get('content-type').indexOf('application/pdf') !== -1) return r.blob();
+            if (r.headers.get('content-type') && r.headers.get('content-type').indexOf('application/pdf') !== -1) return r.blob();
             return r.json();
         });
     }
@@ -572,6 +650,29 @@
             if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || 'Erreur PDF'); });
             return r.blob();
         });
+    }
+    function afficherConformite(elementId, conformite, avertissements) {
+        var conf = CONF_MAP[conformite] || CONF_MAP['a_verifier'];
+        var badge = document.getElementById(elementId + '_badge');
+        var icon = document.getElementById(elementId + '_icon');
+        var text = document.getElementById(elementId + '_text');
+        badge.className = 'alert py-2 px-3 d-flex align-items-center gap-2 ' + conf.cls;
+        icon.innerHTML = conf.icon;
+        text.textContent = conf.text;
+        badge.parentElement.style.display = 'block';
+
+        if (avertissements && avertissements.length > 0) {
+            var listEl = document.getElementById(elementId.replace('conformite', 'avertissements') + '_list') ||
+                         document.getElementById(elementId.replace('conformite', 'avertissements') + '_list');
+            var zoneEl = listEl ? listEl.parentElement : null;
+            if (listEl) {
+                listEl.innerHTML = '';
+                avertissements.forEach(function(w) {
+                    listEl.insertAdjacentHTML('beforeend', '<li>' + w + '</li>');
+                });
+                if (zoneEl) zoneEl.style.display = 'block';
+            }
+        }
     }
 
     // ── Pourcentages / Verrous ──────────────────────────────────────
@@ -624,12 +725,10 @@
         var total = 0;
         CLES.forEach(function(c) { total += pcts[c]; });
 
-        // MAJ labels %
         CLES.forEach(function(c) {
             document.getElementById(SLIDER_IDS[c] + '_val').textContent = pcts[c] + '%';
         });
 
-        // Calcul montants
         var mt = {};
         mt.transport = Math.round(brutTotal * pcts.transport / 100);
         mt.logement  = Math.round(brutTotal * pcts.logement / 100);
@@ -640,13 +739,11 @@
             return {cle: c, label: LABELS[c], pct: pcts[c], montant: mt[c]};
         });
 
-        // MAJ montants
         document.getElementById('decomp_mt_base').textContent = fmt(mt.salaire_base) + ' GNF';
         document.getElementById('decomp_mt_transport').textContent = fmt(mt.transport) + ' GNF';
         document.getElementById('decomp_mt_logement').textContent = fmt(mt.logement) + ' GNF';
         document.getElementById('decomp_mt_cherte').textContent = fmt(mt.cherte_vie) + ' GNF';
 
-        // Barres
         [{id:'decomp_bar_base',cle:'salaire_base'},{id:'decomp_bar_transport',cle:'transport'},
          {id:'decomp_bar_logement',cle:'logement'},{id:'decomp_bar_cherte',cle:'cherte_vie'}]
         .forEach(function(b) {
@@ -655,12 +752,10 @@
             el.textContent = SHORT[b.cle] + ' ' + pcts[b.cle] + '%';
         });
 
-        // Total badge
         var badge = document.getElementById('decomp_total_pct_badge');
         badge.textContent = total + '%';
         badge.className = total === 100 ? 'badge fs-6 bg-success' : 'badge fs-6 bg-danger';
 
-        // Tableau
         var tbody = document.getElementById('decomp_tableau_body');
         tbody.innerHTML = '';
         var somme = 0;
@@ -697,12 +792,11 @@
         document.getElementById('decomp_tfoot_montant').textContent = fmt(somme) + ' GNF';
         btnCreer.disabled = (total !== 100);
 
-        // Debounced impact fiscal
         if (impactTimer) clearTimeout(impactTimer);
         impactTimer = setTimeout(calculerImpactFiscal, 300);
     }
 
-    // ── Impact fiscal en temps réel + Traçabilité ───────────────────
+    // ── Impact fiscal en temps réel + Traçabilité + Conformité ──────
     function calculerImpactFiscal() {
         if (!brutTotal) return;
         var pcts = lirePcts();
@@ -713,7 +807,6 @@
             if (data.error) return;
             lastImpactData = data;
 
-            // Cartes fiscales
             document.getElementById('decomp_net').textContent = fmt(data.net) + ' GNF';
             document.getElementById('decomp_rts').textContent = fmt(data.rts) + ' GNF';
             document.getElementById('decomp_cnss').textContent = fmt(data.cnss) + ' GNF';
@@ -727,7 +820,7 @@
             }
             document.getElementById('decomp_exon_info').innerHTML = exonInfo;
 
-            // ── Traçabilité : formules ──
+            // Formules
             if (data.regles) {
                 var rl = data.regles;
                 var html = '';
@@ -739,7 +832,7 @@
                 document.getElementById('decomp_regles_list').innerHTML = html;
             }
 
-            // ── Traçabilité : tranches RTS ──
+            // Tranches RTS
             var trBody = document.getElementById('decomp_tranches_body');
             trBody.innerHTML = '';
             if (data.detail_tranches && data.detail_tranches.length > 0) {
@@ -758,7 +851,11 @@
                 trBody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">Aucune tranche applicable</td></tr>';
             }
 
-            // Montrer le bouton PDF
+            // ── Conformité fiscale ──
+            if (data.conformite) {
+                afficherConformite('decomp_conformite', data.conformite, data.avertissements);
+            }
+
             btnPdf.style.display = 'inline-block';
         })
         .catch(function() {});
@@ -771,8 +868,6 @@
             recalculer();
         });
     });
-
-    // Verrous
     document.querySelectorAll('.decomp-lock').forEach(function(cb) {
         cb.addEventListener('change', function() {
             var cle = cb.getAttribute('data-cle');
@@ -786,6 +881,7 @@
         divOk.style.display = 'none';
         divGain.style.display = 'none';
         divCompar.style.display = 'none';
+        divConf.style.display = 'none';
 
         brutTotal = parseVal(document.getElementById('decomp_brut').value);
         if (!brutTotal || brutTotal <= 0) {
@@ -828,7 +924,6 @@
         divErr.style.display = 'none';
         divGain.style.display = 'none';
         divCompar.style.display = 'none';
-
         if (!brutTotal) return;
 
         btnOptim.disabled = true;
@@ -842,21 +937,17 @@
         .then(function(data) {
             btnOptim.disabled = false;
             btnOptim.innerHTML = '<i class="bi bi-lightning-fill"></i> Optimiser fiscalement';
-
             if (data.error) {
                 divErr.textContent = data.error;
                 divErr.style.display = 'block';
                 return;
             }
-
-            // Appliquer les pourcentages optimisés
             (data.composantes || []).forEach(function(c) {
                 var slider = document.getElementById(SLIDER_IDS[c.cle]);
                 if (slider && !isLocked(c.cle)) slider.value = c.pct;
             });
             recalculer();
 
-            // Gain
             lastGain = data.gain;
             if (data.gain && data.gain.gain_net_mensuel !== 0) {
                 var g = data.gain;
@@ -867,7 +958,6 @@
                 divGain.style.display = 'block';
             }
 
-            // ── Comparaison scénarios ──
             lastComparaison = data.comparaison;
             if (data.comparaison && data.comparaison.length > 0) {
                 var cBody = document.getElementById('decomp_comparaison_body');
@@ -898,14 +988,12 @@
     // ── Bouton PDF ──────────────────────────────────────────────────
     btnPdf.addEventListener('click', function() {
         if (!brutTotal || !lastImpactData) return;
-
         btnPdf.disabled = true;
         btnPdf.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Génération…';
 
         var payload = {
             brut: brutTotal,
             composantes: composantes,
-            impact: lastImpactData,
             employe_nom: "{{ employe.nom_complet|escapejs }}"
         };
         if (lastComparaison) payload.comparaison = lastComparaison;
@@ -930,7 +1018,7 @@
         });
     });
 
-    // ── Bouton Créer en lot ─────────────────────────────────────────
+    // ── Bouton Créer → ouvre la validation modale ───────────────────
     btnCreer.addEventListener('click', function() {
         divErr.style.display = 'none';
         divOk.style.display = 'none';
@@ -944,6 +1032,7 @@
             return;
         }
 
+        // Vérifier les rubriques
         var elements = [];
         var manquant = false;
         composantes.forEach(function(c) {
@@ -957,7 +1046,6 @@
             if (sel) sel.classList.remove('is-invalid');
             elements.push({rubrique_id: parseInt(sel.value), montant: c.montant});
         });
-
         if (manquant) {
             divErr.textContent = 'Veuillez sélectionner une rubrique pour chaque composante.';
             divErr.style.display = 'block';
@@ -969,16 +1057,109 @@
             return;
         }
 
-        btnCreer.disabled = true;
-        btnCreer.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Création…';
+        pendingElements = elements;
 
-        postJson(CREER_URL, {
-            elements: elements,
-            date_debut: document.getElementById('decomp_date').value
+        // Appel validation serveur
+        btnCreer.disabled = true;
+        btnCreer.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Validation…';
+
+        postJson(VALIDER_URL, {
+            brut: brutTotal,
+            composantes: composantes,
+            employe_id: EMPLOYE_ID
         })
         .then(function(data) {
             btnCreer.disabled = false;
             btnCreer.innerHTML = '<i class="bi bi-check-circle-fill"></i> Créer les éléments en lot';
+
+            if (data.error) {
+                divErr.textContent = data.error;
+                divErr.style.display = 'block';
+                return;
+            }
+
+            lastSimulationId = data.simulation_id;
+
+            // Remplir la modal
+            var conf = CONF_MAP[data.conformite] || CONF_MAP['a_verifier'];
+            var mBadge = document.getElementById('modal_conformite_badge');
+            mBadge.className = 'alert py-2 px-3 mb-3 d-flex align-items-center gap-2 ' + conf.cls;
+            document.getElementById('modal_conformite_icon').innerHTML = conf.icon;
+            document.getElementById('modal_conformite_text').textContent = conf.text;
+
+            // Avertissements
+            var warnDiv = document.getElementById('modal_avertissements');
+            var warnList = document.getElementById('modal_avertissements_list');
+            if (data.avertissements && data.avertissements.length > 0) {
+                warnList.innerHTML = '';
+                data.avertissements.forEach(function(w) {
+                    warnList.insertAdjacentHTML('beforeend', '<li class="text-danger">' + w + '</li>');
+                });
+                warnDiv.style.display = 'block';
+            } else {
+                warnDiv.style.display = 'none';
+            }
+
+            // Résumé
+            var rBody = document.getElementById('modal_resume_body');
+            rBody.innerHTML = '';
+            (data.resume || []).forEach(function(r) {
+                rBody.insertAdjacentHTML('beforeend',
+                    '<tr><td>' + r.label + '</td><td class="text-center">' + r.pct + '%</td><td class="text-end fw-bold">' + fmt(r.montant) + '</td></tr>'
+                );
+            });
+
+            // Impact serveur
+            if (data.impact_serveur) {
+                document.getElementById('modal_cnss').textContent = fmt(data.impact_serveur.cnss) + ' GNF';
+                document.getElementById('modal_rts').textContent = fmt(data.impact_serveur.rts) + ' GNF';
+                document.getElementById('modal_net').textContent = fmt(data.impact_serveur.net) + ' GNF';
+                document.getElementById('modal_taux').textContent = data.impact_serveur.taux_effectif + '%';
+            }
+
+            // Activer/désactiver le bouton confirmer
+            btnConfirmer.disabled = (data.conformite === 'non_conforme');
+            if (data.conformite === 'non_conforme') {
+                btnConfirmer.className = 'btn btn-secondary btn-lg';
+                btnConfirmer.innerHTML = '<i class="bi bi-x-circle"></i> Création bloquée (non conforme)';
+            } else {
+                btnConfirmer.className = 'btn btn-success btn-lg';
+                btnConfirmer.innerHTML = '<i class="bi bi-check-circle-fill"></i> Confirmer la création';
+            }
+
+            // Ouvrir la modal
+            var modal = new bootstrap.Modal(document.getElementById('decomp_modal_validation'));
+            modal.show();
+        })
+        .catch(function(err) {
+            btnCreer.disabled = false;
+            btnCreer.innerHTML = '<i class="bi bi-check-circle-fill"></i> Créer les éléments en lot';
+            divErr.textContent = 'Erreur réseau : ' + err.message;
+            divErr.style.display = 'block';
+        });
+    });
+
+    // ── Bouton Confirmer (dans la modal) → création effective ───────
+    btnConfirmer.addEventListener('click', function() {
+        if (!pendingElements || pendingElements.length === 0) return;
+
+        btnConfirmer.disabled = true;
+        btnConfirmer.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Création…';
+
+        postJson(CREER_URL, {
+            elements: pendingElements,
+            date_debut: document.getElementById('decomp_date').value,
+            simulation_id: lastSimulationId
+        })
+        .then(function(data) {
+            btnConfirmer.disabled = false;
+            btnConfirmer.innerHTML = '<i class="bi bi-check-circle-fill"></i> Confirmer la création';
+
+            // Fermer la modal
+            var modalEl = document.getElementById('decomp_modal_validation');
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
             if (data.error) {
                 divErr.textContent = data.error;
                 divErr.style.display = 'block';
@@ -998,10 +1179,11 @@
                 divErr.textContent = data.message || 'Erreur lors de la création.';
                 divErr.style.display = 'block';
             }
+            pendingElements = null;
         })
         .catch(function(err) {
-            btnCreer.disabled = false;
-            btnCreer.innerHTML = '<i class="bi bi-check-circle-fill"></i> Créer les éléments en lot';
+            btnConfirmer.disabled = false;
+            btnConfirmer.innerHTML = '<i class="bi bi-check-circle-fill"></i> Confirmer la création';
             divErr.textContent = 'Erreur réseau : ' + err.message;
             divErr.style.display = 'block';
         });

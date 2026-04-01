@@ -1223,6 +1223,43 @@ class HistoriqueParametresPaie(models.Model):
         return f"Modification {self.champ_modifie} — {self.date_modification:%d/%m/%Y %H:%M}"
 
 
+# ============================================================================
+# SIMULATION SALARIALE (reproductibilité des calculs)
+# ============================================================================
+
+class SimulationPaie(models.Model):
+    """Historique des simulations de structuration salariale."""
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='simulations_paie')
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='simulations_paie', null=True, blank=True)
+    utilisateur = models.ForeignKey('core.Utilisateur', on_delete=models.SET_NULL, null=True)
+
+    brut = models.DecimalField(max_digits=15, decimal_places=0)
+    composantes = models.JSONField(help_text="[{cle, label, pct, montant}, ...]")
+    impact = models.JSONField(help_text="{cnss, rts, net, taux_effectif, detail_tranches, regles, ...}")
+    comparaison = models.JSONField(null=True, blank=True, help_text="[{scenario, rts, cnss, net, taux}, ...]")
+    gain = models.JSONField(null=True, blank=True, help_text="{gain_net_mensuel, gain_net_annuel, ...}")
+    conformite = models.CharField(max_length=20, default='conforme', help_text="conforme / a_verifier / non_conforme")
+    avertissements = models.JSONField(default=list, blank=True, help_text="Liste des warnings détectés")
+
+    appliquee = models.BooleanField(default=False, help_text="True si les éléments ont été créés en lot")
+    date_application = models.DateTimeField(null=True, blank=True)
+
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'simulations_paie'
+        ordering = ['-date_creation']
+        verbose_name = 'Simulation de paie'
+        verbose_name_plural = 'Simulations de paie'
+        indexes = [
+            models.Index(fields=['entreprise', '-date_creation'], name='idx_sim_entreprise_date'),
+            models.Index(fields=['employe', '-date_creation'], name='idx_sim_employe_date'),
+        ]
+
+    def __str__(self):
+        return f"Simulation {self.brut:,.0f} GNF — {self.date_creation:%d/%m/%Y %H:%M}"
+
+
 # Import des modèles de frais
 from .models_frais import CategoriesFrais, NoteFrais, LigneFrais, BaremeFrais
 
