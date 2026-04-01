@@ -3185,3 +3185,393 @@ def bulletins_groupes_pdf(request):
     response['Content-Disposition'] = f'inline; filename="{nom_fichier}"'
     return response
 
+
+# ============================================================================
+# API RÉTRO-PAIE : NET → BRUT
+# Calcule le brut nécessaire pour obtenir exactement le net convenu
+# ============================================================================
+
+@login_required
+@entreprise_active_required
+def api_retropaie(request):
+    """
+    Endpoint AJAX : calcul rétrograde net → brut.
+
+    POST JSON :
+        net_cible                  : int  – Net mensuel souhaité en GNF
+        pct_indemnites_forfaitaires: float – Part des indemnités forfaitaires
+                                            exonérées de RTS (0-25, défaut 0)
+        annee                      : int  – Année du barème (défaut: courante)
+
+    Réponse JSON :
+        brut, cnss, base_cnss, base_rts, rts, net_calcule, net_cible,
+        ecart, ok, iterations, detail_tranches, formatted (montants formatés)
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Corps JSON invalide'}, status=400)
+
+    # --- Validation net_cible -----------------------------------------------
+    raw_net = data.get('net_cible', '')
+    if not raw_net:
+        return JsonResponse({'error': 'Le net cible est requis'}, status=400)
+
+    try:
+        net_cible = Decimal(str(raw_net).replace(' ', '').replace('\xa0', ''))
+        if net_cible <= 0:
+            raise ValueError
+    except (InvalidOperation, ValueError):
+        return JsonResponse({'error': 'Montant net invalide'}, status=400)
+
+    # --- Paramètres optionnels ---------------------------------------------
+    try:
+        pct_indem = float(data.get('pct_indemnites_forfaitaires', 0) or 0)
+        pct_indem = max(0.0, min(25.0, pct_indem))
+    except (TypeError, ValueError):
+        pct_indem = 0.0
+
+    try:
+        annee = int(data.get('annee') or date.today().year)
+    except (TypeError, ValueError):
+        annee = date.today().year
+
+    garantir_net_minimum = bool(data.get('garantir_net_minimum', True))
+    comparer_baremes = bool(data.get('comparer_baremes', False))
+
+    # --- Calcul rétrograde -------------------------------------------------
+    from .services_retropaie import retropaie_net_vers_brut
+
+    try:
+        resultat = retropaie_net_vers_brut(
+            net_cible=net_cible,
+            annee=annee,
+            pct_indemnites_forfaitaires=pct_indem,
+            garantir_net_minimum=garantir_net_minimum,
+        )
+    except Exception as e:
+        return JsonResponse({'error': f'Erreur de calcul : {str(e)}'}, status=500)
+
+    # --- Formatage des montants (GNF sans décimales, séparateur espace) ---
+    def fmt(n):
+        return f"{int(n):,}".replace(',', ' ')
+
+    reponse = {
+        'brut':            int(resultat['brut']),
+        'cnss':            int(resultat['cnss']),
+        'base_cnss':       int(resultat['base_cnss']),
+        'base_rts':        int(resultat['base_rts']),
+        'rts':             int(resultat['rts']),
+        'net_calcule':     int(resultat['net_calcule']),
+        'net_cible':       int(resultat['net_cible']),
+        'ecart':           int(resultat['ecart']),
+        'ok':              resultat['ok'],
+        'iterations':      resultat['iterations'],
+        'detail_tranches': resultat['detail_tranches'],
+        'mode':            resultat.get('mode', 'net_minimum'),
+        'formatted': {
+            'brut':        fmt(resultat['brut']),
+            'cnss':        fmt(resultat['cnss']),
+            'base_cnss':   fmt(resultat['base_cnss']),
+            'base_rts':    fmt(resultat['base_rts']),
+            'rts':         fmt(resultat['rts']),
+            'net_calcule': fmt(resultat['net_calcule']),
+            'net_cible':   fmt(resultat['net_cible']),
+        },
+    }
+
+    # --- Comparaison multi-barèmes -----------------------------------------
+    if comparer_baremes:
+        annees_disponibles = (
+            TrancheRTS.objects
+            .filter(actif=True, type_bareme='officiel')
+            .values_list('annee_validite', flat=True)
+            .distinct()
+            .order_by('-annee_validite')
+        )
+        comparaison = []
+        for annee_b in annees_disponibles:
+            try:
+                res_b = retropaie_net_vers_brut(
+                    net_cible=net_cible,
+                    annee=int(annee_b),
+                    pct_indemnites_forfaitaires=pct_indem,
+                    garantir_net_minimum=garantir_net_minimum,
+                )
+                comparaison.append({
+                    'annee':        int(annee_b),
+                    'brut':         int(res_b['brut']),
+                    'cnss':         int(res_b['cnss']),
+                    'rts':          int(res_b['rts']),
+                    'net_calcule':  int(res_b['net_calcule']),
+                    'formatted': {
+                        'brut':        fmt(res_b['brut']),
+                        'cnss':        fmt(res_b['cnss']),
+                        'rts':         fmt(res_b['rts']),
+                        'net_calcule': fmt(res_b['net_calcule']),
+                    },
+                })
+            except Exception:
+                pass
+        reponse['comparaison_baremes'] = comparaison
+
+    return JsonResponse(reponse)
+
+
+# ============================================================================
+# VUE PDF RÉTRO-PAIE
+# ============================================================================
+
+@login_required
+@entreprise_active_required
+def retropaie_pdf(request):
+    """
+    Génère un PDF de la simulation rétrograde Net → Brut.
+    Accepte les mêmes paramètres que api_retropaie (en POST ou GET).
+    """
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm
+    from reportlab.pdfgen import canvas
+    from reportlab.lib import colors
+    from reportlab.platypus import Table, TableStyle
+    import io
+    import os
+
+    # Polices
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        _font_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'static', 'fonts'
+        )
+        pdfmetrics.registerFont(TTFont('Arial', os.path.join(_font_dir, 'Arial.ttf')))
+        pdfmetrics.registerFont(TTFont('Arial-Bold', os.path.join(_font_dir, 'Arial-Bold.ttf')))
+        _FN = 'Arial'
+        _FB = 'Arial-Bold'
+    except Exception:
+        _FN = 'Helvetica'
+        _FB = 'Helvetica-Bold'
+
+    # --- Lecture des paramètres (POST ou GET) ---
+    if request.method == 'POST':
+        raw_net = request.POST.get('net_cible', '')
+        pct_indem_raw = request.POST.get('pct_indemnites_forfaitaires', '0')
+        annee_raw = request.POST.get('annee', '')
+        garantir_raw = request.POST.get('garantir_net_minimum', 'true')
+    else:
+        raw_net = request.GET.get('net_cible', '')
+        pct_indem_raw = request.GET.get('pct_indemnites_forfaitaires', '0')
+        annee_raw = request.GET.get('annee', '')
+        garantir_raw = request.GET.get('garantir_net_minimum', 'true')
+
+    try:
+        net_cible = Decimal(str(raw_net).replace(' ', '').replace('\xa0', ''))
+        if net_cible <= 0:
+            raise ValueError
+    except (InvalidOperation, ValueError):
+        return HttpResponse('Paramètre net_cible invalide', status=400)
+
+    try:
+        pct_indem = float(pct_indem_raw or 0)
+        pct_indem = max(0.0, min(25.0, pct_indem))
+    except (TypeError, ValueError):
+        pct_indem = 0.0
+
+    try:
+        annee = int(annee_raw) if annee_raw else date.today().year
+    except (TypeError, ValueError):
+        annee = date.today().year
+
+    garantir_net_minimum = str(garantir_raw).lower() not in ('false', '0', 'no')
+
+    # --- Calcul ---
+    from .services_retropaie import retropaie_net_vers_brut
+    try:
+        resultat = retropaie_net_vers_brut(
+            net_cible=net_cible,
+            annee=annee,
+            pct_indemnites_forfaitaires=pct_indem,
+            garantir_net_minimum=garantir_net_minimum,
+        )
+    except Exception as e:
+        return HttpResponse(f'Erreur de calcul : {e}', status=500)
+
+    def fmt(n):
+        try:
+            return f"{int(n):,}".replace(',', '\u00a0')
+        except Exception:
+            return str(n)
+
+    # --- Génération PDF ---
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    entreprise = getattr(request.user, 'entreprise', None)
+    nom_entreprise = entreprise.nom_entreprise if entreprise else 'ENTREPRISE'
+    mode_label = 'Net minimum (net ≥ objectif)' if garantir_net_minimum else 'Net exact (net ≈ objectif ±1 GNF)'
+    mode_key = resultat.get('mode', 'net_minimum')
+
+    y = height - 1.5 * cm
+
+    # En-tête : nom entreprise
+    p.setFont(_FB, 13)
+    p.setFillColor(colors.HexColor('#0d6efd'))
+    p.drawCentredString(width / 2, y, nom_entreprise)
+    y -= 0.6 * cm
+
+    # Trait bleu
+    p.setStrokeColor(colors.HexColor('#0d6efd'))
+    p.setLineWidth(2)
+    p.line(1.5 * cm, y, width - 1.5 * cm, y)
+    y -= 0.5 * cm
+
+    # Titre principal
+    p.setFont(_FB, 14)
+    p.setFillColor(colors.black)
+    p.drawCentredString(width / 2, y, 'Simulation Salariale - Calcul Net → Brut')
+    y -= 0.5 * cm
+
+    # Date
+    p.setFont(_FN, 9)
+    p.setFillColor(colors.HexColor('#555555'))
+    p.drawCentredString(width / 2, y, f"Barème RTS {annee}   –   Généré le {date.today().strftime('%d/%m/%Y')}")
+    p.setFillColor(colors.black)
+    y -= 0.9 * cm
+
+    # --- Section Paramètres ---
+    p.setFont(_FB, 10)
+    p.setFillColor(colors.HexColor('#198754'))
+    p.drawString(1.5 * cm, y, 'Paramètres de la simulation')
+    p.setFillColor(colors.black)
+    y -= 0.45 * cm
+
+    p.setFont(_FN, 9)
+    params = [
+        ('Net cible', f"{fmt(net_cible)} GNF"),
+        ('% Indemnités forfaitaires exonérées', f"{pct_indem:.0f} %"),
+        ('Mode de calcul', mode_label),
+    ]
+    for label, valeur in params:
+        p.drawString(2 * cm, y, f"• {label} :")
+        p.drawString(9 * cm, y, valeur)
+        y -= 0.45 * cm
+
+    y -= 0.3 * cm
+
+    # --- Tableau résultat principal ---
+    p.setFont(_FB, 10)
+    p.setFillColor(colors.HexColor('#0d6efd'))
+    p.drawString(1.5 * cm, y, 'Résultat du calcul')
+    p.setFillColor(colors.black)
+    y -= 0.5 * cm
+
+    data_table = [
+        ['', 'Montant (GNF)'],
+        ['Salaire BRUT à saisir', fmt(resultat['brut'])],
+        ['CNSS salarié (5 %)', fmt(resultat['cnss'])],
+        ['Base CNSS (plafonnée)', fmt(resultat['base_cnss'])],
+        ['Base imposable RTS', fmt(resultat['base_rts'])],
+        ['RTS / IRG', fmt(resultat['rts'])],
+        ['NET réel calculé', fmt(resultat['net_calcule'])],
+        ['Net cible demandé', fmt(resultat['net_cible'])],
+        [f"Écart (mode : {mode_key})", fmt(resultat['ecart'])],
+    ]
+
+    col_widths = [9 * cm, 6 * cm]
+    tbl = Table(data_table, colWidths=col_widths)
+    tbl.setStyle(TableStyle([
+        ('BACKGROUND',  (0, 0), (-1, 0), colors.HexColor('#0d6efd')),
+        ('TEXTCOLOR',   (0, 0), (-1, 0), colors.white),
+        ('FONTNAME',    (0, 0), (-1, 0), _FB),
+        ('FONTSIZE',    (0, 0), (-1, 0), 9),
+        ('BACKGROUND',  (0, 1), (-1, 1), colors.HexColor('#cfe2ff')),
+        ('FONTNAME',    (0, 1), (-1, 1), _FB),
+        ('BACKGROUND',  (0, 5), (-1, 5), colors.HexColor('#fff3cd')),
+        ('BACKGROUND',  (0, 6), (-1, 6), colors.HexColor('#d1e7dd')),
+        ('FONTNAME',    (0, 6), (-1, 6), _FB),
+        ('FONTSIZE',    (0, 1), (-1, -1), 9),
+        ('ALIGN',       (1, 0), (1, -1), 'RIGHT'),
+        ('GRID',        (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')]),
+        ('LEFTPADDING',  (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING',   (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+
+    tbl_w, tbl_h = tbl.wrap(0, 0)
+    tbl.drawOn(p, 1.5 * cm, y - tbl_h)
+    y -= tbl_h + 0.7 * cm
+
+    # --- Détail tranches RTS ---
+    detail = resultat.get('detail_tranches', [])
+    if detail:
+        p.setFont(_FB, 10)
+        p.setFillColor(colors.HexColor('#dc3545'))
+        p.drawString(1.5 * cm, y, 'Détail barème RTS par tranche')
+        p.setFillColor(colors.black)
+        y -= 0.5 * cm
+
+        data_tranches = [['Tranche', 'Montant imposable (GNF)', 'Taux', 'Impôt (GNF)']]
+        for t in detail:
+            borne_sup = f"{fmt(t['borne_sup'])} GNF" if t.get('borne_sup') else 'Au-delà'
+            data_tranches.append([
+                f"{fmt(t['borne_inf'])} – {borne_sup}",
+                fmt(t['montant_tranche']),
+                f"{t['taux']} %",
+                fmt(t['impot_tranche']),
+            ])
+        # Ligne total
+        total_impot = sum(t['impot_tranche'] for t in detail)
+        data_tranches.append(['TOTAL RTS', '', '', fmt(total_impot)])
+
+        col_w2 = [6 * cm, 4.5 * cm, 2 * cm, 3 * cm]
+        tbl2 = Table(data_tranches, colWidths=col_w2)
+        tbl2.setStyle(TableStyle([
+            ('BACKGROUND',  (0, 0), (-1, 0), colors.HexColor('#dc3545')),
+            ('TEXTCOLOR',   (0, 0), (-1, 0), colors.white),
+            ('FONTNAME',    (0, 0), (-1, 0), _FB),
+            ('FONTSIZE',    (0, 0), (-1, -1), 8),
+            ('ALIGN',       (1, 0), (-1, -1), 'RIGHT'),
+            ('GRID',        (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+            ('BACKGROUND',  (0, -1), (-1, -1), colors.HexColor('#fff3cd')),
+            ('FONTNAME',    (0, -1), (-1, -1), _FB),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.HexColor('#f8f9fa')]),
+            ('LEFTPADDING',  (0, 0), (-1, -1), 5),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING',   (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+
+        tbl2_w, tbl2_h = tbl2.wrap(0, 0)
+        # Vérifier si on a de la place sinon nouvelle page
+        if y - tbl2_h < 2 * cm:
+            p.showPage()
+            y = height - 1.5 * cm
+        tbl2.drawOn(p, 1.5 * cm, y - tbl2_h)
+        y -= tbl2_h + 0.5 * cm
+
+    # --- Pied de page ---
+    p.setFont(_FN, 7)
+    p.setFillColor(colors.HexColor('#888888'))
+    p.drawCentredString(
+        width / 2, 0.8 * cm,
+        f"Document généré le {date.today().strftime('%d/%m/%Y')} – Confidentiel – Gestionnaire RH Guinée"
+    )
+    p.setStrokeColor(colors.HexColor('#cccccc'))
+    p.setLineWidth(0.5)
+    p.line(1.5 * cm, 1.2 * cm, width - 1.5 * cm, 1.2 * cm)
+
+    p.save()
+    buffer.seek(0)
+
+    nom_fichier = f"simulation_retropaie_{date.today().strftime('%Y%m%d')}.pdf"
+    response = HttpResponse(buffer.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{nom_fichier}"'
+    return response
+

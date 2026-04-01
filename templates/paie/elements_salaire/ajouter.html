@@ -16,6 +16,177 @@
     </div>
 </div>
 
+<!-- ================================================================
+     WIDGET RÉTRO-PAIE : Calculer le brut depuis le net convenu
+     ================================================================ -->
+<div class="card border-success shadow mb-4">
+    <div class="card-header bg-success text-white d-flex align-items-center gap-2">
+        <i class="bi bi-calculator-fill fs-5"></i>
+        <strong>Calculer le brut à partir du net convenu</strong>
+        <span class="badge bg-white text-success ms-2">Net → Brut</span>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Vous avez convenu d'un salaire <strong>net</strong> avec l'employé ? Saisissez ce montant
+            et l'application calcule automatiquement le <strong>brut</strong> à saisir pour qu'il
+            reçoive exactement ce montant après déduction CNSS et RTS.
+        </p>
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="rp_net_cible" class="form-label fw-semibold">
+                    <i class="bi bi-currency-exchange"></i> Net souhaité (GNF) <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control form-control-lg" id="rp_net_cible"
+                       placeholder="Ex: 5 500 000" inputmode="numeric" autocomplete="off">
+                <small class="text-muted">Montant net mensuel convenu</small>
+            </div>
+            <div class="col-md-3">
+                <label for="rp_pct_indem" class="form-label fw-semibold">
+                    <i class="bi bi-percent"></i> % Indemnités forfaitaires
+                </label>
+                <div class="input-group">
+                    <input type="number" class="form-control" id="rp_pct_indem"
+                           value="0" min="0" max="25" step="1">
+                    <span class="input-group-text">%</span>
+                </div>
+                <small class="text-muted">Part du brut exonérée de RTS (transport, logement…)</small>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Mode</label>
+                <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="rp_mode" id="rp_mode_min" value="minimum" checked>
+                    <label class="btn btn-outline-success btn-sm" for="rp_mode_min" title="Net ≥ objectif">
+                        <i class="bi bi-shield-check"></i> Minimum
+                    </label>
+                    <input type="radio" class="btn-check" name="rp_mode" id="rp_mode_exact" value="exact">
+                    <label class="btn btn-outline-primary btn-sm" for="rp_mode_exact" title="Net ≈ objectif ±1 GNF">
+                        <i class="bi bi-bullseye"></i> Exact
+                    </label>
+                </div>
+                <small class="text-muted">Minimum = net ≥ objectif</small>
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-success btn-lg w-100" id="rp_btn_calculer">
+                    <i class="bi bi-calculator"></i> Calculer le brut
+                </button>
+            </div>
+        </div>
+        <div class="row g-3 mt-1">
+            <div class="col-md-12">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="rp_comparer_baremes">
+                    <label class="form-check-label" for="rp_comparer_baremes">
+                        Comparer avec les autres barèmes RTS disponibles
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Résultat -->
+        <div id="rp_resultat" class="mt-4" style="display:none;">
+            <hr>
+            <h6 class="fw-bold text-success mb-3">
+                <i class="bi bi-check-circle-fill"></i> Résultat du calcul rétrograde
+            </h6>
+            <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <div class="card border-primary text-center p-3">
+                        <div class="text-primary small fw-bold">BRUT À SAISIR</div>
+                        <div class="fs-5 fw-bold text-primary" id="rp_brut_affiche">—</div>
+                        <div class="text-muted small">GNF</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-warning text-center p-3">
+                        <div class="text-warning small fw-bold">CNSS (5 %)</div>
+                        <div class="fs-6 fw-semibold text-warning" id="rp_cnss_affiche">—</div>
+                        <div class="text-muted small">GNF</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-danger text-center p-3">
+                        <div class="text-danger small fw-bold">RTS / IRG</div>
+                        <div class="fs-6 fw-semibold text-danger" id="rp_rts_affiche">—</div>
+                        <div class="text-muted small">GNF</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-success text-center p-3 bg-success bg-opacity-10">
+                        <div class="text-success small fw-bold">NET RÉEL</div>
+                        <div class="fs-5 fw-bold text-success" id="rp_net_affiche">—</div>
+                        <div class="text-muted small">GNF</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <div class="alert alert-light border mb-0 py-2 px-3 small">
+                        <strong>Base CNSS :</strong> <span id="rp_base_cnss_affiche">—</span> GNF
+                        <span class="text-muted">(plancher 550 000 / plafond 2 500 000)</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-light border mb-0 py-2 px-3 small">
+                        <strong>Base imposable RTS :</strong> <span id="rp_base_rts_affiche">—</span> GNF
+                    </div>
+                </div>
+            </div>
+            <!-- Comparaison multi-barèmes -->
+            <div id="rp_comparaison_container" style="display:none;" class="mb-3">
+                <h6 class="fw-bold text-secondary mb-2"><i class="bi bi-bar-chart"></i> Comparaison multi-barèmes</h6>
+                <table class="table table-sm table-striped table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Barème</th>
+                            <th class="text-end">Brut calculé</th>
+                            <th class="text-end">CNSS</th>
+                            <th class="text-end">RTS/IRG</th>
+                            <th class="text-end">Net réel</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rp_comparaison_tbody"></tbody>
+                </table>
+            </div>
+            <!-- Détail tranches -->
+            <div id="rp_detail_tranches_container" style="display:none;" class="mb-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm mb-2"
+                        onclick="document.getElementById('rp_tranches_table').style.display = document.getElementById('rp_tranches_table').style.display === 'none' ? 'block' : 'none'">
+                    <i class="bi bi-table"></i> Voir le détail barème RTS
+                </button>
+                <div id="rp_tranches_table" style="display:none;">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tranche</th>
+                                <th class="text-end">Montant imposable</th>
+                                <th class="text-end">Taux</th>
+                                <th class="text-end">Impôt tranche</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rp_tranches_tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Bouton appliquer -->
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <button type="button" class="btn btn-primary" id="rp_btn_appliquer">
+                    <i class="bi bi-arrow-down-circle-fill"></i> Appliquer ce brut dans le formulaire
+                </button>
+                <button type="button" class="btn btn-outline-danger" id="rp_btn_pdf">
+                    <i class="bi bi-file-earmark-pdf"></i> Exporter en PDF
+                </button>
+                <span class="text-muted small">
+                    Le montant brut sera copié dans le champ <strong>Montant Fixe</strong> ci-dessous.
+                </span>
+            </div>
+        </div>
+
+        <!-- Erreur -->
+        <div id="rp_erreur" class="alert alert-danger mt-3" style="display:none;"></div>
+    </div>
+</div>
+<!-- Fin widget rétro-paie -->
+
 <div class="card shadow">
     <div class="card-body">
         <form method="post">
@@ -138,25 +309,208 @@
 
 {% block extra_js %}
 <script>
-// Afficher le champ base de calcul si un taux est saisi
-document.getElementById('taux').addEventListener('input', function() {
-    const baseGroup = document.getElementById('base-calcul-group');
-    if (this.value) {
-        baseGroup.style.display = 'block';
-    } else {
-        baseGroup.style.display = 'none';
-    }
+// ── Affichage base de calcul selon taux ──────────────────────────────────
+document.getElementById('taux').addEventListener('input', function () {
+    document.getElementById('base-calcul-group').style.display = this.value ? 'block' : 'none';
 });
 
-// Mettre à jour le type de rubrique
 function updateRubriqueType() {
-    const select = document.getElementById('rubrique');
-    const option = select.options[select.selectedIndex];
-    const type = option.getAttribute('data-type');
-    
-    // Vous pouvez ajouter des comportements spécifiques selon le type
-    console.log('Type de rubrique sélectionné:', type);
+    const sel = document.getElementById('rubrique');
+    const type = sel.options[sel.selectedIndex].getAttribute('data-type');
+    console.log('Type de rubrique sélectionné :', type);
 }
+
+// ── Widget Rétro-Paie : Net → Brut ───────────────────────────────────────
+(function () {
+    const RETROPAIE_URL = "{% url 'paie:api_retropaie' %}";
+    const RETROPAIE_PDF_URL = "{% url 'paie:retropaie_pdf' %}";
+    const CSRF_TOKEN    = "{{ csrf_token }}";
+
+    const btnCalculer  = document.getElementById('rp_btn_calculer');
+    const btnAppliquer = document.getElementById('rp_btn_appliquer');
+    const btnPdf       = document.getElementById('rp_btn_pdf');
+    const divResultat  = document.getElementById('rp_resultat');
+    const divErreur    = document.getElementById('rp_erreur');
+
+    // Stocke les derniers paramètres pour le PDF
+    let dernierBrut = null;
+    let dernierParams = null;
+
+    // Formater un entier avec espaces : 5500000 → "5 500 000"
+    function fmt(n) {
+        return parseInt(n).toLocaleString('fr-FR').replace(/\u202f/g, '\u00a0');
+    }
+
+    // Nettoyer la saisie (accepte espaces, virgules, points) → entier
+    function parseEntier(val) {
+        return parseInt(String(val).replace(/[\s\u00a0\u202f,.]/g, ''), 10);
+    }
+
+    btnCalculer.addEventListener('click', function () {
+        divResultat.style.display = 'none';
+        divErreur.style.display   = 'none';
+        dernierBrut = null;
+        dernierParams = null;
+
+        const netBrut = parseEntier(document.getElementById('rp_net_cible').value);
+        const pctIndem = parseFloat(document.getElementById('rp_pct_indem').value) || 0;
+        const modeSelectionne = document.querySelector('input[name="rp_mode"]:checked');
+        const modeValeur = modeSelectionne ? modeSelectionne.value : 'minimum';
+        const garantirNetMinimum = (modeValeur === 'minimum');
+        const comparerBaremes = document.getElementById('rp_comparer_baremes').checked;
+
+        if (!netBrut || isNaN(netBrut) || netBrut <= 0) {
+            divErreur.textContent = 'Veuillez saisir un montant net valide.';
+            divErreur.style.display = 'block';
+            return;
+        }
+
+        btnCalculer.disabled = true;
+        btnCalculer.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Calcul…';
+
+        fetch(RETROPAIE_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken':  CSRF_TOKEN,
+            },
+            body: JSON.stringify({
+                net_cible: netBrut,
+                pct_indemnites_forfaitaires: pctIndem,
+                garantir_net_minimum: garantirNetMinimum,
+                comparer_baremes: comparerBaremes,
+            }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            btnCalculer.disabled = false;
+            btnCalculer.innerHTML = '<i class="bi bi-calculator"></i> Calculer le brut';
+
+            if (data.error) {
+                divErreur.textContent = data.error;
+                divErreur.style.display = 'block';
+                return;
+            }
+
+            // Remplir les chiffres
+            document.getElementById('rp_brut_affiche').textContent     = fmt(data.brut) + ' GNF';
+            document.getElementById('rp_cnss_affiche').textContent     = fmt(data.cnss) + ' GNF';
+            document.getElementById('rp_rts_affiche').textContent      = fmt(data.rts)  + ' GNF';
+            document.getElementById('rp_net_affiche').textContent      = fmt(data.net_calcule) + ' GNF';
+            document.getElementById('rp_base_cnss_affiche').textContent = fmt(data.base_cnss);
+            document.getElementById('rp_base_rts_affiche').textContent  = fmt(data.base_rts);
+
+            // Détail tranches RTS
+            const tranches = data.detail_tranches || [];
+            const container = document.getElementById('rp_detail_tranches_container');
+            const tbody     = document.getElementById('rp_tranches_tbody');
+            tbody.innerHTML = '';
+
+            if (tranches.length > 0) {
+                tranches.forEach(function (t) {
+                    const borneSup = t.borne_sup ? fmt(t.borne_sup) + ' GNF' : 'Au-delà';
+                    const row = `<tr>
+                        <td>${fmt(t.borne_inf)} – ${borneSup}</td>
+                        <td class="text-end">${fmt(t.montant_tranche)} GNF</td>
+                        <td class="text-end">${t.taux} %</td>
+                        <td class="text-end fw-semibold">${fmt(t.impot_tranche)} GNF</td>
+                    </tr>`;
+                    tbody.insertAdjacentHTML('beforeend', row);
+                });
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+            }
+
+            // Comparaison multi-barèmes
+            const comparaisonContainer = document.getElementById('rp_comparaison_container');
+            const comparaisonTbody = document.getElementById('rp_comparaison_tbody');
+            const comparaisonData = data.comparaison_baremes || [];
+            comparaisonTbody.innerHTML = '';
+
+            if (comparaisonData.length > 0) {
+                comparaisonData.forEach(function (b) {
+                    const estAnneeActuelle = (b.annee === data.annee);
+                    const classeRow = estAnneeActuelle ? 'table-primary fw-bold' : '';
+                    const row = `<tr class="${classeRow}">
+                        <td>Barème ${b.annee}</td>
+                        <td class="text-end">${b.formatted.brut} GNF</td>
+                        <td class="text-end">${b.formatted.cnss} GNF</td>
+                        <td class="text-end">${b.formatted.rts} GNF</td>
+                        <td class="text-end">${b.formatted.net_calcule} GNF</td>
+                    </tr>`;
+                    comparaisonTbody.insertAdjacentHTML('beforeend', row);
+                });
+                comparaisonContainer.style.display = 'block';
+            } else {
+                comparaisonContainer.style.display = 'none';
+            }
+
+            // Stocker les paramètres pour le PDF
+            dernierBrut = data.brut;
+            dernierParams = {
+                net_cible: netBrut,
+                pct_indemnites_forfaitaires: pctIndem,
+                garantir_net_minimum: garantirNetMinimum,
+            };
+            divResultat.style.display = 'block';
+        })
+        .catch(err => {
+            btnCalculer.disabled = false;
+            btnCalculer.innerHTML = '<i class="bi bi-calculator"></i> Calculer le brut';
+            divErreur.textContent = 'Erreur réseau : ' + err.message;
+            divErreur.style.display = 'block';
+        });
+    });
+
+    // Appliquer le brut calculé dans le champ Montant Fixe
+    btnAppliquer.addEventListener('click', function () {
+        if (dernierBrut === null) return;
+        const champMontant = document.getElementById('montant');
+        if (champMontant) {
+            champMontant.value = dernierBrut;
+            champMontant.focus();
+            // Signal visuel
+            champMontant.classList.add('border-success', 'border-3');
+            setTimeout(() => champMontant.classList.remove('border-success', 'border-3'), 2000);
+        }
+        // Scroll vers le champ
+        champMontant && champMontant.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    // Exporter en PDF
+    btnPdf.addEventListener('click', function () {
+        if (!dernierParams) return;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = RETROPAIE_PDF_URL;
+        form.target = '_blank';
+
+        const fields = {
+            'csrfmiddlewaretoken': CSRF_TOKEN,
+            'net_cible': String(dernierParams.net_cible),
+            'pct_indemnites_forfaitaires': String(dernierParams.pct_indemnites_forfaitaires),
+            'garantir_net_minimum': dernierParams.garantir_net_minimum ? 'true' : 'false',
+        };
+
+        Object.entries(fields).forEach(function ([name, value]) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+    });
+
+    // Permettre la saisie avec Entrée dans le champ net
+    document.getElementById('rp_net_cible').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); btnCalculer.click(); }
+    });
+})();
 </script>
 {% endblock %}
 

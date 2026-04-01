@@ -152,4 +152,8 @@ urlpatterns = [
 
     # Bulletins groupés (impression multiple)
     path('bulletins/groupe/pdf/', views.bulletins_groupes_pdf, name='bulletins_groupes_pdf'),
+
+    # Rétro-paie : calcul brut depuis net convenu
+    path('api/retropaie/', views.api_retropaie, name='api_retropaie'),
+    path('api/retropaie/pdf/', views.retropaie_pdf, name='retropaie_pdf'),
 ]
