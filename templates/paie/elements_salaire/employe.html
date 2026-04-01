@@ -48,6 +48,290 @@
     </div>
 </div>
 
+<!-- ================================================================
+     MOTEUR DE STRUCTURATION SALARIALE INTELLIGENT
+     ================================================================ -->
+<div class="card border-info shadow mb-4">
+    <div class="card-header bg-info text-white d-flex align-items-center gap-2"
+         data-bs-toggle="collapse" data-bs-target="#decomp_body" role="button"
+         style="cursor:pointer;">
+        <i class="bi bi-magic fs-5"></i>
+        <strong>Structuration salariale intelligente</strong>
+        <span class="badge bg-white text-info ms-2">Brut &rarr; Base + Indemnités</span>
+        <i class="bi bi-chevron-down ms-auto"></i>
+    </div>
+    <div class="collapse" id="decomp_body">
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Saisissez le <strong>salaire brut total</strong>. L'application le répartit en
+            <em>Salaire de base</em>, <em>Transport</em>, <em>Logement</em> et <em>Cherté de vie</em>.
+            Verrouillez des composantes, optimisez fiscalement, puis créez en lot.
+        </p>
+
+        <!-- Saisie du brut -->
+        <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-4">
+                <label for="decomp_brut" class="form-label fw-semibold">
+                    <i class="bi bi-cash-stack"></i> Montant brut total (GNF) <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control form-control-lg" id="decomp_brut"
+                       placeholder="Ex : 5 500 000" inputmode="numeric" autocomplete="off">
+            </div>
+            <div class="col-md-3">
+                <label for="decomp_date" class="form-label fw-semibold">
+                    <i class="bi bi-calendar-date"></i> Date de début
+                </label>
+                <input type="date" class="form-control" id="decomp_date">
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-info btn-lg w-100 text-white" id="decomp_btn_calculer">
+                    <i class="bi bi-calculator"></i> Décomposer
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-warning btn-lg w-100" id="decomp_btn_optimiser" style="display:none;">
+                    <i class="bi bi-lightning-fill"></i> Optimiser fiscalement
+                </button>
+            </div>
+        </div>
+
+        <!-- Zone principale (cachée avant calcul) -->
+        <div id="decomp_sliders" style="display:none;">
+
+            <!-- Sliders avec verrous -->
+            <h6 class="fw-bold mb-2"><i class="bi bi-sliders"></i> Répartition
+                <small class="text-muted fw-normal ms-2"><i class="bi bi-lock"></i> = verrouillé (les autres s'ajustent)</small>
+            </h6>
+            <div class="row g-3 mb-3">
+                <!-- Salaire de base -->
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <label class="form-label small fw-semibold text-primary mb-0">Salaire de base</label>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input decomp-lock" type="checkbox" id="decomp_lock_salaire_base" data-cle="salaire_base">
+                            <label class="form-check-label small" for="decomp_lock_salaire_base"><i class="bi bi-lock"></i></label>
+                        </div>
+                    </div>
+                    <input type="range" class="form-range decomp-slider" id="decomp_pct_base"
+                           min="30" max="80" value="60" data-cle="salaire_base">
+                    <div class="d-flex justify-content-between">
+                        <span class="badge bg-primary" id="decomp_pct_base_val">60%</span>
+                        <span class="fw-bold text-primary small" id="decomp_mt_base">—</span>
+                    </div>
+                </div>
+                <!-- Transport -->
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <label class="form-label small fw-semibold text-success mb-0">Ind. Transport</label>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input decomp-lock" type="checkbox" id="decomp_lock_transport" data-cle="transport">
+                            <label class="form-check-label small" for="decomp_lock_transport"><i class="bi bi-lock"></i></label>
+                        </div>
+                    </div>
+                    <input type="range" class="form-range decomp-slider" id="decomp_pct_transport"
+                           min="0" max="40" value="15" data-cle="transport">
+                    <div class="d-flex justify-content-between">
+                        <span class="badge bg-success" id="decomp_pct_transport_val">15%</span>
+                        <span class="fw-bold text-success small" id="decomp_mt_transport">—</span>
+                    </div>
+                </div>
+                <!-- Logement -->
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <label class="form-label small fw-semibold text-warning mb-0">Ind. Logement</label>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input decomp-lock" type="checkbox" id="decomp_lock_logement" data-cle="logement">
+                            <label class="form-check-label small" for="decomp_lock_logement"><i class="bi bi-lock"></i></label>
+                        </div>
+                    </div>
+                    <input type="range" class="form-range decomp-slider" id="decomp_pct_logement"
+                           min="0" max="40" value="15" data-cle="logement">
+                    <div class="d-flex justify-content-between">
+                        <span class="badge bg-warning text-dark" id="decomp_pct_logement_val">15%</span>
+                        <span class="fw-bold text-warning small" id="decomp_mt_logement">—</span>
+                    </div>
+                </div>
+                <!-- Cherté de vie -->
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <label class="form-label small fw-semibold text-danger mb-0">Cherté de vie</label>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input decomp-lock" type="checkbox" id="decomp_lock_cherte_vie" data-cle="cherte_vie">
+                            <label class="form-check-label small" for="decomp_lock_cherte_vie"><i class="bi bi-lock"></i></label>
+                        </div>
+                    </div>
+                    <input type="range" class="form-range decomp-slider" id="decomp_pct_cherte"
+                           min="0" max="40" value="10" data-cle="cherte_vie">
+                    <div class="d-flex justify-content-between">
+                        <span class="badge bg-danger" id="decomp_pct_cherte_val">10%</span>
+                        <span class="fw-bold text-danger small" id="decomp_mt_cherte">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barre visuelle + total -->
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <div class="progress flex-grow-1" style="height: 28px;">
+                    <div class="progress-bar bg-primary" id="decomp_bar_base" style="width:60%">Base 60%</div>
+                    <div class="progress-bar bg-success" id="decomp_bar_transport" style="width:15%">Transp. 15%</div>
+                    <div class="progress-bar bg-warning text-dark" id="decomp_bar_logement" style="width:15%">Log. 15%</div>
+                    <div class="progress-bar bg-danger" id="decomp_bar_cherte" style="width:10%">Cherté 10%</div>
+                </div>
+                <span class="badge fs-6" id="decomp_total_pct_badge">100%</span>
+            </div>
+
+            <!-- ════════ IMPACT FISCAL EN TEMPS RÉEL ════════ -->
+            <div class="row g-3 mb-3" id="decomp_impact_zone">
+                <div class="col-md-3">
+                    <div class="card border-success h-100 text-center p-2">
+                        <div class="small text-success fw-bold"><i class="bi bi-wallet2"></i> NET ESTIMÉ</div>
+                        <div class="fs-5 fw-bold text-success" id="decomp_net">—</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card border-danger h-100 text-center p-2">
+                        <div class="small text-danger fw-bold"><i class="bi bi-receipt"></i> RTS</div>
+                        <div class="fs-6 fw-semibold text-danger" id="decomp_rts">—</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card border-warning h-100 text-center p-2">
+                        <div class="small text-warning fw-bold"><i class="bi bi-shield-check"></i> CNSS</div>
+                        <div class="fs-6 fw-semibold text-warning" id="decomp_cnss">—</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card border-info h-100 text-center p-2">
+                        <div class="small text-info fw-bold"><i class="bi bi-percent"></i> Taux RTS</div>
+                        <div class="fs-6 fw-semibold text-info" id="decomp_taux">—</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-secondary h-100 text-center p-2">
+                        <div class="small text-secondary fw-bold"><i class="bi bi-info-circle"></i> Exon. / Plafond</div>
+                        <div class="small" id="decomp_exon_info">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gain d'optimisation (affiché après optimisation) -->
+            <div id="decomp_gain_zone" class="alert alert-success border-success" style="display:none;">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div>
+                        <i class="bi bi-graph-up-arrow fs-4 text-success"></i>
+                    </div>
+                    <div>
+                        <strong>Gain d'optimisation :</strong>
+                        <span id="decomp_gain_mensuel" class="fw-bold text-success">—</span> / mois
+                        (<span id="decomp_gain_annuel" class="fw-bold">—</span> / an)
+                    </div>
+                    <div class="ms-auto">
+                        <span class="small text-muted">RTS avant : <span id="decomp_rts_avant">—</span>
+                        → après : <span id="decomp_rts_apres" class="text-success fw-bold">—</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════ TRAÇABILITÉ : Détail du calcul (collapsible) ════════ -->
+            <div class="mb-3">
+                <button class="btn btn-outline-secondary btn-sm" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#decomp_detail_calcul" aria-expanded="false">
+                    <i class="bi bi-journal-text"></i> Détail du calcul fiscal
+                </button>
+                <div class="collapse mt-2" id="decomp_detail_calcul">
+                    <div class="card card-body bg-light border-secondary small">
+                        <h6 class="fw-bold mb-2"><i class="bi bi-calculator"></i> Formules appliquées</h6>
+                        <ul class="list-unstyled mb-2" id="decomp_regles_list">
+                            <li class="text-muted">Lancez un calcul pour voir les formules</li>
+                        </ul>
+                        <h6 class="fw-bold mb-2"><i class="bi bi-bar-chart-steps"></i> Détail RTS par tranches</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="table-secondary">
+                                    <tr>
+                                        <th>Tranche (GNF)</th>
+                                        <th class="text-center">Taux</th>
+                                        <th class="text-end">Base tranche</th>
+                                        <th class="text-end">Impôt</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="decomp_tranches_body">
+                                    <tr><td colspan="4" class="text-muted text-center">—</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-2 text-muted" style="font-size:0.75rem;">
+                            <i class="bi bi-info-circle"></i>
+                            Réf : CGI Guinée — Art. 196 (exonération 25%) / Art. 197 (barème progressif RTS)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════ MODE COMPARAISON (affiché après optimisation) ════════ -->
+            <div id="decomp_comparaison_zone" style="display:none;" class="mb-3">
+                <h6 class="fw-bold"><i class="bi bi-layout-three-columns"></i> Comparaison des scénarios</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover table-sm align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Scénario</th>
+                                <th class="text-end">RTS</th>
+                                <th class="text-end">CNSS</th>
+                                <th class="text-end">Net</th>
+                                <th class="text-center">Taux eff.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="decomp_comparaison_body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tableau récapitulatif avec rubriques -->
+            <div class="table-responsive mb-3">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Composante</th>
+                            <th class="text-center" style="width:80px;">%</th>
+                            <th class="text-end" style="width:160px;">Montant (GNF)</th>
+                            <th>Rubrique à utiliser</th>
+                            <th class="text-center" style="width:60px;"><i class="bi bi-lock"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody id="decomp_tableau_body"></tbody>
+                    <tfoot class="table-info">
+                        <tr>
+                            <td class="fw-bold">TOTAL</td>
+                            <td class="text-center fw-bold" id="decomp_tfoot_pct">100%</td>
+                            <td class="text-end fw-bold" id="decomp_tfoot_montant">—</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <button type="button" class="btn btn-primary btn-lg" id="decomp_btn_creer">
+                    <i class="bi bi-check-circle-fill"></i> Créer les éléments en lot
+                </button>
+                <button type="button" class="btn btn-outline-dark" id="decomp_btn_pdf" style="display:none;">
+                    <i class="bi bi-file-earmark-pdf"></i> Générer simulation PDF
+                </button>
+                <span class="text-muted small">
+                    Éléments actifs, récurrents. Les doublons existants seront désactivés.
+                </span>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div id="decomp_erreur" class="alert alert-danger mt-3" style="display:none;"></div>
+        <div id="decomp_succes" class="alert alert-success mt-3" style="display:none;"></div>
+    </div>
+    </div>
+</div>
+
 <!-- Gains -->
 <div class="card shadow mb-4">
     <div class="card-header bg-success text-white">
@@ -203,5 +487,539 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ══════════════════════════════════════════════════════════════════════
+// MOTEUR DE STRUCTURATION SALARIALE INTELLIGENT v3
+// Sliders + Verrous + Impact fiscal + Traçabilité + Comparaison + PDF
+// ══════════════════════════════════════════════════════════════════════
+(function () {
+    'use strict';
+
+    // URLs
+    var DECOMP_URL    = "{% url 'paie:api_decomposer_brut' %}";
+    var CREER_URL     = "{% url 'paie:api_creer_elements_lot' employe.id %}";
+    var IMPACT_URL    = "{% url 'paie:api_impact_fiscal' %}";
+    var OPTIMISER_URL = "{% url 'paie:api_optimiser_decomposition' %}";
+    var PDF_URL       = "{% url 'paie:api_simulation_pdf' %}";
+    var CSRF          = "{{ csrf_token }}";
+
+    // DOM
+    var btnCalc     = document.getElementById('decomp_btn_calculer');
+    var btnCreer    = document.getElementById('decomp_btn_creer');
+    var btnOptim    = document.getElementById('decomp_btn_optimiser');
+    var btnPdf      = document.getElementById('decomp_btn_pdf');
+    var divSliders  = document.getElementById('decomp_sliders');
+    var divErr      = document.getElementById('decomp_erreur');
+    var divOk       = document.getElementById('decomp_succes');
+    var divGain     = document.getElementById('decomp_gain_zone');
+    var divCompar   = document.getElementById('decomp_comparaison_zone');
+
+    // Date par défaut
+    var dateInput = document.getElementById('decomp_date');
+    if (!dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+
+    // State
+    var brutTotal = 0;
+    var rubriquesData = {};
+    var composantes = [];
+    var impactTimer = null;
+    var lastImpactData = null;      // dernière réponse impact fiscal
+    var lastComparaison = null;     // dernière comparaison
+    var lastGain = null;            // dernier gain
+
+    // Constantes visuelles
+    var COLORS = {
+        salaire_base: {bg: 'primary'}, transport: {bg: 'success'},
+        logement: {bg: 'warning'}, cherte_vie: {bg: 'danger'}
+    };
+    var SHORT = {salaire_base:'Base', transport:'Transp.', logement:'Log.', cherte_vie:'Cherté'};
+    var LABELS = {
+        salaire_base: 'Salaire de base', transport: 'Indemnité de transport',
+        logement: 'Indemnité de logement', cherte_vie: 'Cherté de vie'
+    };
+    var SLIDER_IDS = {
+        salaire_base: 'decomp_pct_base', transport: 'decomp_pct_transport',
+        logement: 'decomp_pct_logement', cherte_vie: 'decomp_pct_cherte'
+    };
+    var CLES = ['salaire_base', 'transport', 'logement', 'cherte_vie'];
+
+    // ── Helpers ──────────────────────────────────────────────────────
+    function fmt(n) {
+        return parseInt(n).toLocaleString('fr-FR').replace(/\u202f/g, '\u00a0');
+    }
+    function parseVal(s) {
+        return parseInt(String(s).replace(/[\s\u00a0\u202f,.]/g, ''), 10) || 0;
+    }
+    function postJson(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify(body)
+        }).then(function(r) {
+            if (r.headers.get('content-type').indexOf('application/pdf') !== -1) return r.blob();
+            return r.json();
+        });
+    }
+    function postBlob(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify(body)
+        }).then(function(r) {
+            if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || 'Erreur PDF'); });
+            return r.blob();
+        });
+    }
+
+    // ── Pourcentages / Verrous ──────────────────────────────────────
+    function lirePcts() {
+        var p = {};
+        CLES.forEach(function(c) { p[c] = parseInt(document.getElementById(SLIDER_IDS[c]).value); });
+        return p;
+    }
+    function getVerrous() {
+        var v = {};
+        document.querySelectorAll('.decomp-lock:checked').forEach(function(cb) {
+            var cle = cb.getAttribute('data-cle');
+            var pct = parseInt(document.getElementById(SLIDER_IDS[cle]).value);
+            v[cle] = Math.round(brutTotal * pct / 100);
+        });
+        return v;
+    }
+    function isLocked(cle) {
+        var cb = document.getElementById('decomp_lock_' + cle);
+        return cb && cb.checked;
+    }
+
+    // ── Auto-ajustement des sliders non verrouillés ─────────────────
+    function autoAjuster(changed_cle) {
+        var pcts = lirePcts();
+        var locked_total = 0;
+        var free_cles = [];
+        CLES.forEach(function(c) {
+            if (isLocked(c) || c === changed_cle) {
+                locked_total += pcts[c];
+            } else {
+                free_cles.push(c);
+            }
+        });
+        if (free_cles.length === 0) return;
+        var remaining = Math.max(0, 100 - locked_total);
+        var per_free = Math.floor(remaining / free_cles.length);
+        var leftover = remaining - (per_free * free_cles.length);
+        free_cles.forEach(function(c, i) {
+            var val = per_free + (i < leftover ? 1 : 0);
+            val = Math.max(0, Math.min(val, parseInt(document.getElementById(SLIDER_IDS[c]).max)));
+            document.getElementById(SLIDER_IDS[c]).value = val;
+        });
+    }
+
+    // ── Recalcul complet ────────────────────────────────────────────
+    function recalculer() {
+        if (!brutTotal) return;
+        var pcts = lirePcts();
+        var total = 0;
+        CLES.forEach(function(c) { total += pcts[c]; });
+
+        // MAJ labels %
+        CLES.forEach(function(c) {
+            document.getElementById(SLIDER_IDS[c] + '_val').textContent = pcts[c] + '%';
+        });
+
+        // Calcul montants
+        var mt = {};
+        mt.transport = Math.round(brutTotal * pcts.transport / 100);
+        mt.logement  = Math.round(brutTotal * pcts.logement / 100);
+        mt.cherte_vie = Math.round(brutTotal * pcts.cherte_vie / 100);
+        mt.salaire_base = brutTotal - mt.transport - mt.logement - mt.cherte_vie;
+
+        composantes = CLES.map(function(c) {
+            return {cle: c, label: LABELS[c], pct: pcts[c], montant: mt[c]};
+        });
+
+        // MAJ montants
+        document.getElementById('decomp_mt_base').textContent = fmt(mt.salaire_base) + ' GNF';
+        document.getElementById('decomp_mt_transport').textContent = fmt(mt.transport) + ' GNF';
+        document.getElementById('decomp_mt_logement').textContent = fmt(mt.logement) + ' GNF';
+        document.getElementById('decomp_mt_cherte').textContent = fmt(mt.cherte_vie) + ' GNF';
+
+        // Barres
+        [{id:'decomp_bar_base',cle:'salaire_base'},{id:'decomp_bar_transport',cle:'transport'},
+         {id:'decomp_bar_logement',cle:'logement'},{id:'decomp_bar_cherte',cle:'cherte_vie'}]
+        .forEach(function(b) {
+            var el = document.getElementById(b.id);
+            el.style.width = pcts[b.cle] + '%';
+            el.textContent = SHORT[b.cle] + ' ' + pcts[b.cle] + '%';
+        });
+
+        // Total badge
+        var badge = document.getElementById('decomp_total_pct_badge');
+        badge.textContent = total + '%';
+        badge.className = total === 100 ? 'badge fs-6 bg-success' : 'badge fs-6 bg-danger';
+
+        // Tableau
+        var tbody = document.getElementById('decomp_tableau_body');
+        tbody.innerHTML = '';
+        var somme = 0;
+        composantes.forEach(function(c) {
+            somme += c.montant;
+            var rubs = rubriquesData[c.cle] || [];
+            if (rubs.length === 0 && c.cle !== 'salaire_base') rubs = rubriquesData['toutes_indemnites'] || [];
+
+            var selHtml = '<select class="form-select form-select-sm decomp-rubrique-select" data-cle="' + c.cle + '">';
+            if (rubs.length === 0) {
+                selHtml += '<option value="">Aucune rubrique</option>';
+            } else if (rubs.length === 1) {
+                selHtml += '<option value="' + rubs[0].id + '" selected>' + rubs[0].libelle_rubrique + '</option>';
+            } else {
+                selHtml += '<option value="">-- Choisir --</option>';
+                rubs.forEach(function(r) {
+                    selHtml += '<option value="' + r.id + '">' + r.libelle_rubrique + ' (' + r.code_rubrique + ')</option>';
+                });
+            }
+            selHtml += '</select>';
+
+            var lockIcon = isLocked(c.cle) ? '<i class="bi bi-lock-fill text-warning"></i>' : '<i class="bi bi-unlock text-muted"></i>';
+            tbody.insertAdjacentHTML('beforeend',
+                '<tr>' +
+                '<td><span class="badge bg-' + COLORS[c.cle].bg + '">' + c.label + '</span></td>' +
+                '<td class="text-center">' + c.pct + '%</td>' +
+                '<td class="text-end fw-bold">' + fmt(c.montant) + '</td>' +
+                '<td>' + selHtml + '</td>' +
+                '<td class="text-center">' + lockIcon + '</td>' +
+                '</tr>'
+            );
+        });
+        document.getElementById('decomp_tfoot_pct').textContent = total + '%';
+        document.getElementById('decomp_tfoot_montant').textContent = fmt(somme) + ' GNF';
+        btnCreer.disabled = (total !== 100);
+
+        // Debounced impact fiscal
+        if (impactTimer) clearTimeout(impactTimer);
+        impactTimer = setTimeout(calculerImpactFiscal, 300);
+    }
+
+    // ── Impact fiscal en temps réel + Traçabilité ───────────────────
+    function calculerImpactFiscal() {
+        if (!brutTotal) return;
+        var pcts = lirePcts();
+        var indemnites = Math.round(brutTotal * (pcts.transport + pcts.logement + pcts.cherte_vie) / 100);
+
+        postJson(IMPACT_URL, {brut: brutTotal, indemnites: indemnites})
+        .then(function(data) {
+            if (data.error) return;
+            lastImpactData = data;
+
+            // Cartes fiscales
+            document.getElementById('decomp_net').textContent = fmt(data.net) + ' GNF';
+            document.getElementById('decomp_rts').textContent = fmt(data.rts) + ' GNF';
+            document.getElementById('decomp_cnss').textContent = fmt(data.cnss) + ' GNF';
+            document.getElementById('decomp_taux').textContent = data.taux_effectif + '%';
+
+            var exonInfo = 'Exon: ' + fmt(data.exon) + ' / ' + fmt(data.plafond_exon) + ' GNF';
+            if (data.depasse > 0) {
+                exonInfo += '<br><span class="text-danger">Dépasse: +' + fmt(data.depasse) + '</span>';
+            } else {
+                exonInfo += '<br><span class="text-success">OK (plafond 25%)</span>';
+            }
+            document.getElementById('decomp_exon_info').innerHTML = exonInfo;
+
+            // ── Traçabilité : formules ──
+            if (data.regles) {
+                var rl = data.regles;
+                var html = '';
+                html += '<li><strong>CNSS :</strong> ' + rl.cnss_formule + '</li>';
+                html += '<li><strong>Exonération :</strong> ' + rl.exon_formule + '</li>';
+                html += '<li><strong>Base RTS :</strong> ' + rl.base_rts_formule + '</li>';
+                html += '<li><strong>Net :</strong> ' + rl.net_formule + '</li>';
+                html += '<li class="text-muted mt-1"><em>' + rl.reference + '</em></li>';
+                document.getElementById('decomp_regles_list').innerHTML = html;
+            }
+
+            // ── Traçabilité : tranches RTS ──
+            var trBody = document.getElementById('decomp_tranches_body');
+            trBody.innerHTML = '';
+            if (data.detail_tranches && data.detail_tranches.length > 0) {
+                data.detail_tranches.forEach(function(tr) {
+                    var sup = tr.borne_sup ? fmt(tr.borne_sup) : '∞';
+                    trBody.insertAdjacentHTML('beforeend',
+                        '<tr>' +
+                        '<td>' + fmt(tr.borne_inf) + ' → ' + sup + '</td>' +
+                        '<td class="text-center">' + tr.taux + '%</td>' +
+                        '<td class="text-end">' + fmt(tr.base_tranche) + '</td>' +
+                        '<td class="text-end fw-bold">' + fmt(tr.impot_tranche) + '</td>' +
+                        '</tr>'
+                    );
+                });
+            } else {
+                trBody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">Aucune tranche applicable</td></tr>';
+            }
+
+            // Montrer le bouton PDF
+            btnPdf.style.display = 'inline-block';
+        })
+        .catch(function() {});
+    }
+
+    // ── Attacher les sliders ────────────────────────────────────────
+    document.querySelectorAll('.decomp-slider').forEach(function(s) {
+        s.addEventListener('input', function() {
+            autoAjuster(s.getAttribute('data-cle'));
+            recalculer();
+        });
+    });
+
+    // Verrous
+    document.querySelectorAll('.decomp-lock').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            var cle = cb.getAttribute('data-cle');
+            document.getElementById(SLIDER_IDS[cle]).style.opacity = cb.checked ? '0.5' : '1';
+        });
+    });
+
+    // ── Bouton Décomposer ───────────────────────────────────────────
+    btnCalc.addEventListener('click', function() {
+        divErr.style.display = 'none';
+        divOk.style.display = 'none';
+        divGain.style.display = 'none';
+        divCompar.style.display = 'none';
+
+        brutTotal = parseVal(document.getElementById('decomp_brut').value);
+        if (!brutTotal || brutTotal <= 0) {
+            divErr.textContent = 'Veuillez saisir un montant brut valide.';
+            divErr.style.display = 'block';
+            return;
+        }
+
+        btnCalc.disabled = true;
+        btnCalc.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Calcul…';
+
+        postJson(DECOMP_URL, {brut: brutTotal, pourcentages: lirePcts()})
+        .then(function(data) {
+            btnCalc.disabled = false;
+            btnCalc.innerHTML = '<i class="bi bi-calculator"></i> Décomposer';
+            if (data.error) {
+                divErr.textContent = data.error;
+                divErr.style.display = 'block';
+                return;
+            }
+            rubriquesData = data.rubriques || {};
+            divSliders.style.display = 'block';
+            btnOptim.style.display = 'inline-block';
+            recalculer();
+        })
+        .catch(function(err) {
+            btnCalc.disabled = false;
+            btnCalc.innerHTML = '<i class="bi bi-calculator"></i> Décomposer';
+            divErr.textContent = 'Erreur réseau : ' + err.message;
+            divErr.style.display = 'block';
+        });
+    });
+
+    document.getElementById('decomp_brut').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); btnCalc.click(); }
+    });
+
+    // ── Bouton Optimiser ────────────────────────────────────────────
+    btnOptim.addEventListener('click', function() {
+        divErr.style.display = 'none';
+        divGain.style.display = 'none';
+        divCompar.style.display = 'none';
+
+        if (!brutTotal) return;
+
+        btnOptim.disabled = true;
+        btnOptim.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Optimisation…';
+
+        postJson(OPTIMISER_URL, {
+            brut: brutTotal,
+            verrous: getVerrous(),
+            pourcentages_actuels: lirePcts()
+        })
+        .then(function(data) {
+            btnOptim.disabled = false;
+            btnOptim.innerHTML = '<i class="bi bi-lightning-fill"></i> Optimiser fiscalement';
+
+            if (data.error) {
+                divErr.textContent = data.error;
+                divErr.style.display = 'block';
+                return;
+            }
+
+            // Appliquer les pourcentages optimisés
+            (data.composantes || []).forEach(function(c) {
+                var slider = document.getElementById(SLIDER_IDS[c.cle]);
+                if (slider && !isLocked(c.cle)) slider.value = c.pct;
+            });
+            recalculer();
+
+            // Gain
+            lastGain = data.gain;
+            if (data.gain && data.gain.gain_net_mensuel !== 0) {
+                var g = data.gain;
+                document.getElementById('decomp_gain_mensuel').textContent = '+' + fmt(g.gain_net_mensuel) + ' GNF';
+                document.getElementById('decomp_gain_annuel').textContent = '+' + fmt(g.gain_net_annuel) + ' GNF';
+                document.getElementById('decomp_rts_avant').textContent = fmt(g.rts_avant) + ' GNF';
+                document.getElementById('decomp_rts_apres').textContent = fmt(g.rts_apres) + ' GNF';
+                divGain.style.display = 'block';
+            }
+
+            // ── Comparaison scénarios ──
+            lastComparaison = data.comparaison;
+            if (data.comparaison && data.comparaison.length > 0) {
+                var cBody = document.getElementById('decomp_comparaison_body');
+                cBody.innerHTML = '';
+                data.comparaison.forEach(function(s, idx) {
+                    var cls = (idx === data.comparaison.length - 1) ? ' class="table-success"' : '';
+                    cBody.insertAdjacentHTML('beforeend',
+                        '<tr' + cls + '>' +
+                        '<td class="fw-semibold">' + s.scenario + '</td>' +
+                        '<td class="text-end">' + fmt(s.rts) + '</td>' +
+                        '<td class="text-end">' + fmt(s.cnss) + '</td>' +
+                        '<td class="text-end fw-bold">' + fmt(s.net) + '</td>' +
+                        '<td class="text-center">' + s.taux + '%</td>' +
+                        '</tr>'
+                    );
+                });
+                divCompar.style.display = 'block';
+            }
+        })
+        .catch(function(err) {
+            btnOptim.disabled = false;
+            btnOptim.innerHTML = '<i class="bi bi-lightning-fill"></i> Optimiser fiscalement';
+            divErr.textContent = 'Erreur réseau : ' + err.message;
+            divErr.style.display = 'block';
+        });
+    });
+
+    // ── Bouton PDF ──────────────────────────────────────────────────
+    btnPdf.addEventListener('click', function() {
+        if (!brutTotal || !lastImpactData) return;
+
+        btnPdf.disabled = true;
+        btnPdf.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Génération…';
+
+        var payload = {
+            brut: brutTotal,
+            composantes: composantes,
+            impact: lastImpactData,
+            employe_nom: "{{ employe.nom_complet|escapejs }}"
+        };
+        if (lastComparaison) payload.comparaison = lastComparaison;
+        if (lastGain) payload.gain = lastGain;
+
+        postBlob(PDF_URL, payload)
+        .then(function(blob) {
+            btnPdf.disabled = false;
+            btnPdf.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> Générer simulation PDF';
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'simulation_' + brutTotal + '.pdf';
+            a.click();
+            URL.revokeObjectURL(url);
+        })
+        .catch(function(err) {
+            btnPdf.disabled = false;
+            btnPdf.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> Générer simulation PDF';
+            divErr.textContent = 'Erreur PDF : ' + err.message;
+            divErr.style.display = 'block';
+        });
+    });
+
+    // ── Bouton Créer en lot ─────────────────────────────────────────
+    btnCreer.addEventListener('click', function() {
+        divErr.style.display = 'none';
+        divOk.style.display = 'none';
+
+        var pcts = lirePcts();
+        var total = 0;
+        CLES.forEach(function(c) { total += pcts[c]; });
+        if (total !== 100) {
+            divErr.textContent = 'La somme des pourcentages doit faire 100%.';
+            divErr.style.display = 'block';
+            return;
+        }
+
+        var elements = [];
+        var manquant = false;
+        composantes.forEach(function(c) {
+            if (c.montant <= 0) return;
+            var sel = document.querySelector('.decomp-rubrique-select[data-cle="' + c.cle + '"]');
+            if (!sel || !sel.value) {
+                manquant = true;
+                if (sel) sel.classList.add('is-invalid');
+                return;
+            }
+            if (sel) sel.classList.remove('is-invalid');
+            elements.push({rubrique_id: parseInt(sel.value), montant: c.montant});
+        });
+
+        if (manquant) {
+            divErr.textContent = 'Veuillez sélectionner une rubrique pour chaque composante.';
+            divErr.style.display = 'block';
+            return;
+        }
+        if (elements.length === 0) {
+            divErr.textContent = 'Aucun élément à créer.';
+            divErr.style.display = 'block';
+            return;
+        }
+
+        btnCreer.disabled = true;
+        btnCreer.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Création…';
+
+        postJson(CREER_URL, {
+            elements: elements,
+            date_debut: document.getElementById('decomp_date').value
+        })
+        .then(function(data) {
+            btnCreer.disabled = false;
+            btnCreer.innerHTML = '<i class="bi bi-check-circle-fill"></i> Créer les éléments en lot';
+            if (data.error) {
+                divErr.textContent = data.error;
+                divErr.style.display = 'block';
+                return;
+            }
+            if (data.success) {
+                var msg = '<i class="bi bi-check-circle-fill"></i> <strong>' + data.message + '</strong><ul class="mb-0 mt-2">';
+                (data.crees || []).forEach(function(e) {
+                    msg += '<li>' + e.rubrique + ' : <strong>' + fmt(e.montant) + ' GNF</strong></li>';
+                });
+                msg += '</ul>';
+                if (data.erreurs && data.erreurs.length > 0) msg += '<div class="text-danger mt-2">Erreurs : ' + data.erreurs.join(', ') + '</div>';
+                msg += '<div class="mt-2"><a href="" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-clockwise"></i> Rafraîchir la page</a></div>';
+                divOk.innerHTML = msg;
+                divOk.style.display = 'block';
+            } else {
+                divErr.textContent = data.message || 'Erreur lors de la création.';
+                divErr.style.display = 'block';
+            }
+        })
+        .catch(function(err) {
+            btnCreer.disabled = false;
+            btnCreer.innerHTML = '<i class="bi bi-check-circle-fill"></i> Créer les éléments en lot';
+            divErr.textContent = 'Erreur réseau : ' + err.message;
+            divErr.style.display = 'block';
+        });
+    });
+
+    // ── Connexion Rétro-Paie → Structuration ────────────────────────
+    window.appliquerBrutDecomposition = function(brutCalc) {
+        var champBrut = document.getElementById('decomp_brut');
+        if (champBrut) {
+            champBrut.value = brutCalc;
+            var collapse = document.getElementById('decomp_body');
+            if (collapse && !collapse.classList.contains('show')) {
+                new bootstrap.Collapse(collapse, {toggle: true});
+            }
+            btnCalc.click();
+        }
+    };
+})();
+</script>
 {% endblock %}
 

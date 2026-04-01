@@ -5,6 +5,7 @@ from django.db.models import Sum, Count, Q
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.db import transaction
+from django.views.decorators.http import require_POST
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, date
 import json
@@ -3572,6 +3573,810 @@ def retropaie_pdf(request):
 
     nom_fichier = f"simulation_retropaie_{date.today().strftime('%Y%m%d')}.pdf"
     response = HttpResponse(buffer.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{nom_fichier}"'
+    return response
+
+
+# ============================================================================
+# DÉCOMPOSITION INTELLIGENTE DU BRUT
+# Répartit un montant brut en salaire de base + indemnités (transport,
+# logement, cherté de vie) et crée les éléments de salaire en lot
+# ============================================================================
+
+@login_required
+@entreprise_active_required
+def api_decomposer_brut(request):
+    """
+    POST JSON → retourne une proposition de décomposition du brut.
+
+    Entrée :
+        { "brut": 5500000 }
+    Sortie :
+        { "composantes": [
+            {"cle": "salaire_base",   "label": "Salaire de base",        "pct": 60, "montant": 3300000},
+            {"cle": "transport",      "label": "Indemnité de transport",  "pct": 15, "montant":  825000},
+            {"cle": "logement",       "label": "Indemnité de logement",   "pct": 15, "montant":  825000},
+            {"cle": "cherte_vie",     "label": "Cherté de vie",           "pct": 10, "montant":  550000},
+          ],
+          "rubriques": { "salaire_base": [...], "transport": [...], ... }
+        }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST requis'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON invalide'}, status=400)
+
+    brut_raw = data.get('brut', 0)
+    try:
+        brut = int(str(brut_raw).replace(' ', '').replace('\u202f', '').replace('\xa0', ''))
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Montant brut invalide'}, status=400)
+
+    if brut <= 0:
+        return JsonResponse({'error': 'Le montant brut doit être positif'}, status=400)
+
+    # Pourcentages par défaut (optimisés pour la fiscalité guinéenne)
+    pcts = data.get('pourcentages', {})
+    pct_base = int(pcts.get('salaire_base', 60))
+    pct_transport = int(pcts.get('transport', 15))
+    pct_logement = int(pcts.get('logement', 15))
+    pct_cherte = int(pcts.get('cherte_vie', 10))
+
+    total_pct = pct_base + pct_transport + pct_logement + pct_cherte
+    if total_pct != 100:
+        return JsonResponse({'error': f'La somme des pourcentages doit être 100% (actuellement {total_pct}%)'}, status=400)
+
+    # Calcul des montants (arrondi à l'entier, ajustement sur le salaire de base)
+    m_transport = round(brut * pct_transport / 100)
+    m_logement = round(brut * pct_logement / 100)
+    m_cherte = round(brut * pct_cherte / 100)
+    m_base = brut - m_transport - m_logement - m_cherte  # reste sur la base
+
+    composantes = [
+        {'cle': 'salaire_base', 'label': 'Salaire de base', 'pct': pct_base, 'montant': m_base},
+        {'cle': 'transport', 'label': 'Indemnité de transport', 'pct': pct_transport, 'montant': m_transport},
+        {'cle': 'logement', 'label': 'Indemnité de logement', 'pct': pct_logement, 'montant': m_logement},
+        {'cle': 'cherte_vie', 'label': 'Cherté de vie', 'pct': pct_cherte, 'montant': m_cherte},
+    ]
+
+    # Rechercher les rubriques disponibles pour chaque composante
+    entreprise = request.user.entreprise
+    rubriques_map = {}
+
+    # Salaire de base
+    rubs_base = RubriquePaie.objects.filter(
+        entreprise=entreprise, actif=True, categorie_rubrique='salaire_base'
+    ).values('id', 'code_rubrique', 'libelle_rubrique')
+    rubriques_map['salaire_base'] = list(rubs_base)
+
+    # Transport
+    rubs_transport = RubriquePaie.objects.filter(
+        entreprise=entreprise, actif=True, type_rubrique='gain'
+    ).filter(
+        Q(code_rubrique__icontains='TRANSPORT') |
+        Q(libelle_rubrique__icontains='transport')
+    ).values('id', 'code_rubrique', 'libelle_rubrique')
+    rubriques_map['transport'] = list(rubs_transport)
+
+    # Logement
+    rubs_logement = RubriquePaie.objects.filter(
+        entreprise=entreprise, actif=True, type_rubrique='gain'
+    ).filter(
+        Q(code_rubrique__icontains='LOGEMENT') |
+        Q(libelle_rubrique__icontains='logement')
+    ).values('id', 'code_rubrique', 'libelle_rubrique')
+    rubriques_map['logement'] = list(rubs_logement)
+
+    # Cherté de vie
+    rubs_cherte = RubriquePaie.objects.filter(
+        entreprise=entreprise, actif=True, type_rubrique='gain'
+    ).filter(
+        Q(code_rubrique__icontains='CHERTE') |
+        Q(code_rubrique__icontains='PCV') |
+        Q(libelle_rubrique__icontains='cherté') |
+        Q(libelle_rubrique__icontains='cherte') |
+        Q(libelle_rubrique__icontains='vie')
+    ).values('id', 'code_rubrique', 'libelle_rubrique')
+    rubriques_map['cherte_vie'] = list(rubs_cherte)
+
+    # Si pas de rubrique indemnité trouvée, chercher toutes les indemnités
+    rubs_indemnites = list(RubriquePaie.objects.filter(
+        entreprise=entreprise, actif=True,
+        categorie_rubrique='indemnite', type_rubrique='gain'
+    ).values('id', 'code_rubrique', 'libelle_rubrique'))
+    rubriques_map['toutes_indemnites'] = rubs_indemnites
+
+    return JsonResponse({
+        'brut': brut,
+        'composantes': composantes,
+        'rubriques': rubriques_map,
+    })
+
+
+@login_required
+@entreprise_active_required
+@require_POST
+def api_creer_elements_lot(request, employe_id):
+    """
+    Crée en lot les éléments de salaire issus de la décomposition du brut.
+
+    POST JSON :
+        { "elements": [
+            {"rubrique_id": 5, "montant": 3300000},
+            {"rubrique_id": 8, "montant": 825000},
+            ...
+          ],
+          "date_debut": "2026-04-01"
+        }
+    """
+    employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON invalide'}, status=400)
+
+    elements_data = data.get('elements', [])
+    date_debut = data.get('date_debut', str(date.today()))
+
+    if not elements_data:
+        return JsonResponse({'error': 'Aucun élément à créer'}, status=400)
+
+    crees = []
+    erreurs = []
+
+    with transaction.atomic():
+        for item in elements_data:
+            rubrique_id = item.get('rubrique_id')
+            montant = item.get('montant', 0)
+
+            if not rubrique_id or not montant:
+                continue
+
+            try:
+                rubrique = RubriquePaie.objects.get(
+                    pk=rubrique_id, entreprise=request.user.entreprise
+                )
+
+                # Désactiver un éventuel élément existant sur la même rubrique
+                ElementSalaire.objects.filter(
+                    employe=employe, rubrique=rubrique, actif=True
+                ).update(actif=False, date_fin=date_debut)
+
+                elem = ElementSalaire.objects.create(
+                    employe=employe,
+                    rubrique=rubrique,
+                    montant=Decimal(str(montant)),
+                    date_debut=date_debut,
+                    actif=True,
+                    recurrent=True,
+                )
+                crees.append({
+                    'id': elem.id,
+                    'rubrique': rubrique.libelle_rubrique,
+                    'montant': int(elem.montant),
+                })
+            except RubriquePaie.DoesNotExist:
+                erreurs.append(f'Rubrique ID {rubrique_id} introuvable')
+            except Exception as e:
+                erreurs.append(str(e))
+
+    return JsonResponse({
+        'success': len(crees) > 0,
+        'crees': crees,
+        'erreurs': erreurs,
+        'message': f'{len(crees)} élément(s) créé(s) avec succès' + (
+            f', {len(erreurs)} erreur(s)' if erreurs else ''
+        ),
+    })
+
+
+# ============================================================================
+# IMPACT FISCAL EN TEMPS RÉEL
+# Calcule Net / RTS / CNSS pour une décomposition donnée
+# ============================================================================
+
+@login_required
+@entreprise_active_required
+def api_impact_fiscal(request):
+    """
+    POST JSON → calcul instantané de l'impact fiscal d'une décomposition.
+
+    Entrée :
+        { "brut": 5500000,
+          "indemnites": 1650000 }       ← transport + logement + cherté de vie
+    Sortie :
+        { "cnss": ..., "base_rts": ..., "rts": ..., "net": ..., "taux_effectif": ...,
+          "plafond_exon": ..., "exon": ..., "depasse": ...,
+          "charges_employeur": {...}, "detail_tranches": [...] }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST requis'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON invalide'}, status=400)
+
+    brut_val = int(str(data.get('brut', 0)).replace(' ', '').replace('\u202f', '').replace('\xa0', '') or 0)
+    indem_val = int(str(data.get('indemnites', 0)).replace(' ', '').replace('\u202f', '').replace('\xa0', '') or 0)
+
+    if brut_val <= 0:
+        return JsonResponse({'error': 'Brut invalide'}, status=400)
+    if brut_val > 500000000:
+        return JsonResponse({'error': 'Brut anormalement élevé'}, status=400)
+    # Borner les indemnités au brut (cas limite: tout en indemnités)
+    indem_val = max(0, min(indem_val, brut_val))
+
+    from .services_simulation import calculer_un_bareme, _charger_constantes, BAREME_CGI_REFERENCE, _charger_tranches_db
+
+    constantes = _charger_constantes()
+    annee = date.today().year
+
+    # Charger meilleur barème dispo
+    tranches = _charger_tranches_db(annee, 'officiel')
+    if not tranches:
+        tranches = list(BAREME_CGI_REFERENCE)
+
+    result = calculer_un_bareme(
+        Decimal(str(brut_val)),
+        Decimal(str(indem_val)),
+        tranches,
+        constantes,
+    )
+
+    return JsonResponse({
+        'brut': result['brut'],
+        'indemnites': indem_val,
+        'cnss': result['cnss'],
+        'plafond_exon': result['plafond_exon'],
+        'exon': result['exon'],
+        'depasse': result['depasse'],
+        'base_rts': result['base_rts'],
+        'rts': result['rts'],
+        'taux_effectif': result['taux_effectif'],
+        'net': result['net'],
+        'charges_employeur': {
+            'cnss_employeur': result['cnss_employeur'],
+            'vf': result['vf'],
+            'ta': result['ta'],
+            'onfpp': result['onfpp'],
+            'total': result['total_charges_pat'],
+        },
+        'detail_tranches': result['detail_tranches'],
+        # Traçabilité : règles appliquées
+        'regles': {
+            'cnss_formule': f"min({result['brut']:,}, {int(constantes.get('PLAFOND_CNSS', 2500000)):,}) × {float(constantes.get('TAUX_CNSS_EMPLOYE', 5))}%",
+            'exon_formule': f"min({indem_val:,}, {result['plafond_exon']:,}) → plafond 25% × {result['brut']:,}",
+            'base_rts_formule': f"{result['brut']:,} − {result['cnss']:,} − {result['exon']:,} + {result['depasse']:,} = {result['base_rts']:,}",
+            'net_formule': f"{result['brut']:,} − {result['cnss']:,} − {result['rts']:,} = {result['net']:,}",
+            'reference': 'CGI Guinée – Art. 196 (exonération 25%) / Art. 197 (barème RTS progressif)',
+        },
+    })
+
+
+# ============================================================================
+# OPTIMISATION FISCALE DE LA DÉCOMPOSITION
+# Trouve la répartition qui minimise le RTS (maximise le net)
+# ============================================================================
+
+@login_required
+@entreprise_active_required
+def api_optimiser_decomposition(request):
+    """
+    POST JSON → trouve la répartition optimale du brut.
+
+    Entrée :
+        { "brut": 5500000,
+          "verrous": { "transport": 300000 }  ← (optionnel) montants verrouillés
+        }
+    Sortie :
+        { "composantes": [...], "impact": {...}, "gain_vs_actuel": {...} }
+
+    Stratégie: maximiser les indemnités exonérées (jusqu'à 25% du brut)
+    tout en respectant les verrous utilisateur.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST requis'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON invalide'}, status=400)
+
+    brut_val = int(str(data.get('brut', 0)).replace(' ', '').replace('\u202f', '').replace('\xa0', '') or 0)
+    verrous = data.get('verrous', {})  # {"transport": 300000, ...}
+    pcts_actuels = data.get('pourcentages_actuels', {})
+
+    if brut_val <= 0:
+        return JsonResponse({'error': 'Brut invalide'}, status=400)
+
+    # Garde-fous : brut minimum et maximum raisonnables
+    if brut_val < 100000:
+        return JsonResponse({'error': 'Brut trop faible pour une optimisation pertinente (min 100 000 GNF)'}, status=400)
+    if brut_val > 500000000:
+        return JsonResponse({'error': 'Brut anormalement élevé (max 500 000 000 GNF)'}, status=400)
+
+    from .services_simulation import calculer_un_bareme, _charger_constantes, BAREME_CGI_REFERENCE, _charger_tranches_db
+
+    constantes = _charger_constantes()
+    annee = date.today().year
+    tranches = _charger_tranches_db(annee, 'officiel')
+    if not tranches:
+        tranches = list(BAREME_CGI_REFERENCE)
+
+    # Montants verrouillés
+    verrous_montants = {}
+    for cle in ['salaire_base', 'transport', 'logement', 'cherte_vie']:
+        if cle in verrous:
+            val = int(str(verrous[cle]).replace(' ', '').replace('\u202f', '').replace('\xa0', '') or 0)
+            if val > 0:
+                verrous_montants[cle] = max(0, min(val, brut_val))  # borner au brut
+
+    # Cas limite : tout verrouillé
+    if len(verrous_montants) >= 4:
+        return JsonResponse({'error': 'Toutes les composantes sont verrouillées. Déverrouillez au moins une composante.'}, status=400)
+
+    # === Stratégie optimale ===
+    # Indemnités exonérées = min(indemnités, 25% du brut)
+    # Pour maximiser l'exonération, on veut indemnités = 25% du brut
+    plafond_exon = int(Decimal(str(brut_val)) * Decimal('25') / Decimal('100'))
+
+    # Budget verrouillé
+    total_verrous = sum(verrous_montants.values())
+    indemnites_verrouillees = sum(v for k, v in verrous_montants.items() if k != 'salaire_base')
+    base_verrouillee = verrous_montants.get('salaire_base', 0)
+
+    # L'objectif : répartir le budget non-verrouillé pour que les indemnités totales = plafond_exon
+    composantes_libres = [c for c in ['salaire_base', 'transport', 'logement', 'cherte_vie']
+                          if c not in verrous_montants]
+    indemnites_libres = [c for c in composantes_libres if c != 'salaire_base']
+    base_libre = 'salaire_base' in composantes_libres
+
+    budget_restant = brut_val - total_verrous
+
+    if budget_restant < 0:
+        return JsonResponse({
+            'error': f'Les montants verrouillés ({total_verrous:,} GNF) dépassent le brut ({brut_val:,} GNF)'
+        }, status=400)
+
+    # Indemnités cibles = plafond_exon - indemnités déjà verrouillées
+    indem_cible = max(0, plafond_exon - indemnites_verrouillees)
+
+    # Répartir les indemnités cibles entre les composantes libres d'indemnités
+    nb_indem_libres = len(indemnites_libres)
+
+    if base_libre and nb_indem_libres > 0:
+        # On peut ajuster la base ET les indemnités
+        indem_totale_a_repartir = min(indem_cible, budget_restant)
+        base_optimale = budget_restant - indem_totale_a_repartir
+    elif base_libre and nb_indem_libres == 0:
+        # Toutes les indemnités sont verrouillées, tout le reste va en base
+        indem_totale_a_repartir = 0
+        base_optimale = budget_restant
+    elif not base_libre and nb_indem_libres > 0:
+        # La base est verrouillée, répartir le reste en indemnités
+        indem_totale_a_repartir = min(budget_restant, indem_cible)
+        base_optimale = 0  # déjà verrouillée
+    else:
+        # Tout est verrouillé
+        indem_totale_a_repartir = 0
+        base_optimale = 0
+
+    # Répartir les indemnités libres équitablement
+    final = {}
+    for cle in ['salaire_base', 'transport', 'logement', 'cherte_vie']:
+        if cle in verrous_montants:
+            final[cle] = verrous_montants[cle]
+        elif cle == 'salaire_base':
+            final[cle] = base_optimale
+        elif nb_indem_libres > 0:
+            final[cle] = round(indem_totale_a_repartir / nb_indem_libres)
+        else:
+            final[cle] = 0
+
+    # Ajuster l'arrondi sur la base
+    total_calc = sum(final.values())
+    if total_calc != brut_val and 'salaire_base' not in verrous_montants:
+        final['salaire_base'] += (brut_val - total_calc)
+
+    total_indemnites = final.get('transport', 0) + final.get('logement', 0) + final.get('cherte_vie', 0)
+
+    # Calculer l'impact fiscal optimisé
+    impact_optimal = calculer_un_bareme(
+        Decimal(str(brut_val)),
+        Decimal(str(total_indemnites)),
+        tranches,
+        constantes,
+    )
+
+    # Comparer avec la répartition actuelle (si fournie)
+    gain_info = None
+    comparaison = None
+    if pcts_actuels:
+        pct_base_actuel = int(pcts_actuels.get('salaire_base', 60))
+        pct_transport_actuel = int(pcts_actuels.get('transport', 15))
+        pct_logement_actuel = int(pcts_actuels.get('logement', 15))
+        pct_cherte_actuel = int(pcts_actuels.get('cherte_vie', 10))
+
+        indem_actuelles = round(brut_val * (pct_transport_actuel + pct_logement_actuel + pct_cherte_actuel) / 100)
+        impact_actuel = calculer_un_bareme(
+            Decimal(str(brut_val)),
+            Decimal(str(indem_actuelles)),
+            tranches,
+            constantes,
+        )
+        gain_net = impact_optimal['net'] - impact_actuel['net']
+        economie_rts = impact_actuel['rts'] - impact_optimal['rts']
+        gain_info = {
+            'net_avant': impact_actuel['net'],
+            'net_apres': impact_optimal['net'],
+            'gain_net_mensuel': gain_net,
+            'gain_net_annuel': gain_net * 12,
+            'rts_avant': impact_actuel['rts'],
+            'rts_apres': impact_optimal['rts'],
+            'economie_rts_mensuelle': economie_rts,
+        }
+
+        # ── Mode comparaison : tableau Standard vs Optimisé ──
+        # Scénario "standard" = 100% base, 0 indemnités
+        impact_standard = calculer_un_bareme(
+            Decimal(str(brut_val)),
+            Decimal('0'),
+            tranches,
+            constantes,
+        )
+        comparaison = [
+            {
+                'scenario': 'Standard (100% base)',
+                'brut': brut_val,
+                'base': brut_val,
+                'indemnites': 0,
+                'cnss': impact_standard['cnss'],
+                'rts': impact_standard['rts'],
+                'net': impact_standard['net'],
+                'taux': impact_standard['taux_effectif'],
+            },
+            {
+                'scenario': 'Actuel',
+                'brut': brut_val,
+                'base': round(brut_val * pct_base_actuel / 100),
+                'indemnites': indem_actuelles,
+                'cnss': impact_actuel['cnss'],
+                'rts': impact_actuel['rts'],
+                'net': impact_actuel['net'],
+                'taux': impact_actuel['taux_effectif'],
+            },
+            {
+                'scenario': 'Optimisé (25% exon.)',
+                'brut': brut_val,
+                'base': final.get('salaire_base', 0),
+                'indemnites': total_indemnites,
+                'cnss': impact_optimal['cnss'],
+                'rts': impact_optimal['rts'],
+                'net': impact_optimal['net'],
+                'taux': impact_optimal['taux_effectif'],
+            },
+        ]
+
+    # Convertir en pourcentages pour l'UI
+    composantes = []
+    labels = {
+        'salaire_base': 'Salaire de base',
+        'transport': 'Indemnité de transport',
+        'logement': 'Indemnité de logement',
+        'cherte_vie': 'Cherté de vie',
+    }
+    for cle in ['salaire_base', 'transport', 'logement', 'cherte_vie']:
+        montant = final[cle]
+        pct = round(montant * 100 / brut_val) if brut_val > 0 else 0
+        composantes.append({
+            'cle': cle,
+            'label': labels[cle],
+            'pct': pct,
+            'montant': montant,
+            'verrouille': cle in verrous_montants,
+        })
+
+    return JsonResponse({
+        'brut': brut_val,
+        'composantes': composantes,
+        'impact': {
+            'cnss': impact_optimal['cnss'],
+            'base_rts': impact_optimal['base_rts'],
+            'rts': impact_optimal['rts'],
+            'net': impact_optimal['net'],
+            'taux_effectif': impact_optimal['taux_effectif'],
+            'plafond_exon': impact_optimal['plafond_exon'],
+            'exon': impact_optimal['exon'],
+            'depasse': impact_optimal['depasse'],
+            'detail_tranches': impact_optimal['detail_tranches'],
+        },
+        'gain': gain_info,
+        'comparaison': comparaison,
+        'regle': 'Indemnités exonérées jusqu\'à 25% du brut (CGI Guinée)',
+    })
+
+
+# ============================================================================
+# FICHE DE SIMULATION PDF
+# Génère un PDF professionnel résumant la structuration salariale
+# ============================================================================
+
+@login_required
+@entreprise_active_required
+def api_simulation_pdf(request):
+    """
+    POST JSON → génère un PDF de simulation salariale.
+
+    Entrée :
+        { "brut": 5500000,
+          "composantes": [{"cle": "salaire_base", "label": "...", "pct": 60, "montant": 3300000}, ...],
+          "impact": { "cnss": ..., "rts": ..., "net": ..., "base_rts": ..., "taux_effectif": ...,
+                      "plafond_exon": ..., "exon": ..., "depasse": ..., "detail_tranches": [...] },
+          "comparaison": [...],  ← optionnel
+          "gain": {...},         ← optionnel
+          "employe_nom": "..."   ← optionnel
+        }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST requis'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON invalide'}, status=400)
+
+    brut = int(data.get('brut', 0))
+    composantes = data.get('composantes', [])
+    impact = data.get('impact', {})
+    comparaison = data.get('comparaison', None)
+    gain = data.get('gain', None)
+    employe_nom = data.get('employe_nom', '')
+    regles = data.get('regles', {})
+
+    if brut <= 0 or not composantes:
+        return JsonResponse({'error': 'Données insuffisantes'}, status=400)
+
+    import io
+    import os
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm
+    from reportlab.pdfgen import canvas
+    from reportlab.lib import colors
+    from reportlab.platypus import Table, TableStyle
+
+    # Fonts
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    _font_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'fonts')
+    try:
+        pdfmetrics.registerFont(TTFont('Arial', os.path.join(_font_dir, 'Arial.ttf')))
+        pdfmetrics.registerFont(TTFont('Arial-Bold', os.path.join(_font_dir, 'Arial-Bold.ttf')))
+        _FN = 'Arial'; _FB = 'Arial-Bold'
+    except Exception:
+        _FN = 'Helvetica'; _FB = 'Helvetica-Bold'
+
+    def fmtgnf(n):
+        """Formater un nombre en milliers avec séparateur espace."""
+        return f'{int(n):,}'.replace(',', ' ')
+
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    y = height - 1.5 * cm
+
+    # ── En-tête ──
+    entreprise = request.user.entreprise
+    p.setFont(_FB, 14)
+    p.drawCentredString(width / 2, y, "FICHE DE SIMULATION SALARIALE")
+    y -= 0.6 * cm
+    p.setFont(_FN, 9)
+    p.drawCentredString(width / 2, y, f"Générée le {date.today().strftime('%d/%m/%Y')} — {entreprise.nom_entreprise if entreprise else ''}")
+    y -= 0.8 * cm
+
+    if employe_nom:
+        p.setFont(_FB, 11)
+        p.drawString(1.5 * cm, y, f"Employé : {employe_nom}")
+        y -= 0.6 * cm
+
+    p.setFont(_FB, 11)
+    p.drawString(1.5 * cm, y, f"Salaire brut mensuel : {fmtgnf(brut)} GNF")
+    y -= 1 * cm
+
+    # ── Tableau décomposition ──
+    p.setFont(_FB, 10)
+    p.drawString(1.5 * cm, y, "1. Décomposition du brut")
+    y -= 0.5 * cm
+
+    comp_data = [['Composante', '%', 'Montant (GNF)']]
+    for c in composantes:
+        comp_data.append([
+            c.get('label', c.get('cle', '')),
+            f"{c.get('pct', 0)}%",
+            fmtgnf(c.get('montant', 0)),
+        ])
+    comp_data.append(['TOTAL', '100%', fmtgnf(brut)])
+
+    t = Table(comp_data, colWidths=[8 * cm, 3 * cm, 5 * cm])
+    t.setStyle(TableStyle([
+        ('FONT', (0, 0), (-1, 0), _FB, 9),
+        ('FONT', (0, 1), (-1, -2), _FN, 9),
+        ('FONT', (0, -1), (-1, -1), _FB, 9),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d5f5e3')),
+        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    tw, th = t.wrap(0, 0)
+    t.drawOn(p, 1.5 * cm, y - th)
+    y -= th + 0.8 * cm
+
+    # ── Impact fiscal ──
+    p.setFont(_FB, 10)
+    p.drawString(1.5 * cm, y, "2. Impact fiscal")
+    y -= 0.5 * cm
+
+    fisc_data = [
+        ['Rubrique', 'Montant (GNF)', 'Détail'],
+        ['CNSS Employé (5%)', fmtgnf(impact.get('cnss', 0)),
+         f"Plafond: 2 500 000 GNF"],
+        ['Indemnités exonérées', fmtgnf(impact.get('exon', 0)),
+         f"Plafond 25% = {fmtgnf(impact.get('plafond_exon', 0))} GNF"],
+        ['Base imposable RTS', fmtgnf(impact.get('base_rts', 0)),
+         f"Brut − CNSS − Exon + Dépasse"],
+        ['RTS (impôt)', fmtgnf(impact.get('rts', 0)),
+         f"Taux effectif: {impact.get('taux_effectif', 0)}%"],
+        ['NET À PAYER', fmtgnf(impact.get('net', 0)),
+         f"Brut − CNSS − RTS"],
+    ]
+
+    t2 = Table(fisc_data, colWidths=[5 * cm, 4 * cm, 7 * cm])
+    t2.setStyle(TableStyle([
+        ('FONT', (0, 0), (-1, 0), _FB, 9),
+        ('FONT', (0, 1), (-1, -2), _FN, 9),
+        ('FONT', (0, -1), (-1, -1), _FB, 9),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d5f5e3')),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    tw2, th2 = t2.wrap(0, 0)
+    t2.drawOn(p, 1.5 * cm, y - th2)
+    y -= th2 + 0.8 * cm
+
+    # ── Détail RTS par tranches ──
+    detail_tranches = impact.get('detail_tranches', [])
+    if detail_tranches:
+        p.setFont(_FB, 10)
+        p.drawString(1.5 * cm, y, "3. Détail RTS par tranches (barème progressif)")
+        y -= 0.5 * cm
+
+        tr_data = [['Tranche (GNF)', 'Taux', 'Base tranche', 'Impôt']]
+        for tr in detail_tranches:
+            sup = fmtgnf(tr['borne_sup']) if tr.get('borne_sup') else '∞'
+            tr_data.append([
+                f"{fmtgnf(tr['borne_inf'])} → {sup}",
+                f"{tr['taux']}%",
+                fmtgnf(tr['base_tranche']),
+                fmtgnf(tr['impot_tranche']),
+            ])
+
+        t3 = Table(tr_data, colWidths=[5 * cm, 2 * cm, 4.5 * cm, 4.5 * cm])
+        t3.setStyle(TableStyle([
+            ('FONT', (0, 0), (-1, 0), _FB, 8),
+            ('FONT', (0, 1), (-1, -1), _FN, 8),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495e')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        tw3, th3 = t3.wrap(0, 0)
+        if y - th3 < 3 * cm:
+            p.showPage()
+            y = height - 1.5 * cm
+        t3.drawOn(p, 1.5 * cm, y - th3)
+        y -= th3 + 0.8 * cm
+
+    # ── Comparaison scénarios ──
+    section_num = 4 if detail_tranches else 3
+    if comparaison:
+        p.setFont(_FB, 10)
+        p.drawString(1.5 * cm, y, f"{section_num}. Comparaison des scénarios")
+        y -= 0.5 * cm
+
+        cmp_data = [['Scénario', 'RTS', 'CNSS', 'Net', 'Taux eff.']]
+        for s in comparaison:
+            cmp_data.append([
+                s.get('scenario', ''),
+                fmtgnf(s.get('rts', 0)),
+                fmtgnf(s.get('cnss', 0)),
+                fmtgnf(s.get('net', 0)),
+                f"{s.get('taux', 0)}%",
+            ])
+
+        t4 = Table(cmp_data, colWidths=[5 * cm, 3 * cm, 3 * cm, 3.5 * cm, 2.5 * cm])
+        t4.setStyle(TableStyle([
+            ('FONT', (0, 0), (-1, 0), _FB, 9),
+            ('FONT', (0, 1), (-1, -1), _FN, 9),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d5f5e3')),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        tw4, th4 = t4.wrap(0, 0)
+        if y - th4 < 3 * cm:
+            p.showPage()
+            y = height - 1.5 * cm
+        t4.drawOn(p, 1.5 * cm, y - th4)
+        y -= th4 + 0.8 * cm
+        section_num += 1
+
+    # ── Gain d'optimisation ──
+    if gain and gain.get('gain_net_mensuel', 0) != 0:
+        if y < 5 * cm:
+            p.showPage()
+            y = height - 1.5 * cm
+        p.setFont(_FB, 10)
+        p.drawString(1.5 * cm, y, f"{section_num}. Gain d'optimisation")
+        y -= 0.5 * cm
+
+        g_data = [
+            ['', 'Avant', 'Après', 'Gain'],
+            ['RTS mensuel', fmtgnf(gain.get('rts_avant', 0)),
+             fmtgnf(gain.get('rts_apres', 0)),
+             f"−{fmtgnf(gain.get('economie_rts_mensuelle', 0))}"],
+            ['Net mensuel', fmtgnf(gain.get('net_avant', 0)),
+             fmtgnf(gain.get('net_apres', 0)),
+             f"+{fmtgnf(gain.get('gain_net_mensuel', 0))}"],
+            ['Net annuel', fmtgnf(gain.get('net_avant', 0) * 12),
+             fmtgnf(gain.get('net_apres', 0) * 12),
+             f"+{fmtgnf(gain.get('gain_net_annuel', 0))}"],
+        ]
+
+        t5 = Table(g_data, colWidths=[4 * cm, 4 * cm, 4 * cm, 4 * cm])
+        t5.setStyle(TableStyle([
+            ('FONT', (0, 0), (-1, 0), _FB, 9),
+            ('FONT', (0, 1), (-1, -1), _FN, 9),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#27ae60')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('TEXTCOLOR', (-1, 1), (-1, -1), colors.HexColor('#27ae60')),
+            ('FONT', (-1, 1), (-1, -1), _FB, 9),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        tw5, th5 = t5.wrap(0, 0)
+        t5.drawOn(p, 1.5 * cm, y - th5)
+        y -= th5 + 0.8 * cm
+
+    # ── Pied de page ──
+    p.setFont(_FN, 7)
+    p.setFillColor(colors.grey)
+    p.drawString(1.5 * cm, 1 * cm,
+                 f"Simulation indicative — CGI Guinée Art. 196-197 — Générée par Gestionnaire RH — {date.today().strftime('%d/%m/%Y')}")
+    p.drawRightString(width - 1.5 * cm, 1 * cm, "Document non contractuel")
+
+    p.save()
+    buffer.seek(0)
+
+    nom_fichier = f"simulation_{date.today().strftime('%Y%m%d')}_{fmtgnf(brut).replace(' ', '')}.pdf"
+    response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{nom_fichier}"'
     return response
 

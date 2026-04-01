@@ -156,4 +156,11 @@ urlpatterns = [
     # Rétro-paie : calcul brut depuis net convenu
     path('api/retropaie/', views.api_retropaie, name='api_retropaie'),
     path('api/retropaie/pdf/', views.retropaie_pdf, name='retropaie_pdf'),
+
+    # Décomposition intelligente du brut
+    path('api/decomposer-brut/', views.api_decomposer_brut, name='api_decomposer_brut'),
+    path('api/creer-elements-lot/<int:employe_id>/', views.api_creer_elements_lot, name='api_creer_elements_lot'),
+    path('api/impact-fiscal/', views.api_impact_fiscal, name='api_impact_fiscal'),
+    path('api/optimiser-decomposition/', views.api_optimiser_decomposition, name='api_optimiser_decomposition'),
+    path('api/simulation-pdf/', views.api_simulation_pdf, name='api_simulation_pdf'),
 ]
