@@ -3578,6 +3578,32 @@ def retropaie_pdf(request):
 
 
 # ============================================================================
+# HELPERS STRUCTURATION SALARIALE
+# ============================================================================
+from .services_simulation import VERSION_BAREME
+
+def _get_client_ip(request):
+    """Extrait l'IP client (derrière reverse proxy ou direct)."""
+    xff = request.META.get('HTTP_X_FORWARDED_FOR')
+    return xff.split(',')[0].strip() if xff else request.META.get('REMOTE_ADDR')
+
+def _log_audit(request, action, simulation=None, metadata=None):
+    """Enregistre une entrée d'audit de manière non-bloquante."""
+    try:
+        from .models import AuditSimulation
+        AuditSimulation.objects.create(
+            entreprise=request.user.entreprise,
+            utilisateur=request.user,
+            action=action,
+            simulation=simulation,
+            metadata=metadata or {},
+            ip_address=_get_client_ip(request),
+        )
+    except Exception:
+        pass  # Log audit ne doit jamais bloquer l'opération principale
+
+
+# ============================================================================
 # DÉCOMPOSITION INTELLIGENTE DU BRUT
 # Répartit un montant brut en salaire de base + indemnités (transport,
 # logement, cherté de vie) et crée les éléments de salaire en lot
@@ -3813,6 +3839,12 @@ def api_creer_elements_lot(request, employe_id):
                 sim.appliquee = True
                 sim.date_application = timezone.now()
                 sim.save(update_fields=['appliquee', 'date_application'])
+
+                # ── Audit log ──
+                _log_audit(request, 'creation', sim, {
+                    'nb_crees': len(crees), 'nb_erreurs': len(erreurs),
+                    'total_montant': total_montant,
+                })
             except SimulationPaie.DoesNotExist:
                 pass
 
@@ -4305,7 +4337,11 @@ def api_valider_simulation(request):
         },
         conformite=conformite,
         avertissements=avertissements,
+        version_bareme=VERSION_BAREME,
     )
+
+    # ── Audit log ──
+    _log_audit(request, 'validation', sim, {'brut': brut_val, 'conformite': conformite})
 
     return JsonResponse({
         'valide': conformite != 'non_conforme',
@@ -4625,5 +4661,9 @@ def api_simulation_pdf(request):
     nom_fichier = f"simulation_{date.today().strftime('%Y%m%d')}_{fmtgnf(brut).replace(' ', '')}.pdf"
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{nom_fichier}"'
+
+    # ── Audit log ──
+    _log_audit(request, 'pdf', None, {'brut': brut, 'employe_nom': employe_nom[:100]})
+
     return response
 

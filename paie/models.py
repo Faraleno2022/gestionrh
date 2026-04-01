@@ -1240,6 +1240,7 @@ class SimulationPaie(models.Model):
     gain = models.JSONField(null=True, blank=True, help_text="{gain_net_mensuel, gain_net_annuel, ...}")
     conformite = models.CharField(max_length=20, default='conforme', help_text="conforme / a_verifier / non_conforme")
     avertissements = models.JSONField(default=list, blank=True, help_text="Liste des warnings détectés")
+    version_bareme = models.CharField(max_length=30, default='GN-2026-v1', help_text="Version du barème fiscal utilisé")
 
     appliquee = models.BooleanField(default=False, help_text="True si les éléments ont été créés en lot")
     date_application = models.DateTimeField(null=True, blank=True)
@@ -1258,6 +1259,34 @@ class SimulationPaie(models.Model):
 
     def __str__(self):
         return f"Simulation {self.brut:,.0f} GNF — {self.date_creation:%d/%m/%Y %H:%M}"
+
+
+class AuditSimulation(models.Model):
+    """Journal d'audit léger pour les actions de simulation / création."""
+    ACTION_CHOICES = [
+        ('validation', 'Validation simulation'),
+        ('creation', 'Création éléments en lot'),
+        ('pdf', 'Génération PDF'),
+    ]
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='audits_simulation')
+    utilisateur = models.ForeignKey('core.Utilisateur', on_delete=models.SET_NULL, null=True)
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    simulation = models.ForeignKey(SimulationPaie, on_delete=models.SET_NULL, null=True, blank=True, related_name='audits')
+    metadata = models.JSONField(default=dict, blank=True, help_text="Détails contextuels libres")
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'audit_simulations'
+        ordering = ['-timestamp']
+        verbose_name = 'Audit simulation'
+        verbose_name_plural = 'Audits simulation'
+        indexes = [
+            models.Index(fields=['entreprise', '-timestamp'], name='idx_audit_entreprise_ts'),
+        ]
+
+    def __str__(self):
+        return f"{self.get_action_display()} — {self.utilisateur} — {self.timestamp:%d/%m/%Y %H:%M}"
 
 
 # Import des modèles de frais

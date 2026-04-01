@@ -42,6 +42,9 @@ BAREME_CGI_REFERENCE = [
 BAREME_CGI_LABEL = 'Barème RTS officiel Guinée 2019+ (0 %/5 %/10 %/15 %/20 %)'
 BAREME_FALLBACK_ID = 'fallback'
 
+# Version du barème pour traçabilité / reproductibilité
+VERSION_BAREME = 'GN-2026-v1'
+
 
 # ---------------------------------------------------------------------------
 # Chargement des données
