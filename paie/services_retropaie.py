@@ -296,6 +296,118 @@ def retropaie_net_vers_brut(
 # Détail par tranche (pour affichage pédagogique)
 # ---------------------------------------------------------------------------
 
+def cout_total_vers_brut(
+    cout_total,
+    annee=None,
+    pct_indemnites_forfaitaires=0,
+    nb_salaries=0,
+    max_iterations=120,
+):
+    """
+    Calcule le brut et le net depuis un coût total employeur (budget tout compris).
+
+    cout_total = brut + CNSS_employeur + VF + TA (ou ONFPP)
+
+    Paramètres
+    ----------
+    cout_total : montant total que l'entreprise paie pour l'employé
+    nb_salaries : nombre de salariés (>= 25 → ONFPP 1.5%, sinon TA 2%)
+
+    Retourne
+    --------
+    dict : brut, net, cnss_employe, rts, charges_patronales (détail), cout_total_reel
+    """
+    from .cache_service import PayrollCacheService
+
+    cout_total = _arrondir(_d(cout_total))
+    pct_indem = _d(pct_indemnites_forfaitaires)
+
+    if annee is None:
+        annee = date.today().year
+
+    constantes = PayrollCacheService.get_constantes(date_reference=date(annee, 1, 1))
+    tranches = PayrollCacheService.get_tranches_rts(annee)
+
+    constantes.setdefault('PLANCHER_CNSS',     Decimal('550000'))
+    constantes.setdefault('PLAFOND_CNSS',      Decimal('2500000'))
+    constantes.setdefault('TAUX_CNSS_EMPLOYE', Decimal('5'))
+    constantes.setdefault('TAUX_CNSS_EMPLOYEUR', Decimal('18'))
+    constantes.setdefault('TAUX_VF',           Decimal('6'))
+    constantes.setdefault('TAUX_TA',           Decimal('2'))
+    constantes.setdefault('TAUX_ONFPP',        Decimal('1.5'))
+
+    plancher     = constantes['PLANCHER_CNSS']
+    plafond      = constantes['PLAFOND_CNSS']
+    taux_cnss_pat = constantes['TAUX_CNSS_EMPLOYEUR']
+    taux_vf       = constantes['TAUX_VF']
+    taux_ta_onfpp = constantes['TAUX_ONFPP'] if nb_salaries >= 25 else constantes['TAUX_TA']
+    libelle_ta    = 'ONFPP' if nb_salaries >= 25 else 'TA'
+
+    def _charges_pat(brut):
+        seuil = _arrondir(plancher * Decimal('0.10'))
+        if brut < seuil:
+            cnss_pat = Decimal('0')
+        else:
+            base = _arrondir(max(min(brut, plafond), plancher))
+            cnss_pat = _arrondir(base * taux_cnss_pat / Decimal('100'))
+        vf = _arrondir(brut * taux_vf / Decimal('100'))
+        ta = _arrondir(brut * taux_ta_onfpp / Decimal('100'))
+        return cnss_pat, vf, ta
+
+    def _cout(brut):
+        c, v, t = _charges_pat(brut)
+        return brut + c + v + t
+
+    # Dichotomie : trouver brut tel que _cout(brut) ≈ cout_total
+    low  = Decimal('0')
+    high = cout_total  # brut ne peut dépasser le budget total
+    brut_opt = _arrondir(cout_total / Decimal('1.26'))  # estimation init
+
+    for _ in range(max_iterations):
+        mid = _arrondir((low + high) / 2)
+        if abs(_cout(mid) - cout_total) <= _d('1'):
+            brut_opt = mid
+            break
+        if _cout(mid) < cout_total:
+            low = mid
+        else:
+            high = mid
+        brut_opt = mid
+
+    # Garantir que le coût calculé ne dépasse pas le budget
+    while _cout(brut_opt) > cout_total:
+        brut_opt -= Decimal('1')
+
+    # Résultats complets
+    cnss_pat, vf, ta = _charges_pat(brut_opt)
+    total_pat = cnss_pat + vf + ta
+    net, cnss_emp, base_cnss, base_rts, rts = _net_depuis_brut(
+        brut_opt, constantes, tranches, pct_indem
+    )
+    detail_t = _detail_tranches(base_rts, tranches)
+
+    return {
+        'cout_total_vise':  int(cout_total),
+        'cout_total_reel':  int(_cout(brut_opt)),
+        'brut':             brut_opt,
+        'cnss_employe':     cnss_emp,
+        'base_cnss':        base_cnss,
+        'base_rts':         base_rts,
+        'rts':              rts,
+        'net':              net,
+        'charges_patronales': {
+            'cnss_employeur': int(cnss_pat),
+            'vf':             int(vf),
+            'ta':             int(ta),
+            'libelle_ta':     libelle_ta,
+            'total':          int(total_pat),
+        },
+        'detail_tranches':  detail_t,
+        'ok': abs(int(_cout(brut_opt)) - int(cout_total)) <= 1000,
+        'annee':            annee,
+    }
+
+
 def _detail_tranches(base_imposable, tranches):
     """Retourne le détail du calcul RTS tranche par tranche."""
     if base_imposable <= 0:

@@ -3188,6 +3188,106 @@ def bulletins_groupes_pdf(request):
 
 
 # ============================================================================
+# API COÛT TOTAL EMPLOYEUR → BRUT → NET
+# Le budget négocié est le coût total (brut + charges patronales)
+# ============================================================================
+
+@login_required
+def api_cout_total(request):
+    """
+    POST JSON : calcule brut + net depuis un budget total employeur.
+
+    Entrée  : { "cout_total": 5500000, "pct_indemnites_forfaitaires": 0,
+                "annee": 2026, "nb_salaries": 0 }
+    Sortie  : { brut, net, cnss_employe, rts, charges_patronales: {
+                  cnss_employeur, vf, ta, libelle_ta, total },
+                cout_total_reel, formatted }
+    """
+    if not hasattr(request.user, 'entreprise') or not request.user.entreprise:
+        return JsonResponse({'error': 'Aucune entreprise associée.'}, status=403)
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST requis'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON invalide'}, status=400)
+
+    raw = data.get('cout_total', 0)
+    try:
+        cout_total = Decimal(str(raw).replace(' ', '').replace('\xa0', '').replace('\u202f', ''))
+        if cout_total <= 0:
+            raise ValueError
+    except (InvalidOperation, ValueError):
+        return JsonResponse({'error': 'Montant invalide'}, status=400)
+
+    try:
+        pct_indem = float(data.get('pct_indemnites_forfaitaires', 0) or 0)
+        pct_indem = max(0.0, min(25.0, pct_indem))
+    except (TypeError, ValueError):
+        pct_indem = 0.0
+
+    try:
+        annee = int(data.get('annee') or date.today().year)
+    except (TypeError, ValueError):
+        annee = date.today().year
+
+    try:
+        nb_salaries = int(data.get('nb_salaries', 0) or 0)
+    except (TypeError, ValueError):
+        nb_salaries = 0
+
+    from .services_retropaie import cout_total_vers_brut
+
+    try:
+        r = cout_total_vers_brut(
+            cout_total=cout_total,
+            annee=annee,
+            pct_indemnites_forfaitaires=pct_indem,
+            nb_salaries=nb_salaries,
+        )
+    except Exception as e:
+        return JsonResponse({'error': f'Erreur de calcul : {str(e)}'}, status=500)
+
+    def fmt(n):
+        return f"{int(n):,}".replace(',', ' ')
+
+    cp = r['charges_patronales']
+    return JsonResponse({
+        'cout_total_vise':  r['cout_total_vise'],
+        'cout_total_reel':  r['cout_total_reel'],
+        'brut':             int(r['brut']),
+        'cnss_employe':     int(r['cnss_employe']),
+        'base_cnss':        int(r['base_cnss']),
+        'base_rts':         int(r['base_rts']),
+        'rts':              int(r['rts']),
+        'net':              int(r['net']),
+        'charges_patronales': {
+            'cnss_employeur': cp['cnss_employeur'],
+            'vf':             cp['vf'],
+            'ta':             cp['ta'],
+            'libelle_ta':     cp['libelle_ta'],
+            'total':          cp['total'],
+        },
+        'detail_tranches':  r['detail_tranches'],
+        'ok':               r['ok'],
+        'annee':            r['annee'],
+        'formatted': {
+            'cout_total':       fmt(r['cout_total_reel']),
+            'brut':             fmt(r['brut']),
+            'cnss_employe':     fmt(r['cnss_employe']),
+            'rts':              fmt(r['rts']),
+            'net':              fmt(r['net']),
+            'cnss_employeur':   fmt(cp['cnss_employeur']),
+            'vf':               fmt(cp['vf']),
+            'ta':               fmt(cp['ta']),
+            'total_pat':        fmt(cp['total']),
+        },
+    })
+
+
+# ============================================================================
 # API RÉTRO-PAIE : NET → BRUT
 # Calcule le brut nécessaire pour obtenir exactement le net convenu
 # ============================================================================
