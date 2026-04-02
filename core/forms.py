@@ -175,10 +175,16 @@ class EntrepriseSettingsForm(forms.ModelForm):
     
     class Meta:
         model = Entreprise
-        fields = ['nom_entreprise', 'nif', 'num_cnss', 'adresse', 'ville', 'pays', 'telephone', 'email', 'logo']
+        fields = [
+            'nom_entreprise', 'nif', 'nifp', 'num_cnss',
+            'adresse', 'ville', 'pays', 'telephone', 'email', 'logo',
+            'banque_nom', 'banque_code', 'banque_guichet', 'banque_compte',
+            'banque_cle_rib', 'banque_iban', 'telepaiement_autorise',
+        ]
         widgets = {
             'nom_entreprise': forms.TextInput(attrs={'class': 'form-control'}),
             'nif': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Numéro NIF'}),
+            'nifp': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'NIF-p eTax DGI'}),
             'num_cnss': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Numéro CNSS'}),
             'adresse': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'ville': forms.TextInput(attrs={'class': 'form-control'}),
@@ -186,10 +192,25 @@ class EntrepriseSettingsForm(forms.ModelForm):
             'telephone': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'logo': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'banque_nom': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Banque Centrale, Ecobank...'}),
+            'banque_code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '036'}),
+            'banque_guichet': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '003'}),
+            'banque_compte': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '0100000334'}),
+            'banque_cle_rib': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '89'}),
+            'banque_iban': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'GN...'}),
+            'telepaiement_autorise': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         labels = {
             'nom_entreprise': 'Nom de l\'entreprise',
             'nif': 'NIF',
+            'nifp': 'NIF-p (identifiant eTax DGI)',
             'num_cnss': 'Numéro CNSS',
             'logo': 'Logo de l\'entreprise',
+            'banque_nom': 'Banque',
+            'banque_code': 'Code banque',
+            'banque_guichet': 'Code guichet',
+            'banque_compte': 'N° de compte',
+            'banque_cle_rib': 'Clé RIB',
+            'banque_iban': 'IBAN',
+            'telepaiement_autorise': 'Télépaiement DGI activé',
         }
