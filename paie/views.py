@@ -3614,7 +3614,6 @@ def _log_audit(request, action, simulation=None, metadata=None):
 # ============================================================================
 
 @login_required
-@entreprise_active_required
 def api_decomposer_brut(request):
     """
     POST JSON → retourne une proposition de décomposition du brut.
@@ -3631,6 +3630,10 @@ def api_decomposer_brut(request):
           "rubriques": { "salaire_base": [...], "transport": [...], ... }
         }
     """
+    if not hasattr(request.user, 'entreprise') or not request.user.entreprise:
+        return JsonResponse({'error': 'Aucune entreprise associée.'}, status=403)
+    if not request.user.entreprise.actif:
+        return JsonResponse({'error': 'Entreprise désactivée.'}, status=403)
     if request.method != 'POST':
         return JsonResponse({'error': 'POST requis'}, status=405)
 
@@ -3676,10 +3679,21 @@ def api_decomposer_brut(request):
     entreprise = request.user.entreprise
     rubriques_map = {}
 
-    # Salaire de base
+    # Salaire de base — recherche élargie (catégorie + mots-clés code/libelle)
     rubs_base = RubriquePaie.objects.filter(
-        entreprise=entreprise, actif=True, categorie_rubrique='salaire_base'
+        entreprise=entreprise, actif=True, type_rubrique='gain'
+    ).filter(
+        Q(categorie_rubrique='salaire_base') |
+        Q(code_rubrique__icontains='SAL') |
+        Q(code_rubrique__icontains='BASE') |
+        Q(libelle_rubrique__icontains='salaire') |
+        Q(libelle_rubrique__icontains='base')
     ).values('id', 'code_rubrique', 'libelle_rubrique')
+    # Fallback : toutes les rubriques gain si aucune trouvée
+    if not rubs_base.exists():
+        rubs_base = RubriquePaie.objects.filter(
+            entreprise=entreprise, actif=True, type_rubrique='gain'
+        ).values('id', 'code_rubrique', 'libelle_rubrique')
     rubriques_map['salaire_base'] = list(rubs_base)
 
     # Transport
@@ -3727,9 +3741,12 @@ def api_decomposer_brut(request):
 
 
 @login_required
-@entreprise_active_required
 @require_POST
 def api_creer_elements_lot(request, employe_id):
+    if not hasattr(request.user, 'entreprise') or not request.user.entreprise:
+        return JsonResponse({'error': 'Aucune entreprise associée.'}, status=403)
+    if not request.user.entreprise.actif:
+        return JsonResponse({'error': 'Entreprise désactivée.'}, status=403)
     """
     Crée en lot les éléments de salaire issus de la décomposition du brut.
     Sécurisé : permissions, validation dates/montants, anti-doublon, audit.
@@ -3868,7 +3885,6 @@ def api_creer_elements_lot(request, employe_id):
 # ============================================================================
 
 @login_required
-@entreprise_active_required
 def api_impact_fiscal(request):
     """
     POST JSON → calcul instantané de l'impact fiscal d'une décomposition.
@@ -3982,7 +3998,6 @@ def api_impact_fiscal(request):
 # ============================================================================
 
 @login_required
-@entreprise_active_required
 def api_optimiser_decomposition(request):
     """
     POST JSON → trouve la répartition optimale du brut.
