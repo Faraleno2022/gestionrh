@@ -1682,14 +1682,12 @@ def livre_paie(request):
     if mois:
         periodes = periodes.filter(mois=mois)
     
-    # Récupérer tous les bulletins des périodes avec total_retenues calculé
+    # Récupérer tous les bulletins des périodes
     from django.db.models import F
     bulletins = BulletinPaie.objects.filter(
         periode__in=periodes,
         employe__entreprise=request.user.entreprise,
-    ).select_related('employe', 'employe__poste', 'periode').annotate(
-        total_retenues=F('cnss_employe') + F('irg')
-    ).order_by('periode__mois', 'employe__matricule')
+    ).select_related('employe', 'employe__poste', 'periode').order_by('periode__mois', 'employe__matricule')
     
     # Calcul des totaux
     totaux = bulletins.aggregate(
