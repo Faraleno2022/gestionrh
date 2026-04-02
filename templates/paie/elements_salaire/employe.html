@@ -280,6 +280,55 @@
                 </div>
             </div>
 
+            <!-- ════════ ALERTE DÉPASSEMENT EXONÉRATION + COMPARAISON 3 STRUCTURES ════════ -->
+            <div id="decomp_alerte_depassement" class="alert alert-warning border-warning shadow-sm" style="display:none;">
+                <div class="d-flex align-items-start gap-3">
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-3 mt-1"></i>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold mb-1">Dépassement du plafond d'exonération</h6>
+                        <p class="mb-2" id="decomp_alerte_msg">
+                            Vos indemnités dépassent le plafond de 25% du brut de <strong id="decomp_alerte_montant">—</strong> GNF.
+                            Ce surplus est réintégré dans la base RTS, augmentant l'impôt de l'employé.
+                        </p>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="badge bg-warning text-dark">
+                                <i class="bi bi-lightbulb-fill me-1"></i>Recommandation : passer à 75/25 pour maximiser le net
+                            </span>
+                            <button type="button" class="btn btn-success btn-sm" id="decomp_btn_appliquer_25">
+                                <i class="bi bi-magic me-1"></i>Appliquer l'optimisation (25%)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════ COMPARAISON 3 STRUCTURES (60/40 vs 70/30 vs 75/25) ════════ -->
+            <div id="decomp_3structures_zone" class="card border-info shadow-sm mb-3" style="display:none;">
+                <div class="card-header bg-info text-white py-2">
+                    <h6 class="mb-0"><i class="bi bi-layout-three-columns me-2"></i>Comparaison des structures salariales</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover table-sm align-middle mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Structure</th>
+                                    <th class="text-center">Base / Indem.</th>
+                                    <th class="text-end">Indemnités</th>
+                                    <th class="text-end">Exonération</th>
+                                    <th class="text-end">Dépassement</th>
+                                    <th class="text-end">RTS</th>
+                                    <th class="text-end">Net employé</th>
+                                    <th class="text-end">Gain vs actuel</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="decomp_3structures_body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- Gain d'optimisation (affiché après optimisation) -->
             <div id="decomp_gain_zone" class="alert alert-success border-success" style="display:none;">
                 <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -840,6 +889,8 @@
     var divGain      = document.getElementById('decomp_gain_zone');
     var divCompar    = document.getElementById('decomp_comparaison_zone');
     var divConf      = document.getElementById('decomp_conformite_zone');
+    var divAlerte    = document.getElementById('decomp_alerte_depassement');
+    var div3Struct   = document.getElementById('decomp_3structures_zone');
 
     // Date par défaut
     var dateInput = document.getElementById('decomp_date');
@@ -926,6 +977,81 @@
                 if (zoneEl) zoneEl.style.display = 'block';
             }
         }
+    }
+
+    // ── Comparaison 3 structures salariales ─────────────────────────
+    function lancerComparaison3Structures(brut, netActuel) {
+        var structures = [
+            {label: '60 / 40 (Standard)', pctIndem: 40, base: 60, t: 15, l: 15, cv: 10},
+            {label: '70 / 30', pctIndem: 30, base: 70, t: 12, l: 10, cv: 8},
+            {label: '75 / 25 (Fiscal optimal)', pctIndem: 25, base: 75, t: 10, l: 10, cv: 5}
+        ];
+        var promises = structures.map(function(s) {
+            var indem = Math.round(brut * s.pctIndem / 100);
+            return postJson(IMPACT_URL, {brut: brut, indemnites: indem}).then(function(d) {
+                d._struct = s;
+                return d;
+            });
+        });
+        Promise.all(promises).then(function(results) {
+            var tbody = document.getElementById('decomp_3structures_body');
+            tbody.innerHTML = '';
+            var bestNet = 0;
+            var bestIdx = -1;
+            results.forEach(function(r, i) {
+                if (r.net > bestNet) { bestNet = r.net; bestIdx = i; }
+            });
+            results.forEach(function(r, i) {
+                var s = r._struct;
+                var isBest = (i === bestIdx);
+                var gain = r.net - netActuel;
+                var gainHtml = gain > 0
+                    ? '<span class="text-success fw-bold">+' + fmt(gain) + '</span>'
+                    : (gain < 0 ? '<span class="text-danger">' + fmt(gain) + '</span>' : '<span class="text-muted">—</span>');
+                var depHtml = r.depasse > 0
+                    ? '<span class="text-danger fw-bold">+' + fmt(r.depasse) + '</span>'
+                    : '<span class="text-success"><i class="bi bi-check-circle-fill"></i> 0</span>';
+                var cls = isBest ? ' class="table-success"' : '';
+                var btnHtml = '<button type="button" class="btn btn-outline-primary btn-sm btn-appliquer-struct" '
+                    + 'data-base="' + s.base + '" data-t="' + s.t + '" data-l="' + s.l + '" data-cv="' + s.cv + '">'
+                    + '<i class="bi bi-arrow-right-circle"></i> Appliquer</button>';
+                tbody.insertAdjacentHTML('beforeend',
+                    '<tr' + cls + '>' +
+                    '<td class="fw-semibold">' + s.label + (isBest ? ' <span class="badge bg-success">Meilleur</span>' : '') + '</td>' +
+                    '<td class="text-center">' + s.base + '% / ' + s.pctIndem + '%</td>' +
+                    '<td class="text-end">' + fmt(Math.round(brut * s.pctIndem / 100)) + '</td>' +
+                    '<td class="text-end">' + fmt(r.exon) + '</td>' +
+                    '<td class="text-end">' + depHtml + '</td>' +
+                    '<td class="text-end">' + fmt(r.rts) + '</td>' +
+                    '<td class="text-end fw-bold">' + fmt(r.net) + '</td>' +
+                    '<td class="text-end">' + gainHtml + '</td>' +
+                    '<td class="text-center">' + btnHtml + '</td>' +
+                    '</tr>'
+                );
+            });
+            div3Struct.style.display = 'block';
+
+            // Attach click handlers for "Appliquer" buttons
+            tbody.querySelectorAll('.btn-appliquer-struct').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    appliquerStructure(
+                        parseInt(btn.dataset.base),
+                        parseInt(btn.dataset.t),
+                        parseInt(btn.dataset.l),
+                        parseInt(btn.dataset.cv)
+                    );
+                });
+            });
+        });
+    }
+
+    // ── Appliquer une structure (set sliders + recalculer) ──────────
+    function appliquerStructure(base, t, l, cv) {
+        document.getElementById(SLIDER_IDS['salaire_base']).value = base;
+        document.getElementById(SLIDER_IDS['transport']).value = t;
+        document.getElementById(SLIDER_IDS['logement']).value = l;
+        document.getElementById(SLIDER_IDS['cherte_vie']).value = cv;
+        recalculer();
     }
 
     // ── Pourcentages / Verrous ──────────────────────────────────────
@@ -1089,6 +1215,16 @@
             }
             document.getElementById('decomp_exon_info').innerHTML = exonInfo;
 
+            // ── Alerte dépassement + Comparaison 3 structures ──
+            if (data.depasse > 0) {
+                document.getElementById('decomp_alerte_montant').textContent = fmt(data.depasse);
+                divAlerte.style.display = 'block';
+                lancerComparaison3Structures(brutTotal, data.net);
+            } else {
+                divAlerte.style.display = 'none';
+                div3Struct.style.display = 'none';
+            }
+
             // Formules
             if (data.regles) {
                 var rl = data.regles;
@@ -1144,6 +1280,11 @@
         });
     });
 
+    // ── Bouton "Appliquer l'optimisation (25%)" dans l'alerte dépassement ──
+    document.getElementById('decomp_btn_appliquer_25').addEventListener('click', function() {
+        appliquerStructure(75, 10, 10, 5);
+    });
+
     // ── Handler du mode de répartition ──────────────────────────────
     document.querySelectorAll('input[name="decomp_mode"]').forEach(function(radio) {
         radio.addEventListener('change', function() {
@@ -1194,6 +1335,8 @@
         divGain.style.display = 'none';
         divCompar.style.display = 'none';
         divConf.style.display = 'none';
+        divAlerte.style.display = 'none';
+        div3Struct.style.display = 'none';
 
         brutTotal = parseVal(document.getElementById('decomp_brut').value);
         if (!brutTotal || brutTotal <= 0) {
