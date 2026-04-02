@@ -2866,8 +2866,8 @@ def simulation_paie(request):
         # Charges patronales
         vf = (salaire_brut * taux_vf / Decimal('100')).quantize(Decimal('1'))
         
-        # TA et ONFPP mutuellement exclusifs selon le nombre de salariés
-        if nb_salaries < 30:
+        # TA et ONFPP mutuellement exclusifs : < 25 → TA 2%, ≥ 25 → ONFPP 1,5% (CGI Guinée)
+        if nb_salaries < 25:
             ta = (salaire_brut * taux_ta / Decimal('100')).quantize(Decimal('1'))
             onfpp = Decimal('0')
         else:

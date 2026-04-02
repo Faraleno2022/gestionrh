@@ -91,6 +91,7 @@ def _charger_constantes() -> dict:
         'TAUX_VF':             Decimal('6'),
         'TAUX_TA':             Decimal('2'),
         'TAUX_ONFPP':          Decimal('1.5'),
+        'SEUIL_TA_ONFPP':      Decimal('25'),
     }
     for k, v in defaults.items():
         constantes.setdefault(k, v)
@@ -237,7 +238,9 @@ def calculer_un_bareme(
 
     # -- Charges patronales --
     vf    = _half_up(brut * taux_vf / Decimal('100'))
-    if nb_salaries < 30:
+    # Seuil TA/ONFPP : < 25 salariés → TA 2%, ≥ 25 → ONFPP 1,5% (CGI Guinée)
+    seuil_ta_onfpp = int(constantes.get('SEUIL_TA_ONFPP', Decimal('25')))
+    if nb_salaries < seuil_ta_onfpp:
         ta    = _half_up(brut * taux_ta / Decimal('100'))
         onfpp = 0
     else:
