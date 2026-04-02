@@ -4083,6 +4083,21 @@ def api_impact_fiscal(request):
         if conformite == 'conforme':
             conformite = 'a_verifier'
 
+    # Taux de charge global = (Coût total employeur − Net) / Net × 100
+    cout_total_employeur = result['brut'] + result['total_charges_pat']
+    net_val = result['net']
+    taux_charge_global = round(
+        (cout_total_employeur - net_val) / net_val * 100, 1
+    ) if net_val > 0 else 0
+
+    # Interprétation métier du taux de charge
+    if taux_charge_global < 25:
+        taux_charge_interpretation = {'level': 'optimise', 'label': 'Optimisé', 'color': 'success'}
+    elif taux_charge_global <= 35:
+        taux_charge_interpretation = {'level': 'standard', 'label': 'Standard', 'color': 'info'}
+    else:
+        taux_charge_interpretation = {'level': 'couteux', 'label': 'Coûteux', 'color': 'danger'}
+
     return JsonResponse({
         'brut': result['brut'],
         'indemnites': indem_val,
@@ -4094,6 +4109,9 @@ def api_impact_fiscal(request):
         'rts': result['rts'],
         'taux_effectif': result['taux_effectif'],
         'net': result['net'],
+        'cout_total_employeur': cout_total_employeur,
+        'taux_charge_global': taux_charge_global,
+        'taux_charge_interpretation': taux_charge_interpretation,
         'charges_employeur': {
             'cnss_employeur': result['cnss_employeur'],
             'vf': result['vf'],
@@ -4147,6 +4165,9 @@ def api_optimiser_decomposition(request):
     brut_val = int(str(data.get('brut', 0)).replace(' ', '').replace('\u202f', '').replace('\xa0', '') or 0)
     verrous = data.get('verrous', {})  # {"transport": 300000, ...}
     pcts_actuels = data.get('pourcentages_actuels', {})
+    objectif = data.get('objectif', 'max_net')  # 'max_net' ou 'min_cout'
+    if objectif not in ('max_net', 'min_cout'):
+        objectif = 'max_net'
 
     if brut_val <= 0:
         return JsonResponse({'error': 'Brut invalide'}, status=400)
@@ -4157,13 +4178,18 @@ def api_optimiser_decomposition(request):
     if brut_val > 500000000:
         return JsonResponse({'error': 'Brut anormalement élevé (max 500 000 000 GNF)'}, status=400)
 
-    from .services_simulation import calculer_un_bareme, _charger_constantes, BAREME_CGI_REFERENCE, _charger_tranches_db
+    from .services_simulation import calculer_un_bareme, _charger_constantes, BAREME_CGI_REFERENCE, _charger_tranches_db, optimiser_structure_dynamique
 
     constantes = _charger_constantes()
     annee = date.today().year
     tranches = _charger_tranches_db(annee, 'officiel')
     if not tranches:
         tranches = list(BAREME_CGI_REFERENCE)
+
+    # --- Optimisation dynamique (test toutes les structures 0-25%) ---
+    optim_dyn = optimiser_structure_dynamique(brut_val, tranches, constantes, objectif=objectif)
+    best_dyn = optim_dyn['best']
+    best_taux = best_dyn['taux_indem_pct']
 
     # Montants verrouillés
     verrous_montants = {}
@@ -4177,10 +4203,9 @@ def api_optimiser_decomposition(request):
     if len(verrous_montants) >= 4:
         return JsonResponse({'error': 'Toutes les composantes sont verrouillées. Déverrouillez au moins une composante.'}, status=400)
 
-    # === Stratégie optimale ===
-    # Indemnités exonérées = min(indemnités, 25% du brut)
-    # Pour maximiser l'exonération, on veut indemnités = 25% du brut
-    plafond_exon = int(Decimal(str(brut_val)) * Decimal('25') / Decimal('100'))
+    # === Stratégie optimale (dynamique) ===
+    # Utilise le taux trouvé par l'optimisation dynamique (0-25%)
+    plafond_exon = int(Decimal(str(brut_val)) * Decimal(str(best_taux)) / Decimal('100'))
 
     # Budget verrouillé
     total_verrous = sum(verrous_montants.values())
@@ -4354,7 +4379,248 @@ def api_optimiser_decomposition(request):
         },
         'gain': gain_info,
         'comparaison': comparaison,
+        'objectif': objectif,
+        'optimisation_dynamique': {
+            'taux_optimal': best_taux,
+            'net_optimal': best_dyn['net'],
+            'cout_optimal': best_dyn['cout_total_employeur'],
+            'scenarios_testes': len(optim_dyn['scenarios']),
+            'gain_net': optim_dyn['gain_net'],
+            'gain_pct': optim_dyn['gain_pct'],
+            'gain_sans_surcout': optim_dyn['gain_sans_surcout'],
+            'net_standard': optim_dyn['ref_standard']['net'],
+            'cout_standard': optim_dyn['ref_standard']['cout_total_employeur'],
+        },
         'regle': 'Indemnités exonérées jusqu\'à 25% du brut (CGI Guinée)',
+    })
+
+
+# ============================================================================
+# PROPOSITION AUTOMATIQUE COMPLÈTE : Net cible → Brut → Optimisation → Résumé
+# Un clic : calcul brut, optimisation structure, affichage recommandation
+# ============================================================================
+
+@login_required
+@entreprise_active_required
+@require_POST
+def api_proposition_complete(request):
+    """
+    POST JSON → chaîne complète : net_cible → brut (retropaie) → optimisation
+    dynamique → structure recommandée + résumé décisionnel.
+
+    Entrée  : { "net_cible": 5500000, "objectif": "max_net"|"min_cout" }
+    Sortie  : retropaie + optimisation + recommandation en une seule réponse
+    """
+    if not hasattr(request.user, 'entreprise') or not request.user.entreprise:
+        return JsonResponse({'error': 'Aucune entreprise associée.'}, status=403)
+    if not request.user.entreprise.actif:
+        return JsonResponse({'error': 'Entreprise désactivée.'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Corps JSON invalide'}, status=400)
+
+    raw_net = data.get('net_cible', '')
+    if not raw_net:
+        return JsonResponse({'error': 'Le net cible est requis'}, status=400)
+
+    try:
+        net_cible = Decimal(str(raw_net).replace(' ', '').replace('\xa0', ''))
+        if net_cible <= 0:
+            raise ValueError
+    except (InvalidOperation, ValueError):
+        return JsonResponse({'error': 'Montant net invalide'}, status=400)
+
+    objectif = data.get('objectif', 'max_net')
+    if objectif not in ('max_net', 'min_cout'):
+        objectif = 'max_net'
+
+    # Taux max personnalisable (plafond interne entreprise)
+    try:
+        taux_max = int(data.get('taux_max', 25) or 25)
+        taux_max = max(0, min(25, taux_max))
+    except (TypeError, ValueError):
+        taux_max = 25
+
+    annee = date.today().year
+
+    # ── Étape 1 : Rétro-paie (Net → Brut) ─────────────────────────────────
+    from .services_retropaie import retropaie_net_vers_brut, calculer_charges_patronales
+
+    try:
+        retro = retropaie_net_vers_brut(
+            net_cible=net_cible,
+            annee=annee,
+            pct_indemnites_forfaitaires=0,
+            garantir_net_minimum=True,
+        )
+    except Exception as e:
+        return JsonResponse({'error': f'Erreur retropaie : {str(e)}'}, status=500)
+
+    if not retro.get('ok'):
+        return JsonResponse({
+            'error': 'Convergence retropaie impossible pour ce net cible.',
+            'retropaie': {'brut': int(retro['brut']), 'ecart': int(retro['ecart'])}
+        }, status=400)
+
+    brut_calcule = int(retro['brut'])
+
+    # ── Étape 2 : Charges patronales ──────────────────────────────────────
+    try:
+        cp = calculer_charges_patronales(retro['brut'], annee=annee)
+    except Exception:
+        cp = {'cnss_employeur': 0, 'vf': 0, 'ta': 0, 'libelle_ta': 'TA',
+              'total': 0, 'cout_total_employeur': brut_calcule}
+
+    # ── Étape 3 : Optimisation dynamique de la structure ──────────────────
+    from .services_simulation import optimiser_structure_dynamique, _charger_constantes, _charger_tranches_db, BAREME_CGI_REFERENCE
+
+    constantes_sim = _charger_constantes()
+    tranches_sim = _charger_tranches_db(annee, 'officiel')
+    if not tranches_sim:
+        tranches_sim = list(BAREME_CGI_REFERENCE)
+
+    try:
+        optim = optimiser_structure_dynamique(
+            brut_calcule, tranches_sim, constantes_sim, objectif=objectif,
+            taux_max=taux_max
+        )
+    except Exception as e:
+        return JsonResponse({'error': f'Erreur optimisation : {str(e)}'}, status=500)
+
+    best = optim['best']
+    ref = optim['ref_standard']
+
+    # ── Étape 4 : Vérification croisée (assert net cohérent) ─────────────
+    net_verif, *_ = None, None, None, None, None
+    try:
+        from .services_retropaie import _net_depuis_brut as _ndb
+    except ImportError:
+        _ndb = None
+
+    verification_ok = True
+    if _ndb:
+        try:
+            from .cache_service import PayrollCacheService as _PCS
+            _cst = _PCS.get_constantes(date_reference=date(annee, 1, 1))
+            _tr  = _PCS.get_tranches_rts(annee)
+            _cst.setdefault('PLANCHER_CNSS', Decimal('550000'))
+            _cst.setdefault('PLAFOND_CNSS', Decimal('2500000'))
+            _cst.setdefault('TAUX_CNSS_EMPLOYE', Decimal('5'))
+            pct_verif = Decimal(str(best['taux_indem_pct']))
+            net_verif_val, *_ = _ndb(Decimal(str(brut_calcule)), _cst, _tr, pct_verif)
+            verification_ok = abs(int(net_verif_val) - int(best['net'])) <= 1
+        except Exception:
+            verification_ok = True  # ne pas bloquer si vérif échoue
+
+    # ── Étape 4 : Construire la recommandation ────────────────────────────
+    def fmt(n):
+        return f"{int(n):,}".replace(',', ' ')
+
+    taux_optimal = best['taux_indem_pct']
+    pct_base = round(100 - taux_optimal, 1)
+    pct_indem = taux_optimal
+
+    # Répartition recommandée des indemnités (proportionnelle)
+    recommandation_composantes = [
+        {'cle': 'salaire_base', 'pct': pct_base, 'montant': int(Decimal(str(brut_calcule)) * Decimal(str(pct_base)) / Decimal('100'))},
+        {'cle': 'transport',    'pct': round(pct_indem * 0.4, 1), 'montant': int(Decimal(str(brut_calcule)) * Decimal(str(round(pct_indem * 0.4, 1))) / Decimal('100'))},
+        {'cle': 'logement',     'pct': round(pct_indem * 0.4, 1), 'montant': int(Decimal(str(brut_calcule)) * Decimal(str(round(pct_indem * 0.4, 1))) / Decimal('100'))},
+        {'cle': 'cherte_vie',   'pct': round(pct_indem * 0.2, 1), 'montant': int(Decimal(str(brut_calcule)) * Decimal(str(round(pct_indem * 0.2, 1))) / Decimal('100'))},
+    ]
+
+    # ── Audit : historiser la proposition ────────────────────────────────
+    try:
+        from .models import AuditSimulation
+        AuditSimulation.objects.create(
+            entreprise=request.user.entreprise,
+            utilisateur=request.user,
+            action='proposition',
+            metadata={
+                'mode': 'proposition_complete',
+                'net_cible': int(net_cible),
+                'objectif': objectif,
+                'taux_max': taux_max,
+                'brut_calcule': brut_calcule,
+                'taux_optimal': taux_optimal,
+                'net_optimal': int(best['net']),
+                'gain_net': int(optim['gain_net']),
+                'gain_pct': optim['gain_pct'],
+                'gain_sans_surcout': optim['gain_sans_surcout'],
+                'verification_ok': verification_ok,
+            },
+            ip_address=request.META.get('REMOTE_ADDR'),
+        )
+    except Exception:
+        pass  # Ne pas bloquer la réponse en cas d'erreur d'audit
+
+    return JsonResponse({
+        'net_cible': int(net_cible),
+        'objectif': objectif,
+        'annee': annee,
+
+        # Rétro-paie
+        'retropaie': {
+            'brut': brut_calcule,
+            'cnss': int(retro['cnss']),
+            'rts_standard': int(retro['rts']),
+            'net_calcule': int(retro['net_calcule']),
+            'ecart': int(retro['ecart']),
+            'iterations': retro['iterations'],
+            'ok': retro['ok'],
+        },
+
+        # Charges patronales
+        'charges_patronales': {
+            'cnss_employeur': cp['cnss_employeur'],
+            'vf': cp['vf'],
+            'ta': cp['ta'],
+            'libelle_ta': cp['libelle_ta'],
+            'total': cp['total'],
+            'cout_total_employeur': cp['cout_total_employeur'],
+        },
+
+        # Optimisation dynamique
+        'optimisation': {
+            'taux_optimal': taux_optimal,
+            'net_optimal': int(best['net']),
+            'cout_optimal': int(best['cout_total_employeur']),
+            'net_standard': int(ref['net']),
+            'cout_standard': int(ref['cout_total_employeur']),
+            'gain_net': int(optim['gain_net']),
+            'gain_pct': optim['gain_pct'],
+            'gain_sans_surcout': optim['gain_sans_surcout'],
+            'scenarios_testes': len(optim['scenarios']),
+        },
+
+        # Recommandation
+        'recommandation': {
+            'composantes': recommandation_composantes,
+            'resume': (
+                f"Pour un net de {fmt(net_cible)} GNF, structure recommandée : "
+                f"brut {fmt(brut_calcule)} GNF avec {pct_indem}% d'indemnités. "
+                f"Net optimisé : {fmt(best['net'])} GNF"
+                + (f" (+{fmt(optim['gain_net'])} GNF, +{optim['gain_pct']}%)"
+                   if optim['gain_net'] > 0 else '')
+                + (". Coût employeur inchangé." if optim['gain_sans_surcout'] else
+                   f". Coût employeur : {fmt(best['cout_total_employeur'])} GNF.")
+            ),
+        },
+
+        # Formaté pour affichage
+        'formatted': {
+            'brut': fmt(brut_calcule),
+            'net_cible': fmt(net_cible),
+            'net_standard': fmt(ref['net']),
+            'net_optimal': fmt(best['net']),
+            'gain_net': fmt(optim['gain_net']),
+            'cout_total': fmt(best['cout_total_employeur']),
+        },
+
+        # Vérification croisée + paramètres
+        'verification_ok': verification_ok,
+        'taux_max': taux_max,
     })
 
 

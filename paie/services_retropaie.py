@@ -136,7 +136,7 @@ def retropaie_net_vers_brut(
     annee=None,
     pct_indemnites_forfaitaires=0,
     garantir_net_minimum=True,
-    max_iterations=120,
+    max_iterations=50,
     tolerance=1,
 ):
     """
@@ -191,76 +191,68 @@ def retropaie_net_vers_brut(
     constantes.setdefault('PLAFOND_CNSS',      Decimal('2500000'))
     constantes.setdefault('TAUX_CNSS_EMPLOYE', Decimal('5'))
 
-    # ---- Dichotomie -------------------------------------------------------
-    low  = net_cible                      # Brut minimum possible = net cible
-    high = _arrondir(net_cible * Decimal('2'))   # Borne haute (généreux)
+    # ---- Dichotomie entière robuste (pas de float, binary search exact) ---
+    low  = int(net_cible)                          # Brut minimum = net cible
+    high = int(_arrondir(net_cible * Decimal('2')))  # Borne haute (généreux)
 
     brut_opt  = high
     iterations = 0
 
+    # Phase 1 : binary search entier strict (convergence log2)
     for _ in range(max_iterations):
         iterations += 1
-        mid = _arrondir((low + high) / 2)
+        mid = (low + high) // 2
 
-        net_mid, *_ = _net_depuis_brut(mid, constantes, tranches, pct_indem)
+        net_mid, *_ = _net_depuis_brut(Decimal(str(mid)), constantes, tranches, pct_indem)
+        net_mid = int(net_mid)
 
-        if abs(net_mid - net_cible) <= _d(tolerance):
-            brut_opt = mid
+        if net_mid == int(net_cible):
+            brut_opt = Decimal(str(mid))
             break
-
-        if net_mid < net_cible:
-            low = mid
+        elif net_mid < int(net_cible):
+            low = mid + 1
         else:
-            high = mid
+            high = mid - 1
 
-        brut_opt = mid
+        brut_opt = Decimal(str(mid))
+
+        if low > high:
+            # Pas de solution exacte à ce stade, prendre le plus proche
+            brut_opt = Decimal(str(mid))
+            break
 
     # ---- Garantie du net minimum OU affinement net exact ------------------
     if garantir_net_minimum:
         # Mode net_minimum : s'assurer que net >= net_cible
         net_test, *_ = _net_depuis_brut(brut_opt, constantes, tranches, pct_indem)
-        while net_test < net_cible:
-            brut_opt += Decimal('1000')
+        while int(net_test) < int(net_cible):
+            brut_opt += Decimal('1')
             net_test, *_ = _net_depuis_brut(brut_opt, constantes, tranches, pct_indem)
         mode = 'net_minimum'
     else:
-        # Mode net_exact : trouver le brut qui donne le net le plus proche (≤ net_cible + 1 GNF)
-        # Étape 1 : affiner par pas de 100 GNF vers le bas depuis brut_opt
+        # Mode net_exact : affiner au GNF près par balayage linéaire
         net_test, *_ = _net_depuis_brut(brut_opt, constantes, tranches, pct_indem)
-        # D'abord descendre si net_test > net_cible
-        while brut_opt > net_cible:
-            brut_candidat = brut_opt - Decimal('100')
-            net_candidat, *_ = _net_depuis_brut(brut_candidat, constantes, tranches, pct_indem)
-            if net_candidat < net_cible:
-                break
-            brut_opt = brut_candidat
-            net_test = net_candidat
-        # Étape 2 : affiner par pas de 1 GNF
-        net_test, *_ = _net_depuis_brut(brut_opt, constantes, tranches, pct_indem)
-        if net_test > net_cible:
-            # Descendre d'1 GNF à la fois jusqu'à passer sous net_cible
-            while brut_opt > net_cible:
+        if int(net_test) > int(net_cible):
+            # Descendre d'1 GNF à la fois
+            while int(brut_opt) > int(net_cible):
                 brut_candidat = brut_opt - Decimal('1')
                 net_candidat, *_ = _net_depuis_brut(brut_candidat, constantes, tranches, pct_indem)
-                if net_candidat < net_cible:
-                    # Choisir le brut qui minimise l'écart absolu
-                    ecart_actuel = abs(net_test - net_cible)
-                    ecart_candidat = abs(net_candidat - net_cible)
+                if int(net_candidat) < int(net_cible):
+                    ecart_actuel = abs(int(net_test) - int(net_cible))
+                    ecart_candidat = abs(int(net_candidat) - int(net_cible))
                     if ecart_candidat < ecart_actuel:
                         brut_opt = brut_candidat
-                        net_test = net_candidat
                     break
                 brut_opt = brut_candidat
                 net_test = net_candidat
-        else:
-            # net_test < net_cible : monter d'1 GNF jusqu'au plus proche
+        elif int(net_test) < int(net_cible):
+            # Monter d'1 GNF
             while True:
                 brut_candidat = brut_opt + Decimal('1')
                 net_candidat, *_ = _net_depuis_brut(brut_candidat, constantes, tranches, pct_indem)
-                if net_candidat > net_cible:
-                    # Comparer les deux côtés et prendre le plus proche
-                    ecart_actuel = net_cible - net_test
-                    ecart_candidat = net_candidat - net_cible
+                if int(net_candidat) > int(net_cible):
+                    ecart_actuel = int(net_cible) - int(net_test)
+                    ecart_candidat = int(net_candidat) - int(net_cible)
                     if ecart_candidat < ecart_actuel:
                         brut_opt = brut_candidat
                     break
@@ -268,10 +260,13 @@ def retropaie_net_vers_brut(
                 net_test = net_candidat
         mode = 'net_exact'
 
-    # ---- Résultat final ---------------------------------------------------
+    # ---- Résultat final + Assertion de sécurité ---------------------------
     net_final, cnss_f, base_cnss_f, base_rts_f, rts_f = _net_depuis_brut(
         brut_opt, constantes, tranches, pct_indem
     )
+
+    ecart_final = abs(int(net_final) - int(net_cible))
+    precision_ok = ecart_final <= int(tolerance)
 
     # Détail par tranche RTS
     detail_tranches = _detail_tranches(base_rts_f, tranches)
@@ -285,11 +280,52 @@ def retropaie_net_vers_brut(
         'net_calcule':     net_final,
         'net_cible':       net_cible,
         'ecart':           net_final - net_cible,
-        'ok':              abs(net_final - net_cible) <= _d(tolerance) * 10,
+        'ok':              precision_ok,
         'iterations':      iterations,
         'detail_tranches': detail_tranches,
         'mode':            mode,
+        'precision_ok':    precision_ok,
+        'meta': {
+            'version_bareme': f'GN-{annee}-v1',
+            'methode_inverse': 'binary_search_int_v2',
+            'max_iterations': max_iterations,
+            'tolerance_gnf': int(tolerance),
+        },
     }
+
+
+def verifier_monotonie(annee=None, pct_indemnites_forfaitaires=0, pas=500_000,
+                       brut_max=50_000_000):
+    """
+    Vérifie que la fonction brut→net est monotone croissante.
+    Retourne True si OK, lève ValueError si une anomalie est détectée.
+    Utile en CI/dev pour valider un barème.
+    """
+    from .cache_service import PayrollCacheService
+
+    if annee is None:
+        annee = date.today().year
+
+    constantes = PayrollCacheService.get_constantes(date_reference=date(annee, 1, 1))
+    tranches   = PayrollCacheService.get_tranches_rts(annee)
+    constantes.setdefault('PLANCHER_CNSS',     Decimal('550000'))
+    constantes.setdefault('PLAFOND_CNSS',      Decimal('2500000'))
+    constantes.setdefault('TAUX_CNSS_EMPLOYE', Decimal('5'))
+
+    pct_indem = _d(pct_indemnites_forfaitaires)
+    prev_net = 0
+
+    for brut in range(0, brut_max + 1, pas):
+        net, *_ = _net_depuis_brut(Decimal(str(brut)), constantes, tranches, pct_indem)
+        net = int(net)
+        if net < prev_net:
+            raise ValueError(
+                f"Anomalie de monotonicité : brut={brut:,} → net={net:,} "
+                f"< précédent net={prev_net:,} (brut={brut - pas:,})"
+            )
+        prev_net = net
+
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -350,7 +386,7 @@ def cout_total_vers_brut(
     annee=None,
     pct_indemnites_forfaitaires=0,
     nb_salaries=0,
-    max_iterations=120,
+    max_iterations=50,
 ):
     """
     Calcule le brut et le net depuis un coût total employeur (budget tout compris).

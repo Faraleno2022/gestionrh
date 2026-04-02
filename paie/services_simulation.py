@@ -265,6 +265,89 @@ def calculer_un_bareme(
 
 
 # ---------------------------------------------------------------------------
+# Optimisation dynamique de la structuration (10-25%)
+# ---------------------------------------------------------------------------
+
+def optimiser_structure_dynamique(
+    brut: int,
+    tranches: list,
+    constantes: dict,
+    nb_salaries: int = 0,
+    objectif: str = 'max_net',
+    taux_max: int = 25,
+) -> dict:
+    """
+    Teste toutes les répartitions d'indemnités de 0% à taux_max% (pas de 1%)
+    et retourne la meilleure selon l'objectif.
+
+    objectif:
+        'max_net'         → maximise le net employé
+        'min_cout'        → minimise le coût total employeur
+    taux_max:
+        Plafond personnalisable (défaut 25% = max CGI Guinée).
+        Certaines entreprises imposent un plafond interne (ex: 20%).
+
+    Retourne:
+        best      : dict du meilleur scénario (résultat calculer_un_bareme enrichi)
+        scenarios : liste de tous les scénarios testés
+    """
+    taux_max = max(0, min(25, int(taux_max)))  # Sécurité : borné à [0, 25]
+    brut_d = Decimal(str(brut))
+    best = None
+    scenarios = []
+
+    # Phase 1 : balayage 0% → taux_max%
+    for taux_pct in range(0, taux_max + 1):
+        indem = _half_up(brut_d * Decimal(str(taux_pct)) / Decimal('100'))
+        result = calculer_un_bareme(brut_d, Decimal(str(indem)), tranches, constantes, nb_salaries)
+        result['taux_indem_pct'] = taux_pct
+        result['cout_total_employeur'] = result['brut'] + result['total_charges_pat']
+        scenarios.append(result)
+
+        if best is None:
+            best = result
+        elif objectif == 'max_net' and result['net'] > best['net']:
+            best = result
+        elif objectif == 'min_cout' and result['cout_total_employeur'] < best['cout_total_employeur']:
+            best = result
+
+    # Phase 2 : micro-ajustement autour du meilleur (pas de 0.5%)
+    best_taux = best['taux_indem_pct']
+    for delta in [-1.5, -1.0, -0.5, 0.5, 1.0, 1.5]:
+        taux_fin = best_taux + delta
+        if taux_fin < 0 or taux_fin > taux_max:
+            continue
+        indem = _half_up(brut_d * Decimal(str(taux_fin)) / Decimal('100'))
+        result = calculer_un_bareme(brut_d, Decimal(str(indem)), tranches, constantes, nb_salaries)
+        result['taux_indem_pct'] = taux_fin
+        result['cout_total_employeur'] = result['brut'] + result['total_charges_pat']
+        if objectif == 'max_net' and result['net'] > best['net']:
+            best = result
+        elif objectif == 'min_cout' and result['cout_total_employeur'] < best['cout_total_employeur']:
+            best = result
+
+    # Référence : scénario standard (0% indemnités)
+    ref_standard = scenarios[0]  # taux_pct = 0
+
+    # Détection gain sans surcoût
+    cout_standard = ref_standard['cout_total_employeur']
+    cout_optimal = best['cout_total_employeur']
+    gain_net = best['net'] - ref_standard['net']
+    gain_sans_surcout = (gain_net > 0 and abs(cout_optimal - cout_standard) == 0)
+    gain_pct = round(gain_net * 100 / ref_standard['net'], 1) if ref_standard['net'] > 0 else 0
+
+    return {
+        'best': best,
+        'scenarios': scenarios,
+        'objectif': objectif,
+        'ref_standard': ref_standard,
+        'gain_net': gain_net,
+        'gain_pct': gain_pct,
+        'gain_sans_surcout': gain_sans_surcout,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Moteur multi-barèmes
 # ---------------------------------------------------------------------------
 

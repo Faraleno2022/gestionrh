@@ -164,6 +164,7 @@ urlpatterns = [
     path('api/creer-elements-lot/<int:employe_id>/', views.api_creer_elements_lot, name='api_creer_elements_lot'),
     path('api/impact-fiscal/', views.api_impact_fiscal, name='api_impact_fiscal'),
     path('api/optimiser-decomposition/', views.api_optimiser_decomposition, name='api_optimiser_decomposition'),
+    path('api/proposition-complete/', views.api_proposition_complete, name='api_proposition_complete'),
     path('api/valider-simulation/', views.api_valider_simulation, name='api_valider_simulation'),
     path('api/simulation-pdf/', views.api_simulation_pdf, name='api_simulation_pdf'),
 ]

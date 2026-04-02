@@ -1267,6 +1267,7 @@ class AuditSimulation(models.Model):
         ('validation', 'Validation simulation'),
         ('creation', 'Création éléments en lot'),
         ('pdf', 'Génération PDF'),
+        ('proposition', 'Proposition automatique complète'),
     ]
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='audits_simulation')
     utilisateur = models.ForeignKey('core.Utilisateur', on_delete=models.SET_NULL, null=True)

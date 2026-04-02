@@ -98,6 +98,38 @@
         <!-- Zone principale (cachée avant calcul) -->
         <div id="decomp_sliders" style="display:none;">
 
+            <!-- ════════ MODE DE RÉPARTITION ════════ -->
+            <div class="d-flex align-items-center gap-3 mb-3 p-2 bg-light rounded border">
+                <span class="fw-bold small"><i class="bi bi-gear"></i> Mode :</span>
+                <div class="btn-group" role="group" aria-label="Mode de répartition">
+                    <input type="radio" class="btn-check" name="decomp_mode" id="decomp_mode_standard" value="standard" checked>
+                    <label class="btn btn-outline-secondary btn-sm" for="decomp_mode_standard">
+                        <i class="bi bi-grid-3x3"></i> Standard 60/40
+                    </label>
+                    <input type="radio" class="btn-check" name="decomp_mode" id="decomp_mode_fiscal" value="fiscal">
+                    <label class="btn btn-outline-warning btn-sm" for="decomp_mode_fiscal">
+                        <i class="bi bi-lightning-fill"></i> Optimisation fiscale (max 25%)
+                    </label>
+                </div>
+                <span class="small text-muted ms-2" id="decomp_mode_hint">Base 60% / Indemnités 40%</span>
+            </div>
+
+            <!-- ════════ OBJECTIF D'OPTIMISATION ════════ -->
+            <div class="d-flex align-items-center gap-3 mb-3 p-2 border rounded" style="background:#f8f9fa;">
+                <span class="fw-bold small"><i class="bi bi-bullseye"></i> Objectif :</span>
+                <div class="btn-group" role="group" aria-label="Objectif d'optimisation">
+                    <input type="radio" class="btn-check" name="decomp_objectif" id="decomp_obj_max_net" value="max_net" checked>
+                    <label class="btn btn-outline-success btn-sm" for="decomp_obj_max_net">
+                        <i class="bi bi-person-fill"></i> Maximiser le NET employé
+                    </label>
+                    <input type="radio" class="btn-check" name="decomp_objectif" id="decomp_obj_min_cout" value="min_cout">
+                    <label class="btn btn-outline-primary btn-sm" for="decomp_obj_min_cout">
+                        <i class="bi bi-building"></i> Minimiser le coût employeur
+                    </label>
+                </div>
+                <span class="small text-muted ms-2" id="decomp_objectif_hint">L'employé reçoit le maximum</span>
+            </div>
+
             <!-- Sliders avec verrous -->
             <h6 class="fw-bold mb-2"><i class="bi bi-sliders"></i> Répartition
                 <small class="text-muted fw-normal ms-2"><i class="bi bi-lock"></i> = verrouillé (les autres s'ajustent)</small>
@@ -214,6 +246,29 @@
                 </div>
             </div>
 
+            <!-- ════════ TAUX DE CHARGE GLOBAL ════════ -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <div class="card border-dark h-100 text-center p-2">
+                        <div class="small text-dark fw-bold"><i class="bi bi-building"></i> Coût total employeur</div>
+                        <div class="fs-6 fw-bold text-dark" id="decomp_cout_total">—</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-primary h-100 text-center p-2 position-relative">
+                        <div class="small text-primary fw-bold"><i class="bi bi-graph-up"></i> Taux de charge global</div>
+                        <div class="fs-5 fw-bold" id="decomp_taux_charge">—</div>
+                        <div class="small" id="decomp_taux_charge_label"><span class="text-muted">(Coût employeur / Net)</span></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-secondary h-100 text-center p-2">
+                        <div class="small text-secondary fw-bold"><i class="bi bi-pie-chart"></i> Charges patronales</div>
+                        <div class="fs-6 fw-semibold text-secondary" id="decomp_charges_pat">—</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ════════ INDICATEUR DE CONFORMITÉ ════════ -->
             <div id="decomp_conformite_zone" style="display:none;" class="mb-3">
                 <div id="decomp_conformite_badge" class="alert py-2 px-3 d-flex align-items-center gap-2">
@@ -239,6 +294,40 @@
                     <div class="ms-auto">
                         <span class="small text-muted">RTS avant : <span id="decomp_rts_avant">—</span>
                         → après : <span id="decomp_rts_apres" class="text-success fw-bold">—</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════ RÉSUMÉ DÉCISIONNEL (affiché après optimisation) ════════ -->
+            <div id="decomp_decision_zone" class="card border-primary shadow-sm mb-3" style="display:none;">
+                <div class="card-header bg-primary text-white py-2">
+                    <h6 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Résumé décisionnel</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 text-center">
+                        <div class="col-md-3">
+                            <div class="small text-muted">Taux optimal</div>
+                            <div class="fs-4 fw-bold text-primary" id="decision_taux">—</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small text-muted">Net employé</div>
+                            <div class="fs-5 fw-bold text-success" id="decision_net">—</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small text-muted">Gain vs standard</div>
+                            <div class="fs-5 fw-bold text-warning" id="decision_gain">—</div>
+                            <div class="small" id="decision_gain_pct"></div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small text-muted">Coût employeur</div>
+                            <div class="fs-6 fw-bold" id="decision_cout">—</div>
+                            <div class="small" id="decision_cout_delta"></div>
+                        </div>
+                    </div>
+                    <div id="decision_sans_surcout" class="alert alert-info py-2 px-3 mt-3 mb-0 d-flex align-items-center gap-2" style="display:none;">
+                        <i class="bi bi-check-circle-fill text-info fs-5"></i>
+                        <strong>Gain net sans surcoût employeur</strong>
+                        <span class="small text-muted ms-2">— Le net augmente sans toucher au budget entreprise</span>
                     </div>
                 </div>
             </div>
@@ -339,6 +428,170 @@
         <!-- Messages -->
         <div id="decomp_erreur" class="alert alert-danger mt-3" style="display:none;"></div>
         <div id="decomp_succes" class="alert alert-success mt-3" style="display:none;"></div>
+    </div>
+    </div>
+</div>
+
+<!-- ================================================================
+     PROPOSITION AUTOMATIQUE COMPLÈTE : Net cible → Recommandation
+     ================================================================ -->
+<div class="card border-success shadow mb-4">
+    <div class="card-header bg-success text-white d-flex align-items-center gap-2"
+         data-bs-toggle="collapse" data-bs-target="#proposition_body" role="button"
+         style="cursor:pointer;">
+        <i class="bi bi-rocket-takeoff fs-5"></i>
+        <strong>Proposition automatique complète</strong>
+        <span class="badge bg-white text-success ms-2">Net cible &rarr; Structure optimale</span>
+        <i class="bi bi-chevron-down ms-auto"></i>
+    </div>
+    <div class="collapse" id="proposition_body">
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Saisissez le <strong>net mensuel souhaité</strong>. En un clic, le système calcule le brut nécessaire,
+            optimise la structure salariale et affiche la <strong>recommandation complète</strong> avec le gain fiscal.
+        </p>
+
+        <!-- Saisie -->
+        <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-4">
+                <label for="prop_net_cible" class="form-label fw-semibold">
+                    <i class="bi bi-wallet2"></i> Net mensuel souhaité (GNF) <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control form-control-lg" id="prop_net_cible"
+                       placeholder="Ex : 5 500 000" inputmode="numeric" autocomplete="off">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold"><i class="bi bi-bullseye"></i> Objectif</label>
+                <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="prop_objectif" id="prop_obj_max_net" value="max_net" checked>
+                    <label class="btn btn-outline-success btn-sm" for="prop_obj_max_net">Max NET</label>
+                    <input type="radio" class="btn-check" name="prop_objectif" id="prop_obj_min_cout" value="min_cout">
+                    <label class="btn btn-outline-primary btn-sm" for="prop_obj_min_cout">Min coût</label>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label for="prop_taux_max" class="form-label fw-semibold"><i class="bi bi-sliders"></i> Taux max</label>
+                <div class="input-group">
+                    <input type="number" class="form-control" id="prop_taux_max" value="25" min="0" max="25" step="1">
+                    <span class="input-group-text">%</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-success btn-lg w-100" id="prop_btn_lancer">
+                    <i class="bi bi-rocket-takeoff"></i> Calculer tout
+                </button>
+            </div>
+        </div>
+
+        <!-- Erreur -->
+        <div id="prop_erreur" class="alert alert-danger" style="display:none;"></div>
+
+        <!-- Résultat (caché avant calcul) -->
+        <div id="prop_resultat" style="display:none;">
+
+            <!-- Étape 1 : Rétro-paie -->
+            <div class="card border-info mb-3">
+                <div class="card-header py-2 bg-info bg-opacity-10">
+                    <h6 class="mb-0"><i class="bi bi-1-circle text-info me-2"></i>Rétro-paie : Net → Brut</h6>
+                </div>
+                <div class="card-body py-2">
+                    <div class="row text-center g-2">
+                        <div class="col">
+                            <div class="small text-muted">Net cible</div>
+                            <div class="fw-bold text-success" id="prop_r_net_cible">—</div>
+                        </div>
+                        <div class="col">
+                            <div class="small text-muted">→ Brut calculé</div>
+                            <div class="fw-bold text-primary fs-5" id="prop_r_brut">—</div>
+                        </div>
+                        <div class="col">
+                            <div class="small text-muted">CNSS</div>
+                            <div class="fw-bold text-danger" id="prop_r_cnss">—</div>
+                        </div>
+                        <div class="col">
+                            <div class="small text-muted">RTS standard</div>
+                            <div class="fw-bold text-warning" id="prop_r_rts">—</div>
+                        </div>
+                        <div class="col">
+                            <div class="small text-muted">Précision</div>
+                            <div id="prop_r_precision">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Étape 2 : Optimisation -->
+            <div class="card border-warning mb-3">
+                <div class="card-header py-2 bg-warning bg-opacity-10">
+                    <h6 class="mb-0"><i class="bi bi-2-circle text-warning me-2"></i>Optimisation de la structure</h6>
+                </div>
+                <div class="card-body py-2">
+                    <div class="row text-center g-2">
+                        <div class="col">
+                            <div class="small text-muted">Scénarios testés</div>
+                            <div class="fw-bold" id="prop_o_scenarios">—</div>
+                        </div>
+                        <div class="col">
+                            <div class="small text-muted">Taux optimal</div>
+                            <div class="fw-bold text-primary fs-5" id="prop_o_taux">—</div>
+                        </div>
+                        <div class="col">
+                            <div class="small text-muted">Net optimisé</div>
+                            <div class="fw-bold text-success fs-5" id="prop_o_net">—</div>
+                        </div>
+                        <div class="col">
+                            <div class="small text-muted">Gain</div>
+                            <div class="fw-bold" id="prop_o_gain">—</div>
+                            <div class="small" id="prop_o_gain_pct"></div>
+                        </div>
+                        <div class="col">
+                            <div class="small text-muted">Coût employeur</div>
+                            <div class="fw-bold" id="prop_o_cout">—</div>
+                            <div class="small" id="prop_o_cout_delta"></div>
+                        </div>
+                    </div>
+                    <div id="prop_o_sans_surcout" class="alert alert-info py-2 px-3 mt-2 mb-0 d-flex align-items-center gap-2" style="display:none;">
+                        <i class="bi bi-check-circle-fill text-info fs-5"></i>
+                        <strong>Gain net sans surcoût employeur</strong>
+                        <span class="small text-muted ms-2">— Le net augmente sans toucher au budget entreprise</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Étape 3 : Recommandation -->
+            <div class="card border-success mb-3">
+                <div class="card-header py-2 bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-3-circle me-2"></i>Recommandation</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-success mb-3" id="prop_resume_text">—</div>
+                    <h6 class="fw-bold mb-2"><i class="bi bi-list-check"></i> Structure recommandée</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-success">
+                                <tr><th>Composante</th><th class="text-center">%</th><th class="text-end">Montant (GNF)</th></tr>
+                            </thead>
+                            <tbody id="prop_composantes_body"></tbody>
+                            <tfoot class="table-light">
+                                <tr class="fw-bold">
+                                    <td>TOTAL</td>
+                                    <td class="text-center">100%</td>
+                                    <td class="text-end" id="prop_composantes_total">—</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="button" class="btn btn-primary" id="prop_btn_appliquer">
+                            <i class="bi bi-arrow-right-circle"></i> Appliquer cette structure
+                        </button>
+                        <span class="text-muted small align-self-center">
+                            Copie les valeurs dans le moteur de structuration ci-dessus
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     </div>
 </div>
@@ -812,6 +1065,22 @@
             document.getElementById('decomp_cnss').textContent = fmt(data.cnss) + ' GNF';
             document.getElementById('decomp_taux').textContent = data.taux_effectif + '%';
 
+            // Taux de charge global + interprétation métier
+            if (data.taux_charge_global !== undefined) {
+                var tcEl = document.getElementById('decomp_taux_charge');
+                var tcLabel = document.getElementById('decomp_taux_charge_label');
+                tcEl.textContent = data.taux_charge_global + '%';
+                document.getElementById('decomp_cout_total').textContent = fmt(data.cout_total_employeur) + ' GNF';
+                document.getElementById('decomp_charges_pat').textContent = fmt(data.charges_employeur.total) + ' GNF';
+
+                // Interprétation couleur (< 25% = optimisé, 25-35% = standard, > 35% = coûteux)
+                if (data.taux_charge_interpretation) {
+                    var interp = data.taux_charge_interpretation;
+                    tcEl.className = 'fs-5 fw-bold text-' + interp.color;
+                    tcLabel.innerHTML = '<span class="badge bg-' + interp.color + '">' + interp.label + '</span>';
+                }
+            }
+
             var exonInfo = 'Exon: ' + fmt(data.exon) + ' / ' + fmt(data.plafond_exon) + ' GNF';
             if (data.depasse > 0) {
                 exonInfo += '<br><span class="text-danger">Dépasse: +' + fmt(data.depasse) + '</span>';
@@ -875,6 +1144,49 @@
         });
     });
 
+    // ── Handler du mode de répartition ──────────────────────────────
+    document.querySelectorAll('input[name="decomp_mode"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            if (!brutTotal) return;
+            var hint = document.getElementById('decomp_mode_hint');
+
+            if (this.value === 'fiscal') {
+                // Optimisation fiscale : indemnités = 25% du brut (max exonération CGI)
+                hint.textContent = 'Base 75% / Indemnités 25% (max exonération CGI)';
+                hint.className = 'small text-warning ms-2 fw-bold';
+
+                document.getElementById(SLIDER_IDS['salaire_base']).value = 75;
+                document.getElementById(SLIDER_IDS['transport']).value = 10;
+                document.getElementById(SLIDER_IDS['logement']).value = 10;
+                document.getElementById(SLIDER_IDS['cherte_vie']).value = 5;
+            } else {
+                // Standard 60/40
+                hint.textContent = 'Base 60% / Indemnités 40%';
+                hint.className = 'small text-muted ms-2';
+
+                document.getElementById(SLIDER_IDS['salaire_base']).value = 60;
+                document.getElementById(SLIDER_IDS['transport']).value = 15;
+                document.getElementById(SLIDER_IDS['logement']).value = 15;
+                document.getElementById(SLIDER_IDS['cherte_vie']).value = 10;
+            }
+            recalculer();
+        });
+    });
+
+    // ── Handler de l'objectif d'optimisation ──────────────────────
+    document.querySelectorAll('input[name="decomp_objectif"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            var hint = document.getElementById('decomp_objectif_hint');
+            if (this.value === 'min_cout') {
+                hint.textContent = 'L\'entreprise paie le minimum';
+                hint.className = 'small text-primary ms-2 fw-bold';
+            } else {
+                hint.textContent = 'L\'employé reçoit le maximum';
+                hint.className = 'small text-muted ms-2';
+            }
+        });
+    });
+
     // ── Bouton Décomposer ───────────────────────────────────────────
     btnCalc.addEventListener('click', function() {
         divErr.style.display = 'none';
@@ -924,6 +1236,8 @@
         divErr.style.display = 'none';
         divGain.style.display = 'none';
         divCompar.style.display = 'none';
+        var oldDyn = document.getElementById('decomp_optim_dyn');
+        if (oldDyn) oldDyn.remove();
         if (!brutTotal) return;
 
         btnOptim.disabled = true;
@@ -932,7 +1246,8 @@
         postJson(OPTIMISER_URL, {
             brut: brutTotal,
             verrous: getVerrous(),
-            pourcentages_actuels: lirePcts()
+            pourcentages_actuels: lirePcts(),
+            objectif: document.querySelector('input[name="decomp_objectif"]:checked').value
         })
         .then(function(data) {
             btnOptim.disabled = false;
@@ -947,6 +1262,43 @@
                 if (slider && !isLocked(c.cle)) slider.value = c.pct;
             });
             recalculer();
+
+            // Afficher le résultat de l'optimisation dynamique
+            if (data.optimisation_dynamique) {
+                var od = data.optimisation_dynamique;
+                var objLabel = data.objectif === 'min_cout' ? 'coût employeur' : 'net employé';
+                var odHtml = '<div class="small text-info mt-2">' +
+                    '<i class="bi bi-cpu"></i> Optimisation dynamique : <strong>' + od.scenarios_testes + ' scénarios</strong> testés ' +
+                    '\u2192 taux optimal <strong>' + od.taux_optimal + '%</strong> (objectif : ' + objLabel + ')' +
+                    '</div>';
+                divGain.insertAdjacentHTML('afterend', '<div id="decomp_optim_dyn">' + odHtml + '</div>');
+
+                // Résumé décisionnel
+                var dz = document.getElementById('decomp_decision_zone');
+                document.getElementById('decision_taux').textContent = od.taux_optimal + '%';
+                document.getElementById('decision_net').textContent = fmt(od.net_optimal) + ' GNF';
+
+                var gainVal = od.gain_net;
+                var gainSign = gainVal >= 0 ? '+' : '';
+                document.getElementById('decision_gain').textContent = gainSign + fmt(gainVal) + ' GNF';
+                document.getElementById('decision_gain').className = 'fs-5 fw-bold ' + (gainVal > 0 ? 'text-success' : gainVal < 0 ? 'text-danger' : 'text-muted');
+                document.getElementById('decision_gain_pct').textContent = gainVal !== 0 ? '(' + gainSign + od.gain_pct + '%)' : '';
+
+                document.getElementById('decision_cout').textContent = fmt(od.cout_optimal) + ' GNF';
+                var coutDelta = od.cout_optimal - od.cout_standard;
+                if (coutDelta === 0) {
+                    document.getElementById('decision_cout_delta').innerHTML = '<span class="badge bg-success">Inchang\u00e9</span>';
+                } else {
+                    var cSign = coutDelta > 0 ? '+' : '';
+                    document.getElementById('decision_cout_delta').innerHTML = '<span class="text-' + (coutDelta > 0 ? 'danger' : 'success') + '">' + cSign + fmt(coutDelta) + '</span>';
+                }
+
+                // Gain sans surcoût
+                var sansDiv = document.getElementById('decision_sans_surcout');
+                sansDiv.style.display = od.gain_sans_surcout ? 'flex' : 'none';
+
+                dz.style.display = 'block';
+            }
 
             lastGain = data.gain;
             if (data.gain && data.gain.gain_net_mensuel !== 0) {
@@ -1201,6 +1553,194 @@
             btnCalc.click();
         }
     };
+})();
+</script>
+
+<!-- ════════ JS : PROPOSITION AUTOMATIQUE COMPLÈTE ════════ -->
+<script>
+(function() {
+    var PROP_URL = "{% url 'paie:api_proposition_complete' %}";
+    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    var btnLancer = document.getElementById('prop_btn_lancer');
+    var divErr    = document.getElementById('prop_erreur');
+    var divResult = document.getElementById('prop_resultat');
+
+    function fmt(n) {
+        return Math.round(Number(n)).toLocaleString('fr-GN');
+    }
+
+    function parseVal(s) {
+        if (!s) return 0;
+        return parseInt(String(s).replace(/\s/g, '').replace(/\u00a0/g, ''), 10) || 0;
+    }
+
+    // Labels lisibles pour les composantes
+    var LABELS = {
+        'salaire_base': 'Salaire de base',
+        'transport': 'Transport',
+        'logement': 'Logement',
+        'cherte_vie': 'Cherté de vie'
+    };
+
+    btnLancer.addEventListener('click', function() {
+        divErr.style.display = 'none';
+        divResult.style.display = 'none';
+
+        var netCible = parseVal(document.getElementById('prop_net_cible').value);
+        if (!netCible || netCible <= 0) {
+            divErr.textContent = 'Veuillez saisir un montant net valide.';
+            divErr.style.display = 'block';
+            return;
+        }
+
+        var objectif = document.querySelector('input[name="prop_objectif"]:checked').value;
+
+        btnLancer.disabled = true;
+        btnLancer.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Calcul en cours…';
+
+        fetch(PROP_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+            body: JSON.stringify({
+                net_cible: netCible,
+                objectif: objectif,
+                taux_max: parseInt(document.getElementById('prop_taux_max').value) || 25
+            })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btnLancer.disabled = false;
+            btnLancer.innerHTML = '<i class="bi bi-rocket-takeoff"></i> Calculer tout';
+
+            if (data.error) {
+                divErr.textContent = data.error;
+                divErr.style.display = 'block';
+                return;
+            }
+
+            // ── Rétro-paie ──
+            var rp = data.retropaie;
+            document.getElementById('prop_r_net_cible').textContent = fmt(data.net_cible) + ' GNF';
+            document.getElementById('prop_r_brut').textContent = fmt(rp.brut) + ' GNF';
+            document.getElementById('prop_r_cnss').textContent = fmt(rp.cnss) + ' GNF';
+            document.getElementById('prop_r_rts').textContent = fmt(rp.rts_standard) + ' GNF';
+            document.getElementById('prop_r_precision').innerHTML = rp.ok
+                ? '<span class="badge bg-success">Exact (' + rp.ecart + ' GNF)</span>'
+                : '<span class="badge bg-warning">Écart : ' + rp.ecart + ' GNF</span>';
+
+            // ── Optimisation ──
+            var op = data.optimisation;
+            document.getElementById('prop_o_scenarios').textContent = op.scenarios_testes;
+            document.getElementById('prop_o_taux').textContent = op.taux_optimal + '%';
+            document.getElementById('prop_o_net').textContent = fmt(op.net_optimal) + ' GNF';
+
+            var gainSign = op.gain_net >= 0 ? '+' : '';
+            document.getElementById('prop_o_gain').textContent = gainSign + fmt(op.gain_net) + ' GNF';
+            document.getElementById('prop_o_gain').className = 'fw-bold ' + (op.gain_net > 0 ? 'text-success' : 'text-muted');
+            document.getElementById('prop_o_gain_pct').textContent = op.gain_net !== 0 ? '(' + gainSign + op.gain_pct + '%)' : '';
+
+            document.getElementById('prop_o_cout').textContent = fmt(op.cout_optimal) + ' GNF';
+            var delta = op.cout_optimal - op.cout_standard;
+            if (delta === 0) {
+                document.getElementById('prop_o_cout_delta').innerHTML = '<span class="badge bg-success">Inchangé</span>';
+            } else {
+                var dSign = delta > 0 ? '+' : '';
+                document.getElementById('prop_o_cout_delta').innerHTML = '<span class="text-' + (delta > 0 ? 'danger' : 'success') + '">' + dSign + fmt(delta) + '</span>';
+            }
+            document.getElementById('prop_o_sans_surcout').style.display = op.gain_sans_surcout ? 'flex' : 'none';
+
+            // ── Recommandation ──
+            document.getElementById('prop_resume_text').textContent = data.recommandation.resume;
+
+            var tbody = document.getElementById('prop_composantes_body');
+            tbody.innerHTML = '';
+            var totalMontant = 0;
+            (data.recommandation.composantes || []).forEach(function(c) {
+                totalMontant += c.montant;
+                tbody.insertAdjacentHTML('beforeend',
+                    '<tr>' +
+                    '<td>' + (LABELS[c.cle] || c.cle) + '</td>' +
+                    '<td class="text-center">' + c.pct + '%</td>' +
+                    '<td class="text-end">' + fmt(c.montant) + ' GNF</td>' +
+                    '</tr>'
+                );
+            });
+            document.getElementById('prop_composantes_total').textContent = fmt(totalMontant) + ' GNF';
+
+            // Vérification croisée
+            var verifEl = document.getElementById('prop_verification');
+            if (!verifEl) {
+                verifEl = document.createElement('div');
+                verifEl.id = 'prop_verification';
+                verifEl.className = 'mt-2';
+                document.getElementById('prop_resultat').appendChild(verifEl);
+            }
+            if (data.verification_ok) {
+                verifEl.innerHTML = '<span class="badge bg-success"><i class="bi bi-shield-check me-1"></i>Vérification croisée OK — Net cohérent moteur/retropaie</span>';
+            } else {
+                verifEl.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Écart détecté entre moteur et retropaie — vérifiez manuellement</span>';
+            }
+            if (data.taux_max < 25) {
+                verifEl.innerHTML += ' <span class="badge bg-info">Plafond : ' + data.taux_max + '%</span>';
+            }
+
+            divResult.style.display = 'block';
+
+            // Stocker pour le bouton "Appliquer"
+            btnLancer._lastData = data;
+        })
+        .catch(function(err) {
+            btnLancer.disabled = false;
+            btnLancer.innerHTML = '<i class="bi bi-rocket-takeoff"></i> Calculer tout';
+            divErr.textContent = 'Erreur réseau : ' + err.message;
+            divErr.style.display = 'block';
+        });
+    });
+
+    // Enter → lancer
+    document.getElementById('prop_net_cible').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); btnLancer.click(); }
+    });
+
+    // Bouton "Appliquer cette structure" → injecte dans le moteur de structuration
+    document.getElementById('prop_btn_appliquer').addEventListener('click', function() {
+        var data = btnLancer._lastData;
+        if (!data) return;
+
+        // Injecter le brut dans le champ et déclencher le calcul
+        if (window.injecterBrutDepuisProposition) {
+            window.injecterBrutDepuisProposition(data.retropaie.brut);
+        } else {
+            var champBrut = document.getElementById('decomp_brut');
+            if (champBrut) {
+                champBrut.value = data.retropaie.brut;
+                var collapse = document.getElementById('decomp_body');
+                if (collapse && !collapse.classList.contains('show')) {
+                    new bootstrap.Collapse(collapse, {toggle: true});
+                }
+                document.getElementById('decomp_btn_calculer').click();
+            }
+        }
+
+        // Si mode fiscal + sliders disponibles, appliquer les % recommandés
+        setTimeout(function() {
+            var radioFiscal = document.getElementById('decomp_mode_fiscal');
+            if (radioFiscal) {
+                radioFiscal.checked = true;
+                radioFiscal.dispatchEvent(new Event('change'));
+            }
+            (data.recommandation.composantes || []).forEach(function(c) {
+                var slider = document.getElementById('slider_' + c.cle);
+                if (slider) slider.value = c.pct;
+            });
+            // Auto-recalcul pour vérification visuelle
+            var btnRecalc = document.getElementById('decomp_btn_calculer');
+            if (btnRecalc) {
+                setTimeout(function() { btnRecalc.click(); }, 300);
+            }
+        }, 500);
+    });
 })();
 </script>
 {% endblock %}
