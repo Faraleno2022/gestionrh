@@ -35,6 +35,12 @@
             <div class="card-body py-2">
                 <div class="small text-danger text-uppercase mb-1">Total Retenues</div>
                 <div class="h6 mb-0">{{ total_retenues|floatformat:0|intcomma }} <small class="text-muted">GNF</small></div>
+                {% if retenues_legales %}
+                <div class="small text-muted mt-1">
+                    + CNSS {{ cnss_estime|floatformat:0|intcomma }} + RTS {{ rts_estime|floatformat:0|intcomma }}
+                    = <strong class="text-danger">{{ retenues_legales|floatformat:0|intcomma }}</strong> <small>auto</small>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -43,6 +49,11 @@
             <div class="card-body py-2">
                 <div class="small text-primary text-uppercase mb-1">Net Estimé</div>
                 <div class="h6 mb-0">{{ net_estime|floatformat:0|intcomma }} <small class="text-muted">GNF</small></div>
+                {% if retenues_legales %}
+                <div class="small text-muted mt-1">
+                    <i class="bi bi-info-circle"></i> CNSS + RTS déduits automatiquement
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

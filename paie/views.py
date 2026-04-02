@@ -950,7 +950,7 @@ def telecharger_bulletin_pdf(request, pk):
     base_vf = getattr(bulletin, 'base_vf', 0) or 0
     nb_sal = getattr(bulletin, 'nombre_salaries', 0) or 0
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
-    taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '1,5'
+    taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '2'
     
     # Tableau charges patronales (une ligne par charge = lisibilité audit)
     charges_data = [["Charge patronale", "Base", "Taux", "Montant"]]
@@ -963,12 +963,12 @@ def telecharger_bulletin_pdf(request, pk):
         "6%",
         f"{vf:,.0f}".replace(",", " ")])
     if ta > 0:
-        charges_data.append([f"Taxe d'Apprentissage (eff. {nb_sal} <30)",
+        charges_data.append([f"Taxe d'Apprentissage (eff. {nb_sal} <25)",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             f"{taux_ta_label}%",
             f"{ta:,.0f}".replace(",", " ")])
     elif onfpp > 0:
-        charges_data.append([f"ONFPP (eff. {nb_sal} >=30)",
+        charges_data.append([f"ONFPP (eff. {nb_sal} >=25)",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             "1,5%",
             f"{onfpp:,.0f}".replace(",", " ")])
@@ -995,10 +995,12 @@ def telecharger_bulletin_pdf(request, pk):
     # Note explicative déduction VF
     if base_vf > 0 and y > 3.8*cm:
         brut_gnf = float(bulletin.salaire_brut)
+        ta_ou_onfpp = 'ONFPP' if onfpp > 0 else 'TA'
+        taux_ta_note = '1,5' if onfpp > 0 else taux_ta_label
         p.setFont(_FI, 6)
         p.setFillColor(colors.HexColor("#666666"))
         p.drawString(1.5*cm, y,
-            f"Base VF/TA = Brut {brut_gnf:,.0f} GNF  |  VF = {brut_gnf:,.0f} × 6%  |  TA = {brut_gnf:,.0f} × 2%"
+            f"Base VF/{ta_ou_onfpp} = Brut {brut_gnf:,.0f} GNF  |  VF = {brut_gnf:,.0f} × 6%  |  {ta_ou_onfpp} = {brut_gnf:,.0f} × {taux_ta_note}%"
             .replace(",", " "))
         y -= 0.25*cm
     p.setFillColor(colors.black)
@@ -1540,7 +1542,7 @@ def telecharger_bulletin_public(request, token):
     base_vf = getattr(bulletin, 'base_vf', 0) or 0
     nb_sal = getattr(bulletin, 'nombre_salaries', 0) or 0
     total_charges = bulletin.cnss_employeur + vf + ta + onfpp
-    taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '1,5'
+    taux_ta_label = str(taux_ta).rstrip('0').rstrip('.').replace('.', ',') if taux_ta else '2'
     
     # Tableau charges patronales (une ligne par charge = lisibilité audit)
     charges_data = [["Charge patronale", "Base", "Taux", "Montant"]]
@@ -1553,12 +1555,12 @@ def telecharger_bulletin_public(request, token):
         "6%",
         f"{vf:,.0f}".replace(",", " ")])
     if ta > 0:
-        charges_data.append([f"Taxe d'Apprentissage (eff. {nb_sal} <30)",
+        charges_data.append([f"Taxe d'Apprentissage (eff. {nb_sal} <25)",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             f"{taux_ta_label}%",
             f"{ta:,.0f}".replace(",", " ")])
     elif onfpp > 0:
-        charges_data.append([f"ONFPP (eff. {nb_sal} >=30)",
+        charges_data.append([f"ONFPP (eff. {nb_sal} >=25)",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             "1,5%",
             f"{onfpp:,.0f}".replace(",", " ")])
@@ -1585,10 +1587,12 @@ def telecharger_bulletin_public(request, token):
     # Note explicative déduction VF
     if base_vf > 0 and y > 3.8*cm:
         brut_gnf = float(bulletin.salaire_brut)
+        ta_ou_onfpp = 'ONFPP' if onfpp > 0 else 'TA'
+        taux_ta_note = '1,5' if onfpp > 0 else taux_ta_label
         p.setFont(_FI, 6)
         p.setFillColor(colors.HexColor("#666666"))
         p.drawString(1.5*cm, y,
-            f"Base VF/TA = Brut {brut_gnf:,.0f} GNF  |  VF = {brut_gnf:,.0f} × 6%  |  TA = {brut_gnf:,.0f} × 2%"
+            f"Base VF/{ta_ou_onfpp} = Brut {brut_gnf:,.0f} GNF  |  VF = {brut_gnf:,.0f} × 6%  |  {ta_ou_onfpp} = {brut_gnf:,.0f} × {taux_ta_note}%"
             .replace(",", " "))
         y -= 0.25*cm
     p.setFillColor(colors.black)
@@ -2133,15 +2137,48 @@ def elements_salaire_employe(request, employe_id):
     # Calculer les totaux
     total_gains = sum(e.montant or 0 for e in gains if e.actif)
     total_retenues = sum(e.montant or 0 for e in retenues if e.actif)
-    net_estime = total_gains - total_retenues
-    
+
+    # Estimation réaliste du net (CNSS + RTS calculés automatiquement)
+    brut = total_gains
+    cnss_estime = 0
+    rts_estime = 0
+    retenues_legales = 0
+    if brut > 0:
+        try:
+            from .services_retropaie import _net_depuis_brut, _d
+            from .cache_service import PayrollCacheService
+            annee_courante = date.today().year
+            cst = PayrollCacheService.get_constantes(date_reference=date(annee_courante, 1, 1))
+            tr = PayrollCacheService.get_tranches_rts(annee_courante)
+            cst.setdefault('PLANCHER_CNSS', Decimal('550000'))
+            cst.setdefault('PLAFOND_CNSS', Decimal('2500000'))
+            cst.setdefault('TAUX_CNSS_EMPLOYE', Decimal('5'))
+            # Estimer l'exonération à partir des indemnités forfaitaires
+            indem = sum(
+                (e.montant or 0) for e in gains
+                if e.actif and e.rubrique and e.rubrique.categorie_rubrique in
+                ('transport', 'logement', 'cherte_vie', 'indemnite_forfaitaire')
+            )
+            pct_exo = min(_d(indem) / _d(brut) * Decimal('100'), Decimal('25')) if brut > 0 else Decimal('0')
+            net_calc, cnss_calc, _, _, rts_calc = _net_depuis_brut(_d(brut), cst, tr, pct_exo)
+            cnss_estime = int(cnss_calc)
+            rts_estime = int(rts_calc)
+            retenues_legales = cnss_estime + rts_estime
+        except Exception:
+            pass  # En cas d'erreur, fallback = pas de retenues estimées
+
+    net_estime = total_gains - total_retenues - retenues_legales
+
     return render(request, 'paie/elements_salaire/employe.html', {
         'employe': employe,
         'gains': gains,
         'retenues': retenues,
         'total_gains': total_gains,
         'total_retenues': total_retenues,
-        'net_estime': net_estime
+        'cnss_estime': cnss_estime,
+        'rts_estime': rts_estime,
+        'retenues_legales': retenues_legales,
+        'net_estime': net_estime,
     })
 
 

@@ -934,9 +934,9 @@ class MoteurCalculPaie:
         )
 
         # TA et ONFPP sont mutuellement exclusifs selon le nombre de salariés:
-        # - Moins de 30 salariés: TA (2%) sur brut
-        # - 30 salariés ou plus: ONFPP (1,5%) sur brut
-        seuil_ta_onfpp = int(self.constantes.get('SEUIL_TA_ONFPP', Decimal('30')))
+        # - Moins de 25 salariés: TA (2%) sur brut
+        # - 25 salariés ou plus: ONFPP (1,5%) sur brut (législation guinéenne)
+        seuil_ta_onfpp = int(self.constantes.get('SEUIL_TA_ONFPP', Decimal('25')))
         if self.nb_salaries < seuil_ta_onfpp:
             taux_ta = self.constantes.get('TAUX_TA', Decimal('2.00'))
             self.montants['base_ta'] = base_vf_nette
