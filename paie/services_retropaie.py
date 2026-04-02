@@ -296,6 +296,55 @@ def retropaie_net_vers_brut(
 # Détail par tranche (pour affichage pédagogique)
 # ---------------------------------------------------------------------------
 
+def calculer_charges_patronales(brut, annee=None, nb_salaries=0):
+    """
+    Calcule les charges patronales pour un brut donné.
+
+    Retourne dict :
+        cnss_employeur, vf, ta, libelle_ta, total, cout_total_employeur
+    """
+    from .cache_service import PayrollCacheService
+
+    if annee is None:
+        annee = date.today().year
+
+    constantes = PayrollCacheService.get_constantes(date_reference=date(annee, 1, 1))
+    constantes.setdefault('PLANCHER_CNSS',       Decimal('550000'))
+    constantes.setdefault('PLAFOND_CNSS',        Decimal('2500000'))
+    constantes.setdefault('TAUX_CNSS_EMPLOYEUR', Decimal('18'))
+    constantes.setdefault('TAUX_VF',             Decimal('6'))
+    constantes.setdefault('TAUX_TA',             Decimal('2'))
+    constantes.setdefault('TAUX_ONFPP',          Decimal('1.5'))
+
+    brut = _arrondir(_d(brut))
+    plancher     = constantes['PLANCHER_CNSS']
+    plafond      = constantes['PLAFOND_CNSS']
+    taux_cnss_pat = constantes['TAUX_CNSS_EMPLOYEUR']
+    taux_vf       = constantes['TAUX_VF']
+    libelle_ta    = 'ONFPP' if nb_salaries >= 25 else 'TA'
+    taux_ta       = constantes['TAUX_ONFPP'] if nb_salaries >= 25 else constantes['TAUX_TA']
+
+    seuil = _arrondir(plancher * Decimal('0.10'))
+    if brut < seuil:
+        cnss_pat = Decimal('0')
+    else:
+        base = _arrondir(max(min(brut, plafond), plancher))
+        cnss_pat = _arrondir(base * taux_cnss_pat / Decimal('100'))
+
+    vf = _arrondir(brut * taux_vf  / Decimal('100'))
+    ta = _arrondir(brut * taux_ta  / Decimal('100'))
+    total = cnss_pat + vf + ta
+
+    return {
+        'cnss_employeur':      int(cnss_pat),
+        'vf':                  int(vf),
+        'ta':                  int(ta),
+        'libelle_ta':          libelle_ta,
+        'total':               int(total),
+        'cout_total_employeur': int(brut) + int(total),
+    }
+
+
 def cout_total_vers_brut(
     cout_total,
     annee=None,

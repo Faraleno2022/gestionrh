@@ -532,101 +532,118 @@
         </div><!-- fin tab-content -->
 
         <!-- Résultat -->
-        <div id="rp_resultat" class="mt-4" style="display:none;">
+        <div id="rp_resultat" class="mt-3" style="display:none;">
             <hr>
             <h6 class="fw-bold text-success mb-3">
-                <i class="bi bi-check-circle-fill"></i> Résultat du calcul rétrograde
+                <i class="bi bi-check-circle-fill"></i>
+                Net convenu : <span id="rp_net_cible_affiche" class="text-success fw-bold">—</span> GNF
+                &nbsp;→&nbsp; Brut à saisir : <span id="rp_brut_affiche" class="text-primary fw-bold">—</span> GNF
             </h6>
-            <div class="row g-3 mb-3">
-                <div class="col-md-3">
-                    <div class="card border-primary text-center p-3">
-                        <div class="text-primary small fw-bold">BRUT À SAISIR</div>
-                        <div class="fs-5 fw-bold text-primary" id="rp_brut_affiche">—</div>
-                        <div class="text-muted small">GNF</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-warning text-center p-3">
-                        <div class="text-warning small fw-bold">CNSS (5 %)</div>
-                        <div class="fs-6 fw-semibold text-warning" id="rp_cnss_affiche">—</div>
-                        <div class="text-muted small">GNF</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-danger text-center p-3">
-                        <div class="text-danger small fw-bold">RTS / IRG</div>
-                        <div class="fs-6 fw-semibold text-danger" id="rp_rts_affiche">—</div>
-                        <div class="text-muted small">GNF</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-success text-center p-3 bg-success bg-opacity-10">
-                        <div class="text-success small fw-bold">NET RÉEL</div>
-                        <div class="fs-5 fw-bold text-success" id="rp_net_affiche">—</div>
-                        <div class="text-muted small">GNF</div>
-                    </div>
-                </div>
-            </div>
-            <div class="row g-2 mb-3">
-                <div class="col-md-6">
-                    <div class="alert alert-light border mb-0 py-2 px-3 small">
-                        <strong>Base CNSS :</strong> <span id="rp_base_cnss_affiche">—</span> GNF
-                        <span class="text-muted">(plancher 550 000 / plafond 2 500 000)</span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="alert alert-light border mb-0 py-2 px-3 small">
-                        <strong>Base imposable RTS :</strong> <span id="rp_base_rts_affiche">—</span> GNF
-                    </div>
-                </div>
-            </div>
-            <!-- Comparaison multi-barèmes -->
-            <div id="rp_comparaison_container" style="display:none;" class="mb-3">
-                <h6 class="fw-bold text-secondary mb-2"><i class="bi bi-bar-chart"></i> Comparaison multi-barèmes</h6>
-                <table class="table table-sm table-striped table-bordered">
+
+            <!-- Cascade bulletin de paie -->
+            <div class="table-responsive mb-3">
+                <table class="table table-bordered table-sm align-middle mb-0">
                     <thead class="table-dark">
                         <tr>
-                            <th>Barème</th>
-                            <th class="text-end">Brut calculé</th>
-                            <th class="text-end">CNSS</th>
-                            <th class="text-end">RTS/IRG</th>
-                            <th class="text-end">Net réel</th>
+                            <th>Ligne bulletin de paie</th>
+                            <th class="text-end">Montant</th>
+                            <th class="text-muted small">Note</th>
                         </tr>
                     </thead>
-                    <tbody id="rp_comparaison_tbody"></tbody>
+                    <tbody>
+                        <tr class="table-primary">
+                            <td class="fw-bold"><i class="bi bi-briefcase-fill text-primary me-1"></i>Salaire BRUT</td>
+                            <td class="text-end fw-bold fs-5 text-primary" id="rp_brut_cell">—</td>
+                            <td class="text-muted small">Dépasse les 5 500 000 pour couvrir CNSS + RTS</td>
+                        </tr>
+                        <tr class="table-warning">
+                            <td class="ps-4"><i class="bi bi-dash-circle text-warning me-1"></i>− CNSS employé (5%)</td>
+                            <td class="text-end fw-semibold text-warning" id="rp_cnss_affiche">—</td>
+                            <td class="text-muted small">base : <span id="rp_base_cnss_affiche">—</span> GNF</td>
+                        </tr>
+                        <tr class="table-danger">
+                            <td class="ps-4"><i class="bi bi-dash-circle text-danger me-1"></i>− RTS / IRG (progressif)</td>
+                            <td class="text-end fw-semibold text-danger" id="rp_rts_affiche">—</td>
+                            <td class="text-muted small">base imposable : <span id="rp_base_rts_affiche">—</span> GNF</td>
+                        </tr>
+                        <tr style="background:#d1e7dd;">
+                            <td class="fw-bold"><i class="bi bi-wallet2 text-success me-1"></i><strong>= NET À PAYER</strong></td>
+                            <td class="text-end fw-bold fs-4 text-success" id="rp_net_affiche">—</td>
+                            <td class="text-success fw-bold small"><i class="bi bi-check-circle-fill"></i> Montant convenu à l'embauche</td>
+                        </tr>
+                        <!-- Charges patronales (hors bulletin salarié) -->
+                        <tr class="table-light">
+                            <td colspan="3" class="py-1 text-center">
+                                <small class="text-muted fst-italic">Charges patronales — payées par l'entreprise en plus du brut (non visibles sur le bulletin salarié)</small>
+                            </td>
+                        </tr>
+                        <tr class="text-secondary small">
+                            <td class="ps-4"><i class="bi bi-building me-1"></i>CNSS employeur (18%)</td>
+                            <td class="text-end" id="rp_pat_cnss">—</td>
+                            <td class="text-muted" style="font-size:11px">versé à la CNSS par l'entreprise</td>
+                        </tr>
+                        <tr class="text-secondary small">
+                            <td class="ps-4"><i class="bi bi-building me-1"></i>Versement Forfaitaire (6%)</td>
+                            <td class="text-end" id="rp_pat_vf">—</td>
+                            <td class="text-muted" style="font-size:11px">impôt sur salaires versé au Trésor</td>
+                        </tr>
+                        <tr class="text-secondary small">
+                            <td class="ps-4"><i class="bi bi-building me-1"></i><span id="rp_pat_ta_label">TA (2%)</span></td>
+                            <td class="text-end" id="rp_pat_ta">—</td>
+                            <td class="text-muted" style="font-size:11px">formation professionnelle</td>
+                        </tr>
+                        <tr class="table-secondary fw-bold">
+                            <td><i class="bi bi-calculator me-1"></i>Coût TOTAL employeur (Brut + charges)</td>
+                            <td class="text-end" id="rp_cout_total">—</td>
+                            <td class="text-muted small">Ce que l'entreprise paie réellement</td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
-            <!-- Détail tranches -->
-            <div id="rp_detail_tranches_container" style="display:none;" class="mb-3">
-                <button type="button" class="btn btn-outline-secondary btn-sm mb-2"
-                        onclick="document.getElementById('rp_tranches_table').style.display = document.getElementById('rp_tranches_table').style.display === 'none' ? 'block' : 'none'">
-                    <i class="bi bi-table"></i> Voir le détail barème RTS
+
+            <!-- Détail tranches RTS -->
+            <div class="mb-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm"
+                        onclick="var t=document.getElementById('rp_tranches_table'); t.style.display=t.style.display==='none'?'block':'none'">
+                    <i class="bi bi-table"></i> Détail du barème RTS tranche par tranche
                 </button>
-                <div id="rp_tranches_table" style="display:none;">
-                    <table class="table table-sm table-bordered mb-0">
+                <div id="rp_tranches_table" style="display:none;" class="mt-2">
+                    <table class="table table-sm table-bordered">
                         <thead class="table-light">
-                            <tr>
-                                <th>Tranche</th>
-                                <th class="text-end">Montant imposable</th>
-                                <th class="text-end">Taux</th>
-                                <th class="text-end">Impôt tranche</th>
-                            </tr>
+                            <tr><th>Tranche</th><th class="text-end">Montant imposable</th><th class="text-end">Taux</th><th class="text-end">Impôt</th></tr>
                         </thead>
                         <tbody id="rp_tranches_tbody"></tbody>
                     </table>
                 </div>
             </div>
-            <!-- Bouton appliquer -->
-            <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div id="rp_detail_tranches_container"></div>
+
+            <!-- Comparaison multi-barèmes -->
+            <div id="rp_comparaison_container" style="display:none;" class="mb-3">
+                <h6 class="fw-bold text-secondary mb-2"><i class="bi bi-bar-chart"></i> Comparaison multi-barèmes</h6>
+                <table class="table table-sm table-striped table-bordered">
+                    <thead class="table-dark">
+                        <tr><th>Barème</th><th class="text-end">Brut</th><th class="text-end">CNSS</th><th class="text-end">RTS</th><th class="text-end">Net</th></tr>
+                    </thead>
+                    <tbody id="rp_comparaison_tbody"></tbody>
+                </table>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
                 <button type="button" class="btn btn-primary" id="rp_btn_appliquer">
-                    <i class="bi bi-arrow-down-circle-fill"></i> Appliquer ce brut dans le formulaire
+                    <i class="bi bi-arrow-down-circle-fill"></i> Appliquer le brut (1 élément)
                 </button>
-                <button type="button" class="btn btn-outline-danger" id="rp_btn_pdf">
-                    <i class="bi bi-file-earmark-pdf"></i> Exporter en PDF
+                <button type="button" class="btn btn-success fw-bold" id="rp_btn_repartir_brut">
+                    <i class="bi bi-distribute-horizontal"></i> Répartir ce brut en Base + Indemnités
                 </button>
-                <span class="text-muted small">
-                    Le montant brut sera copié dans le champ <strong>Montant Fixe</strong> ci-dessous.
-                </span>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="rp_btn_pdf">
+                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                </button>
+            </div>
+            <div class="text-muted small mt-1">
+                <strong>Appliquer</strong> copie le brut dans le formulaire (1 rubrique).
+                <strong>Répartir</strong> alimente le widget Structuration ci-dessus pour créer Base + Transport + Logement + Cherté.
             </div>
         </div>
 
@@ -1244,12 +1261,22 @@ function updateRubriqueType() {}
                 return;
             }
 
+            document.getElementById('rp_net_cible_affiche').textContent = fmt(data.net_cible || data.net_calcule) + ' GNF';
             document.getElementById('rp_brut_affiche').textContent      = fmt(data.brut) + ' GNF';
-            document.getElementById('rp_cnss_affiche').textContent      = fmt(data.cnss) + ' GNF';
-            document.getElementById('rp_rts_affiche').textContent       = fmt(data.rts)  + ' GNF';
+            document.getElementById('rp_brut_cell').textContent         = fmt(data.brut) + ' GNF';
+            document.getElementById('rp_cnss_affiche').textContent      = '− ' + fmt(data.cnss) + ' GNF';
+            document.getElementById('rp_rts_affiche').textContent       = '− ' + fmt(data.rts)  + ' GNF';
             document.getElementById('rp_net_affiche').textContent       = fmt(data.net_calcule) + ' GNF';
             document.getElementById('rp_base_cnss_affiche').textContent = fmt(data.base_cnss);
             document.getElementById('rp_base_rts_affiche').textContent  = fmt(data.base_rts);
+
+            // Charges patronales
+            const cp = data.charges_patronales || {};
+            document.getElementById('rp_pat_cnss').textContent     = fmt(cp.cnss_employeur || 0) + ' GNF';
+            document.getElementById('rp_pat_vf').textContent       = fmt(cp.vf || 0) + ' GNF';
+            document.getElementById('rp_pat_ta').textContent       = fmt(cp.ta || 0) + ' GNF';
+            document.getElementById('rp_pat_ta_label').textContent = (cp.libelle_ta || 'TA') + ' (2%)';
+            document.getElementById('rp_cout_total').textContent   = fmt(cp.cout_total_employeur || (data.brut + (cp.total || 0))) + ' GNF';
 
             // Détail tranches
             const tranches = data.detail_tranches || [];
@@ -1315,6 +1342,21 @@ function updateRubriqueType() {}
             champMontant.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     });
+
+    const btnRepartir = document.getElementById('rp_btn_repartir_brut');
+    if (btnRepartir) {
+        btnRepartir.addEventListener('click', function () {
+            if (!dernierBrut) return;
+            const champBrut = document.getElementById('dec_brut');
+            if (champBrut) {
+                champBrut.value = dernierBrut;
+                const btnDec = document.getElementById('dec_btn_repartir');
+                if (btnDec) btnDec.click();
+                const cardPrimary = document.querySelector('.card.border-primary');
+                if (cardPrimary) cardPrimary.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    }
 
     btnPdf.addEventListener('click', function () {
         if (!dernierParams) return;

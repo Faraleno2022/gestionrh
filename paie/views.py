@@ -3349,7 +3349,7 @@ def api_retropaie(request):
     comparer_baremes = bool(data.get('comparer_baremes', False))
 
     # --- Calcul rétrograde -------------------------------------------------
-    from .services_retropaie import retropaie_net_vers_brut
+    from .services_retropaie import retropaie_net_vers_brut, calculer_charges_patronales
 
     try:
         resultat = retropaie_net_vers_brut(
@@ -3360,6 +3360,13 @@ def api_retropaie(request):
         )
     except Exception as e:
         return JsonResponse({'error': f'Erreur de calcul : {str(e)}'}, status=500)
+
+    # --- Charges patronales -----------------------------------------------
+    try:
+        cp = calculer_charges_patronales(resultat['brut'], annee=annee)
+    except Exception:
+        cp = {'cnss_employeur': 0, 'vf': 0, 'ta': 0, 'libelle_ta': 'TA', 'total': 0,
+              'cout_total_employeur': int(resultat['brut'])}
 
     # --- Formatage des montants (GNF sans décimales, séparateur espace) ---
     def fmt(n):
@@ -3378,14 +3385,28 @@ def api_retropaie(request):
         'iterations':      resultat['iterations'],
         'detail_tranches': resultat['detail_tranches'],
         'mode':            resultat.get('mode', 'net_minimum'),
+        'annee':           annee,
+        'charges_patronales': {
+            'cnss_employeur':      cp['cnss_employeur'],
+            'vf':                  cp['vf'],
+            'ta':                  cp['ta'],
+            'libelle_ta':          cp['libelle_ta'],
+            'total':               cp['total'],
+            'cout_total_employeur': cp['cout_total_employeur'],
+        },
         'formatted': {
-            'brut':        fmt(resultat['brut']),
-            'cnss':        fmt(resultat['cnss']),
-            'base_cnss':   fmt(resultat['base_cnss']),
-            'base_rts':    fmt(resultat['base_rts']),
-            'rts':         fmt(resultat['rts']),
-            'net_calcule': fmt(resultat['net_calcule']),
-            'net_cible':   fmt(resultat['net_cible']),
+            'brut':             fmt(resultat['brut']),
+            'cnss':             fmt(resultat['cnss']),
+            'base_cnss':        fmt(resultat['base_cnss']),
+            'base_rts':         fmt(resultat['base_rts']),
+            'rts':              fmt(resultat['rts']),
+            'net_calcule':      fmt(resultat['net_calcule']),
+            'net_cible':        fmt(resultat['net_cible']),
+            'cnss_employeur':   fmt(cp['cnss_employeur']),
+            'vf':               fmt(cp['vf']),
+            'ta':               fmt(cp['ta']),
+            'total_pat':        fmt(cp['total']),
+            'cout_total':       fmt(cp['cout_total_employeur']),
         },
     }
 
