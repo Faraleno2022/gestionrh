@@ -307,7 +307,17 @@
                 <div class="card-header bg-info text-white py-2">
                     <h6 class="mb-0"><i class="bi bi-layout-three-columns me-2"></i>Comparaison des structures salariales</h6>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body">
+                    <!-- Résumé décisionnel rapide -->
+                    <div id="decomp_3s_resume" class="alert alert-success d-flex align-items-center gap-3 mb-3" style="display:none;">
+                        <i class="bi bi-trophy-fill fs-3 text-success"></i>
+                        <div>
+                            <strong>Meilleure structure : <span id="decomp_3s_best_label">—</span></strong><br>
+                            <span>Gain estimé : <strong class="text-success" id="decomp_3s_best_gain">—</strong>
+                            <span class="text-muted" id="decomp_3s_best_gain_pct"></span></span>
+                            <span id="decomp_3s_best_surcout" class="ms-2"></span>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover table-sm align-middle mb-0">
                             <thead class="table-dark">
@@ -325,6 +335,11 @@
                             </thead>
                             <tbody id="decomp_3structures_body"></tbody>
                         </table>
+                    </div>
+                    <!-- Phrase métier -->
+                    <div id="decomp_3s_phrase" class="alert alert-light border mt-3 mb-0 py-2" style="display:none;">
+                        <i class="bi bi-lightbulb-fill text-warning me-1"></i>
+                        <em id="decomp_3s_phrase_text"></em>
                     </div>
                 </div>
             </div>
@@ -979,45 +994,106 @@
         }
     }
 
-    // ── Comparaison 3 structures salariales ─────────────────────────
+    // ── Comparaison 3 structures + moteur avancé ───────────────────
+    var STRUCT_BADGES = [
+        {level: 'optimal',       cls: 'bg-success', icon: '🟢'},
+        {level: 'intermediaire', cls: 'bg-primary',  icon: '🔵'},
+        {level: 'standard',      cls: 'bg-secondary', icon: '⚪'},
+        {level: 'avance',        cls: 'bg-warning text-dark', icon: '🔥'}
+    ];
+
     function lancerComparaison3Structures(brut, netActuel) {
         var structures = [
-            {label: '60 / 40 (Standard)', pctIndem: 40, base: 60, t: 15, l: 15, cv: 10},
-            {label: '70 / 30', pctIndem: 30, base: 70, t: 12, l: 10, cv: 8},
-            {label: '75 / 25 (Fiscal optimal)', pctIndem: 25, base: 75, t: 10, l: 10, cv: 5}
+            {label: '60 / 40 (Standard)', pctIndem: 40, base: 60, t: 15, l: 15, cv: 10, badgeIdx: 2},
+            {label: '70 / 30', pctIndem: 30, base: 70, t: 12, l: 10, cv: 8, badgeIdx: 1},
+            {label: '75 / 25 (Fiscal optimal)', pctIndem: 25, base: 75, t: 10, l: 10, cv: 5, badgeIdx: 0}
         ];
-        var promises = structures.map(function(s) {
+
+        // 3 appels structures fixes + 1 appel moteur avancé
+        var structPromises = structures.map(function(s) {
             var indem = Math.round(brut * s.pctIndem / 100);
             return postJson(IMPACT_URL, {brut: brut, indemnites: indem}).then(function(d) {
                 d._struct = s;
+                d._type = 'fixe';
                 return d;
             });
         });
-        Promise.all(promises).then(function(results) {
+
+        var optimPromise = postJson(OPTIMISER_URL, {
+            brut: brut,
+            verrous: {},
+            pourcentages_actuels: {salaire_base: 60, transport: 15, logement: 15, cherte_vie: 10},
+            objectif: 'max_net'
+        }).then(function(od) {
+            if (od.error || !od.optimisation_dynamique) return null;
+            var dyn = od.optimisation_dynamique;
+            // Recalcul avec le taux optimal trouvé
+            var pctOpt = dyn.taux_optimal;
+            var indemOpt = Math.round(brut * pctOpt / 100);
+            return postJson(IMPACT_URL, {brut: brut, indemnites: indemOpt}).then(function(d) {
+                d._struct = {
+                    label: 'Moteur avancé (' + (100 - pctOpt) + ' / ' + pctOpt + ')',
+                    pctIndem: pctOpt,
+                    base: 100 - pctOpt,
+                    t: Math.round(pctOpt * 0.4),
+                    l: Math.round(pctOpt * 0.4),
+                    cv: pctOpt - Math.round(pctOpt * 0.4) * 2,
+                    badgeIdx: 3
+                };
+                d._type = 'avance';
+                d._dynMeta = dyn;
+                return d;
+            });
+        }).catch(function() { return null; });
+
+        Promise.all([Promise.all(structPromises), optimPromise]).then(function(arr) {
+            var rows = arr[0].slice();
+            if (arr[1]) rows.push(arr[1]);
+
+            // Tri par net décroissant
+            rows.sort(function(a, b) { return b.net - a.net; });
+
+            var bestRow = rows[0];
+            var bestGain = bestRow.net - netActuel;
+            var bestPct = netActuel > 0 ? (bestGain / netActuel * 100).toFixed(1) : '0';
+
+            // ── Résumé décisionnel ──
+            var resumeEl = document.getElementById('decomp_3s_resume');
+            document.getElementById('decomp_3s_best_label').textContent = bestRow._struct.label;
+            document.getElementById('decomp_3s_best_gain').textContent = '+' + fmt(bestGain) + ' GNF';
+            document.getElementById('decomp_3s_best_gain_pct').textContent = '(+' + bestPct + '%)';
+            document.getElementById('decomp_3s_best_surcout').innerHTML =
+                '<span class="badge bg-info"><i class="bi bi-check-circle-fill me-1"></i>Aucun surcoût employeur</span>';
+            resumeEl.style.display = bestGain > 0 ? 'flex' : 'none';
+
+            // ── Tableau ──
             var tbody = document.getElementById('decomp_3structures_body');
             tbody.innerHTML = '';
-            var bestNet = 0;
-            var bestIdx = -1;
-            results.forEach(function(r, i) {
-                if (r.net > bestNet) { bestNet = r.net; bestIdx = i; }
-            });
-            results.forEach(function(r, i) {
+            rows.forEach(function(r, i) {
                 var s = r._struct;
-                var isBest = (i === bestIdx);
+                var isBest = (i === 0);
+                var bi = STRUCT_BADGES[s.badgeIdx];
                 var gain = r.net - netActuel;
+                var gainPct = netActuel > 0 ? (gain / netActuel * 100).toFixed(1) : '0';
                 var gainHtml = gain > 0
-                    ? '<span class="text-success fw-bold">+' + fmt(gain) + '</span>'
+                    ? '<span class="text-success fw-bold">+' + fmt(gain) + '</span><br><small class="text-muted">+' + gainPct + '%</small>'
                     : (gain < 0 ? '<span class="text-danger">' + fmt(gain) + '</span>' : '<span class="text-muted">—</span>');
                 var depHtml = r.depasse > 0
                     ? '<span class="text-danger fw-bold">+' + fmt(r.depasse) + '</span>'
                     : '<span class="text-success"><i class="bi bi-check-circle-fill"></i> 0</span>';
                 var cls = isBest ? ' class="table-success"' : '';
-                var btnHtml = '<button type="button" class="btn btn-outline-primary btn-sm btn-appliquer-struct" '
-                    + 'data-base="' + s.base + '" data-t="' + s.t + '" data-l="' + s.l + '" data-cv="' + s.cv + '">'
-                    + '<i class="bi bi-arrow-right-circle"></i> Appliquer</button>';
+                var badgeHtml = '<span class="badge ' + bi.cls + ' me-1">' + bi.icon + '</span>';
+                var bestBadge = isBest ? ' <span class="badge bg-success"><i class="bi bi-trophy-fill me-1"></i>Recommandé</span>' : '';
+                var btnHtml = r._type === 'avance'
+                    ? '<button type="button" class="btn btn-warning btn-sm btn-appliquer-struct" '
+                      + 'data-base="' + s.base + '" data-t="' + s.t + '" data-l="' + s.l + '" data-cv="' + s.cv + '">'
+                      + '<i class="bi bi-lightning-fill"></i> Appliquer</button>'
+                    : '<button type="button" class="btn btn-outline-primary btn-sm btn-appliquer-struct" '
+                      + 'data-base="' + s.base + '" data-t="' + s.t + '" data-l="' + s.l + '" data-cv="' + s.cv + '">'
+                      + '<i class="bi bi-arrow-right-circle"></i> Appliquer</button>';
                 tbody.insertAdjacentHTML('beforeend',
                     '<tr' + cls + '>' +
-                    '<td class="fw-semibold">' + s.label + (isBest ? ' <span class="badge bg-success">Meilleur</span>' : '') + '</td>' +
+                    '<td class="fw-semibold">' + badgeHtml + s.label + bestBadge + '</td>' +
                     '<td class="text-center">' + s.base + '% / ' + s.pctIndem + '%</td>' +
                     '<td class="text-end">' + fmt(Math.round(brut * s.pctIndem / 100)) + '</td>' +
                     '<td class="text-end">' + fmt(r.exon) + '</td>' +
@@ -1029,9 +1105,21 @@
                     '</tr>'
                 );
             });
+
+            // ── Phrase métier ──
+            var phraseEl = document.getElementById('decomp_3s_phrase');
+            var phraseText = document.getElementById('decomp_3s_phrase_text');
+            if (bestGain > 0) {
+                phraseText.textContent = 'Vous pouvez augmenter le net de l\'employé de +' + fmt(bestGain)
+                    + ' GNF/mois (+' + fmt(bestGain * 12) + '/an) sans augmenter le coût pour l\'entreprise.';
+                phraseEl.style.display = 'block';
+            } else {
+                phraseEl.style.display = 'none';
+            }
+
             div3Struct.style.display = 'block';
 
-            // Attach click handlers for "Appliquer" buttons
+            // Attach click handlers
             tbody.querySelectorAll('.btn-appliquer-struct').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     appliquerStructure(
