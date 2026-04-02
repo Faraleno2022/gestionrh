@@ -3394,6 +3394,9 @@ def api_retropaie(request):
             'total':               cp['total'],
             'cout_total_employeur': cp['cout_total_employeur'],
         },
+        'taux_charge_global': round(
+            (cp['cout_total_employeur'] - int(resultat['net_calcule'])) / int(resultat['net_calcule']) * 100, 1
+        ) if int(resultat['net_calcule']) > 0 else 0,
         'formatted': {
             'brut':             fmt(resultat['brut']),
             'cnss':             fmt(resultat['cnss']),

@@ -57,6 +57,18 @@
         <!-- Zone résultat (masquée jusqu'au clic) -->
         <div id="dec_zone_resultat" style="display:none;">
 
+            <!-- Sélecteur de mode de répartition -->
+            <div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
+                <span class="text-muted small fw-semibold me-1"><i class="bi bi-sliders2"></i> Mode :</span>
+                <button type="button" class="btn btn-sm btn-primary" id="dec_mode_standard">
+                    <i class="bi bi-grid-3x2-gap-fill"></i> Standard (60/40)
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-success" id="dec_mode_fiscal">
+                    <i class="bi bi-shield-check"></i> Optimisation fiscale (75/25)
+                </button>
+                <span class="badge bg-light text-secondary border ms-1" id="dec_mode_badge">Base 60% + Indemnités 40%</span>
+            </div>
+
             <!-- Répartition en % avec verrouillage -->
             <div class="mb-3">
                 <label class="form-label fw-semibold">
@@ -597,6 +609,11 @@
                             <td class="text-end" id="rp_cout_total">—</td>
                             <td class="text-muted small">Ce que l'entreprise paie réellement</td>
                         </tr>
+                        <tr class="table-info">
+                            <td><i class="bi bi-percent me-1 text-primary"></i><strong>Taux de charge global</strong> <span class="text-muted small">(Coût − Net) / Net</span></td>
+                            <td class="text-end fw-bold text-primary fs-5" id="rp_taux_charge">—</td>
+                            <td class="text-muted small">Surcoût employeur vs net perçu</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -824,6 +841,41 @@ function updateRubriqueType() {}
             }
         });
     });
+
+    // ── Sélecteur de mode (Standard vs Fiscal) ───────────────────────────────
+    const MODES = {
+        standard: { base: 60, transport: 15, logement: 15, cherte: 10,
+                    label: 'Base 60% + Indemnités 40%' },
+        fiscal:   { base: 75, transport: 10, logement: 10, cherte:  5,
+                    label: 'Base 75% + Indemnités 25% (exonération max CGI)' },
+    };
+    function appliquerMode(mode) {
+        const m = MODES[mode];
+        if (!m) return;
+        ['base','transport','logement','cherte'].forEach(function(cle) {
+            const inp = document.getElementById('dec_pct_' + cle);
+            if (inp && !verrous[cle]) inp.value = m[cle];
+        });
+        // Recalcul base en cas de verrous partiels
+        const pctT = parseInt(document.getElementById('dec_pct_transport').value) || 0;
+        const pctL = parseInt(document.getElementById('dec_pct_logement').value) || 0;
+        const pctC = parseInt(document.getElementById('dec_pct_cherte').value) || 0;
+        const inpBase = document.getElementById('dec_pct_base');
+        if (!verrous.base) inpBase.value = 100 - pctT - pctL - pctC;
+
+        const badge = document.getElementById('dec_mode_badge');
+        if (badge) badge.textContent = m.label;
+        document.getElementById('dec_mode_standard').className =
+            'btn btn-sm ' + (mode === 'standard' ? 'btn-primary' : 'btn-outline-primary');
+        document.getElementById('dec_mode_fiscal').className =
+            'btn btn-sm ' + (mode === 'fiscal' ? 'btn-success' : 'btn-outline-success');
+
+        rafraichirBarre();
+        const brut = parseEntier(document.getElementById('dec_brut').value);
+        if (brut > 0) calculerImpact();
+    }
+    document.getElementById('dec_mode_standard').addEventListener('click', function() { appliquerMode('standard'); });
+    document.getElementById('dec_mode_fiscal').addEventListener('click',   function() { appliquerMode('fiscal'); });
 
     // ── Auto-balance des % (la base absorbe le reste) ─────────────────────────
     document.querySelectorAll('.dec-pct-input').forEach(function (input) {
@@ -1277,6 +1329,12 @@ function updateRubriqueType() {}
             document.getElementById('rp_pat_ta').textContent       = fmt(cp.ta || 0) + ' GNF';
             document.getElementById('rp_pat_ta_label').textContent = (cp.libelle_ta || 'TA') + ' (2%)';
             document.getElementById('rp_cout_total').textContent   = fmt(cp.cout_total_employeur || (data.brut + (cp.total || 0))) + ' GNF';
+            const taux = data.taux_charge_global;
+            const elTaux = document.getElementById('rp_taux_charge');
+            if (elTaux) {
+                elTaux.textContent = (taux !== undefined && taux !== null) ? taux.toFixed(1) + ' %' : '—';
+                elTaux.title = 'Pour ' + fmt(data.net_calcule) + ' GNF net, l\'entreprise paie ' + fmt(cp.cout_total_employeur || 0) + ' GNF — surcoût de ' + (taux || 0).toFixed(1) + '%';
+            }
 
             // Détail tranches
             const tranches = data.detail_tranches || [];
