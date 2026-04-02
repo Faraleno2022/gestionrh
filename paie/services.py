@@ -142,14 +142,13 @@ class MoteurCalculPaie:
             return
 
         # Mapping champ ConfigurationPaieEntreprise -> clé Constante
+        # NB: taux_taxe_apprentissage et taux_onfpp sont EXCLUS car fixés par la loi
         mapping = {
             'taux_cnss_employe': 'TAUX_CNSS_EMPLOYE',
             'taux_cnss_employeur': 'TAUX_CNSS_EMPLOYEUR',
             'plafond_cnss': 'PLAFOND_CNSS',
             'plancher_cnss': 'PLANCHER_CNSS',
             'taux_versement_forfaitaire': 'TAUX_VF',
-            'taux_taxe_apprentissage': 'TAUX_TA',
-            'taux_onfpp': 'TAUX_ONFPP',
         }
         # HS : ConfigPaie stocke la majoration (30%), le moteur attend le coefficient (130%)
         mapping_hs = {
@@ -936,20 +935,21 @@ class MoteurCalculPaie:
         # TA et ONFPP sont mutuellement exclusifs selon le nombre de salariés:
         # - Moins de 25 salariés: TA (2%) sur brut
         # - 25 salariés ou plus: ONFPP (1,5%) sur brut (législation guinéenne)
+        # Les taux sont FIXES par la loi guinéenne, non configurables.
+        TAUX_TA_LEGAL = Decimal('2.00')       # Taxe d'Apprentissage: 2% (loi)
+        TAUX_ONFPP_LEGAL = Decimal('1.50')    # ONFPP: 1,5% (loi)
         seuil_ta_onfpp = int(self.constantes.get('SEUIL_TA_ONFPP', Decimal('25')))
         if self.nb_salaries < seuil_ta_onfpp:
-            taux_ta = self.constantes.get('TAUX_TA', Decimal('2.00'))
             self.montants['base_ta'] = base_vf_nette
-            self.montants['taux_ta'] = taux_ta
+            self.montants['taux_ta'] = TAUX_TA_LEGAL
             self.montants['taxe_apprentissage'] = self._arrondir(
-                base_vf_nette * taux_ta / Decimal('100')
+                base_vf_nette * TAUX_TA_LEGAL / Decimal('100')
             )
             self.montants['contribution_onfpp'] = Decimal('0')
         else:
             self.montants['taxe_apprentissage'] = Decimal('0')
-            taux_onfpp = self.constantes.get('TAUX_ONFPP', Decimal('1.50'))
             self.montants['contribution_onfpp'] = self._arrondir(
-                base_vf_nette * taux_onfpp / Decimal('100')
+                base_vf_nette * TAUX_ONFPP_LEGAL / Decimal('100')
             )
         
         # Total charges patronales (arrondi à l'unité GNF)

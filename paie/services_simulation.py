@@ -206,8 +206,9 @@ def calculer_un_bareme(
     taux_cnss_emp   = constantes.get('TAUX_CNSS_EMPLOYE',   Decimal('5'))
     taux_cnss_pat   = constantes.get('TAUX_CNSS_EMPLOYEUR', Decimal('18'))
     taux_vf         = constantes.get('TAUX_VF',             Decimal('6'))
-    taux_ta         = constantes.get('TAUX_TA',             Decimal('2'))
-    taux_onfpp      = constantes.get('TAUX_ONFPP',          Decimal('1.5'))
+    # Les taux TA et ONFPP sont FIXES par la loi guinéenne (non configurables)
+    TAUX_TA_LEGAL    = Decimal('2')      # Taxe d'Apprentissage: 2% (loi)
+    TAUX_ONFPP_LEGAL = Decimal('1.5')    # ONFPP: 1,5% (loi)
 
     # -- CNSS employé --
     cnss = _half_up(min(brut, plafond_cnss) * taux_cnss_emp / Decimal('100'))
@@ -241,11 +242,11 @@ def calculer_un_bareme(
     # Seuil TA/ONFPP : < 25 salariés → TA 2%, ≥ 25 → ONFPP 1,5% (CGI Guinée)
     seuil_ta_onfpp = int(constantes.get('SEUIL_TA_ONFPP', Decimal('25')))
     if nb_salaries < seuil_ta_onfpp:
-        ta    = _half_up(brut * taux_ta / Decimal('100'))
+        ta    = _half_up(brut * TAUX_TA_LEGAL / Decimal('100'))
         onfpp = 0
     else:
         ta    = 0
-        onfpp = _half_up(brut * taux_onfpp / Decimal('100'))
+        onfpp = _half_up(brut * TAUX_ONFPP_LEGAL / Decimal('100'))
 
     return {
         'brut':                  int(brut),
