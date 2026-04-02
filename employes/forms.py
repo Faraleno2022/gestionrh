@@ -3,7 +3,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Row, Column, Submit, Button, HTML
 from crispy_forms.bootstrap import TabHolder, Tab
 from .models import Employe, ContratEmploye, EvaluationEmploye, SanctionDisciplinaire
-from core.models import Devise
+from core.models import Devise, Etablissement, Service, Poste
 
 
 class EmployeForm(forms.ModelForm):
@@ -78,6 +78,7 @@ class EmployeForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        entreprise = kwargs.pop('entreprise', None)
         super().__init__(*args, **kwargs)
         
         # Rendre plusieurs champs optionnels pour permettre un enregistrement rapide
@@ -94,6 +95,17 @@ class EmployeForm(forms.ModelForm):
         # Filtrer les devises actives uniquement
         self.fields['devise_paie'].queryset = Devise.objects.filter(actif=True)
         self.fields['devise_paie'].empty_label = "GNF (par défaut)"
+        
+        # Isolation multi-tenant : filtrer les FK par entreprise
+        if entreprise:
+            self.fields['etablissement'].queryset = Etablissement.objects.filter(
+                societe__entreprise=entreprise)
+            self.fields['service'].queryset = Service.objects.filter(
+                etablissement__societe__entreprise=entreprise)
+            self.fields['poste'].queryset = Poste.objects.filter(
+                service__etablissement__societe__entreprise=entreprise)
+            self.fields['superieur_hierarchique'].queryset = Employe.objects.filter(
+                entreprise=entreprise)
         
         # Helper Crispy Forms
         self.helper = FormHelper()

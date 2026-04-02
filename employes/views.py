@@ -186,6 +186,11 @@ class EmployeCreateView(LoginRequiredMixin, CreateView):
     template_name = 'employes/form.html'
     success_url = reverse_lazy('employes:list')
     
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['entreprise'] = self.request.user.entreprise
+        return kwargs
+    
     def form_valid(self, form):
         try:
             with transaction.atomic():
@@ -384,6 +389,11 @@ class EmployeUpdateView(EntrepriseEmployeQuerysetMixin, UpdateView):
     model = Employe
     form_class = EmployeForm
     template_name = 'employes/form.html'
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['entreprise'] = self.request.user.entreprise
+        return kwargs
     
     def get(self, request, *args, **kwargs):
         try:
