@@ -4444,11 +4444,12 @@ def api_proposition_complete(request):
 
     annee = date.today().year
 
-    # ── Étape 1 : Rétro-paie (Net → Brut) ─────────────────────────────────
+    # ── Étape 1 : Double rétro-paie (sans puis avec optimisation fiscale) ──
     from .services_retropaie import retropaie_net_vers_brut, calculer_charges_patronales
 
+    # 1a. Rétro-paie SANS exonération (référence)
     try:
-        retro = retropaie_net_vers_brut(
+        retro_ref = retropaie_net_vers_brut(
             net_cible=net_cible,
             annee=annee,
             pct_indemnites_forfaitaires=0,
@@ -4457,13 +4458,30 @@ def api_proposition_complete(request):
     except Exception as e:
         return JsonResponse({'error': f'Erreur retropaie : {str(e)}'}, status=500)
 
-    if not retro.get('ok'):
+    if not retro_ref.get('ok'):
         return JsonResponse({
             'error': 'Convergence retropaie impossible pour ce net cible.',
-            'retropaie': {'brut': int(retro['brut']), 'ecart': int(retro['ecart'])}
+            'retropaie': {'brut': int(retro_ref['brut']), 'ecart': int(retro_ref['ecart'])}
         }, status=400)
 
+    # 1b. Rétro-paie AVEC exonération optimale (taux_max) → brut PLUS BAS
+    #     pour le même net exact = 5 500 000
+    try:
+        retro = retropaie_net_vers_brut(
+            net_cible=net_cible,
+            annee=annee,
+            pct_indemnites_forfaitaires=taux_max,
+            garantir_net_minimum=True,
+        )
+    except Exception as e:
+        # Fallback : utiliser le résultat sans exonération
+        retro = retro_ref
+
+    if not retro.get('ok'):
+        retro = retro_ref
+
     brut_calcule = int(retro['brut'])
+    brut_sans_opti = int(retro_ref['brut'])
 
     # ── Étape 2 : Charges patronales ──────────────────────────────────────
     try:
@@ -4471,6 +4489,11 @@ def api_proposition_complete(request):
     except Exception:
         cp = {'cnss_employeur': 0, 'vf': 0, 'ta': 0, 'libelle_ta': 'TA',
               'total': 0, 'cout_total_employeur': brut_calcule}
+
+    try:
+        cp_ref = calculer_charges_patronales(retro_ref['brut'], annee=annee)
+    except Exception:
+        cp_ref = cp
 
     # ── Étape 3 : Optimisation dynamique de la structure ──────────────────
     from .services_simulation import optimiser_structure_dynamique, _charger_constantes, _charger_tranches_db, BAREME_CGI_REFERENCE
@@ -4554,23 +4577,30 @@ def api_proposition_complete(request):
     except Exception:
         pass  # Ne pas bloquer la réponse en cas d'erreur d'audit
 
+    # Économie employeur grâce à l'optimisation fiscale
+    economie_brut = brut_sans_opti - brut_calcule
+    economie_cout = cp_ref['cout_total_employeur'] - cp['cout_total_employeur']
+
     return JsonResponse({
         'net_cible': int(net_cible),
         'objectif': objectif,
         'annee': annee,
 
-        # Rétro-paie
+        # Rétro-paie (avec exonération optimale → net exact = net_cible)
         'retropaie': {
             'brut': brut_calcule,
+            'brut_sans_opti': brut_sans_opti,
             'cnss': int(retro['cnss']),
-            'rts_standard': int(retro['rts']),
+            'rts_standard': int(retro_ref['rts']),
+            'rts_optimise': int(retro['rts']),
             'net_calcule': int(retro['net_calcule']),
             'ecart': int(retro['ecart']),
             'iterations': retro['iterations'],
             'ok': retro['ok'],
+            'pct_exoneration': taux_max,
         },
 
-        # Charges patronales
+        # Charges patronales (sur brut optimisé)
         'charges_patronales': {
             'cnss_employeur': cp['cnss_employeur'],
             'vf': cp['vf'],
@@ -4583,10 +4613,12 @@ def api_proposition_complete(request):
         # Optimisation dynamique
         'optimisation': {
             'taux_optimal': taux_optimal,
-            'net_optimal': int(best['net']),
-            'cout_optimal': int(best['cout_total_employeur']),
-            'net_standard': int(ref['net']),
-            'cout_standard': int(ref['cout_total_employeur']),
+            'net_optimal': int(retro['net_calcule']),
+            'cout_optimal': cp['cout_total_employeur'],
+            'net_standard': int(retro_ref['net_calcule']),
+            'cout_standard': cp_ref['cout_total_employeur'],
+            'economie_brut': economie_brut,
+            'economie_cout': economie_cout,
             'gain_net': int(optim['gain_net']),
             'gain_pct': optim['gain_pct'],
             'gain_sans_surcout': optim['gain_sans_surcout'],
@@ -4597,24 +4629,26 @@ def api_proposition_complete(request):
         'recommandation': {
             'composantes': recommandation_composantes,
             'resume': (
-                f"Pour un net de {fmt(net_cible)} GNF, structure recommandée : "
-                f"brut {fmt(brut_calcule)} GNF avec {pct_indem}% d'indemnités. "
-                f"Net optimisé : {fmt(best['net'])} GNF"
-                + (f" (+{fmt(optim['gain_net'])} GNF, +{optim['gain_pct']}%)"
-                   if optim['gain_net'] > 0 else '')
-                + (". Coût employeur inchangé." if optim['gain_sans_surcout'] else
-                   f". Coût employeur : {fmt(best['cout_total_employeur'])} GNF.")
+                f"Pour un net exact de {fmt(net_cible)} GNF, brut recommandé : "
+                f"{fmt(brut_calcule)} GNF avec {pct_indem}% d'indemnités exonérées. "
+                f"Net à payer = {fmt(retro['net_calcule'])} GNF"
+                + (f". Économie employeur : −{fmt(economie_cout)} GNF vs structure sans optimisation"
+                   if economie_cout > 0 else '')
+                + f". Coût total employeur : {fmt(cp['cout_total_employeur'])} GNF."
             ),
         },
 
         # Formaté pour affichage
         'formatted': {
             'brut': fmt(brut_calcule),
+            'brut_sans_opti': fmt(brut_sans_opti),
             'net_cible': fmt(net_cible),
-            'net_standard': fmt(ref['net']),
-            'net_optimal': fmt(best['net']),
-            'gain_net': fmt(optim['gain_net']),
-            'cout_total': fmt(best['cout_total_employeur']),
+            'net_standard': fmt(retro_ref['net_calcule']),
+            'net_optimal': fmt(retro['net_calcule']),
+            'economie_brut': fmt(economie_brut),
+            'economie_cout': fmt(economie_cout),
+            'cout_total': fmt(cp['cout_total_employeur']),
+            'cout_total_sans_opti': fmt(cp_ref['cout_total_employeur']),
         },
 
         # Vérification croisée + paramètres

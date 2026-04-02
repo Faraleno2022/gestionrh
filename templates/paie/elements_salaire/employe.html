@@ -390,8 +390,8 @@
                     </div>
                     <div id="decision_sans_surcout" class="alert alert-info py-2 px-3 mt-3 mb-0 d-flex align-items-center gap-2" style="display:none;">
                         <i class="bi bi-check-circle-fill text-info fs-5"></i>
-                        <strong>Gain net sans surcoût employeur</strong>
-                        <span class="small text-muted ms-2">— Le net augmente sans toucher au budget entreprise</span>
+                        <strong>Net exact garanti + économie employeur</strong>
+                        <span class="small text-muted ms-2">— L'employé reçoit exactement le net convenu, l'entreprise économise grâce à l'optimisation fiscale</span>
                     </div>
                 </div>
             </div>
@@ -616,8 +616,8 @@
                     </div>
                     <div id="prop_o_sans_surcout" class="alert alert-info py-2 px-3 mt-2 mb-0 d-flex align-items-center gap-2" style="display:none;">
                         <i class="bi bi-check-circle-fill text-info fs-5"></i>
-                        <strong>Gain net sans surcoût employeur</strong>
-                        <span class="small text-muted ms-2">— Le net augmente sans toucher au budget entreprise</span>
+                        <strong>Net exact garanti + économie employeur</strong>
+                        <span class="small text-muted ms-2">— L'employé reçoit exactement le net convenu, l'entreprise économise grâce à l'optimisation fiscale</span>
                     </div>
                 </div>
             </div>
@@ -1855,7 +1855,7 @@
             document.getElementById('prop_r_net_cible').textContent = fmt(data.net_cible) + ' GNF';
             document.getElementById('prop_r_brut').textContent = fmt(rp.brut) + ' GNF';
             document.getElementById('prop_r_cnss').textContent = fmt(rp.cnss) + ' GNF';
-            document.getElementById('prop_r_rts').textContent = fmt(rp.rts_standard) + ' GNF';
+            document.getElementById('prop_r_rts').textContent = fmt(rp.rts_optimise || rp.rts_standard) + ' GNF';
             document.getElementById('prop_r_precision').innerHTML = rp.ok
                 ? '<span class="badge bg-success">Exact (' + rp.ecart + ' GNF)</span>'
                 : '<span class="badge bg-warning">Écart : ' + rp.ecart + ' GNF</span>';
@@ -1866,20 +1866,27 @@
             document.getElementById('prop_o_taux').textContent = op.taux_optimal + '%';
             document.getElementById('prop_o_net').textContent = fmt(op.net_optimal) + ' GNF';
 
-            var gainSign = op.gain_net >= 0 ? '+' : '';
-            document.getElementById('prop_o_gain').textContent = gainSign + fmt(op.gain_net) + ' GNF';
-            document.getElementById('prop_o_gain').className = 'fw-bold ' + (op.gain_net > 0 ? 'text-success' : 'text-muted');
-            document.getElementById('prop_o_gain_pct').textContent = op.gain_net !== 0 ? '(' + gainSign + op.gain_pct + '%)' : '';
+            // Économie employeur (brut et coût réduits grâce à l'optimisation fiscale)
+            var econCout = op.economie_cout || 0;
+            if (econCout > 0) {
+                document.getElementById('prop_o_gain').textContent = '−' + fmt(econCout) + ' GNF';
+                document.getElementById('prop_o_gain').className = 'fw-bold text-success';
+                var econPct = rp.brut_sans_opti > 0 ? ((econCout / (op.cout_standard || 1)) * 100).toFixed(1) : '0';
+                document.getElementById('prop_o_gain_pct').textContent = 'économie employeur (−' + econPct + '%)';
+            } else {
+                document.getElementById('prop_o_gain').textContent = 'Aucune';
+                document.getElementById('prop_o_gain').className = 'fw-bold text-muted';
+                document.getElementById('prop_o_gain_pct').textContent = '';
+            }
 
             document.getElementById('prop_o_cout').textContent = fmt(op.cout_optimal) + ' GNF';
-            var delta = op.cout_optimal - op.cout_standard;
-            if (delta === 0) {
-                document.getElementById('prop_o_cout_delta').innerHTML = '<span class="badge bg-success">Inchangé</span>';
+            if (econCout > 0) {
+                document.getElementById('prop_o_cout_delta').innerHTML =
+                    '<span class="text-success">−' + fmt(econCout) + ' vs sans opti</span>';
             } else {
-                var dSign = delta > 0 ? '+' : '';
-                document.getElementById('prop_o_cout_delta').innerHTML = '<span class="text-' + (delta > 0 ? 'danger' : 'success') + '">' + dSign + fmt(delta) + '</span>';
+                document.getElementById('prop_o_cout_delta').innerHTML = '<span class="badge bg-info">Identique</span>';
             }
-            document.getElementById('prop_o_sans_surcout').style.display = op.gain_sans_surcout ? 'flex' : 'none';
+            document.getElementById('prop_o_sans_surcout').style.display = econCout > 0 ? 'flex' : 'none';
 
             // ── Recommandation ──
             document.getElementById('prop_resume_text').textContent = data.recommandation.resume;
