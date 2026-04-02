@@ -1791,7 +1791,7 @@
 <script>
 (function() {
     var PROP_URL = "{% url 'paie:api_proposition_complete' %}";
-    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    var csrfToken = "{{ csrf_token }}";
 
     var btnLancer = document.getElementById('prop_btn_lancer');
     var divErr    = document.getElementById('prop_erreur');

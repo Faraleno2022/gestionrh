@@ -4401,7 +4401,6 @@ def api_optimiser_decomposition(request):
 # ============================================================================
 
 @login_required
-@entreprise_active_required
 @require_POST
 def api_proposition_complete(request):
     """
@@ -4412,9 +4411,9 @@ def api_proposition_complete(request):
     Sortie  : retropaie + optimisation + recommandation en une seule réponse
     """
     if not hasattr(request.user, 'entreprise') or not request.user.entreprise:
-        return JsonResponse({'error': 'Aucune entreprise associée.'}, status=403)
+        return JsonResponse({'error': 'Aucune entreprise associée à ce compte.'}, status=403)
     if not request.user.entreprise.actif:
-        return JsonResponse({'error': 'Entreprise désactivée.'}, status=403)
+        return JsonResponse({'error': 'Votre entreprise est désactivée.'}, status=403)
 
     try:
         data = json.loads(request.body)
