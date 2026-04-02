@@ -3193,7 +3193,6 @@ def bulletins_groupes_pdf(request):
 # ============================================================================
 
 @login_required
-@entreprise_active_required
 def api_retropaie(request):
     """
     Endpoint AJAX : calcul rétrograde net → brut.
@@ -3208,6 +3207,12 @@ def api_retropaie(request):
         brut, cnss, base_cnss, base_rts, rts, net_calcule, net_cible,
         ecart, ok, iterations, detail_tranches, formatted (montants formatés)
     """
+    # Vérification entreprise (JSON pour les requêtes AJAX)
+    if not hasattr(request.user, 'entreprise') or not request.user.entreprise:
+        return JsonResponse({'error': 'Aucune entreprise associée à ce compte.'}, status=403)
+    if not request.user.entreprise.actif:
+        return JsonResponse({'error': 'Votre entreprise est désactivée.'}, status=403)
+
     if request.method != 'POST':
         return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
@@ -3327,7 +3332,6 @@ def api_retropaie(request):
 # ============================================================================
 
 @login_required
-@entreprise_active_required
 def retropaie_pdf(request):
     """
     Génère un PDF de la simulation rétrograde Net → Brut.
