@@ -7,7 +7,6 @@ from django.contrib import messages
 from django.db.models import Q
 from django.db import transaction, IntegrityError
 from django.http import HttpResponse, Http404
-from openpyxl import Workbook
 from datetime import datetime
 
 from .models import (
@@ -526,6 +525,7 @@ def employe_export_excel(request):
     )
     
     # Créer le workbook
+    from openpyxl import Workbook
     wb = Workbook()
     ws = wb.active
     ws.title = "Employés"
