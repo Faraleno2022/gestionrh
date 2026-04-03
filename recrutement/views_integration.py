@@ -87,10 +87,10 @@ def creer_decision(request, candidature_id):
         except Exception as e:
             messages.error(request, f'Erreur lors de l\'enregistrement : {str(e)}')
     
-    postes = Poste.objects.filter(actif=True)
+    postes = Poste.objects.filter(entreprise=request.user.entreprise, actif=True)
     services = Service.objects.filter(
+        entreprise=request.user.entreprise,
         actif=True,
-        etablissement__societe__entreprise=request.user.entreprise
     )
     employes = Employe.objects.filter(
         entreprise=request.user.entreprise,

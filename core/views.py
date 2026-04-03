@@ -699,8 +699,8 @@ def gestion_structure(request):
         )
     
     etablissements = Etablissement.objects.filter(societe=societe)
-    services = Service.objects.filter(etablissement__societe=societe)
-    postes = Poste.objects.filter(service__etablissement__societe=societe)
+    services = Service.objects.filter(entreprise=entreprise)
+    postes = Poste.objects.filter(entreprise=entreprise)
     
     return render(request, 'core/gestion_structure.html', {
         'societe': societe,
@@ -794,19 +794,22 @@ def creer_service(request):
         messages.error(request, "Vous devez d'abord créer un établissement avant de pouvoir créer un service.")
         return redirect('core:gestion_structure')
     
+    entreprise = request.user.entreprise
+
     if request.method == 'POST':
         code = request.POST.get('code_service')
         nom = request.POST.get('nom_service')
         etablissement_id = request.POST.get('etablissement')
         description = request.POST.get('description')
-        
-        if Service.objects.filter(code_service=code).exists():
-            messages.error(request, f"Le code '{code}' existe déjà.")
+
+        if Service.objects.filter(entreprise=entreprise, code_service=code).exists():
+            messages.error(request, f"Le code '{code}' existe déjà dans votre entreprise.")
             return redirect('core:creer_service')
-        
+
         etablissement = get_object_or_404(Etablissement, pk=etablissement_id) if etablissement_id else None
-        
+
         Service.objects.create(
+            entreprise=entreprise,
             etablissement=etablissement,
             code_service=code,
             nom_service=nom,
@@ -832,7 +835,7 @@ def supprimer_service(request, pk):
         messages.error(request, "Accès réservé aux administrateurs d'entreprise.")
         return redirect('dashboard:index')
     
-    service = get_object_or_404(Service, pk=pk, etablissement__societe__entreprise=request.user.entreprise)
+    service = get_object_or_404(Service, pk=pk, entreprise=request.user.entreprise)
     nom = service.nom_service
     service.delete()
     
@@ -854,8 +857,10 @@ def creer_poste(request):
         messages.error(request, "Vous devez d'abord créer un établissement avant de pouvoir créer un poste.")
         return redirect('core:gestion_structure')
     
-    services = Service.objects.filter(etablissement__societe__entreprise=request.user.entreprise, actif=True)
+    services = Service.objects.filter(entreprise=request.user.entreprise, actif=True)
     
+    entreprise = request.user.entreprise
+
     if request.method == 'POST':
         code = request.POST.get('code_poste')
         intitule = request.POST.get('intitule_poste')
@@ -863,14 +868,15 @@ def creer_poste(request):
         categorie = request.POST.get('categorie_professionnelle')
         classification = request.POST.get('classification')
         description = request.POST.get('description_poste')
-        
-        if Poste.objects.filter(code_poste=code).exists():
-            messages.error(request, f"Le code '{code}' existe déjà.")
+
+        if Poste.objects.filter(entreprise=entreprise, code_poste=code).exists():
+            messages.error(request, f"Le code '{code}' existe déjà dans votre entreprise.")
             return redirect('core:creer_poste')
-        
+
         service = get_object_or_404(Service, pk=service_id) if service_id else None
-        
+
         Poste.objects.create(
+            entreprise=entreprise,
             code_poste=code,
             intitule_poste=intitule,
             service=service,
@@ -899,7 +905,7 @@ def supprimer_poste(request, pk):
         messages.error(request, "Accès réservé aux administrateurs d'entreprise.")
         return redirect('dashboard:index')
     
-    poste = get_object_or_404(Poste, pk=pk, service__etablissement__societe__entreprise=request.user.entreprise)
+    poste = get_object_or_404(Poste, pk=pk, entreprise=request.user.entreprise)
     nom = poste.intitule_poste
     poste.delete()
     

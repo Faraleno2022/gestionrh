@@ -99,9 +99,9 @@ def liste_offres(request):
         offres_page = paginator.page(paginator.num_pages)
     
     services = Service.objects.filter(
-        etablissement__societe__entreprise=request.user.entreprise
+        entreprise=request.user.entreprise
     )
-    
+
     return render(request, 'recrutement/offres/liste.html', {
         'offres': offres_page,
         'services': services,
@@ -152,10 +152,10 @@ def creer_offre(request):
         except Exception as e:
             messages.error(request, f'Erreur lors de la création : {str(e)}')
     
-    postes = Poste.objects.filter(actif=True)
+    postes = Poste.objects.filter(entreprise=request.user.entreprise, actif=True)
     services = Service.objects.filter(
+        entreprise=request.user.entreprise,
         actif=True,
-        etablissement__societe__entreprise=request.user.entreprise,
     )
     employes = Employe.objects.filter(
         entreprise=request.user.entreprise,
@@ -235,8 +235,8 @@ def modifier_offre(request, pk):
         except Exception as e:
             messages.error(request, f'Erreur lors de la modification : {str(e)}')
     
-    postes = Poste.objects.filter(actif=True)
-    services = Service.objects.filter(actif=True)
+    postes = Poste.objects.filter(entreprise=request.user.entreprise, actif=True)
+    services = Service.objects.filter(entreprise=request.user.entreprise, actif=True)
     employes = Employe.objects.filter(entreprise=request.user.entreprise, statut_employe='actif')
     
     return render(request, 'recrutement/offres/modifier.html', {

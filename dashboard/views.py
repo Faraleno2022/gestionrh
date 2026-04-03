@@ -337,7 +337,7 @@ def rapports(request):
     services_stats = []
     
     # Essayer plusieurs chemins pour trouver les services
-    services = Service.objects.filter(actif=True)
+    services = Service.objects.filter(entreprise=request.user.entreprise, actif=True)
     
     for service in services:
         effectif = employes_actifs.filter(service=service).count()

@@ -241,7 +241,7 @@ def telecharger_template_import(request):
     ws_ref.cell(row=1, column=3, value="Services disponibles").font = ref_header_font
     ws_ref['C1'].fill = ref_header_fill
     services = Service.objects.filter(
-        etablissement__societe__entreprise=entreprise, actif=True
+        entreprise=entreprise, actif=True
     ).values_list('nom_service', flat=True)
     for i, nom in enumerate(services, 2):
         ws_ref.cell(row=i, column=3, value=nom)
@@ -250,7 +250,7 @@ def telecharger_template_import(request):
     ws_ref.cell(row=1, column=5, value="Postes disponibles").font = ref_header_font
     ws_ref['E1'].fill = ref_header_fill
     postes = Poste.objects.filter(
-        service__etablissement__societe__entreprise=entreprise, actif=True
+        entreprise=entreprise, actif=True
     ).values_list('intitule_poste', flat=True)
     for i, nom in enumerate(postes, 2):
         ws_ref.cell(row=i, column=5, value=nom)
@@ -368,10 +368,10 @@ def import_employes_preview(request):
         societe__entreprise=entreprise, actif=True
     )}
     services_cache = {s.nom_service.lower(): s for s in Service.objects.filter(
-        etablissement__societe__entreprise=entreprise, actif=True
+        entreprise=entreprise, actif=True
     )}
     postes_cache = {p.intitule_poste.lower(): p for p in Poste.objects.filter(
-        service__etablissement__societe__entreprise=entreprise, actif=True
+        entreprise=entreprise, actif=True
     )}
 
     # Matricules et CNSS existants
@@ -617,10 +617,10 @@ def import_employes_execute(request):
         societe__entreprise=entreprise, actif=True
     )}
     services_cache = {s.nom_service.lower(): s for s in Service.objects.filter(
-        etablissement__societe__entreprise=entreprise, actif=True
+        entreprise=entreprise, actif=True
     )}
     postes_cache = {p.intitule_poste.lower(): p for p in Poste.objects.filter(
-        service__etablissement__societe__entreprise=entreprise, actif=True
+        entreprise=entreprise, actif=True
     )}
 
     matricules_existants = set(Employe.objects.filter(

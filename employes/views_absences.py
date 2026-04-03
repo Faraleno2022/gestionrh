@@ -68,8 +68,8 @@ def tableau_bord_absences(request):
 
     # Services
     services = Service.objects.filter(
+        entreprise=entreprise,
         actif=True,
-        etablissement__societe__entreprise=entreprise,
     ).order_by('nom_service')
 
     # Nombre de jours dans le mois

@@ -88,8 +88,8 @@ class EmployeListView(LoginRequiredMixin, ListView):
         # Services pour le filtre
         from core.models import Service
         context['services'] = Service.objects.filter(
+            entreprise=self.request.user.entreprise,
             actif=True,
-            etablissement__societe__entreprise=self.request.user.entreprise,
         )
         
         return context

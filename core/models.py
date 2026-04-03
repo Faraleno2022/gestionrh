@@ -295,20 +295,24 @@ class Etablissement(models.Model):
 
 class Service(models.Model):
     """Services/Départements"""
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='services', null=True, blank=True)
     etablissement = models.ForeignKey(Etablissement, on_delete=models.CASCADE, related_name='services', null=True, blank=True)
-    code_service = models.CharField(max_length=20, unique=True)
+    code_service = models.CharField(max_length=20)
     nom_service = models.CharField(max_length=100)
     service_parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sous_services')
     niveau_hierarchique = models.IntegerField(default=1)
     responsable_service = models.ForeignKey('employes.Employe', on_delete=models.SET_NULL, null=True, blank=True, related_name='services_geres')
     description = models.TextField(blank=True, null=True)
     actif = models.BooleanField(default=True)
-    
+
     class Meta:
         db_table = 'services'
         verbose_name = 'Service'
         verbose_name_plural = 'Services'
         ordering = ['nom_service']
+        constraints = [
+            models.UniqueConstraint(fields=['entreprise', 'code_service'], name='unique_service_par_entreprise'),
+        ]
     
     def __str__(self):
         return f"{self.code_service} - {self.nom_service}"
@@ -322,8 +326,9 @@ class Poste(models.Model):
         ('employe', 'Employé'),
         ('ouvrier', 'Ouvrier'),
     )
-    
-    code_poste = models.CharField(max_length=20, unique=True)
+
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='postes', null=True, blank=True)
+    code_poste = models.CharField(max_length=20)
     intitule_poste = models.CharField(max_length=100)
     service = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, blank=True, related_name='postes')
     categorie_professionnelle = models.CharField(max_length=50, choices=CATEGORIES, blank=True, null=True)
@@ -334,12 +339,15 @@ class Poste(models.Model):
     responsabilites = models.TextField(blank=True, null=True)
     competences_requises = models.TextField(blank=True, null=True)
     actif = models.BooleanField(default=True)
-    
+
     class Meta:
         db_table = 'postes'
         verbose_name = 'Poste'
         verbose_name_plural = 'Postes'
         ordering = ['intitule_poste']
+        constraints = [
+            models.UniqueConstraint(fields=['entreprise', 'code_poste'], name='unique_poste_par_entreprise'),
+        ]
     
     def __str__(self):
         return f"{self.code_poste} - {self.intitule_poste}"

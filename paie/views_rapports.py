@@ -118,8 +118,8 @@ def rapport_masse_salariale(request):
 
     # Services disponibles
     services = Service.objects.filter(
+        entreprise=entreprise,
         actif=True,
-        etablissement__societe__entreprise=entreprise,
     ).order_by('nom_service')
 
     # Bulletins filtrés

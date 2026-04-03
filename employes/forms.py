@@ -101,9 +101,9 @@ class EmployeForm(forms.ModelForm):
             self.fields['etablissement'].queryset = Etablissement.objects.filter(
                 societe__entreprise=entreprise)
             self.fields['service'].queryset = Service.objects.filter(
-                etablissement__societe__entreprise=entreprise)
+                entreprise=entreprise)
             self.fields['poste'].queryset = Poste.objects.filter(
-                service__etablissement__societe__entreprise=entreprise)
+                entreprise=entreprise)
             self.fields['superieur_hierarchique'].queryset = Employe.objects.filter(
                 entreprise=entreprise)
         
