@@ -4096,7 +4096,8 @@ def api_impact_fiscal(request):
     conformite = 'conforme'  # conforme / a_verifier / non_conforme
 
     if result['depasse'] > 0:
-        avertissements.append(f"Dépassement exonération : +{result['depasse']:,} GNF au-dessus du plafond 25%")
+        _dep_fmt = f"{result['depasse']:,}".replace(',', '\u202f')
+        avertissements.append(f"Dépassement exonération : +{_dep_fmt} GNF au-dessus du plafond 25%")
         conformite = 'a_verifier'
 
     if indem_val > brut_val * Decimal('0.75'):

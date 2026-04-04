@@ -890,7 +890,7 @@ function updateRubriqueType() {}
 
         // Cacher immédiatement les alertes (seront recalculées par l'API)
         const alertConf = document.getElementById('dec_alerte_conformite');
-        if (alertConf) alertConf.style.display = 'none';
+        if (alertConf) { alertConf.style.display = 'none'; alertConf.innerHTML = ''; }
 
         // Réinitialiser immédiatement l'affichage exonération pour éviter le résidu
         const elExonReset = document.getElementById('dec_exon_texte');
@@ -920,6 +920,9 @@ function updateRubriqueType() {}
     document.querySelectorAll('.dec-pct-input').forEach(function (input) {
         input.addEventListener('input', function () {
             netGaranti = 0; majModeNetUI();  // modification manuelle → quitter mode garanti
+            // Cacher immédiatement l'alerte stale (les % changent, l'API recalculera)
+            var _ac = document.getElementById('dec_alerte_conformite');
+            if (_ac) { _ac.style.display = 'none'; _ac.innerHTML = ''; }
             const cle = this.getAttribute('data-cle');
             if (cle === 'base') return; // la base se calcule automatiquement
 
@@ -1046,6 +1049,9 @@ function updateRubriqueType() {}
     let impactRequestId = 0;  // compteur anti-race-condition
     function calculerImpact() {
         clearTimeout(timerImpact);
+        // Masquer immédiatement l'alerte conformité (évite résidu stale pendant le debounce)
+        var _alertC = document.getElementById('dec_alerte_conformite');
+        if (_alertC) { _alertC.style.display = 'none'; _alertC.innerHTML = ''; }
         timerImpact = setTimeout(function () {
             const brut = parseEntier(document.getElementById('dec_brut').value);
             if (!brut) return;
@@ -1178,6 +1184,9 @@ function updateRubriqueType() {}
     document.getElementById('dec_brut').addEventListener('input', function () {
         netGaranti = 0;  // L'utilisateur modifie le brut → quitter le mode garanti
         majModeNetUI();
+        // Cacher l'alerte stale immédiatement
+        var _ac2 = document.getElementById('dec_alerte_conformite');
+        if (_ac2) { _ac2.style.display = 'none'; _ac2.innerHTML = ''; }
         const brut = parseEntier(this.value);
         if (brut > 0 && zoneResultat.style.display !== 'none') {
             calcMontants(brut);
