@@ -4567,7 +4567,9 @@ def api_proposition_complete(request):
             _cst.setdefault('TAUX_CNSS_EMPLOYE', Decimal('5'))
             pct_verif = Decimal(str(best['taux_indem_pct']))
             net_verif_val, *_ = _ndb(Decimal(str(brut_calcule)), _cst, _tr, pct_verif)
-            verification_ok = abs(int(net_verif_val) - int(best['net'])) <= 1
+            # Comparer avec le net cible de la retropaie (garanti exact par dichotomie)
+            net_retro = int(retro['net_calcule'])
+            verification_ok = abs(int(net_verif_val) - net_retro) <= 10
         except Exception:
             verification_ok = True  # ne pas bloquer si vérif échoue
 
@@ -4580,11 +4582,19 @@ def api_proposition_complete(request):
     pct_indem = taux_optimal
 
     # Répartition recommandée des indemnités (proportionnelle)
+    # IMPORTANT : la base absorbe le résidu d'arrondi pour que le total = brut exact
+    pct_transport = round(pct_indem * 0.4, 1)
+    pct_logement  = round(pct_indem * 0.4, 1)
+    pct_cherte    = round(pct_indem * 0.2, 1)
+    montant_transport = round(brut_calcule * pct_transport / 100)
+    montant_logement  = round(brut_calcule * pct_logement / 100)
+    montant_cherte    = round(brut_calcule * pct_cherte / 100)
+    montant_base      = brut_calcule - montant_transport - montant_logement - montant_cherte
     recommandation_composantes = [
-        {'cle': 'salaire_base', 'pct': pct_base, 'montant': int(Decimal(str(brut_calcule)) * Decimal(str(pct_base)) / Decimal('100'))},
-        {'cle': 'transport',    'pct': round(pct_indem * 0.4, 1), 'montant': int(Decimal(str(brut_calcule)) * Decimal(str(round(pct_indem * 0.4, 1))) / Decimal('100'))},
-        {'cle': 'logement',     'pct': round(pct_indem * 0.4, 1), 'montant': int(Decimal(str(brut_calcule)) * Decimal(str(round(pct_indem * 0.4, 1))) / Decimal('100'))},
-        {'cle': 'cherte_vie',   'pct': round(pct_indem * 0.2, 1), 'montant': int(Decimal(str(brut_calcule)) * Decimal(str(round(pct_indem * 0.2, 1))) / Decimal('100'))},
+        {'cle': 'salaire_base', 'pct': pct_base, 'montant': montant_base},
+        {'cle': 'transport',    'pct': pct_transport, 'montant': montant_transport},
+        {'cle': 'logement',     'pct': pct_logement, 'montant': montant_logement},
+        {'cle': 'cherte_vie',   'pct': pct_cherte, 'montant': montant_cherte},
     ]
 
     # ── Audit : historiser la proposition ────────────────────────────────

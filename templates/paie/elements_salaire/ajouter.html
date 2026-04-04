@@ -154,15 +154,15 @@
             <!-- Indicateurs fiscaux temps réel -->
             <div class="row g-2 mb-3">
                 <div class="col-6 col-md-3">
-                    <div class="card border-success text-center p-2">
-                        <div class="text-success small fw-bold">NET ESTIMÉ</div>
-                        <div class="fw-bold text-success" id="dec_net_estime">—</div>
-                        <div class="text-muted" style="font-size:11px">GNF</div>
+                    <div class="card text-center p-2" id="dec_net_card">
+                        <div class="small fw-bold" id="dec_net_label">NET ESTIMÉ</div>
+                        <div class="fw-bold" id="dec_net_estime">—</div>
+                        <div class="text-muted" style="font-size:11px" id="dec_net_sub">GNF</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="card border-danger text-center p-2">
-                        <div class="text-danger small fw-bold">RTS</div>
+                        <div class="text-danger small fw-bold" id="dec_rts_label">RTS</div>
                         <div class="fw-semibold text-danger" id="dec_rts">—</div>
                         <div class="text-muted" style="font-size:11px">GNF</div>
                     </div>
@@ -216,9 +216,23 @@
                             <div class="fw-bold text-danger" id="dec_pat_total">—</div>
                         </div>
                     </div>
-                    <div class="mt-2 pt-2 border-top d-flex justify-content-between small">
+                    <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center small">
                         <span class="text-muted">Coût total employeur (brut + charges) :</span>
                         <span class="fw-bold text-dark" id="dec_cout_total">—</span>
+                    </div>
+                    <div class="mt-1 d-flex justify-content-between align-items-center small">
+                        <span class="text-muted">Taux de charge global <span class="text-muted" style="font-size:10px">(Coût − Net) / Net</span> :</span>
+                        <span>
+                            <span class="fw-bold text-primary" id="dec_taux_charge_global">—</span>
+                            <span id="dec_taux_charge_badge"></span>
+                        </span>
+                    </div>
+                    <div class="mt-1 d-flex justify-content-between align-items-center small">
+                        <span class="text-muted">Charges patronales :</span>
+                        <span>
+                            <span class="fw-bold" id="dec_charges_pat_recap">—</span>
+                            <span id="dec_charges_total_badge"></span>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -815,6 +829,17 @@ function updateRubriqueType() {}
     const CSRF         = "{{ csrf_token }}";
     const EMPLOYE_ID   = {{ employe.id }};
 
+    // ── Mode garanti : quand le brut vient de la rétro-paie ──────────────
+    // netGaranti > 0 = le brut a été calculé pour garantir ce net exact
+    // Dans ce mode, on affiche le net garanti (pas le net estimé du barème)
+    var netGaranti = 0;
+
+    // Exposer pour le widget rétro-paie (autre closure)
+    window._setNetGaranti = function (val) {
+        netGaranti = val || 0;
+        majModeNetUI();
+    };
+
     const btnRepartir  = document.getElementById('dec_btn_repartir');
     const btnCreer     = document.getElementById('dec_btn_creer');
     const zoneResultat = document.getElementById('dec_zone_resultat');
@@ -863,6 +888,20 @@ function updateRubriqueType() {}
         const inpBase = document.getElementById('dec_pct_base');
         if (!verrous.base) inpBase.value = 100 - pctT - pctL - pctC;
 
+        // Cacher immédiatement les alertes (seront recalculées par l'API)
+        const alertConf = document.getElementById('dec_alerte_conformite');
+        if (alertConf) alertConf.style.display = 'none';
+
+        // Réinitialiser immédiatement l'affichage exonération pour éviter le résidu
+        const elExonReset = document.getElementById('dec_exon_texte');
+        const elInfoExonReset = document.getElementById('dec_info_exon');
+        if (elExonReset) elExonReset.textContent = 'Calcul en cours…';
+        if (elInfoExonReset) elInfoExonReset.className = 'alert alert-light border py-2 px-3 small mb-3';
+
+        // Réinitialiser badge conformité charges
+        const elChargesBadgeReset = document.getElementById('dec_charges_total_badge');
+        if (elChargesBadgeReset) elChargesBadgeReset.innerHTML = '';
+
         const badge = document.getElementById('dec_mode_badge');
         if (badge) badge.textContent = m.label;
         document.getElementById('dec_mode_standard').className =
@@ -880,6 +919,7 @@ function updateRubriqueType() {}
     // ── Auto-balance des % (la base absorbe le reste) ─────────────────────────
     document.querySelectorAll('.dec-pct-input').forEach(function (input) {
         input.addEventListener('input', function () {
+            netGaranti = 0; majModeNetUI();  // modification manuelle → quitter mode garanti
             const cle = this.getAttribute('data-cle');
             if (cle === 'base') return; // la base se calcule automatiquement
 
@@ -973,8 +1013,37 @@ function updateRubriqueType() {}
         autoSelect('dec_sel_cherte',    ['cherté', 'cherte', 'cherté de vie', 'cherte de vie', 'pcv', 'pvc']);
     }
 
+    // ── Gestion du mode Net garanti vs Net estimé ──────────────────────────────
+    function majModeNetUI() {
+        const card = document.getElementById('dec_net_card');
+        const label = document.getElementById('dec_net_label');
+        const sub = document.getElementById('dec_net_sub');
+        const rtsLabel = document.getElementById('dec_rts_label');
+        const elNet = document.getElementById('dec_net_estime');
+        if (netGaranti > 0) {
+            // Mode garanti : fond vert vif, label clair, net immédiat
+            card.className = 'card bg-success bg-opacity-10 border-success border-2 text-center p-2';
+            label.textContent = 'NET GARANTI';
+            label.className = 'small fw-bold text-success';
+            sub.textContent = 'Exact';
+            rtsLabel.textContent = 'RTS ajusté';
+            elNet.className = 'fw-bold fs-5 text-success';
+            // Afficher immédiatement le net garanti (avant l'API)
+            elNet.textContent = fmt(netGaranti) + ' GNF';
+        } else {
+            // Mode estimé : style standard
+            card.className = 'card border-success text-center p-2';
+            label.textContent = 'NET ESTIMÉ';
+            label.className = 'small fw-bold text-success';
+            sub.textContent = 'GNF';
+            rtsLabel.textContent = 'RTS';
+            elNet.className = 'fw-bold text-success';
+        }
+    }
+
     // ── Impact fiscal (appel API) ─────────────────────────────────────────────
     let timerImpact = null;
+    let impactRequestId = 0;  // compteur anti-race-condition
     function calculerImpact() {
         clearTimeout(timerImpact);
         timerImpact = setTimeout(function () {
@@ -986,6 +1055,8 @@ function updateRubriqueType() {}
             const pctC = parseInt(document.getElementById('dec_pct_cherte').value) || 0;
             const indemnites = Math.round(brut * (pctT + pctL + pctC) / 100);
 
+            const myRequestId = ++impactRequestId;
+
             fetch(IMPACT_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
@@ -993,21 +1064,44 @@ function updateRubriqueType() {}
             })
             .then(function (r) { return r.json(); })
             .then(function (data) {
+                // Ignorer les réponses périmées (race condition)
+                if (myRequestId !== impactRequestId) return;
                 if (data.error) return;
 
-                document.getElementById('dec_net_estime').textContent = fmt(data.net) + ' GNF';
-                document.getElementById('dec_rts').textContent        = fmt(data.rts) + ' GNF';
-                document.getElementById('dec_cnss').textContent       = fmt(data.cnss) + ' GNF';
-                document.getElementById('dec_taux_rts').textContent   =
-                    (data.taux_effectif ? parseFloat(data.taux_effectif).toFixed(1) : '0.0') + '%';
+                // Mode garanti : afficher le net cible exact et le RTS ajusté
+                if (netGaranti > 0) {
+                    document.getElementById('dec_net_estime').textContent = fmt(netGaranti) + ' GNF';
+                    var rtsAjuste = brut - (data.cnss || 0) - netGaranti;
+                    document.getElementById('dec_rts').textContent = fmt(rtsAjuste) + ' GNF';
+                    var tauxRts = brut > 0 ? (rtsAjuste / brut * 100).toFixed(1) : '0.0';
+                    document.getElementById('dec_taux_rts').textContent = tauxRts + '%';
+                } else {
+                    document.getElementById('dec_net_estime').textContent = fmt(data.net) + ' GNF';
+                    document.getElementById('dec_rts').textContent        = fmt(data.rts) + ' GNF';
+                    document.getElementById('dec_taux_rts').textContent   =
+                        (data.taux_effectif ? parseFloat(data.taux_effectif).toFixed(1) : '0.0') + '%';
+                }
+                document.getElementById('dec_cnss').textContent = fmt(data.cnss) + ' GNF';
 
                 // Exonération
                 const exon    = data.exon   || 0;
                 const plafond = data.plafond_exon || 0;
                 const depasse = data.depasse || 0;
-                let exonTxt = 'Exon: ' + fmt(exon) + ' / ' + fmt(plafond) + ' GNF';
-                if (depasse > 0) exonTxt += ' — Dépasse: +' + fmt(depasse) + ' GNF';
-                document.getElementById('dec_exon_texte').textContent = exonTxt;
+                const elExon = document.getElementById('dec_exon_texte');
+                const elInfoExon = document.getElementById('dec_info_exon');
+                let exonTxt = '';
+                if (depasse > 0) {
+                    exonTxt = 'Dépassement exonération : +' + fmt(depasse) + ' GNF '
+                            + '(indemnités ' + fmt(exon + depasse) + ' > plafond 25% = ' + fmt(plafond) + ')';
+                    elInfoExon.className = 'alert alert-warning border py-2 px-3 small mb-3';
+                } else if (exon > 0 && exon === plafond) {
+                    exonTxt = 'Exonération maximale atteinte : ' + fmt(exon) + ' / ' + fmt(plafond) + ' GNF — Optimisation parfaite';
+                    elInfoExon.className = 'alert alert-success border py-2 px-3 small mb-3';
+                } else {
+                    exonTxt = 'Exonération : ' + fmt(exon) + ' / ' + fmt(plafond) + ' GNF — Aucun dépassement';
+                    elInfoExon.className = 'alert alert-light border py-2 px-3 small mb-3';
+                }
+                elExon.textContent = exonTxt;
 
                 // ── Charges patronales ──────────────────────────────────────
                 const cp = data.charges_employeur || {};
@@ -1015,8 +1109,31 @@ function updateRubriqueType() {}
                 document.getElementById('dec_pat_vf').textContent    = fmt(cp.vf || 0) + ' GNF';
                 document.getElementById('dec_pat_ta').textContent    = fmt(cp.ta || 0) + ' GNF';
                 document.getElementById('dec_pat_total').textContent = fmt(cp.total || 0) + ' GNF';
+                const elChargesRecap = document.getElementById('dec_charges_pat_recap');
+                if (elChargesRecap) elChargesRecap.textContent = fmt(cp.total || 0) + ' GNF';
                 const totalCout = brut + (cp.total || 0);
                 document.getElementById('dec_cout_total').textContent = fmt(totalCout) + ' GNF';
+
+                // Taux de charge global
+                const tcg = data.taux_charge_global || 0;
+                const tci = data.taux_charge_interpretation || {};
+                const elTcg = document.getElementById('dec_taux_charge_global');
+                const elTcgBadge = document.getElementById('dec_taux_charge_badge');
+                if (elTcg) elTcg.textContent = tcg.toFixed(1) + '%';
+                if (elTcgBadge) {
+                    elTcgBadge.textContent = tci.label || '';
+                    elTcgBadge.className = 'badge ms-2 bg-' + (tci.color || 'secondary');
+                }
+
+                // Charges patronales total avec badge conformité
+                const elChargesTotal = document.getElementById('dec_charges_total_badge');
+                if (elChargesTotal) {
+                    if (depasse > 0) {
+                        elChargesTotal.innerHTML = '<span class="badge bg-warning text-dark ms-2">À vérifier</span>';
+                    } else {
+                        elChargesTotal.innerHTML = '<span class="badge bg-success ms-2">Conforme fiscalement</span>';
+                    }
+                }
 
                 // Alerte conformité
                 const alertConf = document.getElementById('dec_alerte_conformite');
@@ -1059,6 +1176,8 @@ function updateRubriqueType() {}
 
     // Recalcul en temps réel quand le brut change
     document.getElementById('dec_brut').addEventListener('input', function () {
+        netGaranti = 0;  // L'utilisateur modifie le brut → quitter le mode garanti
+        majModeNetUI();
         const brut = parseEntier(this.value);
         if (brut > 0 && zoneResultat.style.display !== 'none') {
             calcMontants(brut);
@@ -1405,12 +1524,25 @@ function updateRubriqueType() {}
     if (btnRepartir) {
         btnRepartir.addEventListener('click', function () {
             if (!dernierBrut) return;
-            const champBrut = document.getElementById('dec_brut');
+            var champBrut = document.getElementById('dec_brut');
             if (champBrut) {
                 champBrut.value = dernierBrut;
-                const btnDec = document.getElementById('dec_btn_repartir');
+
+                // Activer le mode NET GARANTI dans le widget structuration
+                // Le net cible est lu depuis le champ de saisie rétro-paie
+                var netCibleEl = document.getElementById('rp_net_cible');
+                var netCible = netCibleEl ? parseEntier(netCibleEl.value) : 0;
+                // Accéder à la variable netGaranti de la closure structuration
+                // via la fonction exposée sur window
+                if (typeof window._setNetGaranti === 'function') {
+                    window._setNetGaranti(netCible);
+                }
+
+                // Basculer en mode fiscal (75/25) — recommandation optimale
+                appliquerMode('fiscal');
+                var btnDec = document.getElementById('dec_btn_repartir');
                 if (btnDec) btnDec.click();
-                const cardPrimary = document.querySelector('.card.border-primary');
+                var cardPrimary = document.querySelector('.card.border-primary');
                 if (cardPrimary) cardPrimary.scrollIntoView({ behavior: 'smooth' });
             }
         });

@@ -158,13 +158,14 @@ a = Analysis(
     binaries=[
         # Nuitka-compiled modules (native binary — non-decompilable)
         (str(PROJECT_DIR / 'dist_nuitka' / 'license_manager.cp313-win_amd64.pyd'), '.'),
-        # project_guardian et runtime_shield inclus via PYZ (shields désactivés dans .py)
+        (str(PROJECT_DIR / 'dist_nuitka' / 'project_guardian.cp313-win_amd64.pyd'), '.'),
+        (str(PROJECT_DIR / 'dist_nuitka' / 'runtime_shield.cp313-win_amd64.pyd'), '.'),
     ],
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=[str(PROJECT_DIR / 'runtime_hooks' / 'hook_no_numpy.py')],
     excludes=[
         'matplotlib',
         'numpy',
