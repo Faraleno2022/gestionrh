@@ -632,7 +632,7 @@ def _get_salaire_base_intelligent(employe, bulletin_base, annee, mois):
 
     # 1. Utiliser le bulletin courant s'il existe et n'est pas zéro
     if bulletin_base and bulletin_base > 0:
-        return bulletin_base
+        return Decimal(str(bulletin_base)) if not isinstance(bulletin_base, Decimal) else bulletin_base
 
     eid = employe.pk
 
@@ -643,7 +643,7 @@ def _get_salaire_base_intelligent(employe, bulletin_base, annee, mois):
             motif__in=['augmentation', 'promotion', 'autre'],
         ).order_by('-date_avenant').first()
         if avenant and avenant.nouveau_salaire and avenant.nouveau_salaire > 0:
-            return avenant.nouveau_salaire
+            return Decimal(str(avenant.nouveau_salaire)) if not isinstance(avenant.nouveau_salaire, Decimal) else avenant.nouveau_salaire
     except Exception:
         pass
 
@@ -655,7 +655,7 @@ def _get_salaire_base_intelligent(employe, bulletin_base, annee, mois):
             nouveau_salaire__gt=0,
         ).order_by('-date_mouvement').first()
         if carriere and carriere.nouveau_salaire and carriere.nouveau_salaire > 0:
-            return carriere.nouveau_salaire
+            return Decimal(str(carriere.nouveau_salaire)) if not isinstance(carriere.nouveau_salaire, Decimal) else carriere.nouveau_salaire
     except Exception:
         pass
 
@@ -669,7 +669,7 @@ def _get_salaire_base_intelligent(employe, bulletin_base, annee, mois):
             pk=bulletin_base.pk if hasattr(bulletin_base, 'pk') else None,
         ).order_by('-annee_paie', '-mois_paie').first()
         if last_bulletin and last_bulletin.salaire_base > 0:
-            return last_bulletin.salaire_base
+            return Decimal(str(last_bulletin.salaire_base)) if not isinstance(last_bulletin.salaire_base, Decimal) else last_bulletin.salaire_base
     except Exception:
         pass
 
@@ -683,7 +683,8 @@ def _get_salaire_base_intelligent(employe, bulletin_base, annee, mois):
             avg_salaire=Avg('salaire_base')
         )
         if last_three and last_three.get('avg_salaire'):
-            return Decimal(str(last_three['avg_salaire']))
+            avg_val = last_three['avg_salaire']
+            return Decimal(str(avg_val)) if avg_val else Decimal('0')
     except Exception:
         pass
 
