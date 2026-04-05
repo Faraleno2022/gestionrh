@@ -335,31 +335,45 @@ def rapports(request):
     # Répartition par service
     from core.models import Service
     services_stats = []
-    
+
     # Essayer plusieurs chemins pour trouver les services
     services = Service.objects.filter(entreprise=request.user.entreprise, actif=True)
-    
+
     for service in services:
         effectif = employes_actifs.filter(service=service).count()
         if effectif > 0:
+            hommes = employes_actifs.filter(service=service, sexe='M').count()
+            femmes = employes_actifs.filter(service=service, sexe='F').count()
+            pourcentage = round((effectif / effectif_total) * 100, 1) if effectif_total > 0 else 0
             services_stats.append({
                 'nom': service.nom_service,
-                'effectif': effectif
+                'effectif': effectif,
+                'hommes': hommes,
+                'femmes': femmes,
+                'pourcentage': pourcentage
             })
-    
+
     # Si aucun service trouvé, regrouper par service_id
     if not services_stats:
         from django.db.models import Count
         services_groupe = employes_actifs.exclude(service__isnull=True).values(
             'service__nom_service'
-        ).annotate(effectif=Count('id')).order_by('-effectif')
-        
+        ).annotate(
+            effectif=Count('id'),
+            hommes=Count('id', filter=Q(sexe='M')),
+            femmes=Count('id', filter=Q(sexe='F'))
+        ).order_by('-effectif')
+
         for s in services_groupe:
+            pourcentage = round((s['effectif'] / effectif_total) * 100, 1) if effectif_total > 0 else 0
             services_stats.append({
                 'nom': s['service__nom_service'],
-                'effectif': s['effectif']
+                'effectif': s['effectif'],
+                'hommes': s['hommes'],
+                'femmes': s['femmes'],
+                'pourcentage': pourcentage
             })
-    
+
     context['services_stats'] = services_stats
     
     # Taux d'absentéisme (placeholder - à calculer si module absences existe)

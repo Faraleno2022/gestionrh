@@ -256,7 +256,7 @@
                             <td class="text-center fw-bold text-primary" id="dec_cell_pct_base">60%</td>
                             <td class="text-end fw-bold text-primary" id="dec_cell_montant_base">—</td>
                             <td>
-                                <select class="form-select form-select-sm" id="dec_sel_base">
+                                <select class="form-select form-select-sm scrollable-select" id="dec_sel_base">
                                     <option value="">— Choisir une rubrique —</option>
                                     {% for rub in rubriques %}
                                         {% if rub.type_rubrique == 'gain' %}
@@ -276,7 +276,7 @@
                             <td class="text-center fw-bold text-info" id="dec_cell_pct_transport">15%</td>
                             <td class="text-end fw-bold text-info" id="dec_cell_montant_transport">—</td>
                             <td>
-                                <select class="form-select form-select-sm" id="dec_sel_transport">
+                                <select class="form-select form-select-sm scrollable-select" id="dec_sel_transport">
                                     <option value="">— Choisir une rubrique —</option>
                                     {% for rub in rubriques %}
                                         {% if rub.type_rubrique == 'gain' %}
@@ -296,7 +296,7 @@
                             <td class="text-center fw-bold text-warning" id="dec_cell_pct_logement">15%</td>
                             <td class="text-end fw-bold text-warning" id="dec_cell_montant_logement">—</td>
                             <td>
-                                <select class="form-select form-select-sm" id="dec_sel_logement">
+                                <select class="form-select form-select-sm scrollable-select" id="dec_sel_logement">
                                     <option value="">— Choisir une rubrique —</option>
                                     {% for rub in rubriques %}
                                         {% if rub.type_rubrique == 'gain' %}
@@ -316,7 +316,7 @@
                             <td class="text-center fw-bold text-success" id="dec_cell_pct_cherte">10%</td>
                             <td class="text-end fw-bold text-success" id="dec_cell_montant_cherte">—</td>
                             <td>
-                                <select class="form-select form-select-sm" id="dec_sel_cherte">
+                                <select class="form-select form-select-sm scrollable-select" id="dec_sel_cherte">
                                     <option value="">— Choisir une rubrique —</option>
                                     {% for rub in rubriques %}
                                         {% if rub.type_rubrique == 'gain' %}
@@ -692,7 +692,7 @@
             <!-- Rubrique -->
             <div class="mb-3">
                 <label for="rubrique" class="form-label">Rubrique <span class="text-danger">*</span></label>
-                <select class="form-select" id="rubrique" name="rubrique" required onchange="updateRubriqueType()">
+                <select class="form-select scrollable-select" id="rubrique" name="rubrique" required onchange="updateRubriqueType()">
                     <option value="">-- Sélectionner une rubrique --</option>
                     <optgroup label="GAINS">
                         {% for rub in rubriques %}
@@ -736,7 +736,7 @@
             <!-- Base de calcul (si taux) -->
             <div class="mb-3" id="base-calcul-group" style="display: none;">
                 <label for="base_calcul" class="form-label">Base de Calcul</label>
-                <select class="form-select" id="base_calcul" name="base_calcul">
+                <select class="form-select scrollable-select" id="base_calcul" name="base_calcul">
                     <option value="">-- Sélectionner --</option>
                     <option value="SALAIRE_BASE">Salaire de base</option>
                     <option value="BRUT">Salaire brut</option>

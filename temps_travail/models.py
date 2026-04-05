@@ -171,9 +171,15 @@ class Pointage(models.Model):
     """Pointages quotidiens"""
     STATUTS = (
         ('present', 'Présent'),
+        ('present_am', 'Présent AM'),
+        ('present_pm', 'Présent PM'),
+        ('present_am_pm', 'Présent AM et PM'),
         ('absent', 'Absent'),
         ('retard', 'Retard'),
         ('absence_justifiee', 'Absence justifiée'),
+        ('malade', 'Malade'),
+        ('p', 'P'),
+        ('a', 'A'),
     )
     
     employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='pointages')

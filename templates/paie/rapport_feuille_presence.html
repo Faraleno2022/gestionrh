@@ -154,8 +154,14 @@
                                 {{ ji.jour }}<br>{{ ji.nom }}
                             </th>
                             {% endfor %}
-                            <th class="text-center px-1" style="font-size: 0.7rem;">Prés.</th>
-                            <th class="text-center px-1" style="font-size: 0.7rem;">Abs.</th>
+                            <th class="text-center px-1" style="font-size: 0.7rem;">P</th>
+                            <th class="text-center px-1" style="font-size: 0.7rem;">AM</th>
+                            <th class="text-center px-1" style="font-size: 0.7rem;">PM</th>
+                            <th class="text-center px-1" style="font-size: 0.7rem;">AM+PM</th>
+                            <th class="text-center px-1" style="font-size: 0.7rem;">A</th>
+                            <th class="text-center px-1" style="font-size: 0.7rem;">R</th>
+                            <th class="text-center px-1" style="font-size: 0.7rem;">AJ</th>
+                            <th class="text-center px-1" style="font-size: 0.7rem;">M</th>
                             <th class="text-center px-1" style="font-size: 0.7rem;">Dim.T</th>
                             <th class="text-center px-1" style="font-size: 0.7rem;">Fér.T</th>
                             <th class="text-end px-1" style="font-size: 0.7rem;">Sal. Base</th>
@@ -170,12 +176,18 @@
                             <td class="text-nowrap px-2">{{ row.prenom }}</td>
                             <td class="text-center px-1">{{ row.matricule }}</td>
                             {% for code in row.grille %}
-                            <td class="grille-cell {% if code == 'P' %}present{% elif code == 'A' or code == 'AJ' %}absent{% elif code == 'R' %}retard{% endif %}">
+                            <td class="grille-cell {% if code == 'P' %}present{% elif code == 'A' or code == 'AJ' %}absent{% elif code == 'R' %}retard{% elif code == 'AM' or code == 'PM' or code == 'AM+PM' %}present{% elif code == 'M' %}malade{% endif %}">
                                 {{ code }}
                             </td>
                             {% endfor %}
-                            <td class="text-center fw-bold text-success">{{ row.nb_present }}</td>
-                            <td class="text-center {% if row.nb_absent > 0 %}fw-bold text-danger{% endif %}">{{ row.nb_absent }}</td>
+                            <td class="text-center fw-bold">{{ row.count_p }}</td>
+                            <td class="text-center">{{ row.count_am }}</td>
+                            <td class="text-center">{{ row.count_pm }}</td>
+                            <td class="text-center">{{ row.count_am_pm }}</td>
+                            <td class="text-center {% if row.count_a > 0 %}text-danger{% endif %}">{{ row.count_a }}</td>
+                            <td class="text-center">{{ row.count_r }}</td>
+                            <td class="text-center">{{ row.count_aj }}</td>
+                            <td class="text-center">{{ row.count_m }}</td>
                             <td class="text-center">{{ row.nb_dim_travailles }}</td>
                             <td class="text-center">{{ row.feries_travailles }}</td>
                             <td class="text-end">{{ row.salaire_base|floatformat:0|intcomma }}</td>

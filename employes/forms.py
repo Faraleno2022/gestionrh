@@ -4,6 +4,7 @@ from crispy_forms.layout import Layout, Fieldset, Row, Column, Submit, Button, H
 from crispy_forms.bootstrap import TabHolder, Tab
 from .models import Employe, ContratEmploye, EvaluationEmploye, SanctionDisciplinaire
 from core.models import Devise, Etablissement, Service, Poste
+from core.widgets import ScrollableSelectWidget
 
 
 class EmployeForm(forms.ModelForm):
@@ -75,6 +76,14 @@ class EmployeForm(forms.ModelForm):
             'date_dernier_recyclage': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
             'date_derniere_visite_medicale': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
             'date_prochaine_visite_medicale': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            # Listes déroulantes avec recherche et scrollbar
+            'etablissement': ScrollableSelectWidget(attrs={'class': 'form-select'}),
+            'service': ScrollableSelectWidget(attrs={'class': 'form-select'}),
+            'poste': ScrollableSelectWidget(attrs={'class': 'form-select'}),
+            'superieur_hierarchique': ScrollableSelectWidget(attrs={'class': 'form-select'}),
+            'devise_paie': ScrollableSelectWidget(attrs={'class': 'form-select'}),
+            'nom_banque': forms.TextInput(attrs={'class': 'form-control'}),
+            'operateur_mobile_money': forms.TextInput(attrs={'class': 'form-control'}),
         }
     
     def __init__(self, *args, **kwargs):

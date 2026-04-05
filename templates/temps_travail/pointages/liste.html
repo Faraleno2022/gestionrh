@@ -73,11 +73,18 @@
                         </div>
                         <div class="col-md-3">
                             <label for="statut" class="form-label">Statut</label>
-                            <select class="form-select" id="statut" name="statut">
+                            <select class="form-select scrollable-select" id="statut" name="statut">
                                 <option value="">Tous</option>
                                 <option value="present">Présent</option>
+                                <option value="present_am">Présent AM</option>
+                                <option value="present_pm">Présent PM</option>
+                                <option value="present_am_pm">Présent AM et PM</option>
                                 <option value="absent">Absent</option>
                                 <option value="retard">Retard</option>
+                                <option value="absence_justifiee">Absence justifiée</option>
+                                <option value="malade">Malade</option>
+                                <option value="p">P</option>
+                                <option value="a">A</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -125,13 +132,27 @@
                                     <td>{{ pointage.heures_supplementaires|default:"0"|floatformat:2 }}h</td>
                                     <td>
                                         {% if pointage.statut_pointage == 'present' %}
-                                        <span class="badge bg-success">Présent</span>
+                                        <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Présent</span>
+                                        {% elif pointage.statut_pointage == 'present_am' %}
+                                        <span class="badge bg-info"><i class="fas fa-sun me-1"></i>Présent AM</span>
+                                        {% elif pointage.statut_pointage == 'present_pm' %}
+                                        <span class="badge bg-info"><i class="fas fa-moon me-1"></i>Présent PM</span>
+                                        {% elif pointage.statut_pointage == 'present_am_pm' %}
+                                        <span class="badge bg-info"><i class="fas fa-calendar-day me-1"></i>Présent AM et PM</span>
                                         {% elif pointage.statut_pointage == 'absent' %}
-                                        <span class="badge bg-danger">Absent</span>
+                                        <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Absent</span>
                                         {% elif pointage.statut_pointage == 'retard' %}
-                                        <span class="badge bg-warning">Retard</span>
+                                        <span class="badge bg-warning"><i class="fas fa-clock me-1"></i>Retard</span>
+                                        {% elif pointage.statut_pointage == 'absence_justifiee' %}
+                                        <span class="badge bg-primary"><i class="fas fa-shield-alt me-1"></i>Absence justifiée</span>
+                                        {% elif pointage.statut_pointage == 'malade' %}
+                                        <span class="badge bg-warning"><i class="fas fa-heartbeat me-1"></i>Malade</span>
+                                        {% elif pointage.statut_pointage == 'p' %}
+                                        <span class="badge bg-secondary">P</span>
+                                        {% elif pointage.statut_pointage == 'a' %}
+                                        <span class="badge bg-secondary">A</span>
                                         {% else %}
-                                        <span class="badge bg-secondary">{{ pointage.get_statut_pointage_display }}</span>
+                                        <span class="badge bg-dark">{{ pointage.get_statut_pointage_display }}</span>
                                         {% endif %}
                                     </td>
                                     <td>

@@ -3,6 +3,7 @@ from .models import (
     PlanComptable, Journal, ExerciceComptable, EcritureComptable,
     LigneEcriture, Tiers, Facture, LigneFacture, Reglement
 )
+from core.widgets import ScrollableSelectWidget
 
 
 class PlanComptableForm(forms.ModelForm):
@@ -14,7 +15,7 @@ class PlanComptableForm(forms.ModelForm):
         widgets = {
             'numero_compte': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 411000'}),
             'intitule': forms.TextInput(attrs={'class': 'form-control'}),
-            'compte_parent': forms.Select(attrs={'class': 'form-select'}),
+            'compte_parent': ScrollableSelectWidget(attrs={'class': 'form-select'}),
             'est_actif': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
     
@@ -59,8 +60,8 @@ class JournalForm(forms.ModelForm):
         widgets = {
             'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: AC, VT, BQ'}),
             'libelle': forms.TextInput(attrs={'class': 'form-control'}),
-            'type_journal': forms.Select(attrs={'class': 'form-select'}),
-            'compte_contrepartie': forms.Select(attrs={'class': 'form-select'}),
+            'type_journal': ScrollableSelectWidget(attrs={'class': 'form-select'}),
+            'compte_contrepartie': ScrollableSelectWidget(attrs={'class': 'form-select'}),
             'est_actif': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
     
@@ -106,7 +107,7 @@ class ExerciceForm(forms.ModelForm):
             'libelle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Exercice 2026'}),
             'date_debut': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'date_fin': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'statut': forms.Select(attrs={'class': 'form-select'}),
+            'statut': ScrollableSelectWidget(attrs={'class': 'form-select'}),
             'est_courant': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
@@ -118,8 +119,8 @@ class EcritureForm(forms.ModelForm):
         model = EcritureComptable
         fields = ['exercice', 'journal', 'numero_ecriture', 'date_ecriture', 'libelle']
         widgets = {
-            'exercice': forms.Select(attrs={'class': 'form-select'}),
-            'journal': forms.Select(attrs={'class': 'form-select'}),
+            'exercice': ScrollableSelectWidget(attrs={'class': 'form-select'}),
+            'journal': ScrollableSelectWidget(attrs={'class': 'form-select'}),
             'numero_ecriture': forms.TextInput(attrs={'class': 'form-control'}),
             'date_ecriture': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'libelle': forms.TextInput(attrs={'class': 'form-control'}),
@@ -143,7 +144,7 @@ class LigneEcritureForm(forms.ModelForm):
         model = LigneEcriture
         fields = ['compte', 'libelle', 'montant_debit', 'montant_credit']
         widgets = {
-            'compte': forms.Select(attrs={'class': 'form-select'}),
+            'compte': ScrollableSelectWidget(attrs={'class': 'form-select'}),
             'libelle': forms.TextInput(attrs={'class': 'form-control'}),
             'montant_debit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'montant_credit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -160,12 +161,12 @@ class TiersForm(forms.ModelForm):
         widgets = {
             'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: CLI001'}),
             'raison_sociale': forms.TextInput(attrs={'class': 'form-control'}),
-            'type_tiers': forms.Select(attrs={'class': 'form-select'}),
+            'type_tiers': ScrollableSelectWidget(attrs={'class': 'form-select'}),
             'nif': forms.TextInput(attrs={'class': 'form-control'}),
             'adresse': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'telephone': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'compte_comptable': forms.Select(attrs={'class': 'form-select'}),
+            'compte_comptable': ScrollableSelectWidget(attrs={'class': 'form-select'}),
             'plafond_credit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'est_actif': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -211,8 +212,8 @@ class FactureForm(forms.ModelForm):
                   'reference_externe', 'notes']
         widgets = {
             'numero': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: FA-2026-001'}),
-            'type_facture': forms.Select(attrs={'class': 'form-select'}),
-            'tiers': forms.Select(attrs={'class': 'form-select'}),
+            'type_facture': ScrollableSelectWidget(attrs={'class': 'form-select'}),
+            'tiers': ScrollableSelectWidget(attrs={'class': 'form-select'}),
             'date_facture': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'date_echeance': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'reference_externe': forms.TextInput(attrs={'class': 'form-control'}),
@@ -238,7 +239,7 @@ class LigneFactureForm(forms.ModelForm):
             'quantite': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'prix_unitaire': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'taux_tva': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'compte_comptable': forms.Select(attrs={'class': 'form-select'}),
+            'compte_comptable': ScrollableSelectWidget(attrs={'class': 'form-select'}),
         }
 
 
@@ -250,10 +251,10 @@ class ReglementForm(forms.ModelForm):
         fields = ['numero', 'facture', 'date_reglement', 'montant', 'mode_paiement', 'reference', 'notes']
         widgets = {
             'numero': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: REG-2026-001'}),
-            'facture': forms.Select(attrs={'class': 'form-select'}),
+            'facture': ScrollableSelectWidget(attrs={'class': 'form-select'}),
             'date_reglement': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'montant': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'mode_paiement': forms.Select(attrs={'class': 'form-select'}),
+            'mode_paiement': ScrollableSelectWidget(attrs={'class': 'form-select'}),
             'reference': forms.TextInput(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }

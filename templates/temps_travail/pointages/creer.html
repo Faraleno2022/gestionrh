@@ -19,7 +19,7 @@
                         
                         <div class="mb-3">
                             <label for="employe" class="form-label">Employé *</label>
-                            <select class="form-select" id="employe" name="employe" required>
+                            <select class="form-select scrollable-select" id="employe" name="employe" required>
                                 <option value="">Sélectionner un employé</option>
                                 {% for emp in employes %}
                                 <option value="{{ emp.id }}">{{ emp.matricule }} - {{ emp.nom }} {{ emp.prenoms }}</option>
@@ -45,10 +45,16 @@
 
                         <div class="mb-3">
                             <label for="statut" class="form-label">Statut *</label>
-                            <select class="form-select" id="statut" name="statut" required>
+                            <select class="form-select scrollable-select" id="statut" name="statut" required>
                                 <option value="present">Présent</option>
+                                <option value="present_am">Présent AM</option>
+                                <option value="present_pm">Présent PM</option>
+                                <option value="present_am_pm">Présent AM et PM</option>
                                 <option value="absent">Absent</option>
                                 <option value="retard">Retard</option>
+                                <option value="malade">Malade</option>
+                                <option value="p">P</option>
+                                <option value="a">A</option>
                             </select>
                         </div>
 

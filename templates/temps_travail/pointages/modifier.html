@@ -59,11 +59,17 @@
                         <!-- Statut -->
                         <div class="mb-3">
                             <label for="statut" class="form-label">Statut</label>
-                            <select class="form-select" id="statut" name="statut">
+                            <select class="form-select scrollable-select" id="statut" name="statut">
                                 <option value="present" {% if pointage.statut_pointage == 'present' %}selected{% endif %}>Présent</option>
+                                <option value="present_am" {% if pointage.statut_pointage == 'present_am' %}selected{% endif %}>Présent AM</option>
+                                <option value="present_pm" {% if pointage.statut_pointage == 'present_pm' %}selected{% endif %}>Présent PM</option>
+                                <option value="present_am_pm" {% if pointage.statut_pointage == 'present_am_pm' %}selected{% endif %}>Présent AM et PM</option>
                                 <option value="absent" {% if pointage.statut_pointage == 'absent' %}selected{% endif %}>Absent</option>
                                 <option value="retard" {% if pointage.statut_pointage == 'retard' %}selected{% endif %}>Retard</option>
                                 <option value="absence_justifiee" {% if pointage.statut_pointage == 'absence_justifiee' %}selected{% endif %}>Absence justifiée</option>
+                                <option value="malade" {% if pointage.statut_pointage == 'malade' %}selected{% endif %}>Malade</option>
+                                <option value="p" {% if pointage.statut_pointage == 'p' %}selected{% endif %}>P</option>
+                                <option value="a" {% if pointage.statut_pointage == 'a' %}selected{% endif %}>A</option>
                             </select>
                         </div>
 

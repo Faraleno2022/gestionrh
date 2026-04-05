@@ -1157,9 +1157,15 @@ def rapport_etat_paie_pdf(request):
 
 _CODES_POINTAGE = {
     'present': 'P',
+    'present_am': 'AM',
+    'present_pm': 'PM',
+    'present_am_pm': 'AM+PM',
     'absent': 'A',
     'retard': 'R',
     'absence_justifiee': 'AJ',
+    'malade': 'M',
+    'p': 'P',
+    'a': 'A',
 }
 
 
@@ -1253,28 +1259,75 @@ def _construire_donnees_feuille_presence(entreprise, annee, mois, service_id=Non
     for emp in employes:
         eid = emp.pk
         grille = []
-        nb_present = 0
-        nb_absent = 0
+        # Separate counters for each statut type
+        count_p = 0      # Présent
+        count_am = 0     # Présent AM
+        count_pm = 0     # Présent PM
+        count_am_pm = 0  # Présent AM et PM
+        count_a = 0      # Absent
+        count_r = 0      # Retard
+        count_aj = 0     # Absence justifiée
+        count_m = 0      # Malade
         nb_dim_travailles = 0
 
         for j in range(1, nb_jours + 1):
             statut = pointages_bulk.get(eid, {}).get(j, '')
             code = _CODES_POINTAGE.get(statut, '')
             grille.append(code)
-            if statut in ('present', 'retard'):
-                nb_present += 1
+
+            # Count by specific statut
+            if statut == 'present':
+                count_p += 1
                 d_j = date(annee_int, mois_int, j)
                 if d_j in dimanches:
                     nb_dim_travailles += 1
-            elif statut in ('absent', 'absence_justifiee'):
-                nb_absent += 1
+            elif statut == 'present_am':
+                count_am += 1
+                d_j = date(annee_int, mois_int, j)
+                if d_j in dimanches:
+                    nb_dim_travailles += 1
+            elif statut == 'present_pm':
+                count_pm += 1
+                d_j = date(annee_int, mois_int, j)
+                if d_j in dimanches:
+                    nb_dim_travailles += 1
+            elif statut == 'present_am_pm':
+                count_am_pm += 1
+                d_j = date(annee_int, mois_int, j)
+                if d_j in dimanches:
+                    nb_dim_travailles += 1
+            elif statut == 'absent':
+                count_a += 1
+            elif statut == 'retard':
+                count_r += 1
+                d_j = date(annee_int, mois_int, j)
+                if d_j in dimanches:
+                    nb_dim_travailles += 1
+            elif statut == 'absence_justifiee':
+                count_aj += 1
+            elif statut == 'malade':
+                count_m += 1
+            elif statut in ('p', 'a'):
+                # Handle abbreviations: 'p' counts as present, 'a' counts as absent
+                if statut == 'p':
+                    count_p += 1
+                    d_j = date(annee_int, mois_int, j)
+                    if d_j in dimanches:
+                        nb_dim_travailles += 1
+                else:  # statut == 'a'
+                    count_a += 1
 
         bull = bulletins_map.get(eid)
         feries_travailles = 0
         if feries:
             for f_date in feries:
-                if pointages_bulk.get(eid, {}).get(f_date.day, '') in ('present', 'retard'):
+                statut_f = pointages_bulk.get(eid, {}).get(f_date.day, '')
+                if statut_f in ('present', 'present_am', 'present_pm', 'present_am_pm', 'retard', 'p'):
                     feries_travailles += 1
+
+        # Calculate totals for display
+        nb_present = count_p + count_am + count_pm + count_am_pm
+        nb_absent = count_a + count_aj
 
         row = {
             'employe': emp,
@@ -1283,6 +1336,14 @@ def _construire_donnees_feuille_presence(entreprise, annee, mois, service_id=Non
             'matricule': emp.matricule,
             'profession': str(emp.poste) if emp.poste else '-',
             'grille': grille,
+            'count_p': count_p,
+            'count_am': count_am,
+            'count_pm': count_pm,
+            'count_am_pm': count_am_pm,
+            'count_a': count_a,
+            'count_r': count_r,
+            'count_aj': count_aj,
+            'count_m': count_m,
             'nb_present': nb_present,
             'nb_absent': nb_absent,
             'nb_dim_travailles': nb_dim_travailles,
@@ -1371,7 +1432,7 @@ def rapport_feuille_presence_excel(request):
     thin = Side(style='thin')
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-    nb_cols = 4 + nb_jours + 7  # nom,prenom,matricule,profession + jours + résumé
+    nb_cols = 4 + nb_jours + 13  # nom,prenom,matricule,profession + jours + résumé (P, AM, PM, AM+PM, A, R, AJ, M, Dim.T, Fér.T, Sal.Base, Net, Avance)
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=nb_cols)
     ws.cell(row=1, column=1, value=f"FEUILLE DE PRÉSENCE — {mois_label} {annee}").font = Font(bold=True, size=14)
     ws.cell(row=1, column=1).alignment = Alignment(horizontal='center')
@@ -1399,7 +1460,7 @@ def rapport_feuille_presence_excel(request):
         else:
             c.fill = header_fill
 
-    resume_headers = ['Présent', 'Absent', 'Dim. Trav.', 'Fériés Trav.', 'Salaire Base', 'Net', 'Avance']
+    resume_headers = ['P', 'AM', 'PM', 'AM+PM', 'A', 'R', 'AJ', 'M', 'Dim. Trav.', 'Fériés Trav.', 'Salaire Base', 'Net', 'Avance']
     for idx, h in enumerate(resume_headers):
         col = 5 + nb_jours + idx
         c = ws.cell(row=hdr_row, column=col, value=h)
@@ -1421,22 +1482,28 @@ def rapport_feuille_presence_excel(request):
             c = ws.cell(row=data_row, column=col, value=code)
             c.alignment = center
             c.border = border
-            if code == 'P':
+            if code in ('P', 'AM', 'PM', 'AM+PM'):
                 c.fill = present_fill
             elif code in ('A', 'AJ'):
                 c.fill = absent_fill
 
         base_col = 5 + nb_jours
-        ws.cell(row=data_row, column=base_col, value=row['nb_present']).border = border
-        ws.cell(row=data_row, column=base_col + 1, value=row['nb_absent']).border = border
-        ws.cell(row=data_row, column=base_col + 2, value=row['nb_dim_travailles']).border = border
-        ws.cell(row=data_row, column=base_col + 3, value=row['feries_travailles']).border = border
-        ws.cell(row=data_row, column=base_col + 4, value=float(row['salaire_base'])).border = border
-        ws.cell(row=data_row, column=base_col + 4).number_format = '#,##0'
-        ws.cell(row=data_row, column=base_col + 5, value=float(row['net'])).border = border
-        ws.cell(row=data_row, column=base_col + 5).number_format = '#,##0'
-        ws.cell(row=data_row, column=base_col + 6, value=float(row['avance'])).border = border
-        ws.cell(row=data_row, column=base_col + 6).number_format = '#,##0'
+        ws.cell(row=data_row, column=base_col, value=row['count_p']).border = border
+        ws.cell(row=data_row, column=base_col + 1, value=row['count_am']).border = border
+        ws.cell(row=data_row, column=base_col + 2, value=row['count_pm']).border = border
+        ws.cell(row=data_row, column=base_col + 3, value=row['count_am_pm']).border = border
+        ws.cell(row=data_row, column=base_col + 4, value=row['count_a']).border = border
+        ws.cell(row=data_row, column=base_col + 5, value=row['count_r']).border = border
+        ws.cell(row=data_row, column=base_col + 6, value=row['count_aj']).border = border
+        ws.cell(row=data_row, column=base_col + 7, value=row['count_m']).border = border
+        ws.cell(row=data_row, column=base_col + 8, value=row['nb_dim_travailles']).border = border
+        ws.cell(row=data_row, column=base_col + 9, value=row['feries_travailles']).border = border
+        ws.cell(row=data_row, column=base_col + 10, value=float(row['salaire_base'])).border = border
+        ws.cell(row=data_row, column=base_col + 10).number_format = '#,##0'
+        ws.cell(row=data_row, column=base_col + 11, value=float(row['net'])).border = border
+        ws.cell(row=data_row, column=base_col + 11).number_format = '#,##0'
+        ws.cell(row=data_row, column=base_col + 12, value=float(row['avance'])).border = border
+        ws.cell(row=data_row, column=base_col + 12).number_format = '#,##0'
         data_row += 1
 
     # Largeurs
@@ -1507,8 +1574,9 @@ def rapport_feuille_presence_pdf(request):
     header_row = [_p('Nom', hdr_s), _p('Prénom', hdr_s), _p('Mat.', hdr_s)]
     for ji in jours_info:
         header_row.append(_p(f"{ji['jour']}", hdr_s))
-    header_row += [_p('Prés.', hdr_s), _p('Abs.', hdr_s), _p('Dim.T', hdr_s),
-                   _p('Fér.T', hdr_s), _p('Base', hdr_s), _p('Net', hdr_s), _p('Av.', hdr_s)]
+    header_row += [_p('P', hdr_s), _p('AM', hdr_s), _p('PM', hdr_s), _p('AM+PM', hdr_s),
+                   _p('A', hdr_s), _p('R', hdr_s), _p('AJ', hdr_s), _p('M', hdr_s),
+                   _p('Dim.T', hdr_s), _p('Fér.T', hdr_s), _p('Base', hdr_s), _p('Net', hdr_s), _p('Av.', hdr_s)]
 
     table_data = [header_row]
     for row in rows:
@@ -1516,8 +1584,14 @@ def rapport_feuille_presence_pdf(request):
         for code in row['grille']:
             r.append(_p(code))
         r += [
-            _p(row['nb_present']),
-            _p(row['nb_absent']),
+            _p(row['count_p']),
+            _p(row['count_am']),
+            _p(row['count_pm']),
+            _p(row['count_am_pm']),
+            _p(row['count_a']),
+            _p(row['count_r']),
+            _p(row['count_aj']),
+            _p(row['count_m']),
             _p(row['nb_dim_travailles']),
             _p(row['feries_travailles']),
             _p(_fmt_gnf(row['salaire_base'])),
@@ -1529,7 +1603,7 @@ def rapport_feuille_presence_pdf(request):
     # Largeurs colonnes
     fixed_w = [2.2*cm, 2*cm, 1.5*cm]
     jour_w = [0.7*cm] * nb_jours
-    resume_w = [0.9*cm] * 4 + [1.5*cm, 1.5*cm, 1.2*cm]
+    resume_w = [0.8*cm] * 8 + [0.9*cm, 0.9*cm, 1.5*cm, 1.5*cm, 1.2*cm]
     col_widths = fixed_w + jour_w + resume_w
 
     t = Table(table_data, colWidths=col_widths, repeatRows=1)

@@ -32,7 +32,10 @@
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
-    
+
+    <!-- Searchable Select CSS (listes déroulantes avec recherche et scrollbar) -->
+    <link rel="stylesheet" href="{% static 'css/searchable_select.css' %}">
+
     {% block extra_css %}{% endblock %}
     
     <style>
@@ -156,7 +159,10 @@
             });
         });
     </script>
-    
+
+    <!-- Searchable Select JS (listes déroulantes avec recherche et scrollbar) -->
+    <script src="{% static 'js/searchable_select.js' %}"></script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>
