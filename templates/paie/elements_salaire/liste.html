@@ -74,6 +74,7 @@
 
                 <!-- Résultat -->
                 <div id="adv_resultat" class="alert d-none"></div>
+                {% csrf_token %}
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
@@ -191,7 +192,7 @@
 
 <script>
 (function () {
-    const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+    const CSRF = '{{ csrf_token }}';
     const API_URL = "{% url 'paie:api_avancer_dates_elements' %}";
 
     // Pré-remplir avec le 1er jour du mois prochain

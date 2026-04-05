@@ -1064,7 +1064,7 @@ class MoteurCalculPaie:
             # Taux effectif RTS = montant RTS / base imposable × 100
             if base_imposable > 0:
                 self.montants['taux_effectif_rts'] = (
-                    self.montants['irg'] * Decimal('100') / base_imposable
+                    Decimal(str(self.montants['irg'])) * Decimal('100') / Decimal(str(base_imposable))
                 ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             else:
                 self.montants['taux_effectif_rts'] = Decimal('0')
