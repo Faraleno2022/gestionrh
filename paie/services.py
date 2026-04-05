@@ -229,6 +229,8 @@ class MoteurCalculPaie:
     
     def _arrondir(self, montant):
         """Arrondir un montant à l'unité (GNF = pas de centimes)"""
+        if not isinstance(montant, Decimal):
+            montant = Decimal(str(montant))
         return montant.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
     
     def _calculer_anciennete(self):
