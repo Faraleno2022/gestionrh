@@ -623,12 +623,12 @@ def _get_salaire_base_intelligent(employe, bulletin_base, annee, mois):
     Stratégie de fallback:
     1. Salaire_base du bulletin courant (si non-nul)
     2. Dernier avenant de contrat (nouveau_salaire)
-    3. Dernière promotion ou changement de salaire
+    3. Dernière carrière/promotion/changement de salaire
     4. Dernier bulletin validé/payé de l'employé
     5. Moyenne des 3 derniers bulletins valides
     6. Zéro si rien trouvé
     """
-    from employes.models import AvenantContrat, Promotion
+    from employes.models import AvenantContrat, CarriereEmploye
 
     # 1. Utiliser le bulletin courant s'il existe et n'est pas zéro
     if bulletin_base and bulletin_base > 0:
@@ -647,13 +647,15 @@ def _get_salaire_base_intelligent(employe, bulletin_base, annee, mois):
     except Exception:
         pass
 
-    # 3. Chercher la dernière promotion avec nouveau_salaire
+    # 3. Chercher la dernière carrière (promotion/changement) avec nouveau_salaire
     try:
-        promotion = Promotion.objects.filter(
+        carriere = CarriereEmploye.objects.filter(
             employe_id=eid,
-        ).order_by('-date_decision').first()
-        if promotion and promotion.nouveau_salaire and promotion.nouveau_salaire > 0:
-            return promotion.nouveau_salaire
+            type_mouvement__in=['promotion', 'reclassement'],
+            nouveau_salaire__gt=0,
+        ).order_by('-date_mouvement').first()
+        if carriere and carriere.nouveau_salaire and carriere.nouveau_salaire > 0:
+            return carriere.nouveau_salaire
     except Exception:
         pass
 
