@@ -1,20 +1,24 @@
 """
 Vues pour les rapports de paie avancés.
 - Rapport masse salariale
-- Export Excel / PDF du rapport
+- État de paie (récapitulatif mensuel détaillé)
+- Feuille de présence (grille journalière)
+- Export Excel / PDF pour chaque rapport
 """
 import io
 import json
-from datetime import date
+import calendar
+from collections import defaultdict
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
-from django.db.models import Sum, Count, Avg, Q
+from django.db.models import Sum, Count, Avg, Q, F, Prefetch
 from django.utils import timezone
 
-from .models import BulletinPaie, PeriodePaie
+from .models import BulletinPaie, PeriodePaie, LigneBulletin, RubriquePaie, AvanceSalaire
 from employes.models import Employe
 from core.models import Service
 from core.decorators import reauth_required, entreprise_active_required
@@ -458,4 +462,1100 @@ def rapport_masse_salariale_pdf(request):
     buffer.seek(0)
     response = HttpResponse(buffer.read(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="masse_salariale_{annee}.pdf"'
+    return response
+
+
+# ============================================================================
+# ÉTAT DE PAIE — Rapport mensuel détaillé (24 colonnes)
+# ============================================================================
+
+JOURS_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+
+# ---- Classification intelligente des lignes bulletin ----
+# Réutilise les patterns de paie/services.py pour une détection robuste
+
+_PATTERNS_TRANSPORT = {'TRANSPORT', 'DEPLACEMENT'}
+_PATTERNS_LOGEMENT = {'LOGEMENT', 'HEBERGEMENT'}
+_PATTERNS_CHERTE = {'CHERTE', 'CHERTEVIE'}
+_PATTERNS_DISCIPLINE = {'DISCIPLINE', 'ASSIDUITE'}
+_PATTERNS_ANCIENNETE = {'ANCIENNETE', 'ANCIENNET'}
+_PATTERNS_RENDEMENT = {'RENDEMENT', 'PERFORMANCE', 'OBJECTIF', 'PRODUCTIVITE'}
+_PATTERNS_FONCTION = {'FONCTION', 'RESPONSABILITE', 'RESPONSABILIT'}
+_PATTERNS_RISQUE = {'RISQUE', 'DANGER', 'PENIBILITE', 'INSALUBRITE', 'SALISSURE'}
+_PATTERNS_REPAS = {'REPAS', 'PANIER', 'NOURRITURE', 'RESTAURATION'}
+
+_MOTS_TRANSPORT = {
+    'transport', 'déplacement', 'deplacement', 'indemnité de transport',
+    'indemnite de transport', 'allocation transport', 'prime de transport',
+    'frais de transport', 'carburant',
+}
+_MOTS_LOGEMENT = {
+    'logement', 'hébergement', 'hebergement', 'allocation logement',
+    'prime de logement', 'indemnité de logement', 'indemnite de logement',
+}
+_MOTS_CHERTE = {
+    'cherté', 'cherte', 'vie chère', 'vie chere', 'cherté de vie',
+    'cherte de vie', 'indemnité de vie chère',
+}
+_MOTS_DISCIPLINE = {
+    'discipline', 'prime de discipline', 'assiduité', 'assiduite',
+    'prime d\'assiduité', 'ponctualité', 'ponctualite',
+}
+_MOTS_ANCIENNETE = {'ancienneté', 'anciennete', 'prime d\'ancienneté'}
+_MOTS_RENDEMENT = {
+    'rendement', 'performance', 'objectif', 'productivité',
+    'productivite', 'prime de rendement', 'prime de performance',
+}
+_MOTS_REPAS = {'repas', 'panier', 'nourriture', 'restauration', 'indemnité de repas'}
+
+ETAT_PAIE_HEADERS = [
+    'N°', 'Profession', 'Prénom', 'Nom', 'Matricule',
+    'Salaire de Base', 'RTS', 'CNSS', 'VF',
+    'Prime Discipline', 'Heures Supp', 'Montant HS',
+    'Cher. Vie', 'Ind. Transport', 'Ind. Logement',
+    'Brut', 'Salaire Net',
+    'Jours Mois', 'Jours Travaillés', 'Dim. Travaillés',
+    'Paie Dim.', 'Jours Repos', 'Jours Absents',
+    'Fériés Payés', 'Net à Payer',
+]
+
+ETAT_PAIE_KEYS = [
+    'num', 'profession', 'prenom', 'nom', 'matricule',
+    'salaire_base', 'rts', 'cnss', 'vf',
+    'prime_discipline', 'heures_sup', 'montant_hs',
+    'cherte_vie', 'ind_transport', 'ind_logement',
+    'brut', 'salaire_net',
+    'jours_mois', 'jours_travailles', 'dim_travailles',
+    'paie_dim', 'jours_repos', 'jours_absents',
+    'feries_payes', 'net_a_payer',
+]
+
+
+def _classer_ligne_bulletin(ligne):
+    """Classe une LigneBulletin par catégorie — détection multi-niveaux.
+
+    Niveaux de détection (par priorité) :
+    1. Code rubrique exact (PT, PL, PCV)
+    2. Pattern dans le code rubrique (TRANSPORT, LOGEMENT, etc.)
+    3. categorie_rubrique du modèle RubriquePaie
+    4. Mots-clés dans le libellé (personnalisé ou rubrique)
+    """
+    rub = ligne.rubrique
+    code = (rub.code_rubrique or '').upper().replace(' ', '').replace('-', '').replace('_', '')
+    libelle = (ligne.libelle_personnalise or rub.libelle_rubrique or '').lower()
+    categorie = getattr(rub, 'categorie_rubrique', '') or ''
+    type_rub = getattr(rub, 'type_rubrique', '') or ''
+
+    # --- Ignorer les retenues / cotisations (CNSS, RTS sont déjà dans colonnes dédiées) ---
+    if type_rub in ('retenue', 'cotisation'):
+        return 'retenue'
+
+    # --- Niveau 1 : Codes exacts ---
+    if code in ('PT',):
+        return 'transport'
+    if code in ('PL',):
+        return 'logement'
+    if code in ('PCV',):
+        return 'cherte_vie'
+
+    # --- Niveau 2 : Patterns dans le code ---
+    for pat in _PATTERNS_TRANSPORT:
+        if pat in code:
+            return 'transport'
+    for pat in _PATTERNS_LOGEMENT:
+        if pat in code:
+            return 'logement'
+    for pat in _PATTERNS_CHERTE:
+        if pat in code:
+            return 'cherte_vie'
+    for pat in _PATTERNS_DISCIPLINE:
+        if pat in code:
+            return 'discipline'
+    for pat in _PATTERNS_ANCIENNETE:
+        if pat in code:
+            return 'anciennete'
+    for pat in _PATTERNS_RENDEMENT:
+        if pat in code:
+            return 'rendement'
+    for pat in _PATTERNS_FONCTION:
+        if pat in code:
+            return 'fonction'
+    for pat in _PATTERNS_RISQUE:
+        if pat in code:
+            return 'risque'
+    for pat in _PATTERNS_REPAS:
+        if pat in code:
+            return 'repas'
+
+    # --- Niveau 3 : Mots-clés dans le libellé ---
+    if any(m in libelle for m in _MOTS_TRANSPORT):
+        return 'transport'
+    if any(m in libelle for m in _MOTS_LOGEMENT):
+        return 'logement'
+    if any(m in libelle for m in _MOTS_CHERTE):
+        return 'cherte_vie'
+    if any(m in libelle for m in _MOTS_DISCIPLINE):
+        return 'discipline'
+    if any(m in libelle for m in _MOTS_ANCIENNETE):
+        return 'anciennete'
+    if any(m in libelle for m in _MOTS_RENDEMENT):
+        return 'rendement'
+    if any(m in libelle for m in _MOTS_REPAS):
+        return 'repas'
+
+    # --- Niveau 4 : categorie_rubrique comme fallback ---
+    if categorie == 'salaire_base':
+        return 'salaire_base'
+    if categorie == 'indemnite':
+        return 'indemnite'
+    if categorie == 'prime':
+        return 'prime'
+    if categorie == 'avantage':
+        return 'avantage'
+
+    return 'autre_gain' if type_rub == 'gain' else 'autre'
+
+
+def _fmt_gnf(val):
+    """Formate un nombre avec séparateur de milliers."""
+    if val is None:
+        return '0'
+    v = int(val)
+    if v < 0:
+        return '-' + f'{-v:,}'.replace(',', ' ')
+    return f'{v:,}'.replace(',', ' ')
+
+
+def _construire_donnees_etat_paie(bulletins_qs, annee, mois, entreprise):
+    """Construit les données du tableau État de paie (24 colonnes).
+
+    Remplissage intelligent multi-sources :
+    - BulletinPaie : salaires, charges, HS stockées sur le bulletin
+    - LigneBulletin → RubriquePaie : classification intelligente des composantes
+    - Pointage : jours travaillés, dimanches, fériés (avec fallback si pas de pointages)
+    - Absence : absences maladie, injustifiées, permissions
+    - Conge : congés approuvés du mois
+    - HeureSupplementaire : HS dimanche/nuit détaillées
+    - JourFerie : fériés du mois
+    - PeriodePaie : nombre_jours_travailles comme fallback
+    - ArretTravail : arrêts maladie/accident
+    """
+    from temps_travail.models import Pointage, HeureSupplementaire, JourFerie
+    from temps_travail.models import Absence, Conge
+
+    mois_int = int(mois)
+    annee_int = int(annee)
+    nb_jours_mois = calendar.monthrange(annee_int, mois_int)[1]
+    date_debut = date(annee_int, mois_int, 1)
+    date_fin = date(annee_int, mois_int, nb_jours_mois)
+
+    # ---- Calendrier du mois ----
+    feries = set(
+        JourFerie.objects.filter(
+            Q(entreprise=entreprise) | Q(entreprise__isnull=True),
+            date_jour_ferie__gte=date_debut,
+            date_jour_ferie__lte=date_fin,
+        ).values_list('date_jour_ferie', flat=True)
+    )
+
+    dimanches = set()
+    jours_ouvrables = 0
+    d = date_debut
+    while d <= date_fin:
+        if d.weekday() == 6:
+            dimanches.add(d)
+        else:
+            if d not in feries:
+                jours_ouvrables += 1
+        d += timedelta(days=1)
+
+    # ---- PeriodePaie : fallback pour jours travaillés ----
+    from .models import PeriodePaie
+    periode_jours = None
+    try:
+        pp = PeriodePaie.objects.get(entreprise=entreprise, annee=annee_int, mois=mois_int)
+        periode_jours = pp.nombre_jours_travailles
+    except PeriodePaie.DoesNotExist:
+        pass
+
+    # ---- Bulletins avec prefetch intelligent ----
+    bulletins = list(bulletins_qs.filter(
+        mois_paie=mois_int,
+    ).select_related(
+        'employe', 'employe__poste', 'employe__service',
+    ).prefetch_related(
+        Prefetch('lignes', queryset=LigneBulletin.objects.select_related('rubrique'))
+    ).order_by('employe__nom', 'employe__prenoms'))
+
+    if not bulletins:
+        return [], {k: Decimal('0') for k in ETAT_PAIE_KEYS[5:]}, nb_jours_mois
+
+    employe_ids = [b.employe_id for b in bulletins]
+
+    # ---- BULK : Pointages ----
+    pointages_map = defaultdict(lambda: defaultdict(int))
+    for p in Pointage.objects.filter(
+        employe_id__in=employe_ids,
+        date_pointage__gte=date_debut,
+        date_pointage__lte=date_fin,
+    ):
+        pointages_map[p.employe_id][p.statut_pointage] += 1
+
+    # Pointages dimanche (présent un dimanche)
+    dim_pointages = defaultdict(int)
+    if dimanches:
+        for p in Pointage.objects.filter(
+            employe_id__in=employe_ids,
+            date_pointage__in=dimanches,
+            statut_pointage__in=['present', 'retard'],
+        ):
+            dim_pointages[p.employe_id] += 1
+
+    # ---- BULK : Absences (hors pointage — module Absence dédié) ----
+    absences_map = defaultdict(int)
+    try:
+        for ab in Absence.objects.filter(
+            employe_id__in=employe_ids,
+            date_absence__gte=date_debut,
+            date_absence__lte=date_fin,
+        ):
+            absences_map[ab.employe_id] += 1
+    except Exception:
+        pass  # Module absence pas utilisé
+
+    # ---- BULK : Congés approuvés chevauchant le mois ----
+    conges_jours_map = defaultdict(int)
+    try:
+        for cg in Conge.objects.filter(
+            employe_id__in=employe_ids,
+            statut_demande='approuve',
+            date_debut__lte=date_fin,
+            date_fin__gte=date_debut,
+        ):
+            # Compter les jours dans le mois seulement
+            d_start = max(cg.date_debut, date_debut)
+            d_end = min(cg.date_fin, date_fin)
+            conges_jours_map[cg.employe_id] += (d_end - d_start).days + 1
+    except Exception:
+        pass  # Module congé pas utilisé
+
+    # ---- BULK : HeureSupplementaire détaillées ----
+    hs_dim_map = defaultdict(Decimal)
+    hs_nuit_map = defaultdict(Decimal)
+    hs_detail_heures = defaultdict(Decimal)
+    for hs in HeureSupplementaire.objects.filter(
+        employe_id__in=employe_ids,
+        date_hs__gte=date_debut,
+        date_hs__lte=date_fin,
+        statut__in=['valide', 'paye'],
+    ):
+        montant = hs.montant_hs or Decimal('0')
+        heures = hs.nombre_heures or Decimal('0')
+        hs_detail_heures[hs.employe_id] += heures
+        if hs.type_hs in ('dimanche_75', 'dimanche_nuit_100'):
+            hs_dim_map[hs.employe_id] += montant
+        if hs.type_hs in ('nuit_50', 'dimanche_nuit_100'):
+            hs_nuit_map[hs.employe_id] += montant
+
+    # ---- BULK : Fériés travaillés ----
+    feries_map = defaultdict(int)
+    if feries:
+        for p in Pointage.objects.filter(
+            employe_id__in=employe_ids,
+            date_pointage__in=feries,
+            statut_pointage__in=['present', 'retard'],
+        ):
+            feries_map[p.employe_id] += 1
+
+    # ---- BULK : Prêts en cours (échéances du mois) ----
+    prets_map = defaultdict(Decimal)
+    try:
+        from paie.models_pret import EcheancePret
+        for ech in EcheancePret.objects.filter(
+            pret__employe_id__in=employe_ids,
+            pret__statut='en_cours',
+            date_echeance__gte=date_debut,
+            date_echeance__lte=date_fin,
+            statut__in=['en_attente', 'paye'],
+        ).select_related('pret'):
+            prets_map[ech.pret.employe_id] += ech.montant_echeance or Decimal('0')
+    except Exception:
+        pass
+
+    # ---- BULK : Avances salaire en cours ----
+    avances_map = defaultdict(Decimal)
+    for av in AvanceSalaire.objects.filter(
+        employe_id__in=employe_ids,
+        statut='en_cours',
+    ):
+        avances_map[av.employe_id] += av.montant_mensuel or Decimal('0')
+
+    # ---- BULK : Saisies-arrêts actives ----
+    saisies_map = defaultdict(Decimal)
+    try:
+        from .models import SaisieArret
+        for sa in SaisieArret.objects.filter(
+            employe_id__in=employe_ids,
+            statut='active',
+            date_debut__lte=date_fin,
+        ).filter(Q(date_fin__isnull=True) | Q(date_fin__gte=date_debut)):
+            saisies_map[sa.employe_id] += sa.montant_mensuel or Decimal('0')
+    except Exception:
+        pass
+
+    # ---- Construction des lignes ----
+    rows = []
+    totaux = {k: Decimal('0') for k in ETAT_PAIE_KEYS[5:]}
+
+    for idx, b in enumerate(bulletins, 1):
+        emp = b.employe
+        eid = emp.pk
+
+        # -- Classification intelligente des lignes bulletin --
+        transport = Decimal('0')
+        logement = Decimal('0')
+        cherte_vie = Decimal('0')
+        discipline = Decimal('0')
+        for ligne in b.lignes.all():
+            cat = _classer_ligne_bulletin(ligne)
+            montant = ligne.montant or Decimal('0')
+            if montant <= 0:
+                continue
+            if cat == 'transport':
+                transport += montant
+            elif cat == 'logement':
+                logement += montant
+            elif cat == 'cherte_vie':
+                cherte_vie += montant
+            elif cat == 'discipline':
+                discipline += montant
+
+        # -- Jours travaillés — fallback intelligent --
+        pm = pointages_map.get(eid, {})
+        has_pointages = bool(pm)
+        jours_presents = pm.get('present', 0) + pm.get('retard', 0)
+        jours_absents_pointage = pm.get('absent', 0) + pm.get('absence_justifiee', 0)
+
+        # Enrichir avec absences et congés des modules dédiés
+        jours_absents_extra = absences_map.get(eid, 0) + conges_jours_map.get(eid, 0)
+
+        if has_pointages:
+            jours_travailles = jours_presents
+            jours_absents = jours_absents_pointage + jours_absents_extra
+        else:
+            # Fallback 1 : heures_normales du bulletin / 8h par jour
+            if b.heures_normales and b.heures_normales > 0:
+                jours_travailles = int(b.heures_normales / 8)
+            # Fallback 2 : PeriodePaie.nombre_jours_travailles
+            elif periode_jours:
+                jours_travailles = periode_jours - jours_absents_extra
+            # Fallback 3 : jours ouvrables du mois
+            else:
+                jours_travailles = jours_ouvrables - jours_absents_extra
+            jours_absents = jours_absents_extra
+
+        # -- HS : préférer le bulletin, enrichir avec HeureSupplementaire --
+        hs_bulletin = (b.heures_supplementaires_30 or Decimal('0')) + \
+                      (b.heures_supplementaires_60 or Decimal('0')) + \
+                      (b.heures_nuit or Decimal('0')) + \
+                      (b.heures_feries or Decimal('0')) + \
+                      (b.heures_feries_nuit or Decimal('0'))
+        hs_detail = hs_detail_heures.get(eid, Decimal('0'))
+        # Prendre le max pour ne pas sous-estimer
+        heures_sup = max(hs_bulletin, hs_detail)
+
+        montant_hs = (b.prime_heures_sup or Decimal('0')) + \
+                     (b.prime_nuit or Decimal('0')) + \
+                     (b.prime_feries or Decimal('0')) + \
+                     (b.prime_feries_nuit or Decimal('0'))
+
+        # -- Fériés payés : montant depuis le bulletin --
+        feries_payes_montant = (b.prime_feries or Decimal('0')) + (b.prime_feries_nuit or Decimal('0'))
+        feries_travailles_count = feries_map.get(eid, 0)
+        # Si pas de pointages mais fériés payés, estimer depuis le bulletin
+        if not feries_travailles_count and feries_payes_montant > 0 and b.heures_feries:
+            feries_travailles_count = int(b.heures_feries / 8) if b.heures_feries >= 8 else 1
+
+        # -- Paie dimanche : depuis HS ou bulletin --
+        paie_dim = hs_dim_map.get(eid, Decimal('0'))
+
+        row = {
+            'num': idx,
+            'profession': str(emp.poste) if emp.poste else '-',
+            'prenom': emp.prenoms,
+            'nom': emp.nom,
+            'matricule': emp.matricule,
+            'salaire_base': b.salaire_base or Decimal('0'),
+            'rts': b.irg or Decimal('0'),
+            'cnss': b.cnss_employe or Decimal('0'),
+            'vf': b.versement_forfaitaire or Decimal('0'),
+            'prime_discipline': discipline,
+            'heures_sup': heures_sup,
+            'montant_hs': montant_hs,
+            'cherte_vie': cherte_vie,
+            'ind_transport': transport,
+            'ind_logement': logement,
+            'brut': b.salaire_brut or Decimal('0'),
+            'salaire_net': (b.salaire_brut or Decimal('0')) - (b.total_retenues or Decimal('0')),
+            'jours_mois': nb_jours_mois,
+            'jours_travailles': jours_travailles,
+            'dim_travailles': dim_pointages.get(eid, 0),
+            'paie_dim': paie_dim,
+            'jours_repos': len(dimanches),
+            'jours_absents': jours_absents,
+            'feries_payes': feries_travailles_count,
+            'net_a_payer': b.net_a_payer or Decimal('0'),
+        }
+        rows.append(row)
+
+        for k in totaux:
+            totaux[k] += Decimal(str(row.get(k, 0)))
+
+    return rows, totaux, nb_jours_mois
+
+
+@login_required
+@entreprise_active_required
+@reauth_required
+def rapport_etat_paie(request):
+    """Rapport État de paie — tableau récapitulatif mensuel 24 colonnes."""
+    entreprise = request.user.entreprise
+    annee_courante = date.today().year
+
+    annee = int(request.GET.get('annee', annee_courante))
+    mois = request.GET.get('mois', str(date.today().month))
+    service_id = request.GET.get('service', '')
+
+    services = Service.objects.filter(entreprise=entreprise, actif=True).order_by('nom_service')
+    annees_dispo = BulletinPaie.objects.filter(
+        employe__entreprise=entreprise
+    ).values_list('annee_paie', flat=True).distinct().order_by('-annee_paie')
+
+    bulletins = _get_bulletins_filtrés(
+        entreprise, annee, 'mois', mois=mois, service_id=service_id or None,
+    )
+
+    rows = []
+    totaux = {}
+    nb_jours_mois = 30
+    if mois:
+        rows, totaux, nb_jours_mois = _construire_donnees_etat_paie(bulletins, annee, mois, entreprise)
+
+    context = {
+        'annee': annee,
+        'mois': mois,
+        'mois_label': MOIS_FR[int(mois)] if mois else '',
+        'service_id': service_id,
+        'services': services,
+        'annees_dispo': annees_dispo,
+        'headers': ETAT_PAIE_HEADERS,
+        'keys': ETAT_PAIE_KEYS,
+        'rows': rows,
+        'totaux': totaux,
+        'nb_employes': len(rows),
+        'mois_fr': MOIS_FR,
+        'mois_liste': list(range(1, 13)),
+    }
+    return render(request, 'paie/rapport_etat_paie.html', context)
+
+
+@login_required
+@entreprise_active_required
+@reauth_required
+def rapport_etat_paie_excel(request):
+    """Export Excel de l'État de paie."""
+    if not OPENPYXL_AVAILABLE:
+        return HttpResponse("openpyxl non disponible", status=500)
+
+    entreprise = request.user.entreprise
+    annee = int(request.GET.get('annee', date.today().year))
+    mois = request.GET.get('mois', str(date.today().month))
+    service_id = request.GET.get('service', '')
+
+    bulletins = _get_bulletins_filtrés(
+        entreprise, annee, 'mois', mois=mois, service_id=service_id or None,
+    )
+    rows, totaux, nb_jours_mois = _construire_donnees_etat_paie(bulletins, annee, mois, entreprise)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "État de Paie"
+
+    header_font = Font(bold=True, color="FFFFFF", size=9)
+    header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    center = Alignment(horizontal='center', wrap_text=True)
+    right_align = Alignment(horizontal='right')
+    thin = Side(style='thin')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    total_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")
+
+    mois_label = MOIS_FR[int(mois)] if mois else ''
+    nb_cols = len(ETAT_PAIE_HEADERS)
+
+    # Titre
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=nb_cols)
+    ws.cell(row=1, column=1, value=f"ÉTAT DE PAIE — {mois_label} {annee}").font = Font(bold=True, size=14)
+    ws.cell(row=1, column=1).alignment = Alignment(horizontal='center')
+
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=nb_cols)
+    ws.cell(row=2, column=1, value=f"Généré le {date.today().strftime('%d/%m/%Y')} — {len(rows)} employés").alignment = Alignment(horizontal='center')
+
+    # En-têtes
+    for col_idx, h in enumerate(ETAT_PAIE_HEADERS, 1):
+        c = ws.cell(row=4, column=col_idx, value=h)
+        c.font = header_font
+        c.fill = header_fill
+        c.alignment = center
+        c.border = border
+
+    # Données
+    row_num = 5
+    for row in rows:
+        for col_idx, key in enumerate(ETAT_PAIE_KEYS, 1):
+            val = row.get(key, '')
+            if isinstance(val, Decimal):
+                val = float(val)
+            c = ws.cell(row=row_num, column=col_idx, value=val)
+            c.border = border
+            if col_idx >= 6:
+                c.number_format = '#,##0'
+        row_num += 1
+
+    # Ligne totaux
+    ws.cell(row=row_num, column=1, value='TOTAUX').font = Font(bold=True)
+    for col_idx, key in enumerate(ETAT_PAIE_KEYS, 1):
+        c = ws.cell(row=row_num, column=col_idx)
+        if key in totaux:
+            c.value = float(totaux[key])
+            c.number_format = '#,##0'
+        c.font = Font(bold=True)
+        c.fill = total_fill
+        c.border = border
+
+    # Largeurs colonnes
+    widths = [5, 18, 14, 14, 12] + [14] * 20
+    for i, w in enumerate(widths[:nb_cols], 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="etat_paie_{annee}_{mois}.xlsx"'
+    return response
+
+
+@login_required
+@entreprise_active_required
+@reauth_required
+def rapport_etat_paie_pdf(request):
+    """Export PDF de l'État de paie — landscape A4, font 6pt."""
+    if not REPORTLAB_AVAILABLE:
+        return HttpResponse("ReportLab non disponible", status=500)
+
+    entreprise = request.user.entreprise
+    annee = int(request.GET.get('annee', date.today().year))
+    mois = request.GET.get('mois', str(date.today().month))
+    service_id = request.GET.get('service', '')
+
+    bulletins = _get_bulletins_filtrés(
+        entreprise, annee, 'mois', mois=mois, service_id=service_id or None,
+    )
+    rows, totaux, nb_jours_mois = _construire_donnees_etat_paie(bulletins, annee, mois, entreprise)
+    mois_label = MOIS_FR[int(mois)] if mois else ''
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4),
+                            leftMargin=0.8*cm, rightMargin=0.8*cm,
+                            topMargin=1.5*cm, bottomMargin=1.5*cm)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    title_style = ParagraphStyle('EPTitle', parent=styles['Title'],
+                                  fontSize=14, spaceAfter=4, alignment=TA_CENTER)
+    sub_style = ParagraphStyle('EPSub', parent=styles['Normal'],
+                                fontSize=8, spaceAfter=8, alignment=TA_CENTER)
+
+    elements.append(Paragraph(f"ÉTAT DE PAIE — {mois_label} {annee}", title_style))
+    elements.append(Paragraph(
+        f"Généré le {date.today().strftime('%d/%m/%Y')} — {len(rows)} employés", sub_style))
+
+    # Préparer données tableau
+    cell_style_tiny = ParagraphStyle('Tiny', parent=styles['Normal'], fontSize=5, leading=6)
+    header_ps = ParagraphStyle('HdrTiny', parent=styles['Normal'],
+                                fontSize=5, leading=6, fontName='Helvetica-Bold',
+                                textColor=colors.white)
+
+    def _p(text, style=cell_style_tiny):
+        return Paragraph(str(text), style)
+
+    table_data = [[_p(h, header_ps) for h in ETAT_PAIE_HEADERS]]
+
+    for row in rows:
+        table_data.append([
+            _p(row['num']),
+            _p(row['profession']),
+            _p(row['prenom']),
+            _p(row['nom']),
+            _p(row['matricule']),
+            _p(_fmt_gnf(row['salaire_base'])),
+            _p(_fmt_gnf(row['rts'])),
+            _p(_fmt_gnf(row['cnss'])),
+            _p(_fmt_gnf(row['vf'])),
+            _p(_fmt_gnf(row['prime_discipline'])),
+            _p(row['heures_sup']),
+            _p(_fmt_gnf(row['montant_hs'])),
+            _p(_fmt_gnf(row['cherte_vie'])),
+            _p(_fmt_gnf(row['ind_transport'])),
+            _p(_fmt_gnf(row['ind_logement'])),
+            _p(_fmt_gnf(row['brut'])),
+            _p(_fmt_gnf(row['salaire_net'])),
+            _p(row['jours_mois']),
+            _p(row['jours_travailles']),
+            _p(row['dim_travailles']),
+            _p(_fmt_gnf(row['paie_dim'])),
+            _p(row['jours_repos']),
+            _p(row['jours_absents']),
+            _p(row['feries_payes']),
+            _p(_fmt_gnf(row['net_a_payer'])),
+        ])
+
+    # Ligne totaux
+    total_row = [_p('', cell_style_tiny)] * 5
+    for key in ETAT_PAIE_KEYS[5:]:
+        total_row.append(_p(_fmt_gnf(totaux.get(key, 0)), ParagraphStyle(
+            'TotTiny', parent=cell_style_tiny, fontName='Helvetica-Bold')))
+    table_data.append(total_row)
+
+    col_widths = [0.8*cm, 2.5*cm, 2*cm, 2*cm, 1.8*cm] + [1.1*cm] * 20
+    t = Table(table_data, colWidths=col_widths, repeatRows=1)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F4E79')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.3, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.HexColor('#F5F8FF')]),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#D9E2F3')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (5, 0), (-1, -1), 'RIGHT'),
+        ('ALIGN', (0, 0), (4, -1), 'LEFT'),
+    ]))
+    elements.append(t)
+
+    doc.build(elements)
+    buffer.seek(0)
+    response = HttpResponse(buffer.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="etat_paie_{annee}_{mois}.pdf"'
+    return response
+
+
+# ============================================================================
+# FEUILLE DE PRÉSENCE — Grille journalière mensuelle
+# ============================================================================
+
+_CODES_POINTAGE = {
+    'present': 'P',
+    'absent': 'A',
+    'retard': 'R',
+    'absence_justifiee': 'AJ',
+}
+
+
+def _construire_donnees_feuille_presence(entreprise, annee, mois, service_id=None):
+    """Construit les données de la feuille de présence mensuelle."""
+    from temps_travail.models import Pointage, HeureSupplementaire, JourFerie
+    from employes.models import Employe as EmployeModel
+
+    mois_int = int(mois)
+    annee_int = int(annee)
+    nb_jours = calendar.monthrange(annee_int, mois_int)[1]
+    date_debut = date(annee_int, mois_int, 1)
+    date_fin = date(annee_int, mois_int, nb_jours)
+
+    # Employés actifs
+    emp_qs = EmployeModel.objects.filter(
+        entreprise=entreprise,
+        statut_employe='actif',
+    ).select_related('poste', 'service').order_by('nom', 'prenoms')
+    if service_id:
+        emp_qs = emp_qs.filter(service_id=service_id)
+
+    employes = list(emp_qs)
+    emp_ids = [e.pk for e in employes]
+
+    # Jours fériés
+    feries = set(
+        JourFerie.objects.filter(
+            Q(entreprise=entreprise) | Q(entreprise__isnull=True),
+            date_jour_ferie__gte=date_debut,
+            date_jour_ferie__lte=date_fin,
+        ).values_list('date_jour_ferie', flat=True)
+    )
+
+    # Dimanches
+    dimanches = set()
+    d = date_debut
+    while d <= date_fin:
+        if d.weekday() == 6:
+            dimanches.add(d)
+        d += timedelta(days=1)
+
+    # Pointages bulk
+    pointages_bulk = defaultdict(dict)
+    for p in Pointage.objects.filter(
+        employe_id__in=emp_ids,
+        date_pointage__gte=date_debut,
+        date_pointage__lte=date_fin,
+    ):
+        pointages_bulk[p.employe_id][p.date_pointage.day] = p.statut_pointage
+
+    # Bulletins du mois
+    bulletins_map = {}
+    for b in BulletinPaie.objects.filter(
+        employe_id__in=emp_ids,
+        annee_paie=annee_int,
+        mois_paie=mois_int,
+        statut_bulletin__in=['calcule', 'valide', 'paye'],
+    ):
+        bulletins_map[b.employe_id] = b
+
+    # HS dimanches
+    hs_dim_map = defaultdict(Decimal)
+    for hs in HeureSupplementaire.objects.filter(
+        employe_id__in=emp_ids,
+        date_hs__gte=date_debut,
+        date_hs__lte=date_fin,
+        type_hs__in=['dimanche_75', 'dimanche_nuit_100'],
+        statut__in=['valide', 'paye'],
+    ):
+        hs_dim_map[hs.employe_id] += hs.montant_hs or Decimal('0')
+
+    # Avances en cours
+    avances_map = defaultdict(Decimal)
+    for av in AvanceSalaire.objects.filter(
+        employe_id__in=emp_ids,
+        statut='en_cours',
+    ):
+        avances_map[av.employe_id] += av.montant_mensuel or Decimal('0')
+
+    # Construire les lignes
+    rows = []
+    jours_info = []
+    for j in range(1, nb_jours + 1):
+        d = date(annee_int, mois_int, j)
+        jour_nom = JOURS_FR[d.weekday()]
+        est_dim = d in dimanches
+        est_ferie = d in feries
+        jours_info.append({'jour': j, 'nom': jour_nom, 'dimanche': est_dim, 'ferie': est_ferie})
+
+    for emp in employes:
+        eid = emp.pk
+        grille = []
+        nb_present = 0
+        nb_absent = 0
+        nb_dim_travailles = 0
+
+        for j in range(1, nb_jours + 1):
+            statut = pointages_bulk.get(eid, {}).get(j, '')
+            code = _CODES_POINTAGE.get(statut, '')
+            grille.append(code)
+            if statut in ('present', 'retard'):
+                nb_present += 1
+                d_j = date(annee_int, mois_int, j)
+                if d_j in dimanches:
+                    nb_dim_travailles += 1
+            elif statut in ('absent', 'absence_justifiee'):
+                nb_absent += 1
+
+        bull = bulletins_map.get(eid)
+        feries_travailles = 0
+        if feries:
+            for f_date in feries:
+                if pointages_bulk.get(eid, {}).get(f_date.day, '') in ('present', 'retard'):
+                    feries_travailles += 1
+
+        row = {
+            'employe': emp,
+            'nom': emp.nom,
+            'prenom': emp.prenoms,
+            'matricule': emp.matricule,
+            'profession': str(emp.poste) if emp.poste else '-',
+            'grille': grille,
+            'nb_present': nb_present,
+            'nb_absent': nb_absent,
+            'nb_dim_travailles': nb_dim_travailles,
+            'feries_travailles': feries_travailles,
+            'salaire_base': bull.salaire_base if bull else Decimal('0'),
+            'brut': bull.salaire_brut if bull else Decimal('0'),
+            'net': bull.net_a_payer if bull else Decimal('0'),
+            'paie_dim': hs_dim_map.get(eid, Decimal('0')),
+            'feries_payes': bull.prime_feries if bull else Decimal('0'),
+            'avance': avances_map.get(eid, Decimal('0')),
+        }
+        rows.append(row)
+
+    return rows, jours_info, nb_jours
+
+
+@login_required
+@entreprise_active_required
+@reauth_required
+def rapport_feuille_presence(request):
+    """Rapport Feuille de présence — grille journalière mensuelle."""
+    entreprise = request.user.entreprise
+    annee_courante = date.today().year
+
+    annee = int(request.GET.get('annee', annee_courante))
+    mois = request.GET.get('mois', str(date.today().month))
+    service_id = request.GET.get('service', '')
+
+    services = Service.objects.filter(entreprise=entreprise, actif=True).order_by('nom_service')
+    annees_dispo = BulletinPaie.objects.filter(
+        employe__entreprise=entreprise
+    ).values_list('annee_paie', flat=True).distinct().order_by('-annee_paie')
+
+    rows = []
+    jours_info = []
+    nb_jours = 30
+    if mois:
+        rows, jours_info, nb_jours = _construire_donnees_feuille_presence(
+            entreprise, annee, mois, service_id or None)
+
+    context = {
+        'annee': annee,
+        'mois': mois,
+        'mois_label': MOIS_FR[int(mois)] if mois else '',
+        'service_id': service_id,
+        'services': services,
+        'annees_dispo': annees_dispo,
+        'rows': rows,
+        'jours_info': jours_info,
+        'nb_jours': nb_jours,
+        'nb_employes': len(rows),
+        'mois_fr': MOIS_FR,
+        'mois_liste': list(range(1, 13)),
+    }
+    return render(request, 'paie/rapport_feuille_presence.html', context)
+
+
+@login_required
+@entreprise_active_required
+@reauth_required
+def rapport_feuille_presence_excel(request):
+    """Export Excel de la feuille de présence."""
+    if not OPENPYXL_AVAILABLE:
+        return HttpResponse("openpyxl non disponible", status=500)
+
+    entreprise = request.user.entreprise
+    annee = int(request.GET.get('annee', date.today().year))
+    mois = request.GET.get('mois', str(date.today().month))
+    service_id = request.GET.get('service', '')
+
+    rows, jours_info, nb_jours = _construire_donnees_feuille_presence(
+        entreprise, annee, mois, service_id or None)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Feuille de Présence"
+    mois_label = MOIS_FR[int(mois)] if mois else ''
+
+    header_font = Font(bold=True, color="FFFFFF", size=9)
+    header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    dim_fill = PatternFill(start_color="D6E4F0", end_color="D6E4F0", fill_type="solid")
+    ferie_fill = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")
+    present_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+    absent_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+    center = Alignment(horizontal='center')
+    thin = Side(style='thin')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    nb_cols = 4 + nb_jours + 7  # nom,prenom,matricule,profession + jours + résumé
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=nb_cols)
+    ws.cell(row=1, column=1, value=f"FEUILLE DE PRÉSENCE — {mois_label} {annee}").font = Font(bold=True, size=14)
+    ws.cell(row=1, column=1).alignment = Alignment(horizontal='center')
+
+    # En-têtes
+    hdr_row = 3
+    fixed_headers = ['Nom', 'Prénom', 'Matricule', 'Profession']
+    for col, h in enumerate(fixed_headers, 1):
+        c = ws.cell(row=hdr_row, column=col, value=h)
+        c.font = header_font
+        c.fill = header_fill
+        c.alignment = center
+        c.border = border
+
+    for idx, ji in enumerate(jours_info):
+        col = 5 + idx
+        c = ws.cell(row=hdr_row, column=col, value=f"{ji['jour']}\n{ji['nom']}")
+        c.font = header_font
+        c.alignment = Alignment(horizontal='center', wrap_text=True)
+        c.border = border
+        if ji['dimanche']:
+            c.fill = dim_fill
+        elif ji['ferie']:
+            c.fill = ferie_fill
+        else:
+            c.fill = header_fill
+
+    resume_headers = ['Présent', 'Absent', 'Dim. Trav.', 'Fériés Trav.', 'Salaire Base', 'Net', 'Avance']
+    for idx, h in enumerate(resume_headers):
+        col = 5 + nb_jours + idx
+        c = ws.cell(row=hdr_row, column=col, value=h)
+        c.font = header_font
+        c.fill = header_fill
+        c.alignment = center
+        c.border = border
+
+    # Données
+    data_row = 4
+    for row in rows:
+        ws.cell(row=data_row, column=1, value=row['nom']).border = border
+        ws.cell(row=data_row, column=2, value=row['prenom']).border = border
+        ws.cell(row=data_row, column=3, value=row['matricule']).border = border
+        ws.cell(row=data_row, column=4, value=row['profession']).border = border
+
+        for idx, code in enumerate(row['grille']):
+            col = 5 + idx
+            c = ws.cell(row=data_row, column=col, value=code)
+            c.alignment = center
+            c.border = border
+            if code == 'P':
+                c.fill = present_fill
+            elif code in ('A', 'AJ'):
+                c.fill = absent_fill
+
+        base_col = 5 + nb_jours
+        ws.cell(row=data_row, column=base_col, value=row['nb_present']).border = border
+        ws.cell(row=data_row, column=base_col + 1, value=row['nb_absent']).border = border
+        ws.cell(row=data_row, column=base_col + 2, value=row['nb_dim_travailles']).border = border
+        ws.cell(row=data_row, column=base_col + 3, value=row['feries_travailles']).border = border
+        ws.cell(row=data_row, column=base_col + 4, value=float(row['salaire_base'])).border = border
+        ws.cell(row=data_row, column=base_col + 4).number_format = '#,##0'
+        ws.cell(row=data_row, column=base_col + 5, value=float(row['net'])).border = border
+        ws.cell(row=data_row, column=base_col + 5).number_format = '#,##0'
+        ws.cell(row=data_row, column=base_col + 6, value=float(row['avance'])).border = border
+        ws.cell(row=data_row, column=base_col + 6).number_format = '#,##0'
+        data_row += 1
+
+    # Largeurs
+    for col in range(1, 5):
+        ws.column_dimensions[get_column_letter(col)].width = 14
+    for col in range(5, 5 + nb_jours):
+        ws.column_dimensions[get_column_letter(col)].width = 5
+    for col in range(5 + nb_jours, nb_cols + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 14
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="feuille_presence_{annee}_{mois}.xlsx"'
+    return response
+
+
+@login_required
+@entreprise_active_required
+@reauth_required
+def rapport_feuille_presence_pdf(request):
+    """Export PDF de la feuille de présence — landscape large."""
+    if not REPORTLAB_AVAILABLE:
+        return HttpResponse("ReportLab non disponible", status=500)
+
+    entreprise = request.user.entreprise
+    annee = int(request.GET.get('annee', date.today().year))
+    mois = request.GET.get('mois', str(date.today().month))
+    service_id = request.GET.get('service', '')
+
+    rows, jours_info, nb_jours = _construire_donnees_feuille_presence(
+        entreprise, annee, mois, service_id or None)
+    mois_label = MOIS_FR[int(mois)] if mois else ''
+
+    # A3 landscape (42 x 29.7 cm)
+    page_w = 42 * cm
+    page_h = 29.7 * cm
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=(page_w, page_h),
+                            leftMargin=0.5*cm, rightMargin=0.5*cm,
+                            topMargin=1*cm, bottomMargin=1*cm)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    title_style = ParagraphStyle('FPTitle', parent=styles['Title'],
+                                  fontSize=12, spaceAfter=4, alignment=TA_CENTER)
+    sub_style = ParagraphStyle('FPSub', parent=styles['Normal'],
+                                fontSize=7, spaceAfter=6, alignment=TA_CENTER)
+
+    elements.append(Paragraph(f"FEUILLE DE PRÉSENCE — {mois_label} {annee}", title_style))
+    elements.append(Paragraph(
+        f"Généré le {date.today().strftime('%d/%m/%Y')} — {len(rows)} employés", sub_style))
+
+    cell_s = ParagraphStyle('CellS', parent=styles['Normal'], fontSize=5, leading=6)
+    hdr_s = ParagraphStyle('HdrS', parent=styles['Normal'],
+                            fontSize=5, leading=6, fontName='Helvetica-Bold',
+                            textColor=colors.white)
+
+    def _p(text, style=cell_s):
+        return Paragraph(str(text), style)
+
+    # En-tête
+    header_row = [_p('Nom', hdr_s), _p('Prénom', hdr_s), _p('Mat.', hdr_s)]
+    for ji in jours_info:
+        header_row.append(_p(f"{ji['jour']}", hdr_s))
+    header_row += [_p('Prés.', hdr_s), _p('Abs.', hdr_s), _p('Dim.T', hdr_s),
+                   _p('Fér.T', hdr_s), _p('Base', hdr_s), _p('Net', hdr_s), _p('Av.', hdr_s)]
+
+    table_data = [header_row]
+    for row in rows:
+        r = [_p(row['nom']), _p(row['prenom']), _p(row['matricule'])]
+        for code in row['grille']:
+            r.append(_p(code))
+        r += [
+            _p(row['nb_present']),
+            _p(row['nb_absent']),
+            _p(row['nb_dim_travailles']),
+            _p(row['feries_travailles']),
+            _p(_fmt_gnf(row['salaire_base'])),
+            _p(_fmt_gnf(row['net'])),
+            _p(_fmt_gnf(row['avance'])),
+        ]
+        table_data.append(r)
+
+    # Largeurs colonnes
+    fixed_w = [2.2*cm, 2*cm, 1.5*cm]
+    jour_w = [0.7*cm] * nb_jours
+    resume_w = [0.9*cm] * 4 + [1.5*cm, 1.5*cm, 1.2*cm]
+    col_widths = fixed_w + jour_w + resume_w
+
+    t = Table(table_data, colWidths=col_widths, repeatRows=1)
+
+    style_cmds = [
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F4E79')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.2, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFF')]),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (3, 0), (3 + nb_jours - 1, -1), 'CENTER'),
+    ]
+
+    # Colorer les dimanches/fériés dans l'en-tête
+    for idx, ji in enumerate(jours_info):
+        col = 3 + idx
+        if ji['dimanche']:
+            style_cmds.append(('BACKGROUND', (col, 0), (col, 0), colors.HexColor('#5B9BD5')))
+        elif ji['ferie']:
+            style_cmds.append(('BACKGROUND', (col, 0), (col, 0), colors.HexColor('#FFD966')))
+
+    t.setStyle(TableStyle(style_cmds))
+    elements.append(t)
+
+    doc.build(elements)
+    buffer.seek(0)
+    response = HttpResponse(buffer.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="feuille_presence_{annee}_{mois}.pdf"'
     return response

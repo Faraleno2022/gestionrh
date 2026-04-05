@@ -168,7 +168,19 @@ def landing_page(request):
 
 
 def csrf_failure(request, reason=""):
-    """Vue personnalisée pour les erreurs CSRF"""
+    """Vue personnalisée pour les erreurs CSRF — JSON pour AJAX, HTML sinon"""
+    from django.http import JsonResponse
+    # Requête AJAX / API → renvoyer JSON
+    is_ajax = (
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        or request.headers.get('Content-Type', '').startswith('application/json')
+        or request.headers.get('Accept', '').startswith('application/json')
+    )
+    if is_ajax:
+        return JsonResponse(
+            {'error': 'Session expirée ou token CSRF invalide. Rechargez la page (F5).'},
+            status=403
+        )
     return render(request, 'core/csrf_failure.html', {
         'reason': reason
     }, status=403)

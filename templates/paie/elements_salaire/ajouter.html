@@ -595,7 +595,7 @@
                         <tr style="background:#d1e7dd;">
                             <td class="fw-bold"><i class="bi bi-wallet2 text-success me-1"></i><strong>= NET À PAYER</strong></td>
                             <td class="text-end fw-bold fs-4 text-success" id="rp_net_affiche">—</td>
-                            <td class="text-success fw-bold small"><i class="bi bi-check-circle-fill"></i> Montant convenu à l'embauche</td>
+                            <td class="text-success fw-bold small" id="rp_net_note"><i class="bi bi-check-circle-fill"></i> Montant convenu à l'embauche</td>
                         </tr>
                         <!-- Charges patronales (hors bulletin salarié) -->
                         <tr class="table-light">
@@ -838,6 +838,19 @@ function updateRubriqueType() {}
     window._setNetGaranti = function (val) {
         netGaranti = val || 0;
         majModeNetUI();
+        // ── Synchroniser l'affichage "NET À PAYER" du widget rétro-paie ──
+        // Remplace net_calcule par le net garanti pour éviter la confusion visuelle
+        if (netGaranti > 0) {
+            var rpNetEl = document.getElementById('rp_net_affiche');
+            var rpNetCibleEl = document.getElementById('rp_net_cible_affiche');
+            var rpNetNote = document.getElementById('rp_net_note');
+            if (rpNetEl) {
+                rpNetEl.textContent = fmt(netGaranti) + ' GNF';
+                rpNetEl.title = 'Net garanti exact — RTS ajusté pour couvrir exactement ce montant';
+            }
+            if (rpNetCibleEl) rpNetCibleEl.textContent = fmt(netGaranti) + ' GNF';
+            if (rpNetNote) rpNetNote.innerHTML = '<i class="bi bi-lock-fill text-success me-1"></i> <span class="badge bg-success">Net garanti exact</span>';
+        }
     };
 
     const btnRepartir  = document.getElementById('dec_btn_repartir');
@@ -1041,6 +1054,9 @@ function updateRubriqueType() {}
             sub.textContent = 'GNF';
             rtsLabel.textContent = 'RTS';
             elNet.className = 'fw-bold text-success';
+            // Restaurer la note originale du widget rétro-paie
+            var rpNetNote = document.getElementById('rp_net_note');
+            if (rpNetNote) rpNetNote.innerHTML = '<i class="bi bi-check-circle-fill"></i> Montant convenu à l\'embauche';
         }
     }
 
@@ -1049,9 +1065,15 @@ function updateRubriqueType() {}
     let impactRequestId = 0;  // compteur anti-race-condition
     function calculerImpact() {
         clearTimeout(timerImpact);
-        // Masquer immédiatement l'alerte conformité (évite résidu stale pendant le debounce)
+        // ── Reset immédiat de TOUS les indicateurs fiscaux (anti-stale) ──
         var _alertC = document.getElementById('dec_alerte_conformite');
         if (_alertC) { _alertC.style.display = 'none'; _alertC.innerHTML = ''; }
+        var _exonTxt = document.getElementById('dec_exon_texte');
+        var _infoExon = document.getElementById('dec_info_exon');
+        if (_exonTxt) _exonTxt.textContent = 'Calcul en cours…';
+        if (_infoExon) _infoExon.className = 'alert alert-light border py-2 px-3 small mb-3';
+        var _chargesBadge = document.getElementById('dec_charges_total_badge');
+        if (_chargesBadge) _chargesBadge.innerHTML = '';
         timerImpact = setTimeout(function () {
             const brut = parseEntier(document.getElementById('dec_brut').value);
             if (!brut) return;
@@ -1059,7 +1081,7 @@ function updateRubriqueType() {}
             const pctT = parseInt(document.getElementById('dec_pct_transport').value) || 0;
             const pctL = parseInt(document.getElementById('dec_pct_logement').value) || 0;
             const pctC = parseInt(document.getElementById('dec_pct_cherte').value) || 0;
-            const indemnites = Math.round(brut * (pctT + pctL + pctC) / 100);
+            const indemnites = Math.floor(brut * (pctT + pctL + pctC) / 100);
 
             const myRequestId = ++impactRequestId;
 

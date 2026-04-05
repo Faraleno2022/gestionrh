@@ -5,7 +5,7 @@ from django.db.models import Sum, Count, Q
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.db import transaction
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, date
 import json
@@ -4096,8 +4096,8 @@ def api_impact_fiscal(request):
     conformite = 'conforme'  # conforme / a_verifier / non_conforme
 
     if result['depasse'] > 0:
-        _dep_fmt = f"{result['depasse']:,}".replace(',', '\u202f')
-        avertissements.append(f"Dépassement exonération : +{_dep_fmt} GNF au-dessus du plafond 25%")
+        # NB : le front affiche déjà le dépassement via renderEtatExoneration(DEPASSEMENT)
+        # → on ne met PAS de texte redondant dans avertissements pour éviter le doublon visuel
         conformite = 'a_verifier'
 
     if indem_val > brut_val * Decimal('0.75'):
@@ -4822,6 +4822,11 @@ def api_valider_simulation(request):
             'exon': result['exon'],
             'depasse': result['depasse'],
             'detail_tranches': result['detail_tranches'],
+            'statut_exoneration': (
+                'depassement' if result['depasse'] > 0
+                else 'ok_parfait' if result['exon'] == result['plafond_exon'] and result['exon'] > 0
+                else 'ok_normal'
+            ),
         },
         conformite=conformite,
         avertissements=avertissements,
@@ -4845,6 +4850,71 @@ def api_valider_simulation(request):
         'simulation_id': sim.pk,
         'employe_nom': employe_nom,
     })
+
+
+# ============================================================================
+# HISTORIQUE DES SIMULATIONS PAR EMPLOYE
+# ============================================================================
+
+@login_required
+@entreprise_active_required
+@require_GET
+def api_historique_simulations_employe(request, employe_id):
+    """
+    GET → retourne les dernières simulations (SimulationPaie) d'un employé.
+    ?limit=10  (défaut 10, max 50)
+    """
+    from .models import SimulationPaie
+
+    qs = SimulationPaie.objects.filter(
+        employe_id=employe_id,
+        entreprise=request.user.entreprise,
+    ).order_by('-date_creation')
+
+    total = qs.count()
+    limit = min(int(request.GET.get('limit', 10)), 50)
+    sims = qs[:limit]
+
+    def _resume_structure(composantes):
+        """Extrait le ratio base/indemnités depuis les composantes JSON."""
+        base_pct = 0
+        indem_pct = 0
+        for c in (composantes or []):
+            pct = c.get('pct', 0)
+            if c.get('cle') == 'salaire_base':
+                base_pct = pct
+            else:
+                indem_pct += pct
+        return f"{base_pct}/{indem_pct}" if base_pct else "—"
+
+    results = []
+    for s in sims:
+        impact = s.impact or {}
+        statut = impact.get('statut_exoneration', '')
+        if not statut and impact:
+            depasse = impact.get('depasse', 0)
+            exon = impact.get('exon', 0)
+            plafond = impact.get('plafond_exon', 0)
+            statut = (
+                'depassement' if depasse > 0
+                else 'ok_parfait' if exon == plafond and exon > 0
+                else 'ok_normal'
+            )
+        results.append({
+            'id': s.pk,
+            'date': s.date_creation.strftime('%d/%m/%Y %H:%M'),
+            'brut': int(s.brut),
+            'net': impact.get('net', 0),
+            'conformite': s.conformite,
+            'statut_exoneration': statut,
+            'appliquee': s.appliquee,
+            'date_application': s.date_application.strftime('%d/%m/%Y %H:%M') if s.date_application else None,
+            'utilisateur': str(s.utilisateur.get_short_name() or s.utilisateur.username),
+            'composantes_resume': _resume_structure(s.composantes),
+            'version_bareme': s.version_bareme,
+        })
+
+    return JsonResponse({'simulations': results, 'total': total})
 
 
 # ============================================================================
@@ -4875,42 +4945,63 @@ def api_simulation_pdf(request):
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({'error': 'JSON invalide'}, status=400)
 
-    brut = int(data.get('brut', 0))
-    composantes = data.get('composantes', [])
-    comparaison = data.get('comparaison', None)
-    gain = data.get('gain', None)
-    employe_nom = str(data.get('employe_nom', ''))[:200]  # sanitize
+    simulation_id = data.get('simulation_id', None)
+    sim_obj = None         # référence SimulationPaie (si fournie)
+    version_bareme = None  # pour la traçabilité PDF
 
-    if brut <= 0 or not composantes:
-        return JsonResponse({'error': 'Données insuffisantes'}, status=400)
+    if simulation_id:
+        # ── MODE TRAÇABLE : charger depuis SimulationPaie (zéro recalcul) ──
+        from .models import SimulationPaie
+        try:
+            sim_obj = SimulationPaie.objects.select_related('employe').get(
+                pk=simulation_id, entreprise=request.user.entreprise
+            )
+        except SimulationPaie.DoesNotExist:
+            return JsonResponse({'error': 'Simulation introuvable'}, status=404)
 
-    # ── RECALCUL CÔTÉ SERVEUR (ne pas faire confiance aux données JS) ──
-    from .services_simulation import calculer_un_bareme, _charger_constantes, BAREME_CGI_REFERENCE, _charger_tranches_db
-    constantes = _charger_constantes()
-    annee = date.today().year
-    tranches_bareme = _charger_tranches_db(annee, 'officiel')
-    if not tranches_bareme:
-        tranches_bareme = list(BAREME_CGI_REFERENCE)
+        brut = int(sim_obj.brut)
+        composantes = sim_obj.composantes or []
+        comparaison = sim_obj.comparaison
+        gain = sim_obj.gain
+        employe_nom = str(sim_obj.employe) if sim_obj.employe else ''
+        impact_data = sim_obj.impact or {}
+        version_bareme = sim_obj.version_bareme
+    else:
+        # ── MODE PREVIEW : recalcul côté serveur (comportement existant) ──
+        brut = int(data.get('brut', 0))
+        composantes = data.get('composantes', [])
+        comparaison = data.get('comparaison', None)
+        gain = data.get('gain', None)
+        employe_nom = str(data.get('employe_nom', ''))[:200]
 
-    total_indem = sum(c.get('montant', 0) for c in composantes if c.get('cle') != 'salaire_base')
-    impact = calculer_un_bareme(
-        Decimal(str(brut)),
-        Decimal(str(total_indem)),
-        tranches_bareme,
-        constantes,
-    )
-    # Utiliser les valeurs recalculées
-    impact_data = {
-        'cnss': impact['cnss'],
-        'rts': impact['rts'],
-        'net': impact['net'],
-        'taux_effectif': impact['taux_effectif'],
-        'base_rts': impact['base_rts'],
-        'plafond_exon': impact['plafond_exon'],
-        'exon': impact['exon'],
-        'depasse': impact['depasse'],
-        'detail_tranches': impact['detail_tranches'],
-    }
+        if brut <= 0 or not composantes:
+            return JsonResponse({'error': 'Données insuffisantes'}, status=400)
+
+        from .services_simulation import calculer_un_bareme, _charger_constantes, BAREME_CGI_REFERENCE, _charger_tranches_db
+        constantes = _charger_constantes()
+        annee = date.today().year
+        tranches_bareme = _charger_tranches_db(annee, 'officiel')
+        if not tranches_bareme:
+            tranches_bareme = list(BAREME_CGI_REFERENCE)
+
+        total_indem = sum(c.get('montant', 0) for c in composantes if c.get('cle') != 'salaire_base')
+        impact = calculer_un_bareme(
+            Decimal(str(brut)),
+            Decimal(str(total_indem)),
+            tranches_bareme,
+            constantes,
+        )
+        impact_data = {
+            'cnss': impact['cnss'],
+            'rts': impact['rts'],
+            'net': impact['net'],
+            'taux_effectif': impact['taux_effectif'],
+            'base_rts': impact['base_rts'],
+            'plafond_exon': impact['plafond_exon'],
+            'exon': impact['exon'],
+            'depasse': impact['depasse'],
+            'detail_tranches': impact['detail_tranches'],
+        }
 
     import io
     import os
@@ -4956,6 +5047,24 @@ def api_simulation_pdf(request):
 
     p.setFont(_FB, 11)
     p.drawString(1.5 * cm, y, f"Salaire brut mensuel : {fmtgnf(brut)} GNF")
+    y -= 0.5 * cm
+
+    # ── Métadonnées de traçabilité ──
+    if sim_obj or version_bareme:
+        p.setFont(_FN, 8)
+        p.setFillColor(colors.HexColor('#7f8c8d'))
+        meta_parts = []
+        if sim_obj:
+            meta_parts.append(f"Simulation #{sim_obj.pk}")
+            meta_parts.append(f"Validée le {sim_obj.date_creation.strftime('%d/%m/%Y à %H:%M')}")
+        if version_bareme:
+            meta_parts.append(f"Barème {version_bareme}")
+        statut = (impact_data.get('statut_exoneration') or '').replace('_', ' ').capitalize()
+        if statut:
+            meta_parts.append(f"Exonération : {statut}")
+        p.drawString(1.5 * cm, y, ' — '.join(meta_parts))
+        p.setFillColor(colors.black)
+        y -= 0.5 * cm
     y -= 1 * cm
 
     # ── Tableau décomposition ──
@@ -5139,9 +5248,16 @@ def api_simulation_pdf(request):
     # ── Pied de page ──
     p.setFont(_FN, 7)
     p.setFillColor(colors.grey)
-    p.drawString(1.5 * cm, 1 * cm,
-                 f"Simulation indicative — CGI Guinée Art. 196-197 — Générée par Gestionnaire RH — {date.today().strftime('%d/%m/%Y')}")
-    p.drawRightString(width - 1.5 * cm, 1 * cm, "Document non contractuel")
+    footer_left = f"CGI Guinée Art. 196-197 — Gestionnaire RH — {date.today().strftime('%d/%m/%Y')}"
+    if sim_obj:
+        footer_left = f"Simulation #{sim_obj.pk} — {footer_left}"
+    p.drawString(1.5 * cm, 1 * cm, footer_left)
+    if sim_obj:
+        valideur = sim_obj.utilisateur.get_full_name() or sim_obj.utilisateur.username
+        p.drawCentredString(width / 2, 1 * cm,
+                            f"Validé par {valideur} le {sim_obj.date_creation.strftime('%d/%m/%Y à %H:%M')}")
+    p.drawRightString(width - 1.5 * cm, 1 * cm,
+                      "Document traçable" if sim_obj else "Document non contractuel")
 
     p.save()
     buffer.seek(0)
@@ -5150,8 +5266,8 @@ def api_simulation_pdf(request):
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{nom_fichier}"'
 
-    # ── Audit log ──
-    _log_audit(request, 'pdf', None, {'brut': brut, 'employe_nom': employe_nom[:100]})
+    # ── Audit log (lié à la simulation si disponible) ──
+    _log_audit(request, 'pdf', sim_obj, {'brut': brut, 'employe_nom': employe_nom[:100]})
 
     return response
 

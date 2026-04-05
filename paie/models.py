@@ -1260,6 +1260,15 @@ class SimulationPaie(models.Model):
     def __str__(self):
         return f"Simulation {self.brut:,.0f} GNF — {self.date_creation:%d/%m/%Y %H:%M}"
 
+    def save(self, *args, **kwargs):
+        # Immutabilité : seule la création est autorisée (+ marquage appliquee)
+        if self.pk:
+            allowed = {'appliquee', 'date_application'}
+            update_fields = set(kwargs.get('update_fields') or [])
+            if not update_fields or not update_fields.issubset(allowed):
+                raise ValueError("SimulationPaie est immutable après création")
+        super().save(*args, **kwargs)
+
 
 class AuditSimulation(models.Model):
     """Journal d'audit léger pour les actions de simulation / création."""

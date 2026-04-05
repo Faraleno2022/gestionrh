@@ -150,6 +150,16 @@ urlpatterns = [
     path('rapports/masse-salariale/excel/', views_rapports.rapport_masse_salariale_excel, name='rapport_masse_salariale_excel'),
     path('rapports/masse-salariale/pdf/', views_rapports.rapport_masse_salariale_pdf, name='rapport_masse_salariale_pdf'),
 
+    # État de paie
+    path('rapports/etat-paie/', views_rapports.rapport_etat_paie, name='rapport_etat_paie'),
+    path('rapports/etat-paie/excel/', views_rapports.rapport_etat_paie_excel, name='rapport_etat_paie_excel'),
+    path('rapports/etat-paie/pdf/', views_rapports.rapport_etat_paie_pdf, name='rapport_etat_paie_pdf'),
+
+    # Feuille de présence
+    path('rapports/feuille-presence/', views_rapports.rapport_feuille_presence, name='rapport_feuille_presence'),
+    path('rapports/feuille-presence/excel/', views_rapports.rapport_feuille_presence_excel, name='rapport_feuille_presence_excel'),
+    path('rapports/feuille-presence/pdf/', views_rapports.rapport_feuille_presence_pdf, name='rapport_feuille_presence_pdf'),
+
     # Bulletins groupés (impression multiple)
     path('bulletins/groupe/pdf/', views.bulletins_groupes_pdf, name='bulletins_groupes_pdf'),
 
@@ -166,5 +176,6 @@ urlpatterns = [
     path('api/optimiser-decomposition/', views.api_optimiser_decomposition, name='api_optimiser_decomposition'),
     path('api/proposition-complete/', views.api_proposition_complete, name='api_proposition_complete'),
     path('api/valider-simulation/', views.api_valider_simulation, name='api_valider_simulation'),
+    path('api/historique-simulations/<int:employe_id>/', views.api_historique_simulations_employe, name='api_historique_simulations_employe'),
     path('api/simulation-pdf/', views.api_simulation_pdf, name='api_simulation_pdf'),
 ]

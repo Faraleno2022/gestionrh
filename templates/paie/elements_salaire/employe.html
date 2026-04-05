@@ -671,6 +671,47 @@
     </div>
 </div>
 
+<!-- ════════ HISTORIQUE DES SIMULATIONS ════════ -->
+<div class="card border-secondary shadow mb-4">
+    <div class="card-header bg-secondary text-white d-flex align-items-center gap-2"
+         data-bs-toggle="collapse" data-bs-target="#historique_body" role="button"
+         style="cursor:pointer;">
+        <i class="bi bi-clock-history fs-5"></i>
+        <strong>Historique des simulations</strong>
+        <span class="badge bg-white text-secondary ms-2" id="historique_count_badge">—</span>
+        <i class="bi bi-chevron-down ms-auto"></i>
+    </div>
+    <div class="collapse" id="historique_body">
+    <div class="card-body p-0">
+        <div id="historique_vide" class="text-muted text-center py-4" style="display:none;">
+            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+            Aucune simulation enregistrée pour cet employé.
+        </div>
+        <div class="table-responsive" id="historique_table_zone" style="display:none;">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th class="text-end">Brut</th>
+                        <th class="text-end">Net</th>
+                        <th class="text-center">Structure</th>
+                        <th class="text-center">Conformité</th>
+                        <th class="text-center">Exonération</th>
+                        <th class="text-center">Appliquée</th>
+                        <th class="text-center">Par</th>
+                        <th class="text-center">PDF</th>
+                    </tr>
+                </thead>
+                <tbody id="historique_tbody"></tbody>
+            </table>
+        </div>
+        <div id="historique_footer" class="text-center py-2 border-top small" style="display:none;">
+            <span class="text-muted" id="historique_footer_text"></span>
+        </div>
+    </div>
+    </div>
+</div>
+
 <!-- ════════ MODAL DE VALIDATION AVANT CRÉATION ════════ -->
 <div class="modal fade" id="decomp_modal_validation" tabindex="-1" aria-labelledby="decomp_modal_title" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -900,6 +941,7 @@
     var OPTIMISER_URL = "{% url 'paie:api_optimiser_decomposition' %}";
     var PDF_URL       = "{% url 'paie:api_simulation_pdf' %}";
     var VALIDER_URL   = "{% url 'paie:api_valider_simulation' %}";
+    var HISTORIQUE_URL = "{% url 'paie:api_historique_simulations_employe' employe.id %}";
     var CSRF          = "{{ csrf_token }}";
     var EMPLOYE_ID    = {{ employe.id }};
 
@@ -927,6 +969,8 @@
     var rubriquesData = {};
     var composantes = [];
     var impactTimer = null;
+    var impactRequestId = 0;       // anti-race-condition : ignore les réponses périmées
+    var impactController = null;   // AbortController : annule la requête en vol
     var lastImpactData = null;
     var lastComparaison = null;
     var lastGain = null;
@@ -967,7 +1011,15 @@
             headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
             body: JSON.stringify(body)
         }).then(function(r) {
-            if (r.headers.get('content-type') && r.headers.get('content-type').indexOf('application/pdf') !== -1) return r.blob();
+            var ct = r.headers.get('content-type') || '';
+            if (ct.indexOf('application/pdf') !== -1) return r.blob();
+            // Si la réponse est HTML (erreur serveur ou redirect login), lever une erreur claire
+            if (ct.indexOf('text/html') !== -1) {
+                if (r.status === 403 || r.url.indexOf('/login') !== -1 || r.url.indexOf('/connexion') !== -1) {
+                    throw new Error('Session expirée — veuillez vous reconnecter (F5)');
+                }
+                throw new Error('Erreur serveur (' + r.status + ') — vérifiez les logs Django');
+            }
             return r.json();
         });
     }
@@ -991,10 +1043,9 @@
         text.textContent = conf.text;
         badge.parentElement.style.display = 'block';
 
+        var listEl = document.getElementById(elementId.replace('conformite', 'avertissements') + '_list');
+        var zoneEl = listEl ? listEl.parentElement : null;
         if (avertissements && avertissements.length > 0) {
-            var listEl = document.getElementById(elementId.replace('conformite', 'avertissements') + '_list') ||
-                         document.getElementById(elementId.replace('conformite', 'avertissements') + '_list');
-            var zoneEl = listEl ? listEl.parentElement : null;
             if (listEl) {
                 listEl.innerHTML = '';
                 avertissements.forEach(function(w) {
@@ -1002,6 +1053,47 @@
                 });
                 if (zoneEl) zoneEl.style.display = 'block';
             }
+        } else {
+            if (listEl) listEl.innerHTML = '';
+            if (zoneEl) zoneEl.style.display = 'none';
+        }
+    }
+
+    // ── Rendu centralisé de l'état d'exonération ──────────────────
+    var ETAT_EXON = { LOADING: 'loading', DEPASSEMENT: 'depassement', OK_PARFAIT: 'ok_parfait', OK_NORMAL: 'ok_normal' };
+    function renderEtatExoneration(etat, data) {
+        var exonEl   = document.getElementById('decomp_exon_info');
+        var awarnZone = document.getElementById('decomp_avertissements_zone');
+        var awarnList = document.getElementById('decomp_avertissements_list');
+
+        // Reset global — aucun résidu possible
+        divAlerte.style.display = 'none';
+        div3Struct.style.display = 'none';
+        if (awarnList) awarnList.innerHTML = '';
+        if (awarnZone) awarnZone.style.display = 'none';
+
+        switch (etat) {
+            case 'loading':
+                exonEl.innerHTML = '<span class="text-muted">Calcul en cours…</span>';
+                break;
+
+            case 'depassement':
+                exonEl.innerHTML = '<span class="text-danger fw-bold">Dépassement : +' + fmt(data.depasse) + ' GNF</span>'
+                    + '<br><small class="text-muted">Indemnités ' + fmt(data.exon + data.depasse) + ' > plafond 25% = ' + fmt(data.plafond_exon) + '</small>';
+                document.getElementById('decomp_alerte_montant').textContent = fmt(data.depasse);
+                divAlerte.style.display = 'block';
+                lancerComparaison3Structures(brutTotal, data.net);
+                break;
+
+            case 'ok_parfait':
+                exonEl.innerHTML = '<span class="text-success fw-bold">Exonération maximale : ' + fmt(data.exon) + ' / ' + fmt(data.plafond_exon) + ' GNF</span>'
+                    + '<br><small class="text-success">Optimisation parfaite — plafond 25% exactement atteint</small>';
+                break;
+
+            case 'ok_normal':
+                exonEl.innerHTML = '<span class="text-success">Exonération : ' + fmt(data.exon) + ' / ' + fmt(data.plafond_exon) + ' GNF</span>'
+                    + '<br><small class="text-muted">Aucun dépassement</small>';
+                break;
         }
     }
 
@@ -1022,7 +1114,7 @@
 
         // 3 appels structures fixes + 1 appel moteur avancé
         var structPromises = structures.map(function(s) {
-            var indem = Math.round(brut * s.pctIndem / 100);
+            var indem = Math.floor(brut * s.pctIndem / 100);
             return postJson(IMPACT_URL, {brut: brut, indemnites: indem}).then(function(d) {
                 d._struct = s;
                 d._type = 'fixe';
@@ -1040,7 +1132,7 @@
             var dyn = od.optimisation_dynamique;
             // Recalcul avec le taux optimal trouvé
             var pctOpt = dyn.taux_optimal;
-            var indemOpt = Math.round(brut * pctOpt / 100);
+            var indemOpt = Math.floor(brut * pctOpt / 100);
             return postJson(IMPACT_URL, {brut: brut, indemnites: indemOpt}).then(function(d) {
                 d._struct = {
                     label: 'Moteur avancé (' + (100 - pctOpt) + ' / ' + pctOpt + ')',
@@ -1106,7 +1198,7 @@
                     '<tr' + cls + '>' +
                     '<td class="fw-semibold">' + badgeHtml + s.label + bestBadge + '</td>' +
                     '<td class="text-center">' + s.base + '% / ' + s.pctIndem + '%</td>' +
-                    '<td class="text-end">' + fmt(Math.round(brut * s.pctIndem / 100)) + '</td>' +
+                    '<td class="text-end">' + fmt(Math.floor(brut * s.pctIndem / 100)) + '</td>' +
                     '<td class="text-end">' + fmt(r.exon) + '</td>' +
                     '<td class="text-end">' + depHtml + '</td>' +
                     '<td class="text-end">' + fmt(r.rts) + '</td>' +
@@ -1271,6 +1363,7 @@
         btnCreer.disabled = (total !== 100);
 
         if (impactTimer) clearTimeout(impactTimer);
+        renderEtatExoneration(ETAT_EXON.LOADING);
         impactTimer = setTimeout(calculerImpactFiscal, 300);
     }
 
@@ -1278,10 +1371,27 @@
     function calculerImpactFiscal() {
         if (!brutTotal) return;
         var pcts = lirePcts();
-        var indemnites = Math.round(brutTotal * (pcts.transport + pcts.logement + pcts.cherte_vie) / 100);
+        var indemnites = Math.floor(brutTotal * (pcts.transport + pcts.logement + pcts.cherte_vie) / 100);
 
-        postJson(IMPACT_URL, {brut: brutTotal, indemnites: indemnites})
+        // Annuler la requête précédente + incrémenter le compteur
+        if (impactController) impactController.abort();
+        impactController = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var myId = ++impactRequestId;
+        var signal = impactController ? impactController.signal : undefined;
+
+        fetch(IMPACT_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify({brut: brutTotal, indemnites: indemnites}),
+            signal: signal
+        })
+        .then(function(r) {
+            var ct = r.headers.get('content-type') || '';
+            if (ct.indexOf('text/html') !== -1) throw new Error('html');
+            return r.json();
+        })
         .then(function(data) {
+            if (myId !== impactRequestId) return;  // double garde : ignore réponse périmée
             if (data.error) return;
             lastImpactData = data;
 
@@ -1306,23 +1416,11 @@
                 }
             }
 
-            var exonInfo = 'Exon: ' + fmt(data.exon) + ' / ' + fmt(data.plafond_exon) + ' GNF';
-            if (data.depasse > 0) {
-                exonInfo += '<br><span class="text-danger">Dépasse: +' + fmt(data.depasse) + '</span>';
-            } else {
-                exonInfo += '<br><span class="text-success">OK (plafond 25%)</span>';
-            }
-            document.getElementById('decomp_exon_info').innerHTML = exonInfo;
-
-            // ── Alerte dépassement + Comparaison 3 structures ──
-            if (data.depasse > 0) {
-                document.getElementById('decomp_alerte_montant').textContent = fmt(data.depasse);
-                divAlerte.style.display = 'block';
-                lancerComparaison3Structures(brutTotal, data.net);
-            } else {
-                divAlerte.style.display = 'none';
-                div3Struct.style.display = 'none';
-            }
+            // ── État exonération (rendu centralisé) ──
+            var etat = data.depasse > 0 ? ETAT_EXON.DEPASSEMENT
+                     : (data.exon > 0 && data.exon === data.plafond_exon) ? ETAT_EXON.OK_PARFAIT
+                     : ETAT_EXON.OK_NORMAL;
+            renderEtatExoneration(etat, data);
 
             // Formules
             if (data.regles) {
@@ -1362,7 +1460,11 @@
 
             btnPdf.style.display = 'inline-block';
         })
-        .catch(function() {});
+        .catch(function(err) {
+            // AbortError = requête annulée volontairement → ignorer silencieusement
+            if (err && err.name === 'AbortError') return;
+            // Autres erreurs (réseau, serveur) → ignorer aussi (UI déjà réinitialisée)
+        });
     }
 
     // ── Attacher les sliders ────────────────────────────────────────
@@ -1673,6 +1775,7 @@
             }
 
             lastSimulationId = data.simulation_id;
+            chargerHistoriqueSimulations();
 
             // Remplir la modal
             var conf = CONF_MAP[data.conformite] || CONF_MAP['a_verifier'];
@@ -1769,6 +1872,7 @@
                 msg += '<div class="mt-2"><a href="" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-clockwise"></i> Rafraîchir la page</a></div>';
                 divOk.innerHTML = msg;
                 divOk.style.display = 'block';
+                chargerHistoriqueSimulations();
             } else {
                 divErr.textContent = data.message || 'Erreur lors de la création.';
                 divErr.style.display = 'block';
@@ -1783,6 +1887,100 @@
         });
     });
 
+    // ── Historique des simulations ──────────────────────────────────
+    var HISTORIQUE_CONF = {
+        'conforme':     {cls: 'bg-success',  label: 'Conforme'},
+        'a_verifier':   {cls: 'bg-warning text-dark', label: 'À vérifier'},
+        'non_conforme': {cls: 'bg-danger',   label: 'Non conforme'}
+    };
+    var HISTORIQUE_EXON = {
+        'ok_parfait':   {cls: 'text-success', icon: 'bi-check-circle-fill', label: 'Optimal'},
+        'ok_normal':    {cls: 'text-success', icon: 'bi-check-circle',      label: 'OK'},
+        'depassement':  {cls: 'text-danger',  icon: 'bi-exclamation-triangle-fill', label: 'Dépassement'}
+    };
+
+    function chargerHistoriqueSimulations() {
+        fetch(HISTORIQUE_URL)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var badge = document.getElementById('historique_count_badge');
+            var vide  = document.getElementById('historique_vide');
+            var zone  = document.getElementById('historique_table_zone');
+            var tbody = document.getElementById('historique_tbody');
+            var footer = document.getElementById('historique_footer');
+            var footerText = document.getElementById('historique_footer_text');
+
+            badge.textContent = data.total;
+
+            if (!data.simulations || data.simulations.length === 0) {
+                vide.style.display = 'block';
+                zone.style.display = 'none';
+                footer.style.display = 'none';
+                return;
+            }
+
+            vide.style.display = 'none';
+            zone.style.display = 'block';
+            tbody.innerHTML = '';
+
+            data.simulations.forEach(function(s) {
+                var conf = HISTORIQUE_CONF[s.conformite] || HISTORIQUE_CONF['a_verifier'];
+                var exon = HISTORIQUE_EXON[s.statut_exoneration] || {cls: 'text-muted', icon: 'bi-dash', label: '—'};
+                var applHtml = s.appliquee
+                    ? '<span class="badge bg-success"><i class="bi bi-check-lg"></i> Oui</span>'
+                    : '<span class="badge bg-light text-muted">Non</span>';
+
+                tbody.insertAdjacentHTML('beforeend',
+                    '<tr>' +
+                    '<td class="small">' + s.date + '</td>' +
+                    '<td class="text-end">' + fmt(s.brut) + '</td>' +
+                    '<td class="text-end fw-bold">' + fmt(s.net) + '</td>' +
+                    '<td class="text-center"><span class="badge bg-light text-dark">' + s.composantes_resume + '</span></td>' +
+                    '<td class="text-center"><span class="badge ' + conf.cls + '">' + conf.label + '</span></td>' +
+                    '<td class="text-center"><i class="bi ' + exon.icon + ' ' + exon.cls + '" title="' + exon.label + '"></i> <small>' + exon.label + '</small></td>' +
+                    '<td class="text-center">' + applHtml + '</td>' +
+                    '<td class="text-center small">' + s.utilisateur + '</td>' +
+                    '<td class="text-center"><button type="button" class="btn btn-outline-dark btn-sm btn-historique-pdf" data-sim-id="' + s.id + '" title="Télécharger PDF"><i class="bi bi-file-earmark-pdf"></i></button></td>' +
+                    '</tr>'
+                );
+            });
+
+            // Attacher les handlers PDF
+            tbody.querySelectorAll('.btn-historique-pdf').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var simId = btn.dataset.simId;
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                    postBlob(PDF_URL, {simulation_id: parseInt(simId)})
+                    .then(function(blob) {
+                        var url = URL.createObjectURL(blob);
+                        var a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'simulation_' + simId + '.pdf';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    })
+                    .catch(function() {})
+                    .finally(function() {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i>';
+                    });
+                });
+            });
+
+            if (data.total > data.simulations.length) {
+                footerText.textContent = data.simulations.length + ' sur ' + data.total + ' simulations affichées';
+                footer.style.display = 'block';
+            } else {
+                footer.style.display = 'none';
+            }
+        })
+        .catch(function() {});
+    }
+
+    // Charger l'historique au chargement de la page
+    chargerHistoriqueSimulations();
+
     // ── Connexion Rétro-Paie → Structuration ────────────────────────
     window.appliquerBrutDecomposition = function(brutCalc) {
         var champBrut = document.getElementById('decomp_brut');
@@ -1794,6 +1992,11 @@
             }
             btnCalc.click();
         }
+    };
+
+    // Exposer appliquerStructure pour la proposition automatique
+    window.appliquerStructureDepuisProposition = function(base, t, l, cv) {
+        appliquerStructure(base, t, l, cv);
     };
 })();
 </script>
@@ -1850,7 +2053,13 @@
                 taux_max: parseInt(document.getElementById('prop_taux_max').value) || 25
             })
         })
-        .then(function(r) { return r.json(); })
+        .then(function(r) {
+            var ct = r.headers.get('content-type') || '';
+            if (ct.indexOf('text/html') !== -1) {
+                throw new Error(r.status === 403 ? 'Session expirée — rechargez la page (F5)' : 'Erreur serveur (' + r.status + ')');
+            }
+            return r.json();
+        })
         .then(function(data) {
             btnLancer.disabled = false;
             btnLancer.innerHTML = '<i class="bi bi-rocket-takeoff"></i> Calculer tout';
@@ -1955,40 +2164,42 @@
     // Bouton "Appliquer cette structure" → injecte dans le moteur de structuration
     document.getElementById('prop_btn_appliquer').addEventListener('click', function() {
         var data = btnLancer._lastData;
-        if (!data) return;
+        if (!data || !data.recommandation || !data.retropaie) return;
 
-        // Injecter le brut dans le champ et déclencher le calcul
-        if (window.injecterBrutDepuisProposition) {
-            window.injecterBrutDepuisProposition(data.retropaie.brut);
-        } else {
-            var champBrut = document.getElementById('decomp_brut');
-            if (champBrut) {
-                champBrut.value = data.retropaie.brut;
-                var collapse = document.getElementById('decomp_body');
-                if (collapse && !collapse.classList.contains('show')) {
-                    new bootstrap.Collapse(collapse, {toggle: true});
-                }
-                document.getElementById('decomp_btn_calculer').click();
+        // 1. Injecter le brut et lancer la décomposition initiale
+        var champBrut = document.getElementById('decomp_brut');
+        if (champBrut) {
+            champBrut.value = data.retropaie.brut;
+            var collapse = document.getElementById('decomp_body');
+            if (collapse && !collapse.classList.contains('show')) {
+                new bootstrap.Collapse(collapse, {toggle: true});
             }
+            // Décomposer pour charger les rubriques
+            document.getElementById('decomp_btn_calculer').click();
         }
 
-        // Si mode fiscal + sliders disponibles, appliquer les % recommandés
+        // 2. Extraire les % recommandés
+        var comps = data.recommandation.composantes || [];
+        var pctMap = {};
+        comps.forEach(function(c) { pctMap[c.cle] = c.pct; });
+        var base = pctMap['salaire_base'] || 75;
+        var t = pctMap['transport'] || 10;
+        var l = pctMap['logement'] || 10;
+        var cv = pctMap['cherte_vie'] || 5;
+
+        // 3. Appliquer les sliders après que la décomposition a chargé les rubriques
         setTimeout(function() {
+            // Activer le mode fiscal si disponible
             var radioFiscal = document.getElementById('decomp_mode_fiscal');
             if (radioFiscal) {
                 radioFiscal.checked = true;
                 radioFiscal.dispatchEvent(new Event('change'));
             }
-            (data.recommandation.composantes || []).forEach(function(c) {
-                var slider = document.getElementById('slider_' + c.cle);
-                if (slider) slider.value = c.pct;
-            });
-            // Auto-recalcul pour vérification visuelle
-            var btnRecalc = document.getElementById('decomp_btn_calculer');
-            if (btnRecalc) {
-                setTimeout(function() { btnRecalc.click(); }, 300);
+            // Appliquer via la fonction exposée (set sliders + recalculer + impact fiscal)
+            if (window.appliquerStructureDepuisProposition) {
+                window.appliquerStructureDepuisProposition(base, t, l, cv);
             }
-        }, 500);
+        }, 600);
     });
 })();
 </script>
