@@ -3398,8 +3398,12 @@ def api_retropaie(request):
         return JsonResponse({'error': f'Erreur de calcul : {str(e)}'}, status=500)
 
     # --- Charges patronales -----------------------------------------------
+    nb_salaries = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    ).count()
     try:
-        cp = calculer_charges_patronales(resultat['brut'], annee=annee)
+        cp = calculer_charges_patronales(resultat['brut'], annee=annee, nb_salaries=nb_salaries)
     except Exception:
         cp = {'cnss_employeur': 0, 'vf': 0, 'ta': 0, 'libelle_ta': 'TA', 'total': 0,
               'cout_total_employeur': int(resultat['brut'])}
@@ -4521,14 +4525,18 @@ def api_proposition_complete(request):
     brut_sans_opti = int(retro_ref['brut'])
 
     # ── Étape 2 : Charges patronales ──────────────────────────────────────
+    nb_salaries = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    ).count()
     try:
-        cp = calculer_charges_patronales(retro['brut'], annee=annee)
+        cp = calculer_charges_patronales(retro['brut'], annee=annee, nb_salaries=nb_salaries)
     except Exception:
         cp = {'cnss_employeur': 0, 'vf': 0, 'ta': 0, 'libelle_ta': 'TA',
               'total': 0, 'cout_total_employeur': brut_calcule}
 
     try:
-        cp_ref = calculer_charges_patronales(retro_ref['brut'], annee=annee)
+        cp_ref = calculer_charges_patronales(retro_ref['brut'], annee=annee, nb_salaries=nb_salaries)
     except Exception:
         cp_ref = cp
 
