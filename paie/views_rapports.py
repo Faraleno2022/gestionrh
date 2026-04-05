@@ -616,6 +616,79 @@ def _classer_ligne_bulletin(ligne):
     return 'autre_gain' if type_rub == 'gain' else 'autre'
 
 
+def _get_salaire_base_intelligent(employe, bulletin_base, annee, mois):
+    """
+    Récupère le salaire de base du travailleur de façon intelligente et automatique.
+
+    Stratégie de fallback:
+    1. Salaire_base du bulletin courant (si non-nul)
+    2. Dernier avenant de contrat (nouveau_salaire)
+    3. Dernière promotion ou changement de salaire
+    4. Dernier bulletin validé/payé de l'employé
+    5. Moyenne des 3 derniers bulletins valides
+    6. Zéro si rien trouvé
+    """
+    from employes.models import AvenantContrat, Promotion
+
+    # 1. Utiliser le bulletin courant s'il existe et n'est pas zéro
+    if bulletin_base and bulletin_base > 0:
+        return bulletin_base
+
+    eid = employe.pk
+
+    # 2. Chercher le dernier avenant de contrat avec nouveau_salaire
+    try:
+        avenant = AvenantContrat.objects.filter(
+            contrat__employe_id=eid,
+            motif__in=['augmentation', 'promotion', 'autre'],
+        ).order_by('-date_avenant').first()
+        if avenant and avenant.nouveau_salaire and avenant.nouveau_salaire > 0:
+            return avenant.nouveau_salaire
+    except Exception:
+        pass
+
+    # 3. Chercher la dernière promotion avec nouveau_salaire
+    try:
+        promotion = Promotion.objects.filter(
+            employe_id=eid,
+        ).order_by('-date_decision').first()
+        if promotion and promotion.nouveau_salaire and promotion.nouveau_salaire > 0:
+            return promotion.nouveau_salaire
+    except Exception:
+        pass
+
+    # 4. Chercher le dernier bulletin validé/payé de l'employé
+    try:
+        last_bulletin = BulletinPaie.objects.filter(
+            employe_id=eid,
+            statut_bulletin__in=['valide', 'paye'],
+            salaire_base__gt=0,
+        ).exclude(
+            pk=bulletin_base.pk if hasattr(bulletin_base, 'pk') else None,
+        ).order_by('-annee_paie', '-mois_paie').first()
+        if last_bulletin and last_bulletin.salaire_base > 0:
+            return last_bulletin.salaire_base
+    except Exception:
+        pass
+
+    # 5. Moyenne des 3 derniers bulletins valides
+    try:
+        last_three = BulletinPaie.objects.filter(
+            employe_id=eid,
+            statut_bulletin__in=['valide', 'paye'],
+            salaire_base__gt=0,
+        ).order_by('-annee_paie', '-mois_paie')[:3].aggregate(
+            avg_salaire=Avg('salaire_base')
+        )
+        if last_three and last_three.get('avg_salaire'):
+            return Decimal(str(last_three['avg_salaire']))
+    except Exception:
+        pass
+
+    # 6. Fallback zéro
+    return Decimal('0')
+
+
 def _fmt_gnf(val):
     """Formate un nombre avec séparateur de milliers."""
     if val is None:
@@ -879,13 +952,16 @@ def _construire_donnees_etat_paie(bulletins_qs, annee, mois, entreprise):
         # -- Paie dimanche : depuis HS ou bulletin --
         paie_dim = hs_dim_map.get(eid, Decimal('0'))
 
+        # -- Salaire de base : intelligent & automatique --
+        salaire_base_intelligent = _get_salaire_base_intelligent(emp, b, annee_int, mois_int)
+
         row = {
             'num': idx,
             'profession': str(emp.poste) if emp.poste else '-',
             'prenom': emp.prenoms,
             'nom': emp.nom,
             'matricule': emp.matricule,
-            'salaire_base': b.salaire_base or Decimal('0'),
+            'salaire_base': salaire_base_intelligent,
             'rts': b.irg or Decimal('0'),
             'cnss': b.cnss_employe or Decimal('0'),
             'vf': b.versement_forfaitaire or Decimal('0'),
@@ -1329,6 +1405,10 @@ def _construire_donnees_feuille_presence(entreprise, annee, mois, service_id=Non
         nb_present = count_p + count_am + count_pm + count_am_pm
         nb_absent = count_a + count_aj
 
+        # Salaire de base : intelligent & automatique
+        salaire_base_bull = bull.salaire_base if bull else None
+        salaire_base_intelligent = _get_salaire_base_intelligent(emp, salaire_base_bull, annee_int, mois_int)
+
         row = {
             'employe': emp,
             'nom': emp.nom,
@@ -1348,7 +1428,7 @@ def _construire_donnees_feuille_presence(entreprise, annee, mois, service_id=Non
             'nb_absent': nb_absent,
             'nb_dim_travailles': nb_dim_travailles,
             'feries_travailles': feries_travailles,
-            'salaire_base': bull.salaire_base if bull else Decimal('0'),
+            'salaire_base': salaire_base_intelligent,
             'brut': bull.salaire_brut if bull else Decimal('0'),
             'net': bull.net_a_payer if bull else Decimal('0'),
             'paie_dim': hs_dim_map.get(eid, Decimal('0')),
