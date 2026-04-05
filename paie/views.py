@@ -4081,6 +4081,12 @@ def api_impact_fiscal(request):
 
     from .services_simulation import calculer_un_bareme, _charger_constantes, BAREME_CGI_REFERENCE, _charger_tranches_db
 
+    # Compte les salariés actifs pour TA/ONFPP
+    nb_salaries = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    ).count()
+
     constantes = _charger_constantes()
     annee = date.today().year
 
@@ -4094,6 +4100,7 @@ def api_impact_fiscal(request):
         Decimal(str(indem_val)),
         tranches,
         constantes,
+        nb_salaries=nb_salaries,
     )
 
     # ── Indicateur de conformité fiscale ──
@@ -4221,6 +4228,12 @@ def api_optimiser_decomposition(request):
 
     from .services_simulation import calculer_un_bareme, _charger_constantes, BAREME_CGI_REFERENCE, _charger_tranches_db, optimiser_structure_dynamique
 
+    # Compte les salariés actifs pour TA/ONFPP
+    nb_salaries = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    ).count()
+
     constantes = _charger_constantes()
     annee = date.today().year
     tranches = _charger_tranches_db(annee, 'officiel')
@@ -4228,7 +4241,7 @@ def api_optimiser_decomposition(request):
         tranches = list(BAREME_CGI_REFERENCE)
 
     # --- Optimisation dynamique (test toutes les structures 0-25%) ---
-    optim_dyn = optimiser_structure_dynamique(brut_val, tranches, constantes, objectif=objectif)
+    optim_dyn = optimiser_structure_dynamique(brut_val, tranches, constantes, nb_salaries=nb_salaries, objectif=objectif)
     best_dyn = optim_dyn['best']
     best_taux = best_dyn['taux_indem_pct']
 
@@ -4314,6 +4327,7 @@ def api_optimiser_decomposition(request):
         Decimal(str(total_indemnites)),
         tranches,
         constantes,
+        nb_salaries=nb_salaries,
     )
 
     # Comparer avec la répartition actuelle (si fournie)
@@ -4331,6 +4345,7 @@ def api_optimiser_decomposition(request):
             Decimal(str(indem_actuelles)),
             tranches,
             constantes,
+            nb_salaries=nb_salaries,
         )
         gain_net = impact_optimal['net'] - impact_actuel['net']
         economie_rts = impact_actuel['rts'] - impact_optimal['rts']
@@ -4351,6 +4366,7 @@ def api_optimiser_decomposition(request):
             Decimal('0'),
             tranches,
             constantes,
+            nb_salaries=nb_salaries,
         )
         comparaison = [
             {
@@ -4742,6 +4758,13 @@ def api_valider_simulation(request):
 
     # ── Recalculer côté serveur (ne pas faire confiance au JS) ──
     from .services_simulation import calculer_un_bareme, _charger_constantes, BAREME_CGI_REFERENCE, _charger_tranches_db
+
+    # Compte les salariés actifs pour TA/ONFPP
+    nb_salaries = Employe.objects.filter(
+        entreprise=request.user.entreprise,
+        statut_employe='actif'
+    ).count()
+
     constantes = _charger_constantes()
     annee = date.today().year
     tranches = _charger_tranches_db(annee, 'officiel')
@@ -4754,6 +4777,7 @@ def api_valider_simulation(request):
         Decimal(str(total_indem)),
         tranches,
         constantes,
+        nb_salaries=nb_salaries,
     )
 
     # ── Vérifications de conformité ──
