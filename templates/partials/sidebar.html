@@ -444,6 +444,42 @@
                 <i class="bi bi-file-earmark-spreadsheet"></i> Déclarations
             </a>
         </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if 'rapport-masse-salariale' in request.path %}active{% endif %}" href="{% url 'paie:rapport_masse_salariale' %}">
+                <i class="bi bi-bar-chart-line"></i> Masse Salariale
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if 'etat-paie' in request.path %}active{% endif %}" href="{% url 'paie:rapport_etat_paie' %}">
+                <i class="bi bi-table"></i> État de Paie
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if 'feuille-presence' in request.path %}active{% endif %}" href="{% url 'paie:rapport_feuille_presence' %}">
+                <i class="bi bi-calendar-check"></i> Feuille de Présence
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if 'tableau-de-bord' in request.path and 'absences' in request.path %}active{% endif %}" href="{% url 'employes:tableau_bord_absences' %}">
+                <i class="bi bi-calendar-x"></i> Tableau de Bord Absences
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if 'simulation/comparative' in request.path %}active{% endif %}" href="{% url 'paie:simulation_comparative' %}">
+                <i class="bi bi-sliders2"></i> Simulation RTS
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if 'simulation/historique' in request.path %}active{% endif %}" href="{% url 'paie:historique_simulations' %}">
+                <i class="bi bi-clock-history"></i> Historique Simulations
+            </a>
+        </li>
         {% endif %}  <!-- Fin condition has_rh -->
         
         {% if user.profil.niveau_acces >= 4 %}
