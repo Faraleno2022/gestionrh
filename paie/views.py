@@ -2313,6 +2313,77 @@ def supprimer_element_salaire(request, pk):
 
 
 @login_required
+def api_avancer_dates_elements(request):
+    """
+    POST JSON → met à jour date_debut (et date_fin) de tous les éléments de salaire.
+    Permet de passer au mois suivant sans modifier chaque élément manuellement.
+
+    Entrée :
+        {
+          "date_debut": "2026-05-01",
+          "date_fin": "2026-05-31",      ← optionnel, null pour ne pas changer
+          "employe_id": 12,              ← optionnel, null pour tous les employés
+          "actif_seulement": true        ← défaut true
+        }
+    Sortie :
+        { "nb_mis_a_jour": 42, "message": "..." }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST requis'}, status=405)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON invalide'}, status=400)
+
+    date_debut_str = data.get('date_debut', '')
+    date_fin_str   = data.get('date_fin', None)
+    employe_id     = data.get('employe_id', None)
+    actif_seulement = data.get('actif_seulement', True)
+
+    if not date_debut_str:
+        return JsonResponse({'error': 'date_debut obligatoire'}, status=400)
+
+    try:
+        from datetime import datetime as dt
+        nouvelle_date_debut = dt.strptime(date_debut_str, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'error': 'Format date_debut invalide (YYYY-MM-DD)'}, status=400)
+
+    nouvelle_date_fin = None
+    if date_fin_str:
+        try:
+            from datetime import datetime as dt
+            nouvelle_date_fin = dt.strptime(date_fin_str, '%Y-%m-%d').date()
+        except ValueError:
+            return JsonResponse({'error': 'Format date_fin invalide (YYYY-MM-DD)'}, status=400)
+
+    # Filtrer les éléments appartenant à l'entreprise de l'utilisateur
+    qs = ElementSalaire.objects.filter(employe__entreprise=request.user.entreprise)
+
+    if actif_seulement:
+        qs = qs.filter(actif=True)
+
+    if employe_id:
+        try:
+            qs = qs.filter(employe_id=int(employe_id))
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'employe_id invalide'}, status=400)
+
+    # Mise à jour en masse
+    champs = {'date_debut': nouvelle_date_debut}
+    if nouvelle_date_fin:
+        champs['date_fin'] = nouvelle_date_fin
+
+    nb = qs.update(**champs)
+
+    scope = 'tous les employés' if not employe_id else 'l\'employé sélectionné'
+    return JsonResponse({
+        'nb_mis_a_jour': nb,
+        'message': f'{nb} élément(s) mis à jour pour {scope}.',
+    })
+
+
+@login_required
 def liste_rubriques(request):
     """Liste des rubriques de paie"""
     type_rubrique = request.GET.get('type')

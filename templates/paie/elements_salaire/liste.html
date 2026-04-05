@@ -6,7 +6,11 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2"><i class="bi bi-cash-coin"></i> Éléments de Salaire</h1>
-    <div class="btn-toolbar">
+    <div class="btn-toolbar gap-2">
+        <!-- Bouton avancer au mois -->
+        <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalAvancerDates">
+            <i class="bi bi-calendar-arrow-right"></i> Avancer au mois
+        </button>
         <div class="dropdown">
             <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                 <i class="bi bi-plus-circle"></i> Définir salaire employé
@@ -16,6 +20,67 @@
                 <li><a class="dropdown-item" href="{% url 'paie:elements_salaire_employe' emp.id %}">{{ emp.matricule }} - {{ emp.nom }} {{ emp.prenoms }}</a></li>
                 {% endfor %}
             </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Modal : Avancer au mois -->
+<div class="modal fade" id="modalAvancerDates" tabindex="-1" aria-labelledby="modalAvancerDatesLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning bg-opacity-10 border-warning">
+                <h5 class="modal-title" id="modalAvancerDatesLabel">
+                    <i class="bi bi-calendar-arrow-right text-warning"></i> Avancer les dates au nouveau mois
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">
+                    Met à jour automatiquement les dates de début (et de fin) de tous les éléments de salaire sélectionnés, pour préparer le calcul du nouveau mois.
+                </p>
+
+                <!-- Nouvelle date de début -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nouvelle date de début <span class="text-danger">*</span></label>
+                    <input type="date" id="adv_date_debut" class="form-control" required>
+                    <div class="form-text">Par défaut : 1er du mois prochain</div>
+                </div>
+
+                <!-- Nouvelle date de fin (optionnel) -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nouvelle date de fin <span class="text-muted fw-normal">(optionnel)</span></label>
+                    <input type="date" id="adv_date_fin" class="form-control">
+                    <div class="form-text">Laisser vide pour ne pas modifier la date de fin</div>
+                </div>
+
+                <!-- Cibler un employé spécifique -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Appliquer à</label>
+                    <select id="adv_employe" class="form-select">
+                        <option value="">Tous les employés</option>
+                        {% for emp in employes %}
+                        <option value="{{ emp.id }}">{{ emp.matricule }} - {{ emp.nom }} {{ emp.prenoms }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Actifs seulement -->
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="adv_actif_seulement" checked>
+                    <label class="form-check-label" for="adv_actif_seulement">
+                        Éléments actifs seulement
+                    </label>
+                </div>
+
+                <!-- Résultat -->
+                <div id="adv_resultat" class="alert d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-warning" id="adv_btn_appliquer">
+                    <i class="bi bi-calendar-check"></i> Appliquer
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -106,7 +171,7 @@
                     </div>
                     {% endfor %}
                 </div>
-                
+
                 <div class="d-grid gap-2 mt-3">
                     <a href="{% url 'paie:elements_salaire_employe' employe_group.grouper.id %}" class="btn btn-primary btn-sm">
                         <i class="bi bi-eye"></i> Voir tous les éléments
@@ -123,5 +188,88 @@
     </div>
     {% endfor %}
 </div>
+
+<script>
+(function () {
+    const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+    const API_URL = "{% url 'paie:api_avancer_dates_elements' %}";
+
+    // Pré-remplir avec le 1er jour du mois prochain
+    function premierJourMoisProchain() {
+        const now = new Date();
+        const y = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
+        const m = now.getMonth() === 11 ? 1 : now.getMonth() + 2;
+        return `${y}-${String(m).padStart(2, '0')}-01`;
+    }
+
+    // Dernier jour du mois prochain
+    function dernierJourMoisProchain() {
+        const now = new Date();
+        const y = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
+        const m = now.getMonth() === 11 ? 1 : now.getMonth() + 2;
+        const lastDay = new Date(y, m, 0).getDate();
+        return `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    }
+
+    const modal = document.getElementById('modalAvancerDates');
+    if (modal) {
+        modal.addEventListener('show.bs.modal', function () {
+            document.getElementById('adv_date_debut').value = premierJourMoisProchain();
+            document.getElementById('adv_date_fin').value   = dernierJourMoisProchain();
+            document.getElementById('adv_resultat').className = 'alert d-none';
+            document.getElementById('adv_resultat').textContent = '';
+        });
+    }
+
+    document.getElementById('adv_btn_appliquer')?.addEventListener('click', function () {
+        const dateDebut  = document.getElementById('adv_date_debut').value;
+        const dateFin    = document.getElementById('adv_date_fin').value || null;
+        const employeId  = document.getElementById('adv_employe').value || null;
+        const actifSeul  = document.getElementById('adv_actif_seulement').checked;
+        const elRes      = document.getElementById('adv_resultat');
+        const btn        = this;
+
+        if (!dateDebut) {
+            elRes.className = 'alert alert-danger';
+            elRes.textContent = 'Veuillez saisir une date de début.';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> En cours…';
+
+        fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify({
+                date_debut: dateDebut,
+                date_fin: dateFin,
+                employe_id: employeId ? parseInt(employeId) : null,
+                actif_seulement: actifSeul,
+            }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                elRes.className = 'alert alert-danger';
+                elRes.textContent = data.error;
+            } else {
+                elRes.className = 'alert alert-success';
+                elRes.innerHTML = `<i class="bi bi-check-circle me-1"></i> ${data.message}`;
+                // Recharger la page après 1.5s pour refléter les nouvelles dates
+                setTimeout(() => location.reload(), 1500);
+            }
+        })
+        .catch(() => {
+            elRes.className = 'alert alert-danger';
+            elRes.textContent = 'Erreur réseau. Veuillez réessayer.';
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-calendar-check"></i> Appliquer';
+        });
+    });
+})();
+</script>
 {% endblock %}
 

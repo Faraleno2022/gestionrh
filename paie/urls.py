@@ -177,5 +177,6 @@ urlpatterns = [
     path('api/proposition-complete/', views.api_proposition_complete, name='api_proposition_complete'),
     path('api/valider-simulation/', views.api_valider_simulation, name='api_valider_simulation'),
     path('api/historique-simulations/<int:employe_id>/', views.api_historique_simulations_employe, name='api_historique_simulations_employe'),
+    path('api/avancer-dates-elements/', views.api_avancer_dates_elements, name='api_avancer_dates_elements'),
     path('api/simulation-pdf/', views.api_simulation_pdf, name='api_simulation_pdf'),
 ]
