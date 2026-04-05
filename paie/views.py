@@ -2759,9 +2759,8 @@ def simulation_paie(request):
         salaire_brut = (salaire_base + prime_transport + prime_logement + prime_cherte_vie +
                        prime_panier + prime_anciennete + prime_responsabilite + autres_primes)
         
-        # Primes exonérées de CNSS 5% (transport, logement, cherté de vie)
-        primes_exonerees_cnss = prime_transport + prime_logement + prime_cherte_vie
-        base_cnss_brute = salaire_brut - primes_exonerees_cnss
+        # Primes exonérées de RTS (transport, logement, cherté de vie)
+        primes_exonerees_rts = prime_transport + prime_logement + prime_cherte_vie
         
         # Nombre de salariés actifs pour TA vs ONFPP
         nb_salaries = Employe.objects.filter(
@@ -2787,11 +2786,12 @@ def simulation_paie(request):
             pass
         
         # Calcul CNSS avec vérification du seuil minimum
-        # Base CNSS = brut - primes exonérées (transport, logement, cherté de vie)
+        # IMPORTANT: Base CNSS = Brut complet (pas de primes exonérées à soustraire)
+        # Les taux CNSS/RTS s'appliquent sur le brut avec plafond uniquement
         seuil_minimum_cnss = plancher_cnss * Decimal('0.10')
         alertes = []
-        
-        if base_cnss_brute <= 0:
+
+        if salaire_brut <= 0:
             assiette_cnss = Decimal('0')
             cnss_employe = Decimal('0')
             cnss_employeur = Decimal('0')
@@ -2799,16 +2799,17 @@ def simulation_paie(request):
                 'type': 'critique',
                 'message': f"Salaire brut nul ou négatif ({salaire_brut:,.0f} GNF). Vérifiez les éléments de salaire."
             })
-        elif base_cnss_brute < seuil_minimum_cnss:
+        elif salaire_brut < seuil_minimum_cnss:
             assiette_cnss = Decimal('0')
             cnss_employe = Decimal('0')
             cnss_employeur = Decimal('0')
             alertes.append({
                 'type': 'avertissement',
-                'message': f"Base CNSS très faible ({base_cnss_brute:,.0f} GNF < {seuil_minimum_cnss:,.0f} GNF). Pas de cotisation CNSS calculée."
+                'message': f"Brut très faible ({salaire_brut:,.0f} GNF < {seuil_minimum_cnss:,.0f} GNF). Pas de cotisation CNSS calculée."
             })
         else:
-            assiette_cnss = min(max(base_cnss_brute, plancher_cnss), plafond_cnss)
+            # Assiette CNSS = min(brut, plafond)
+            assiette_cnss = min(salaire_brut, plafond_cnss)
             cnss_employe = (assiette_cnss * taux_cnss_employe / Decimal('100')).quantize(Decimal('1'))
             cnss_employeur = (assiette_cnss * taux_cnss_employeur / Decimal('100')).quantize(Decimal('1'))
         
@@ -2903,7 +2904,7 @@ def simulation_paie(request):
             'prime_responsabilite': prime_responsabilite,
             'autres_primes': autres_primes,
             'salaire_brut': salaire_brut,
-            'primes_exonerees_cnss': primes_exonerees_cnss,
+            'primes_exonerees_cnss': primes_exonerees_rts,  # Primes exonérées de RTS (pour compatibilité template)
             'assiette_cnss': assiette_cnss,
             'cnss_employe': cnss_employe,
             'cnss_employeur': cnss_employeur,
