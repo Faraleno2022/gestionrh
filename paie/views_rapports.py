@@ -956,7 +956,7 @@ def _construire_donnees_etat_paie(bulletins_qs, annee, mois, entreprise):
         paie_dim = hs_dim_map.get(eid, Decimal('0'))
 
         # -- Salaire de base : intelligent & automatique --
-        salaire_base_intelligent = _get_salaire_base_intelligent(emp, b, annee_int, mois_int)
+        salaire_base_intelligent = _get_salaire_base_intelligent(emp, b.salaire_base if b else None, annee_int, mois_int)
 
         row = {
             'num': idx,
