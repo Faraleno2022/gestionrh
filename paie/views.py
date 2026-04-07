@@ -3591,8 +3591,8 @@ def api_retropaie(request):
             'cout_total_employeur': cp['cout_total_employeur'],
         },
         'taux_charge_global': round(
-            (cp['cout_total_employeur'] - int(resultat['net_calcule'])) / int(resultat['net_calcule']) * 100, 1
-        ) if int(resultat['net_calcule']) > 0 else 0,
+            cp['total'] / int(resultat['brut']) * 100, 1
+        ) if int(resultat['brut']) > 0 else 0,
         'formatted': {
             'brut':             fmt(resultat['brut']),
             'cnss':             fmt(resultat['cnss']),
@@ -4287,20 +4287,20 @@ def api_impact_fiscal(request):
         if conformite == 'conforme':
             conformite = 'a_verifier'
 
-    # Taux de charge global = (Coût total employeur − Net) / Net × 100
+    # Taux de charge patronale = Charges patronales / Brut × 100 (standard RH)
     cout_total_employeur = result['brut'] + result['total_charges_pat']
-    net_val = result['net']
+    brut_val = result['brut']
     taux_charge_global = round(
-        (cout_total_employeur - net_val) / net_val * 100, 1
-    ) if net_val > 0 else 0
+        result['total_charges_pat'] / brut_val * 100, 1
+    ) if brut_val > 0 else 0
 
-    # Interprétation métier du taux de charge
-    if taux_charge_global < 25:
+    # Interprétation métier du taux de charge (référence Guinée : CNSS18%+VF6%+ONFPP1.5% = 25.5% max)
+    if taux_charge_global < 15:
         taux_charge_interpretation = {'level': 'optimise', 'label': 'Optimisé', 'color': 'success'}
-    elif taux_charge_global <= 35:
+    elif taux_charge_global <= 22:
         taux_charge_interpretation = {'level': 'standard', 'label': 'Standard', 'color': 'info'}
     else:
-        taux_charge_interpretation = {'level': 'couteux', 'label': 'Coûteux', 'color': 'danger'}
+        taux_charge_interpretation = {'level': 'couteux', 'label': 'Élevé', 'color': 'warning'}
 
     return JsonResponse({
         'brut': result['brut'],
