@@ -828,14 +828,26 @@ class MoteurCalculPaie:
         - Taux employé: 5% (retraite 2.5% + assurance maladie 2.5%)
         - Taux employeur: 18% (prestations familiales 6% + AT/MP 4% + retraite 4% + maladie 4%)
         """
-        # Convertir la base CNSS en GNF si nécessaire (les cotisations sociales sont toujours en GNF)
-        base_cnss_gnf = self.montants['cnss_base']
+        # Base CNSS = salaire brut total (CGI Guinée : CNSS sur l'ensemble de la rémunération)
+        # On utilise le brut plutôt que cnss_base (accumulé via soumis_cnss) car toutes les
+        # rubriques ne sont pas forcément taguées, et la loi guinéenne applique la CNSS sur
+        # le brut global (plancher 550 000 / plafond 2 500 000 GNF).
+        # Si cnss_base est renseigné et cohérent (> 10% du plancher), on l'utilise en priorité ;
+        # sinon on tombe sur le brut.
+        plancher_seuil = self.constantes.get('PLANCHER_CNSS', Decimal('550000')) * Decimal('0.10')
+        if self.montants['cnss_base'] >= plancher_seuil:
+            base_raw = self.montants['cnss_base']
+        else:
+            base_raw = self.montants['brut']
+
         if self.devise_employe != self.devise_base:
             base_cnss_gnf = DeviseService.convertir_vers_gnf(
-                self.montants['cnss_base'], 
-                self.devise_employe, 
+                base_raw,
+                self.devise_employe,
                 self.date_conversion
             )
+        else:
+            base_cnss_gnf = base_raw
         
         # Récupérer plancher et plafond CNSS (en GNF)
         # Plancher = 550 000 GNF - assiette minimale de cotisation
@@ -857,10 +869,13 @@ class MoteurCalculPaie:
         else:
             base_cnss_plafonnee = self._arrondir(max(min(base_cnss_gnf, plafond_cnss), plancher_cnss))
         
+        # Mettre à jour cnss_base avec la valeur réelle utilisée (pour affichage résumé)
+        self.montants['cnss_base'] = base_cnss_plafonnee
+
         # CNSS salarié (utiliser TAUX_CNSS_EMPLOYE au lieu de TAUX_CNSS_SALARIE)
         taux_cnss = self.constantes.get('TAUX_CNSS_EMPLOYE', Decimal('5.00'))
         cnss_employe = self._arrondir(base_cnss_plafonnee * taux_cnss / Decimal('100'))
-        
+
         self.montants['cnss_employe'] = cnss_employe
         self.montants['total_retenues'] += cnss_employe
         
