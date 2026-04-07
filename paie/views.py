@@ -4683,9 +4683,11 @@ def api_proposition_complete(request):
     pct_transport = round(pct_indem * 0.4, 1)
     pct_logement  = round(pct_indem * 0.4, 1)
     pct_cherte    = round(pct_indem * 0.2, 1)
-    montant_transport = round(brut_calcule * pct_transport / 100)
-    montant_logement  = round(brut_calcule * pct_logement / 100)
-    montant_cherte    = round(brut_calcule * pct_cherte / 100)
+    # Utiliser floor (comme _floor_gnf et JS Math.floor) pour éviter le +1 GNF
+    import math as _math
+    montant_transport = _math.floor(brut_calcule * pct_transport / 100)
+    montant_logement  = _math.floor(brut_calcule * pct_logement / 100)
+    montant_cherte    = _math.floor(brut_calcule * pct_cherte / 100)
     montant_base      = brut_calcule - montant_transport - montant_logement - montant_cherte
     recommandation_composantes = [
         {'cle': 'salaire_base', 'pct': pct_base, 'montant': montant_base},
