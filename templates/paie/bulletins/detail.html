@@ -11,6 +11,16 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h2><i class="fas fa-file-invoice me-2"></i>Bulletin {{ bulletin.numero_bulletin }}</h2>
                 <div class="btn-group">
+                    {% if bulletin.cnss_employe == 0 and bulletin.salaire_brut > 0 %}
+                    <form method="post" action="{% url 'paie:recalculer_cnss_bulletin' bulletin.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning fw-bold"
+                                onclick="return confirm('Recalculer la CNSS de ce bulletin ? Le net sera ajusté en conséquence.')"
+                                title="CNSS = 0 détectée — cliquez pour corriger">
+                            <i class="fas fa-sync-alt me-1"></i> Corriger CNSS
+                        </button>
+                    </form>
+                    {% endif %}
                     <a href="{% url 'paie:telecharger_bulletin_pdf' bulletin.pk %}" class="btn btn-danger">
                         <i class="fas fa-file-pdf me-2"></i>PDF Modèle 1
                     </a>

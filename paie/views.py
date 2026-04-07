@@ -393,6 +393,57 @@ def liste_bulletins(request):
 
 @login_required
 @entreprise_active_required
+@require_POST
+def recalculer_cnss_bulletin(request, pk):
+    """
+    Recalcule et corrige le CNSS d'un bulletin existant (CNSS = 0 → correct).
+    CGI Guinée : base = min(max(brut, plancher 550 000), plafond 2 500 000)
+    """
+    from decimal import Decimal, ROUND_HALF_UP
+    bulletin = get_object_or_404(
+        BulletinPaie,
+        pk=pk,
+        employe__entreprise=request.user.entreprise,
+        periode__entreprise=request.user.entreprise,
+    )
+
+    brut = Decimal(str(bulletin.salaire_brut or 0))
+    if brut <= 0:
+        from django.contrib import messages
+        messages.error(request, "Brut nul — impossible de recalculer la CNSS.")
+        return redirect('paie:detail_bulletin', pk=pk)
+
+    plafond  = Decimal('2500000')
+    plancher = Decimal('550000')
+    taux_emp = Decimal('5')
+    taux_pat = Decimal('18')
+
+    base_cnss = max(min(brut, plafond), plancher)
+    cnss_employe   = (base_cnss * taux_emp  / Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+    cnss_employeur = (base_cnss * taux_pat / Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+
+    # Net recalculé = Brut − CNSS employé − RTS (anciennement net = brut − RTS car CNSS était 0)
+    ancien_net = Decimal(str(bulletin.net_a_payer or 0))
+    ancien_cnss = Decimal(str(bulletin.cnss_employe or 0))
+    nouveau_net = ancien_net - (cnss_employe - ancien_cnss)  # ajustement exact
+
+    bulletin.cnss_employe   = cnss_employe
+    bulletin.cnss_employeur = cnss_employeur
+    bulletin.net_a_payer    = nouveau_net
+    bulletin.save(update_fields=['cnss_employe', 'cnss_employeur', 'net_a_payer'])
+
+    from django.contrib import messages
+    messages.success(
+        request,
+        f"CNSS recalculée : employé {int(cnss_employe):,} GNF | "
+        f"employeur {int(cnss_employeur):,} GNF | "
+        f"Net corrigé : {int(nouveau_net):,} GNF".replace(',', ' ')
+    )
+    return redirect('paie:detail_bulletin', pk=pk)
+
+
+@login_required
+@entreprise_active_required
 @reauth_required
 def detail_bulletin(request, pk):
     """Détail d'un bulletin de paie"""

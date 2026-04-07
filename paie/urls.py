@@ -26,6 +26,7 @@ urlpatterns = [
     # Bulletins de paie
     path('bulletins/', views.liste_bulletins, name='liste_bulletins'),
     path('bulletins/<int:pk>/', views.detail_bulletin, name='detail_bulletin'),
+    path('bulletins/<int:pk>/recalculer-cnss/', views.recalculer_cnss_bulletin, name='recalculer_cnss_bulletin'),
     path('bulletins/<int:pk>/imprimer/', views.imprimer_bulletin, name='imprimer_bulletin'),
     path('bulletins/<int:pk>/telecharger-pdf/', views.telecharger_bulletin_pdf, name='telecharger_bulletin_pdf'),
     path('bulletins/public/<str:token>/', views.telecharger_bulletin_public, name='telecharger_bulletin_public'),
