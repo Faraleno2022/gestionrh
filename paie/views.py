@@ -2128,45 +2128,79 @@ def declarations_sociales_pdf(request):
 
 @login_required
 def liste_elements_salaire(request):
-    """Liste tous les éléments de salaire"""
+    """
+    Liste les employés avec leur résumé d'éléments de salaire.
+    Pagination par employé (20 par page) pour éviter les problèmes de regroupement.
+    """
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-    
+    from django.db.models import Count, Sum, Q
+
     # Filtres
-    employe_id = request.GET.get('employe')
-    type_rubrique = request.GET.get('type')
-    actif = request.GET.get('actif')
-    
-    elements = ElementSalaire.objects.select_related(
-        'employe', 'rubrique'
-    ).filter(employe__entreprise=request.user.entreprise).order_by('employe__nom', 'rubrique__ordre_calcul')
-    
-    if employe_id:
-        elements = elements.filter(employe_id=employe_id)
-    if type_rubrique:
-        elements = elements.filter(rubrique__type_rubrique=type_rubrique)
-    if actif:
-        elements = elements.filter(actif=(actif == 'true'))
-    
-    # Pagination - 50 par page
-    paginator = Paginator(elements, 50)
+    q_nom      = request.GET.get('q', '').strip()
+    statut_f   = request.GET.get('statut', 'actif')
+    par_page   = int(request.GET.get('par_page', 20))
+    if par_page not in (10, 20, 50):
+        par_page = 20
+
+    employes_qs = Employe.objects.filter(
+        entreprise=request.user.entreprise
+    ).order_by('nom', 'prenoms')
+
+    if q_nom:
+        employes_qs = employes_qs.filter(
+            Q(nom__icontains=q_nom) | Q(prenoms__icontains=q_nom) | Q(matricule__icontains=q_nom)
+        )
+    if statut_f and statut_f != 'tous':
+        employes_qs = employes_qs.filter(statut_employe=statut_f)
+
+    # Annoter chaque employé avec le nombre d'éléments actifs et la somme brute
+    employes_qs = employes_qs.annotate(
+        nb_elements_actifs=Count('elementsalaire', filter=Q(elementsalaire__actif=True)),
+        nb_elements_total=Count('elementsalaire'),
+        total_gains=Sum(
+            'elementsalaire__montant',
+            filter=Q(elementsalaire__actif=True, elementsalaire__rubrique__type_rubrique='gain')
+        ),
+    )
+
+    # Pagination par employé
+    paginator = Paginator(employes_qs, par_page)
     page = request.GET.get('page')
     try:
-        elements_page = paginator.page(page)
+        employes_page = paginator.page(page)
     except PageNotAnInteger:
-        elements_page = paginator.page(1)
+        employes_page = paginator.page(1)
     except EmptyPage:
-        elements_page = paginator.page(paginator.num_pages)
-    
-    # Liste des employés pour le filtre
-    employes = Employe.objects.filter(
+        employes_page = paginator.page(paginator.num_pages)
+
+    # Pour chaque employé de la page, charger ses éléments actifs (max 5 pour aperçu)
+    employes_ids = [e.id for e in employes_page]
+    elements_par_employe = {}
+    for el in ElementSalaire.objects.filter(
+        employe_id__in=employes_ids, actif=True
+    ).select_related('rubrique').order_by('employe_id', 'rubrique__ordre_calcul'):
+        elements_par_employe.setdefault(el.employe_id, []).append(el)
+
+    # Enrichir chaque employé paginé avec ses éléments
+    for emp in employes_page:
+        emp.elements_actifs_liste = elements_par_employe.get(emp.id, [])
+
+    # Liste complète pour filtre dropdown
+    tous_employes = Employe.objects.filter(
         entreprise=request.user.entreprise,
         statut_employe='actif'
     ).order_by('nom', 'prenoms')
-    
+
     return render(request, 'paie/elements_salaire/liste.html', {
-        'elements': elements_page,
-        'employes': employes,
-        'total_elements': paginator.count,
+        'employes_page': employes_page,
+        'employes': tous_employes,
+        'total_employes': paginator.count,
+        'total_pages': paginator.num_pages,
+        'q_nom': q_nom,
+        'statut_f': statut_f,
+        'par_page': par_page,
+        # Compatibilité rétro pour le modal avancer dates
+        'elements': ElementSalaire.objects.none(),
     })
 
 
