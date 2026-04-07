@@ -2155,11 +2155,11 @@ def liste_elements_salaire(request):
 
     # Annoter chaque employé avec le nombre d'éléments actifs et la somme brute
     employes_qs = employes_qs.annotate(
-        nb_elements_actifs=Count('elementsalaire', filter=Q(elementsalaire__actif=True)),
-        nb_elements_total=Count('elementsalaire'),
+        nb_elements_actifs=Count('elements_salaire', filter=Q(elements_salaire__actif=True)),
+        nb_elements_total=Count('elements_salaire'),
         total_gains=Sum(
-            'elementsalaire__montant',
-            filter=Q(elementsalaire__actif=True, elementsalaire__rubrique__type_rubrique='gain')
+            'elements_salaire__montant',
+            filter=Q(elements_salaire__actif=True, elements_salaire__rubrique__type_rubrique='gain')
         ),
     )
 
