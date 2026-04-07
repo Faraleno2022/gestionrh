@@ -1300,9 +1300,9 @@
         });
 
         var mt = {};
-        mt.transport = Math.round(brutTotal * pcts.transport / 100);
-        mt.logement  = Math.round(brutTotal * pcts.logement / 100);
-        mt.cherte_vie = Math.round(brutTotal * pcts.cherte_vie / 100);
+        mt.transport = Math.floor(brutTotal * pcts.transport / 100);
+        mt.logement  = Math.floor(brutTotal * pcts.logement / 100);
+        mt.cherte_vie = Math.floor(brutTotal * pcts.cherte_vie / 100);
         mt.salaire_base = brutTotal - mt.transport - mt.logement - mt.cherte_vie;
 
         composantes = CLES.map(function(c) {
