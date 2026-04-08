@@ -510,7 +510,7 @@
         </tr>
         {% if bulletin.taxe_apprentissage and bulletin.taxe_apprentissage > 0 %}
         <tr>
-            <td>Taxe d'Apprentissage (TA) {% if bulletin.nombre_salaries %}(eff. {{ bulletin.nombre_salaries }} &lt;30){% endif %}</td>
+            <td>Taxe d'Apprentissage (effectif : {{ bulletin.nombre_salaries }} &lt; 25 sal.)</td>
             <td class="text-right">{{ bulletin.base_vf|default:bulletin.salaire_brut|floatformat:0|intcomma }}</td>
             <td class="text-center">{{ bulletin.taux_ta|default:"2" }}%</td>
             <td class="text-right"><strong>{{ bulletin.taxe_apprentissage|floatformat:0|intcomma }} GNF</strong></td>
@@ -518,7 +518,7 @@
         {% endif %}
         {% if bulletin.contribution_onfpp and bulletin.contribution_onfpp > 0 %}
         <tr>
-            <td>Contribution ONFPP {% if bulletin.nombre_salaries %}(eff. {{ bulletin.nombre_salaries }} &ge;30){% endif %}</td>
+            <td>Contribution ONFPP (effectif : {{ bulletin.nombre_salaries }} &ge; 25 sal.)</td>
             <td class="text-right">{{ bulletin.base_vf|default:bulletin.salaire_brut|floatformat:0|intcomma }}</td>
             <td class="text-center">1.5%</td>
             <td class="text-right"><strong>{{ bulletin.contribution_onfpp|floatformat:0|intcomma }} GNF</strong></td>
