@@ -1,4 +1,4 @@
-﻿from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Sum, Count, Q
@@ -1014,12 +1014,12 @@ def telecharger_bulletin_pdf(request, pk):
         "6%",
         f"{vf:,.0f}".replace(",", " ")])
     if ta > 0:
-        charges_data.append([f"Taxe d'Apprentissage (effectif : {nb_sal} < 25 sal.)",
+        charges_data.append([f"TA (applicable si effectif < 25 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             f"{taux_ta_label}%",
             f"{ta:,.0f}".replace(",", " ")])
     elif onfpp > 0:
-        charges_data.append([f"ONFPP (effectif : {nb_sal} \u2265 25 sal.)",
+        charges_data.append([f"ONFPP (applicable si effectif \u2265 25 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             "1,5%",
             f"{onfpp:,.0f}".replace(",", " ")])
@@ -1606,12 +1606,12 @@ def telecharger_bulletin_public(request, token):
         "6%",
         f"{vf:,.0f}".replace(",", " ")])
     if ta > 0:
-        charges_data.append([f"Taxe d'Apprentissage (effectif : {nb_sal} < 25 sal.)",
+        charges_data.append([f"TA (applicable si effectif < 25 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             f"{taux_ta_label}%",
             f"{ta:,.0f}".replace(",", " ")])
     elif onfpp > 0:
-        charges_data.append([f"ONFPP (effectif : {nb_sal} \u2265 25 sal.)",
+        charges_data.append([f"ONFPP (applicable si effectif \u2265 25 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             "1,5%",
             f"{onfpp:,.0f}".replace(",", " ")])
@@ -5618,5 +5618,6 @@ def api_simulation_pdf(request):
     _log_audit(request, 'pdf', sim_obj, {'brut': brut, 'employe_nom': employe_nom[:100]})
 
     return response
+
 
 

@@ -720,12 +720,12 @@ def generer_bulletin_pdf(bulletin):
         "6%",
         f"{vf:,.0f}".replace(",", " ")])
     if ta > 0:
-        charges_data.append([f"Taxe d'Apprentissage (effectif : {nb_sal} < 25 sal.)",
+        charges_data.append([f"TA (applicable si effectif < 25 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             f"{taux_ta_label}%",
             f"{ta:,.0f}".replace(",", " ")])
     elif onfpp > 0:
-        charges_data.append([f"ONFPP (effectif : {nb_sal} \u2265 25 sal.)",
+        charges_data.append([f"ONFPP (applicable si effectif \u2265 25 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             "1,5%",
             f"{onfpp:,.0f}".replace(",", " ")])
