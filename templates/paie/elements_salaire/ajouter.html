@@ -1228,14 +1228,36 @@ function updateRubriqueType() {}
                         }
 
                         // ── Bloc 4 : Détails techniques (réductible) ──
+                        roiHtml += '<details class="mt-2 small"><summary class="text-muted" style="cursor:pointer"><i class="bi bi-gear-fill me-1"></i>Détails techniques</summary>';
+                        roiHtml += '<div class="mt-1 ps-3">';
+                        var _f = function(v) { return new Intl.NumberFormat('fr-GN').format(v); };
+                        if (data.base_rts !== undefined) {
+                            roiHtml += '<div><i class="bi bi-calculator me-1 text-info"></i>Base imposable (RTS) : <strong>' + _f(data.base_rts) + ' GNF</strong></div>';
+                        }
+                        if (data.cnss !== undefined) {
+                            var cnssInfo = _f(data.cnss) + ' GNF';
+                            if (data.brut >= 2500000) cnssInfo += ' <span class="badge bg-secondary ms-1">plafonnée</span>';
+                            roiHtml += '<div><i class="bi bi-shield-check me-1 text-info"></i>CNSS employé : <strong>' + cnssInfo + '</strong></div>';
+                        }
+                        if (data.exon !== undefined) {
+                            roiHtml += '<div><i class="bi bi-percent me-1 text-info"></i>Exonération : <strong>' + _f(data.exon) + ' GNF</strong>';
+                            if (data.exon > 0 && data.plafond_exon > 0 && data.exon >= data.plafond_exon) {
+                                roiHtml += ' <span class="badge bg-success ms-1">max 25%</span>';
+                            }
+                            roiHtml += '</div>';
+                        }
+                        if (data.taux_effectif !== undefined) {
+                            roiHtml += '<div><i class="bi bi-graph-up me-1 text-info"></i>Taux effectif RTS : <strong>' + data.taux_effectif + ' %</strong></div>';
+                        }
+                        if (data.regles && data.regles.reference) {
+                            roiHtml += '<div class="text-muted fst-italic mt-1"><i class="bi bi-book me-1"></i>' + data.regles.reference + '</div>';
+                        }
                         if (conseils.length > 0) {
-                            roiHtml += '<details class="mt-2 small"><summary class="text-muted" style="cursor:pointer"><i class="bi bi-gear-fill me-1"></i>Détails techniques</summary>';
-                            roiHtml += '<div class="mt-1 ps-3">';
                             conseils.forEach(function(c) {
                                 roiHtml += '<div><i class="bi bi-lightbulb-fill text-warning me-1"></i>' + c + '</div>';
                             });
-                            roiHtml += '</div></details>';
                         }
+                        roiHtml += '</div></details>';
                         var alertClass = roi.level === 'fort' ? 'alert-success' : roi.level === 'moyen' ? 'alert-info' : 'alert-warning';
                         elRoi.className = 'alert py-2 px-3 small mb-3 ' + alertClass;
                         elRoi.innerHTML = roiHtml;

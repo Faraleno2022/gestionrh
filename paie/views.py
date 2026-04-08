@@ -4969,13 +4969,17 @@ def api_proposition_complete(request):
             'brut': brut_calcule,
             'brut_sans_opti': brut_sans_opti,
             'cnss': int(retro['cnss']),
+            'base_rts': int(retro['base_rts']),
             'rts_standard': int(retro_ref['rts']),
             'rts_optimise': int(retro['rts']),
+            'taux_effectif': round(float(retro['rts']) / float(retro['base_rts']) * 100, 1) if float(retro.get('base_rts', 0)) > 0 else 0,
             'net_calcule': int(retro['net_calcule']),
             'ecart': int(retro['ecart']),
             'iterations': retro['iterations'],
             'ok': retro['ok'],
             'pct_exoneration': taux_max,
+            'cnss_plafonnee': cnss_plafonnee,
+            'plafond_cnss': plafond_cnss,
         },
 
         # Charges patronales (sur brut optimisé)

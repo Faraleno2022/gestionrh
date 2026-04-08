@@ -2183,14 +2183,34 @@
                 }
 
                 // ── Bloc 4 : Détails techniques (réductible) ──
+                roiHtml += '<details class="mt-2 small"><summary class="text-muted" style="cursor:pointer"><i class="bi bi-gear-fill me-1"></i>Détails techniques</summary>';
+                roiHtml += '<div class="mt-1 ps-3">';
+                var _f = function(v) { return new Intl.NumberFormat('fr-GN').format(v); };
+                if (data.retropaie && data.retropaie.base_rts !== undefined) {
+                    roiHtml += '<div><i class="bi bi-calculator me-1 text-info"></i>Base imposable (RTS) : <strong>' + _f(data.retropaie.base_rts) + ' GNF</strong></div>';
+                }
+                if (data.retropaie && data.retropaie.cnss !== undefined) {
+                    var cnssInfo = _f(data.retropaie.cnss) + ' GNF';
+                    if (data.retropaie.cnss_plafonnee) cnssInfo += ' <span class="badge bg-secondary ms-1">plafonnée</span>';
+                    roiHtml += '<div><i class="bi bi-shield-check me-1 text-info"></i>CNSS employé : <strong>' + cnssInfo + '</strong></div>';
+                }
+                if (data.retropaie && data.retropaie.pct_exoneration !== undefined) {
+                    roiHtml += '<div><i class="bi bi-percent me-1 text-info"></i>Exonération : <strong>' + data.retropaie.pct_exoneration + ' %</strong>';
+                    if (data.retropaie.pct_exoneration >= 25) {
+                        roiHtml += ' <span class="badge bg-success ms-1">max 25%</span>';
+                    }
+                    roiHtml += '</div>';
+                }
+                if (data.retropaie && data.retropaie.taux_effectif !== undefined) {
+                    roiHtml += '<div><i class="bi bi-graph-up me-1 text-info"></i>Taux effectif RTS : <strong>' + data.retropaie.taux_effectif + ' %</strong></div>';
+                }
+                roiHtml += '<div class="text-muted fst-italic mt-1"><i class="bi bi-book me-1"></i>CGI Guinée – Art. 196 (exonération 25%) / Art. 197 (barème RTS progressif)</div>';
                 if (conseils.length > 0) {
-                    roiHtml += '<details class="mt-2 small"><summary class="text-muted" style="cursor:pointer"><i class="bi bi-gear-fill me-1"></i>Détails techniques</summary>';
-                    roiHtml += '<div class="mt-1 ps-3">';
                     conseils.forEach(function(c) {
                         roiHtml += '<div><i class="bi bi-lightbulb-fill text-warning me-1"></i>' + c + '</div>';
                     });
-                    roiHtml += '</div></details>';
                 }
+                roiHtml += '</div></details>';
                 roiBody.innerHTML = roiHtml;
                 roiCard.style.display = 'block';
             } else {
