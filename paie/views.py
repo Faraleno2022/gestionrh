@@ -4220,7 +4220,7 @@ _MESSAGES_OPTIMISATION = {
         "RECO": None,
         "SEGMENTS": {
             "BAS": "À ce niveau de rémunération, l'impact reste limité. L'intérêt principal est la structuration conforme.",
-            "MOYEN": "Optimisation pertinente avec un gain mesuré. Peut être améliorée selon la politique de rémunération.",
+            "MOYEN": "Bon compromis entre optimisation fiscale et maîtrise des charges — standard recommandé entreprise.",
             "ELEVE": "Optimisation correcte mais sous-exploitée. Un ajustement de la structure peut améliorer le gain.",
         },
         "IMPACT": "Gain modéré mais récurrent sur l'année.",
