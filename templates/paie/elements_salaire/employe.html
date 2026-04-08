@@ -2139,47 +2139,57 @@
                 }
                 roiHtml += '</div>';
 
-                // Message principal (global)
+                // ── Bloc 1 : Décision ──
                 if (roi.message) {
                     var iconClass = roi.level === 'fort' ? 'bi-check-circle-fill text-success'
                                   : roi.level === 'moyen' ? 'bi-info-circle-fill text-info'
                                   : 'bi-exclamation-triangle-fill text-warning';
                     roiHtml += '<div class="small mb-1"><i class="bi ' + iconClass + ' me-1"></i>' + roi.message + '</div>';
                 }
-                // Message contextuel (segment salaire)
-                if (roi.message_segment) {
-                    roiHtml += '<div class="small mb-1"><i class="bi bi-arrow-right-circle-fill text-secondary me-1"></i>' + roi.message_segment + '</div>';
+
+                // ── Bloc 2 : Recommandation ──
+                if (roi.message_segment || roi.recommandation) {
+                    roiHtml += '<div class="small mb-1 ps-2 border-start border-2 border-secondary-subtle">';
+                    if (roi.message_segment) {
+                        roiHtml += '<div><i class="bi bi-arrow-right-circle-fill text-secondary me-1"></i>' + roi.message_segment + '</div>';
+                    }
+                    if (roi.recommandation) {
+                        roiHtml += '<div class="fst-italic text-muted"><i class="bi bi-bookmark-star-fill me-1"></i>' + roi.recommandation + '</div>';
+                    }
+                    roiHtml += '</div>';
                 }
-                // Part gain vs charges
-                if (data.gain_vs_charges !== undefined) {
-                    roiHtml += '<div class="small mb-1"><i class="bi bi-pie-chart-fill text-primary me-1"></i>'
-                        + "L'économie représente <strong>" + data.gain_vs_charges + "%</strong> des charges employeur</div>";
-                }
-                // Économie annuelle
+
+                // ── Bloc 3 : Impact financier ──
                 if (data.economie_annuelle) {
                     var ecoVal = new Intl.NumberFormat('fr-GN').format(data.economie_annuelle);
                     if (data.economie_annuelle >= 1000000) {
                         roiHtml += '<div class="mt-2 p-2 bg-success bg-opacity-10 border border-success rounded">';
-                        roiHtml += '<i class="bi bi-trophy-fill text-success me-1"></i>';
-                        roiHtml += '<strong class="text-success">Économie annuelle : ' + ecoVal + ' GNF</strong>';
-                        if (roi.impact_annuel) roiHtml += '<br><small class="text-muted">' + roi.impact_annuel + '</small>';
+                        roiHtml += '<div><i class="bi bi-trophy-fill text-success me-1"></i>';
+                        roiHtml += '<strong class="text-success">Économie annuelle : ' + ecoVal + ' GNF</strong></div>';
+                        if (data.gain_vs_charges !== undefined) {
+                            roiHtml += '<div class="small text-muted mt-1">Représente <strong>' + data.gain_vs_charges + '%</strong> des charges employeur</div>';
+                        }
+                        if (roi.impact_annuel) roiHtml += '<div class="small text-muted">' + roi.impact_annuel + '</div>';
                         roiHtml += '</div>';
                     } else {
                         roiHtml += '<div class="small mb-1"><i class="bi bi-calendar-check-fill text-success me-1"></i>'
                             + 'Économie annuelle : <strong>' + ecoVal + ' GNF</strong>';
+                        if (data.gain_vs_charges !== undefined) {
+                            roiHtml += ' <span class="text-muted">(' + data.gain_vs_charges + '% des charges)</span>';
+                        }
                         if (roi.impact_annuel) roiHtml += ' — ' + roi.impact_annuel;
                         roiHtml += '</div>';
                     }
                 }
-                // Recommandation stratégique
-                if (roi.recommandation) {
-                    roiHtml += '<div class="small mb-1 fst-italic text-muted"><i class="bi bi-bookmark-star-fill me-1"></i>' + roi.recommandation + '</div>';
-                }
-                // Conseils complémentaires
+
+                // ── Bloc 4 : Détails techniques (réductible) ──
                 if (conseils.length > 0) {
+                    roiHtml += '<details class="mt-2 small"><summary class="text-muted" style="cursor:pointer"><i class="bi bi-gear-fill me-1"></i>Détails techniques</summary>';
+                    roiHtml += '<div class="mt-1 ps-3">';
                     conseils.forEach(function(c) {
-                        roiHtml += '<div class="small"><i class="bi bi-lightbulb-fill text-warning me-1"></i>' + c + '</div>';
+                        roiHtml += '<div><i class="bi bi-lightbulb-fill text-warning me-1"></i>' + c + '</div>';
                     });
+                    roiHtml += '</div></details>';
                 }
                 roiBody.innerHTML = roiHtml;
                 roiCard.style.display = 'block';
