@@ -1178,13 +1178,20 @@ function updateRubriqueType() {}
                     if (roi.level) {
                         var roiHtml = '<div class="d-flex align-items-center gap-2 mb-1">'
                             + '<strong>ROI optimisation :</strong> '
-                            + '<span class="badge bg-' + (roi.color || 'secondary') + '">' + (roi.label || '') + '</span>'
-                            + '</div>';
+                            + '<span class="badge bg-' + (roi.color || 'secondary') + '">' + (roi.label || '') + '</span>';
+                        if (data.gain_vs_charges !== undefined) {
+                            roiHtml += '<span class="ms-auto small text-muted">Part gain/charges : <strong>' + data.gain_vs_charges + '%</strong></span>';
+                        }
+                        roiHtml += '</div>';
                         if (roi.message) {
                             var iconClass = roi.level === 'fort' ? 'bi-check-circle-fill text-success'
                                           : roi.level === 'moyen' ? 'bi-info-circle-fill text-info'
                                           : 'bi-exclamation-triangle-fill text-warning';
                             roiHtml += '<div class="small"><i class="bi ' + iconClass + ' me-1"></i>' + roi.message + '</div>';
+                        }
+                        if (data.gain_vs_charges !== undefined) {
+                            roiHtml += '<div class="small mt-1"><i class="bi bi-pie-chart-fill text-primary me-1"></i>'
+                                + "L'économie représente <strong>" + data.gain_vs_charges + "%</strong> des charges employeur</div>";
                         }
                         if (conseils.length > 0) {
                             roiHtml += '<div class="small mt-1">';

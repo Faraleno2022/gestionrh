@@ -4319,8 +4319,12 @@ def api_impact_fiscal(request):
                             'message': "L'optimisation apporte un gain modéré. Efficacité correcte."}
     else:
         roi_optimisation = {'level': 'faible', 'label': 'Faible', 'color': 'warning',
-                            'message': "Pour ce niveau de salaire, l'impact de l'optimisation est limité. "
-                                       "L'optimisation fiscale devient vraiment intéressante à partir de salaires plus élevés."}
+                            'message': "À ce niveau de rémunération, l'optimisation fiscale génère un gain limité. "
+                                       "L'intérêt principal reste la structuration conforme plutôt que l'économie."}
+
+    # Part du gain vs charges patronales (indicateur décideur)
+    charges_pat_total = result['total_charges_pat']
+    gain_vs_charges = round(abs(gain_opti_net) * 100 / charges_pat_total, 1) if charges_pat_total > 0 else 0
 
     # Conseil intelligent selon le contexte
     conseils_optimisation = []
@@ -4358,6 +4362,7 @@ def api_impact_fiscal(request):
         'roi_optimisation': roi_optimisation,
         'gain_opti_net': gain_opti_net,
         'gain_opti_pct': gain_opti_pct,
+        'gain_vs_charges': gain_vs_charges,
         'conseils_optimisation': conseils_optimisation,
         # Traçabilité : règles appliquées
         'regles': {
@@ -4854,8 +4859,11 @@ def api_proposition_complete(request):
                             'message': "L'optimisation apporte un gain modéré. Efficacité correcte."}
     else:
         roi_optimisation = {'level': 'faible', 'label': 'Faible', 'color': 'warning',
-                            'message': "Pour ce niveau de salaire, l'impact de l'optimisation est limité. "
-                                       "L'optimisation fiscale devient vraiment intéressante à partir de salaires plus élevés."}
+                            'message': "À ce niveau de rémunération, l'optimisation fiscale génère un gain limité. "
+                                       "L'intérêt principal reste la structuration conforme plutôt que l'économie."}
+
+    # Part du gain vs charges patronales (indicateur décideur)
+    gain_vs_charges = round(abs(economie_cout) * 100 / cp['total'], 1) if cp['total'] > 0 else 0
 
     conseils_optimisation = []
     if roi_optimisation['level'] == 'faible':
@@ -4941,6 +4949,7 @@ def api_proposition_complete(request):
         'roi_optimisation': roi_optimisation,
         'gain_opti_pct': gain_opti_pct,
         'taux_charges_pct': taux_charges_pct,
+        'gain_vs_charges': gain_vs_charges,
         'conseils_optimisation': conseils_optimisation,
     })
 

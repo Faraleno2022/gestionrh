@@ -152,7 +152,14 @@ Type: filesandordirs; Name: "{app}\_internal\dashboard\*.py"
 Type: filesandordirs; Name: "{app}\_internal\gestionnaire_rh\*.py"
 ; Nettoyer le marqueur de falsification (réinitialisation à la mise à jour)
 Type: files; Name: "{app}\.tamper_detected"
-; Nettoyer l'ancien manifest (sera remplacé par le nouveau)
+; Nettoyer les anciens fichiers de protection (seront recréés par le nouveau build)
+; IMPORTANT : ces fichiers contiennent les checksums de l'ancien build et DOIVENT
+; être supprimés avant l'installation du nouveau, sinon tamper detection se déclenche.
+Type: files; Name: "{app}\_internal\.file_checksums"
+Type: files; Name: "{app}\_internal\.exe_signature"
+Type: files; Name: "{app}\_internal\.protection_report.json"
+Type: files; Name: "{app}\_internal\.integrity_manifest.json"
+; Nettoyer l'ancien manifest à la racine (sera remplacé par le nouveau)
 Type: files; Name: "{app}\.integrity_manifest.json"
 ; Nettoyer les anciens .py sources à la RACINE de {app} (résidus critiques)
 Type: files; Name: "{app}\license_manager.py"

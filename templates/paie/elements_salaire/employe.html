@@ -2142,6 +2142,10 @@
                                   : 'bi-exclamation-triangle-fill text-warning';
                     roiHtml += '<div class="small mb-1"><i class="bi ' + iconClass + ' me-1"></i>' + roi.message + '</div>';
                 }
+                if (data.gain_vs_charges !== undefined) {
+                    roiHtml += '<div class="small mb-1"><i class="bi bi-pie-chart-fill text-primary me-1"></i>'
+                        + "L'économie représente <strong>" + data.gain_vs_charges + "%</strong> des charges employeur</div>";
+                }
                 if (conseils.length > 0) {
                     conseils.forEach(function(c) {
                         roiHtml += '<div class="small"><i class="bi bi-lightbulb-fill text-warning me-1"></i>' + c + '</div>';
