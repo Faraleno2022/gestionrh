@@ -2157,10 +2157,19 @@
                 }
                 // Économie annuelle
                 if (data.economie_annuelle) {
-                    roiHtml += '<div class="small mb-1"><i class="bi bi-calendar-check-fill text-success me-1"></i>'
-                        + 'Économie annuelle : <strong>' + new Intl.NumberFormat('fr-GN').format(data.economie_annuelle) + ' GNF</strong>';
-                    if (roi.impact_annuel) roiHtml += ' — ' + roi.impact_annuel;
-                    roiHtml += '</div>';
+                    var ecoVal = new Intl.NumberFormat('fr-GN').format(data.economie_annuelle);
+                    if (data.economie_annuelle >= 1000000) {
+                        roiHtml += '<div class="mt-2 p-2 bg-success bg-opacity-10 border border-success rounded">';
+                        roiHtml += '<i class="bi bi-trophy-fill text-success me-1"></i>';
+                        roiHtml += '<strong class="text-success">Économie annuelle : ' + ecoVal + ' GNF</strong>';
+                        if (roi.impact_annuel) roiHtml += '<br><small class="text-muted">' + roi.impact_annuel + '</small>';
+                        roiHtml += '</div>';
+                    } else {
+                        roiHtml += '<div class="small mb-1"><i class="bi bi-calendar-check-fill text-success me-1"></i>'
+                            + 'Économie annuelle : <strong>' + ecoVal + ' GNF</strong>';
+                        if (roi.impact_annuel) roiHtml += ' — ' + roi.impact_annuel;
+                        roiHtml += '</div>';
+                    }
                 }
                 // Recommandation stratégique
                 if (roi.recommandation) {

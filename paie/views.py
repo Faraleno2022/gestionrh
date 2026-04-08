@@ -4211,7 +4211,7 @@ _MESSAGES_OPTIMISATION = {
         "SEGMENTS": {
             "BAS": "Optimisation efficace malgré un salaire bas.",
             "MOYEN": "Optimisation pertinente avec un bon équilibre entre conformité et économie.",
-            "ELEVE": "Niveau de rémunération idéal pour maximiser les effets de l'optimisation fiscale.",
+            "ELEVE": "Structure fortement optimisée — recommandée pour les profils cadres et fonctions à forte rémunération.",
         },
         "IMPACT": "Impact financier significatif sur l'année.",
     },
@@ -4242,6 +4242,7 @@ _MESSAGES_COMPLEMENTAIRES = {
     "charges_faibles": "Niveau de charges maîtrisé — situation favorable pour l'employeur.",
     "cnss_plafonnee": "Le plafond CNSS est atteint — les charges sociales n'augmenteront plus proportionnellement au salaire.",
     "exoneration_max": "Plafond d'exonération fiscale atteint (25%) — optimisation maximale appliquée.",
+    "salaire_eleve_fort": "Plus le salaire est élevé, plus la CNSS est plafonnée, plus l'exonération joue — l'optimisation devient très rentable.",
 }
 
 
@@ -4293,6 +4294,8 @@ def _generer_messages_optimisation(brut, roi_pct, taux_charges, gain_mensuel,
         conseils.append(_MESSAGES_COMPLEMENTAIRES["cnss_plafonnee"])
     if exoneration_max:
         conseils.append(_MESSAGES_COMPLEMENTAIRES["exoneration_max"])
+    if niveau == "FORT" and segment == "ELEVE":
+        conseils.append(_MESSAGES_COMPLEMENTAIRES["salaire_eleve_fort"])
     if niveau == "FAIBLE":
         conseils.append("Regrouper certains avantages ou revoir la structure contractuelle peut être plus pertinent.")
 
