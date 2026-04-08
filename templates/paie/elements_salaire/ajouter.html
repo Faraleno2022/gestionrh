@@ -192,6 +192,9 @@
             <!-- Alerte conformité fiscale -->
             <div id="dec_alerte_conformite" class="alert py-2 px-3 small mb-3" style="display:none;"></div>
 
+            <!-- ROI optimisation -->
+            <div id="dec_roi_optimisation" class="alert py-2 px-3 small mb-3" style="display:none;"></div>
+
             <!-- Charges patronales -->
             <div class="card border-secondary mb-3">
                 <div class="card-header bg-secondary text-white py-1 px-3 small fw-bold">
@@ -1166,6 +1169,39 @@ function updateRubriqueType() {}
                 // Alerte conformité
                 const alertConf = document.getElementById('dec_alerte_conformite');
                 const avertissements = data.avertissements || [];
+
+                // ROI optimisation
+                const roi = data.roi_optimisation || {};
+                const conseils = data.conseils_optimisation || [];
+                const elRoi = document.getElementById('dec_roi_optimisation');
+                if (elRoi) {
+                    if (roi.level) {
+                        var roiHtml = '<div class="d-flex align-items-center gap-2 mb-1">'
+                            + '<strong>ROI optimisation :</strong> '
+                            + '<span class="badge bg-' + (roi.color || 'secondary') + '">' + (roi.label || '') + '</span>'
+                            + '</div>';
+                        if (roi.message) {
+                            var iconClass = roi.level === 'fort' ? 'bi-check-circle-fill text-success'
+                                          : roi.level === 'moyen' ? 'bi-info-circle-fill text-info'
+                                          : 'bi-exclamation-triangle-fill text-warning';
+                            roiHtml += '<div class="small"><i class="bi ' + iconClass + ' me-1"></i>' + roi.message + '</div>';
+                        }
+                        if (conseils.length > 0) {
+                            roiHtml += '<div class="small mt-1">';
+                            conseils.forEach(function(c) {
+                                roiHtml += '<div><i class="bi bi-lightbulb-fill text-warning me-1"></i>' + c + '</div>';
+                            });
+                            roiHtml += '</div>';
+                        }
+                        var alertClass = roi.level === 'fort' ? 'alert-success' : roi.level === 'moyen' ? 'alert-info' : 'alert-warning';
+                        elRoi.className = 'alert py-2 px-3 small mb-3 ' + alertClass;
+                        elRoi.innerHTML = roiHtml;
+                        elRoi.style.display = 'block';
+                    } else {
+                        elRoi.style.display = 'none';
+                    }
+                }
+
                 if (avertissements.length > 0) {
                     const conformite = data.conformite || 'a_verifier';
                     const classes = { 'conforme': 'alert-success', 'a_verifier': 'alert-warning', 'non_conforme': 'alert-danger' };

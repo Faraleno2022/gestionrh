@@ -4302,6 +4302,33 @@ def api_impact_fiscal(request):
     else:
         taux_charge_interpretation = {'level': 'couteux', 'label': 'Élevé', 'color': 'warning'}
 
+    # ── ROI optimisation : indicateur d'efficacité de l'optimisation fiscale ──
+    # Comparer le net actuel vs net sans indemnités (0%) pour mesurer le gain réel
+    result_sans_opti = calculer_un_bareme(
+        Decimal(str(brut_val)), Decimal('0'), tranches, constantes, nb_salaries=nb_salaries
+    )
+    gain_opti_net = result['net'] - result_sans_opti['net']
+    gain_opti_pct = round(gain_opti_net * 100 / result_sans_opti['net'], 2) if result_sans_opti['net'] > 0 else 0
+
+    # Seuils ROI : basé sur le gain % et le niveau de salaire
+    if gain_opti_pct >= 2.0:
+        roi_optimisation = {'level': 'fort', 'label': 'Fort', 'color': 'success',
+                            'message': "L'optimisation fiscale est très efficace à ce niveau de salaire."}
+    elif gain_opti_pct >= 0.5:
+        roi_optimisation = {'level': 'moyen', 'label': 'Moyen', 'color': 'info',
+                            'message': "L'optimisation apporte un gain modéré. Efficacité correcte."}
+    else:
+        roi_optimisation = {'level': 'faible', 'label': 'Faible', 'color': 'warning',
+                            'message': "Pour ce niveau de salaire, l'impact de l'optimisation est limité. "
+                                       "L'optimisation fiscale devient vraiment intéressante à partir de salaires plus élevés."}
+
+    # Conseil intelligent selon le contexte
+    conseils_optimisation = []
+    if roi_optimisation['level'] == 'faible':
+        conseils_optimisation.append("Regrouper certains avantages ou revoir la structure contractuelle")
+    if taux_charge_global > 22 and brut_val < 5000000:
+        conseils_optimisation.append("Les charges patronales pèsent structurellement plus lourd sur les petits salaires")
+
     return JsonResponse({
         'brut': result['brut'],
         'indemnites': indem_val,
@@ -4327,6 +4354,11 @@ def api_impact_fiscal(request):
         # Conformité
         'conformite': conformite,
         'avertissements': avertissements,
+        # ROI optimisation
+        'roi_optimisation': roi_optimisation,
+        'gain_opti_net': gain_opti_net,
+        'gain_opti_pct': gain_opti_pct,
+        'conseils_optimisation': conseils_optimisation,
         # Traçabilité : règles appliquées
         'regles': {
             'cnss_formule': f"min({result['brut']:,}, {int(constantes.get('PLAFOND_CNSS', 2500000)):,}) × {float(constantes.get('TAUX_CNSS_EMPLOYE', 5))}%",
@@ -4810,6 +4842,27 @@ def api_proposition_complete(request):
     economie_brut = brut_sans_opti - brut_calcule
     economie_cout = cp_ref['cout_total_employeur'] - cp['cout_total_employeur']
 
+    # ── ROI optimisation : indicateur d'efficacité ──
+    gain_opti_pct = round(economie_cout * 100 / cp_ref['cout_total_employeur'], 2) if cp_ref['cout_total_employeur'] > 0 else 0
+    taux_charges_pct = round(cp['total'] * 100 / brut_calcule, 1) if brut_calcule > 0 else 0
+
+    if gain_opti_pct >= 2.0:
+        roi_optimisation = {'level': 'fort', 'label': 'Fort', 'color': 'success',
+                            'message': "L'optimisation fiscale est très efficace à ce niveau de salaire."}
+    elif gain_opti_pct >= 0.5:
+        roi_optimisation = {'level': 'moyen', 'label': 'Moyen', 'color': 'info',
+                            'message': "L'optimisation apporte un gain modéré. Efficacité correcte."}
+    else:
+        roi_optimisation = {'level': 'faible', 'label': 'Faible', 'color': 'warning',
+                            'message': "Pour ce niveau de salaire, l'impact de l'optimisation est limité. "
+                                       "L'optimisation fiscale devient vraiment intéressante à partir de salaires plus élevés."}
+
+    conseils_optimisation = []
+    if roi_optimisation['level'] == 'faible':
+        conseils_optimisation.append("Regrouper certains avantages ou revoir la structure contractuelle")
+    if taux_charges_pct > 22 and brut_calcule < 5000000:
+        conseils_optimisation.append("Les charges patronales pèsent structurellement plus lourd sur les petits salaires")
+
     return JsonResponse({
         'net_cible': int(net_cible),
         'objectif': objectif,
@@ -4883,6 +4936,12 @@ def api_proposition_complete(request):
         # Vérification croisée + paramètres
         'verification_ok': verification_ok,
         'taux_max': taux_max,
+
+        # ROI optimisation
+        'roi_optimisation': roi_optimisation,
+        'gain_opti_pct': gain_opti_pct,
+        'taux_charges_pct': taux_charges_pct,
+        'conseils_optimisation': conseils_optimisation,
     })
 
 
