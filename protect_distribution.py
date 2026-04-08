@@ -241,6 +241,9 @@ def protect_internal_directory(dist_path: Path):
         # Exclure les .pyc dans __pycache__ (régénérés par Python)
         if '__pycache__' in f.parts and f.suffix == '.pyc':
             continue
+        # Exclure les fichiers générés PAR CE SCRIPT (écrits après les checksums)
+        if f.name in ('.protection_report.json',):
+            continue
         rel = f.relative_to(internal)
         content = f.read_bytes()
         file_hash = hmac.new(_SHIELD_KEY, content, hashlib.sha256).hexdigest()
