@@ -4200,6 +4200,111 @@ def api_creer_elements_lot(request, employe_id):
 
 
 # ============================================================================
+# GRILLE DE MESSAGES DYNAMIQUES — OPTIMISATION SALARIALE
+# Messages intelligents selon ROI × Segment salaire × Charges
+# ============================================================================
+
+_MESSAGES_OPTIMISATION = {
+    "FORT": {
+        "GLOBAL": "Optimisation très efficace — réduction significative des charges employeur.",
+        "RECO": "Structure fortement optimisée. Recommandée pour contractualisation afin de réduire durablement le coût salarial.",
+        "SEGMENTS": {
+            "BAS": "Optimisation efficace malgré un salaire bas.",
+            "MOYEN": "Optimisation pertinente avec un bon équilibre entre conformité et économie.",
+            "ELEVE": "Niveau de rémunération idéal pour maximiser les effets de l'optimisation fiscale.",
+        },
+        "IMPACT": "Impact financier significatif sur l'année.",
+    },
+    "MOYEN": {
+        "GLOBAL": "Gain modéré — optimisation utile avec une efficacité correcte.",
+        "RECO": None,
+        "SEGMENTS": {
+            "BAS": "À ce niveau de rémunération, l'impact reste limité. L'intérêt principal est la structuration conforme.",
+            "MOYEN": "Optimisation pertinente avec un gain mesuré. Peut être améliorée selon la politique de rémunération.",
+            "ELEVE": "Optimisation correcte mais sous-exploitée. Un ajustement de la structure peut améliorer le gain.",
+        },
+        "IMPACT": "Gain modéré mais récurrent sur l'année.",
+    },
+    "FAIBLE": {
+        "GLOBAL": "Impact limité — optimisation peu significative à ce niveau.",
+        "RECO": "Revoir la structure salariale ou envisager d'autres formes d'avantages.",
+        "SEGMENTS": {
+            "BAS": "À ce niveau de salaire, l'optimisation fiscale a un effet marginal. Les charges restent dominantes.",
+            "MOYEN": "Structure peu optimisée. Une révision de la répartition des composantes salariales est recommandée.",
+            "ELEVE": "Optimisation insuffisante pour ce niveau de rémunération. Un ajustement peut générer un gain significatif.",
+        },
+        "IMPACT": "Gain faible sur l'année.",
+    },
+}
+
+_MESSAGES_COMPLEMENTAIRES = {
+    "charges_elevees": "Le taux de charges élevé est lié au niveau de rémunération et non à une erreur de configuration.",
+    "charges_faibles": "Niveau de charges maîtrisé — situation favorable pour l'employeur.",
+    "cnss_plafonnee": "Le plafond CNSS est atteint — les charges sociales n'augmenteront plus proportionnellement au salaire.",
+    "exoneration_max": "Plafond d'exonération fiscale atteint (25%) — optimisation maximale appliquée.",
+}
+
+
+def _generer_messages_optimisation(brut, roi_pct, taux_charges, gain_mensuel,
+                                    charges_pat, cnss_plafonnee=False, exoneration_max=False):
+    """
+    Génère un bloc complet de messages intelligents pour l'optimisation.
+    Retourne un dict prêt à injecter dans la réponse JSON.
+    """
+    # Niveau ROI
+    if roi_pct >= 2.0:
+        niveau = "FORT"
+        roi = {'level': 'fort', 'label': 'Fort', 'color': 'success'}
+    elif roi_pct >= 0.5:
+        niveau = "MOYEN"
+        roi = {'level': 'moyen', 'label': 'Moyen', 'color': 'info'}
+    else:
+        niveau = "FAIBLE"
+        roi = {'level': 'faible', 'label': 'Faible', 'color': 'warning'}
+
+    # Segment salaire
+    if brut < 2_000_000:
+        segment = "BAS"
+    elif brut <= 5_000_000:
+        segment = "MOYEN"
+    else:
+        segment = "ELEVE"
+
+    cfg = _MESSAGES_OPTIMISATION[niveau]
+
+    roi['message'] = cfg["GLOBAL"]
+    roi['message_segment'] = cfg["SEGMENTS"][segment]
+    roi['recommandation'] = cfg["RECO"]
+    roi['impact_annuel'] = cfg["IMPACT"]
+
+    # Part gain vs charges patronales
+    gain_vs_charges = round(abs(gain_mensuel) * 100 / charges_pat, 1) if charges_pat > 0 else 0
+
+    # Économie annuelle
+    economie_annuelle = round(abs(gain_mensuel) * 12)
+
+    # Conseils dynamiques (modules complémentaires)
+    conseils = []
+    if taux_charges > 22:
+        conseils.append(_MESSAGES_COMPLEMENTAIRES["charges_elevees"])
+    elif taux_charges < 15:
+        conseils.append(_MESSAGES_COMPLEMENTAIRES["charges_faibles"])
+    if cnss_plafonnee:
+        conseils.append(_MESSAGES_COMPLEMENTAIRES["cnss_plafonnee"])
+    if exoneration_max:
+        conseils.append(_MESSAGES_COMPLEMENTAIRES["exoneration_max"])
+    if niveau == "FAIBLE":
+        conseils.append("Regrouper certains avantages ou revoir la structure contractuelle peut être plus pertinent.")
+
+    return {
+        'roi_optimisation': roi,
+        'gain_vs_charges': gain_vs_charges,
+        'economie_annuelle': economie_annuelle,
+        'conseils_optimisation': conseils,
+    }
+
+
+# ============================================================================
 # IMPACT FISCAL EN TEMPS RÉEL
 # Calcule Net / RTS / CNSS pour une décomposition donnée
 # ============================================================================
@@ -4310,28 +4415,16 @@ def api_impact_fiscal(request):
     gain_opti_net = result['net'] - result_sans_opti['net']
     gain_opti_pct = round(gain_opti_net * 100 / result_sans_opti['net'], 2) if result_sans_opti['net'] > 0 else 0
 
-    # Seuils ROI : basé sur le gain % et le niveau de salaire
-    if gain_opti_pct >= 2.0:
-        roi_optimisation = {'level': 'fort', 'label': 'Fort', 'color': 'success',
-                            'message': "L'optimisation fiscale est très efficace à ce niveau de salaire."}
-    elif gain_opti_pct >= 0.5:
-        roi_optimisation = {'level': 'moyen', 'label': 'Moyen', 'color': 'info',
-                            'message': "L'optimisation apporte un gain modéré. Efficacité correcte."}
-    else:
-        roi_optimisation = {'level': 'faible', 'label': 'Faible', 'color': 'warning',
-                            'message': "À ce niveau de rémunération, l'optimisation fiscale génère un gain limité. "
-                                       "L'intérêt principal reste la structuration conforme plutôt que l'économie."}
+    # Détection CNSS plafonnée et exonération max
+    plafond_cnss = int(constantes.get('PLAFOND_CNSS', 2500000))
+    cnss_plafonnee = brut_val >= plafond_cnss
+    exoneration_max = result['depasse'] == 0 and indem_val > 0
 
-    # Part du gain vs charges patronales (indicateur décideur)
-    charges_pat_total = result['total_charges_pat']
-    gain_vs_charges = round(abs(gain_opti_net) * 100 / charges_pat_total, 1) if charges_pat_total > 0 else 0
-
-    # Conseil intelligent selon le contexte
-    conseils_optimisation = []
-    if roi_optimisation['level'] == 'faible':
-        conseils_optimisation.append("Regrouper certains avantages ou revoir la structure contractuelle")
-    if taux_charge_global > 22 and brut_val < 5000000:
-        conseils_optimisation.append("Les charges patronales pèsent structurellement plus lourd sur les petits salaires")
+    msgs = _generer_messages_optimisation(
+        brut=brut_val, roi_pct=gain_opti_pct, taux_charges=taux_charge_global,
+        gain_mensuel=gain_opti_net, charges_pat=result['total_charges_pat'],
+        cnss_plafonnee=cnss_plafonnee, exoneration_max=exoneration_max,
+    )
 
     return JsonResponse({
         'brut': result['brut'],
@@ -4359,11 +4452,12 @@ def api_impact_fiscal(request):
         'conformite': conformite,
         'avertissements': avertissements,
         # ROI optimisation
-        'roi_optimisation': roi_optimisation,
+        'roi_optimisation': msgs['roi_optimisation'],
         'gain_opti_net': gain_opti_net,
         'gain_opti_pct': gain_opti_pct,
-        'gain_vs_charges': gain_vs_charges,
-        'conseils_optimisation': conseils_optimisation,
+        'gain_vs_charges': msgs['gain_vs_charges'],
+        'economie_annuelle': msgs['economie_annuelle'],
+        'conseils_optimisation': msgs['conseils_optimisation'],
         # Traçabilité : règles appliquées
         'regles': {
             'cnss_formule': f"min({result['brut']:,}, {int(constantes.get('PLAFOND_CNSS', 2500000)):,}) × {float(constantes.get('TAUX_CNSS_EMPLOYE', 5))}%",
@@ -4851,25 +4945,16 @@ def api_proposition_complete(request):
     gain_opti_pct = round(economie_cout * 100 / cp_ref['cout_total_employeur'], 2) if cp_ref['cout_total_employeur'] > 0 else 0
     taux_charges_pct = round(cp['total'] * 100 / brut_calcule, 1) if brut_calcule > 0 else 0
 
-    if gain_opti_pct >= 2.0:
-        roi_optimisation = {'level': 'fort', 'label': 'Fort', 'color': 'success',
-                            'message': "L'optimisation fiscale est très efficace à ce niveau de salaire."}
-    elif gain_opti_pct >= 0.5:
-        roi_optimisation = {'level': 'moyen', 'label': 'Moyen', 'color': 'info',
-                            'message': "L'optimisation apporte un gain modéré. Efficacité correcte."}
-    else:
-        roi_optimisation = {'level': 'faible', 'label': 'Faible', 'color': 'warning',
-                            'message': "À ce niveau de rémunération, l'optimisation fiscale génère un gain limité. "
-                                       "L'intérêt principal reste la structuration conforme plutôt que l'économie."}
+    # Détection CNSS plafonnée et exonération max
+    plafond_cnss = int(_cst.get('PLAFOND_CNSS', 2500000))
+    cnss_plafonnee = brut_calcule >= plafond_cnss
+    exoneration_max = taux_max >= 25
 
-    # Part du gain vs charges patronales (indicateur décideur)
-    gain_vs_charges = round(abs(economie_cout) * 100 / cp['total'], 1) if cp['total'] > 0 else 0
-
-    conseils_optimisation = []
-    if roi_optimisation['level'] == 'faible':
-        conseils_optimisation.append("Regrouper certains avantages ou revoir la structure contractuelle")
-    if taux_charges_pct > 22 and brut_calcule < 5000000:
-        conseils_optimisation.append("Les charges patronales pèsent structurellement plus lourd sur les petits salaires")
+    msgs = _generer_messages_optimisation(
+        brut=brut_calcule, roi_pct=gain_opti_pct, taux_charges=taux_charges_pct,
+        gain_mensuel=economie_cout, charges_pat=cp['total'],
+        cnss_plafonnee=cnss_plafonnee, exoneration_max=exoneration_max,
+    )
 
     return JsonResponse({
         'net_cible': int(net_cible),
@@ -4946,11 +5031,12 @@ def api_proposition_complete(request):
         'taux_max': taux_max,
 
         # ROI optimisation
-        'roi_optimisation': roi_optimisation,
+        'roi_optimisation': msgs['roi_optimisation'],
         'gain_opti_pct': gain_opti_pct,
         'taux_charges_pct': taux_charges_pct,
-        'gain_vs_charges': gain_vs_charges,
-        'conseils_optimisation': conseils_optimisation,
+        'gain_vs_charges': msgs['gain_vs_charges'],
+        'economie_annuelle': msgs['economie_annuelle'],
+        'conseils_optimisation': msgs['conseils_optimisation'],
     })
 
 
