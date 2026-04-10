@@ -3982,15 +3982,12 @@ def api_decomposer_brut(request):
     if total_pct != 100:
         return JsonResponse({'error': f'La somme des pourcentages doit être 100% (actuellement {total_pct}%)'}, status=400)
 
-    # Calcul des montants (floor pour cohérence avec le plafond CGI, base absorbe le résidu)
+    # Calcul des montants : chaque indemnité floor indépendamment, base absorbe le résidu
     import math as _math
-    pct_indem_total = pct_transport + pct_logement + pct_cherte
-    plafond_indem = _math.floor(brut * pct_indem_total / 100)
     m_transport = _math.floor(brut * pct_transport / 100)
     m_logement = _math.floor(brut * pct_logement / 100)
-    # Cherté absorbe le résidu d'arrondi pour que le total indemnités = plafond exact
-    m_cherte = plafond_indem - m_transport - m_logement
-    m_base = brut - plafond_indem  # reste sur la base
+    m_cherte = _math.floor(brut * pct_cherte / 100)
+    m_base = brut - m_transport - m_logement - m_cherte
 
     composantes = [
         {'cle': 'salaire_base', 'label': 'Salaire de base', 'pct': pct_base, 'montant': m_base},
@@ -4902,18 +4899,15 @@ def api_proposition_complete(request):
     pct_indem = taux_optimal
 
     # Répartition recommandée des indemnités (proportionnelle)
-    # IMPORTANT : la base absorbe le résidu d'arrondi pour que le total = brut exact
+    # Chaque indemnité floor indépendamment, base absorbe le résidu
     pct_transport = round(pct_indem * 0.4, 1)
     pct_logement  = round(pct_indem * 0.4, 1)
     pct_cherte    = round(pct_indem * 0.2, 1)
-    # Utiliser floor (comme _floor_gnf et JS Math.floor) pour éviter le +1 GNF
     import math as _math
-    plafond_indem = _math.floor(brut_calcule * pct_indem / 100)
     montant_transport = _math.floor(brut_calcule * pct_transport / 100)
     montant_logement  = _math.floor(brut_calcule * pct_logement / 100)
-    # Cherté absorbe le résidu d'arrondi pour que le total indemnités = plafond exact
-    montant_cherte    = plafond_indem - montant_transport - montant_logement
-    montant_base      = brut_calcule - plafond_indem
+    montant_cherte    = _math.floor(brut_calcule * pct_cherte / 100)
+    montant_base      = brut_calcule - montant_transport - montant_logement - montant_cherte
     recommandation_composantes = [
         {'cle': 'salaire_base', 'pct': pct_base, 'montant': montant_base},
         {'cle': 'transport',    'pct': pct_transport, 'montant': montant_transport},

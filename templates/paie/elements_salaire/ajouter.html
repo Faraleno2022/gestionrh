@@ -990,9 +990,9 @@ function updateRubriqueType() {}
         const pctC = parseInt(document.getElementById('dec_pct_cherte').value) || 0;
         const pctB = parseInt(document.getElementById('dec_pct_base').value) || 0;
 
-        const mT = Math.round(brut * pctT / 100);
-        const mL = Math.round(brut * pctL / 100);
-        const mC = Math.round(brut * pctC / 100);
+        const mT = Math.floor(brut * pctT / 100);
+        const mL = Math.floor(brut * pctL / 100);
+        const mC = Math.floor(brut * pctC / 100);
         const mB = brut - mT - mL - mC;
 
         // Afficher dans les cellules

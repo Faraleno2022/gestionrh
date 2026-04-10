@@ -11,7 +11,7 @@ Utilisation :
     from paie.services_retropaie import retropaie_net_vers_brut
     resultat = retropaie_net_vers_brut(net_cible=5_500_000, annee=2025)
 """
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, ROUND_FLOOR
 from datetime import date
 
 
@@ -118,7 +118,8 @@ def _net_depuis_brut(brut, constantes, tranches, pct_indem_exonerees=Decimal('0'
     cnss, base_cnss = _calculer_cnss(brut, plancher, plafond, taux_cnss)
 
     # Exonération indemnités forfaitaires (CGI Guinée : max 25 % du brut)
-    exo = _arrondir(brut * min(pct_indem_exonerees, Decimal('25')) / Decimal('100'))
+    # ROUND_FLOOR pour cohérence avec services.py (plafond CGI arrondi vers le bas)
+    exo = _d(brut * min(pct_indem_exonerees, Decimal('25')) / Decimal('100')).quantize(Decimal('1'), rounding=ROUND_FLOOR)
 
     base_rts = max(brut - cnss - exo, Decimal('0'))
     rts      = _calculer_rts(base_rts, tranches)
