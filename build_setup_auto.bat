@@ -13,14 +13,14 @@ echo.
 echo [1/4] Compilation Nuitka (project_guardian + runtime_shield)...
 if not exist dist_nuitka mkdir dist_nuitka
 
-python -m nuitka --module --output-dir=dist_nuitka --remove-output --no-pyi-file --python-flag=no_docstrings --python-flag=no_asserts project_guardian.py
+python -m nuitka --module --output-dir=dist_nuitka --remove-output --no-pyi-file --python-flag=no_docstrings --python-flag=no_asserts --zig project_guardian.py
 if errorlevel 1 (
     echo [ERREUR] Echec Nuitka project_guardian.py
     exit /b 1
 )
 echo   project_guardian.pyd OK
 
-python -m nuitka --module --output-dir=dist_nuitka --remove-output --no-pyi-file --python-flag=no_docstrings --python-flag=no_asserts runtime_shield.py
+python -m nuitka --module --output-dir=dist_nuitka --remove-output --no-pyi-file --python-flag=no_docstrings --python-flag=no_asserts --zig runtime_shield.py
 if errorlevel 1 (
     echo [ERREUR] Echec Nuitka runtime_shield.py
     exit /b 1
