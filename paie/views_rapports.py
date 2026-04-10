@@ -3,10 +3,12 @@ Vues pour les rapports de paie avancés.
 - Rapport masse salariale
 - État de paie (récapitulatif mensuel détaillé)
 - Feuille de présence (grille journalière)
+- Récapitulatif entreprise (synthèse globale optimisation)
 - Export Excel / PDF pour chaque rapport
 """
 import io
 import json
+import math
 import calendar
 from collections import defaultdict
 from datetime import date, timedelta
@@ -1715,4 +1717,257 @@ def rapport_feuille_presence_pdf(request):
     buffer.seek(0)
     response = HttpResponse(buffer.read(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="feuille_presence_{annee}_{mois}.pdf"'
+    return response
+
+
+# ============================================================================
+# Récapitulatif Entreprise — Synthèse globale avec gains d'optimisation
+# ============================================================================
+
+@login_required
+@entreprise_active_required
+def recapitulatif_entreprise(request):
+    """
+    Tableau récapitulatif global : tous les employés avec brut, charges,
+    net, gain d'optimisation mensuel et annuel.
+    """
+    from .services_simulation import (
+        calculer_un_bareme, _charger_constantes, _charger_tranches_db,
+        BAREME_CGI_REFERENCE, _floor_gnf
+    )
+    from .models import ElementSalaire
+
+    entreprise = request.user.entreprise
+    annee = int(request.GET.get('annee', date.today().year))
+    mois = request.GET.get('mois', str(date.today().month))
+
+    # Bulletins du mois sélectionné
+    bulletins = BulletinPaie.objects.filter(
+        employe__entreprise=entreprise,
+        annee_paie=annee,
+        mois_paie=int(mois),
+        statut_bulletin__in=['calcule', 'valide', 'paye'],
+    ).select_related('employe', 'employe__poste', 'employe__service').order_by('employe__nom')
+
+    # Charger constantes et tranches RTS
+    constantes = _charger_constantes()
+    tranches = _charger_tranches_db(annee, 'officiel')
+    if not tranches:
+        tranches = list(BAREME_CGI_REFERENCE)
+
+    nb_salaries = bulletins.count()
+
+    # Construire le tableau ligne par ligne
+    lignes = []
+    totaux = {
+        'brut': Decimal('0'), 'cnss_employe': Decimal('0'), 'rts': Decimal('0'),
+        'net': Decimal('0'), 'charges_patronales': Decimal('0'),
+        'cout_employeur': Decimal('0'), 'gain_mensuel': Decimal('0'),
+        'gain_annuel': Decimal('0'),
+        'net_sans_optim': Decimal('0'), 'rts_sans_optim': Decimal('0'),
+    }
+
+    for b in bulletins:
+        emp = b.employe
+        brut = b.salaire_brut or Decimal('0')
+        cnss_emp = b.cnss_employe or Decimal('0')
+        rts_val = b.irg or Decimal('0')
+        net_val = b.net_a_payer or Decimal('0')
+        cnss_employeur = b.cnss_employeur or Decimal('0')
+        vf = b.versement_forfaitaire or Decimal('0')
+        ta = b.taxe_apprentissage or Decimal('0')
+        charges_pat = cnss_employeur + vf + ta
+
+        # Calculer le scénario sans optimisation (0% indemnités)
+        ref = calculer_un_bareme(brut, Decimal('0'), tranches, constantes, nb_salaries)
+
+        gain = Decimal(str(ref['rts'])) - rts_val  # gain = RTS sans optim - RTS avec optim
+        taux_rts = (rts_val * 100 / brut).quantize(Decimal('0.01')) if brut else Decimal('0')
+
+        ligne = {
+            'employe': f"{emp.nom} {emp.prenoms}",
+            'matricule': emp.matricule or '-',
+            'poste': emp.poste.intitule_poste if emp.poste else '-',
+            'service': str(emp.service) if emp.service else '-',
+            'brut': brut,
+            'cnss_employe': cnss_emp,
+            'rts': rts_val,
+            'net': net_val,
+            'charges_patronales': charges_pat,
+            'cout_employeur': brut + charges_pat,
+            'taux_rts': taux_rts,
+            'rts_sans_optim': Decimal(str(ref['rts'])),
+            'net_sans_optim': Decimal(str(ref['net'])),
+            'gain_mensuel': gain,
+            'gain_annuel': gain * 12,
+        }
+        lignes.append(ligne)
+
+        # Totaux
+        totaux['brut'] += brut
+        totaux['cnss_employe'] += cnss_emp
+        totaux['rts'] += rts_val
+        totaux['net'] += net_val
+        totaux['charges_patronales'] += charges_pat
+        totaux['cout_employeur'] += brut + charges_pat
+        totaux['gain_mensuel'] += gain
+        totaux['gain_annuel'] += gain * 12
+        totaux['net_sans_optim'] += Decimal(str(ref['net']))
+        totaux['rts_sans_optim'] += Decimal(str(ref['rts']))
+
+    # Taux moyen RTS
+    totaux['taux_rts_moyen'] = (
+        (totaux['rts'] * 100 / totaux['brut']).quantize(Decimal('0.01'))
+        if totaux['brut'] else Decimal('0')
+    )
+    # ROI global
+    totaux['roi'] = (
+        (totaux['gain_annuel'] * 100 / totaux['cout_employeur']).quantize(Decimal('0.1'))
+        if totaux['cout_employeur'] else Decimal('0')
+    )
+
+    # Années et mois disponibles
+    annees_dispo = BulletinPaie.objects.filter(
+        employe__entreprise=entreprise
+    ).values_list('annee_paie', flat=True).distinct().order_by('-annee_paie')
+
+    context = {
+        'lignes': lignes,
+        'totaux': totaux,
+        'annee': annee,
+        'mois': int(mois),
+        'mois_label': MOIS_FR[int(mois)],
+        'nb_employes': nb_salaries,
+        'annees_dispo': annees_dispo,
+        'mois_fr': MOIS_FR,
+        'mois_liste': list(range(1, 13)),
+        'entreprise': entreprise,
+    }
+    return render(request, 'paie/recapitulatif_entreprise.html', context)
+
+
+@login_required
+@entreprise_active_required
+def recapitulatif_entreprise_pdf(request):
+    """Export PDF du récapitulatif entreprise."""
+    if not REPORTLAB_AVAILABLE:
+        return HttpResponse("ReportLab non installé", status=500)
+
+    from .services_simulation import (
+        calculer_un_bareme, _charger_constantes, _charger_tranches_db,
+        BAREME_CGI_REFERENCE
+    )
+
+    entreprise = request.user.entreprise
+    annee = int(request.GET.get('annee', date.today().year))
+    mois = int(request.GET.get('mois', date.today().month))
+
+    bulletins = BulletinPaie.objects.filter(
+        employe__entreprise=entreprise,
+        annee_paie=annee,
+        mois_paie=mois,
+        statut_bulletin__in=['calcule', 'valide', 'paye'],
+    ).select_related('employe', 'employe__poste').order_by('employe__nom')
+
+    constantes = _charger_constantes()
+    tranches = _charger_tranches_db(annee, 'officiel')
+    if not tranches:
+        tranches = list(BAREME_CGI_REFERENCE)
+    nb_salaries = bulletins.count()
+
+    def fmt(val):
+        try:
+            return f"{int(val or 0):,}".replace(",", " ")
+        except Exception:
+            return "0"
+
+    # Construire les données
+    rows_data = []
+    t_brut = t_cnss = t_rts = t_net = t_charges = t_gain = 0
+
+    for b in bulletins:
+        emp = b.employe
+        brut = int(b.salaire_brut or 0)
+        rts_val = int(b.irg or 0)
+        net_val = int(b.net_a_payer or 0)
+        cnss_emp = int(b.cnss_employe or 0)
+        charges = int((b.cnss_employeur or 0) + (b.versement_forfaitaire or 0) + (b.taxe_apprentissage or 0))
+
+        ref = calculer_un_bareme(Decimal(str(brut)), Decimal('0'), tranches, constantes, nb_salaries)
+        gain = ref['rts'] - rts_val
+
+        rows_data.append([
+            f"{emp.nom} {emp.prenoms}"[:25],
+            emp.matricule or '-',
+            fmt(brut), fmt(cnss_emp), fmt(rts_val), fmt(net_val),
+            fmt(charges), fmt(gain), fmt(gain * 12),
+        ])
+        t_brut += brut
+        t_cnss += cnss_emp
+        t_rts += rts_val
+        t_net += net_val
+        t_charges += charges
+        t_gain += gain
+
+    # Ligne totaux
+    rows_data.append([
+        'TOTAUX', '', fmt(t_brut), fmt(t_cnss), fmt(t_rts), fmt(t_net),
+        fmt(t_charges), fmt(t_gain), fmt(t_gain * 12),
+    ])
+
+    # Construire le PDF
+    buffer = io.BytesIO()
+    page_size = landscape(A4)
+    doc = SimpleDocTemplate(buffer, pagesize=page_size, topMargin=1*cm, bottomMargin=1*cm)
+
+    styles = getSampleStyleSheet()
+    elements_pdf = []
+
+    # Titre
+    titre_style = ParagraphStyle('Titre', parent=styles['Title'], fontSize=14, alignment=TA_CENTER)
+    elements_pdf.append(Paragraph(
+        f"Récapitulatif Entreprise — {MOIS_FR[mois]} {annee}", titre_style
+    ))
+    elements_pdf.append(Spacer(1, 0.3*cm))
+
+    sous_titre = ParagraphStyle('SousTitre', parent=styles['Normal'], fontSize=9, alignment=TA_CENTER,
+                                textColor=colors.HexColor('#555555'))
+    elements_pdf.append(Paragraph(
+        f"{entreprise.nom_entreprise} — {nb_salaries} employé(s) — "
+        f"Économie totale: {fmt(t_gain)} GNF/mois soit {fmt(t_gain * 12)} GNF/an",
+        sous_titre
+    ))
+    elements_pdf.append(Spacer(1, 0.5*cm))
+
+    # Tableau
+    headers = ['Employé', 'Matr.', 'Brut', 'CNSS', 'RTS', 'Net',
+               'Charges Pat.', 'Gain/mois', 'Gain/an']
+    table_data = [headers] + rows_data
+
+    col_widths = [4.5*cm, 1.8*cm, 2.5*cm, 2*cm, 2*cm, 2.5*cm, 2.5*cm, 2.5*cm, 2.5*cm]
+    table = Table(table_data, colWidths=col_widths, repeatRows=1)
+
+    style_cmds = [
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0d6efd')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#cccccc')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.HexColor('#f8f9fa')]),
+        # Ligne totaux
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e8f5e9')),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('LINEABOVE', (0, -1), (-1, -1), 1.5, colors.HexColor('#0d6efd')),
+        # Colonne gain en vert
+        ('TEXTCOLOR', (7, 1), (8, -1), colors.HexColor('#2e7d32')),
+    ]
+    table.setStyle(TableStyle(style_cmds))
+    elements_pdf.append(table)
+
+    doc.build(elements_pdf)
+    buffer.seek(0)
+    response = HttpResponse(buffer.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="recapitulatif_{entreprise.nom_entreprise}_{annee}_{mois:02d}.pdf"'
     return response

@@ -161,6 +161,10 @@ urlpatterns = [
     path('rapports/feuille-presence/excel/', views_rapports.rapport_feuille_presence_excel, name='rapport_feuille_presence_excel'),
     path('rapports/feuille-presence/pdf/', views_rapports.rapport_feuille_presence_pdf, name='rapport_feuille_presence_pdf'),
 
+    # Récapitulatif entreprise (synthèse globale + gains optimisation)
+    path('rapports/recapitulatif/', views_rapports.recapitulatif_entreprise, name='recapitulatif_entreprise'),
+    path('rapports/recapitulatif/pdf/', views_rapports.recapitulatif_entreprise_pdf, name='recapitulatif_entreprise_pdf'),
+
     # Bulletins groupés (impression multiple)
     path('bulletins/groupe/pdf/', views.bulletins_groupes_pdf, name='bulletins_groupes_pdf'),
 

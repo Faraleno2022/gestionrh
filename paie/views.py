@@ -3982,11 +3982,15 @@ def api_decomposer_brut(request):
     if total_pct != 100:
         return JsonResponse({'error': f'La somme des pourcentages doit être 100% (actuellement {total_pct}%)'}, status=400)
 
-    # Calcul des montants (arrondi à l'entier, ajustement sur le salaire de base)
-    m_transport = round(brut * pct_transport / 100)
-    m_logement = round(brut * pct_logement / 100)
-    m_cherte = round(brut * pct_cherte / 100)
-    m_base = brut - m_transport - m_logement - m_cherte  # reste sur la base
+    # Calcul des montants (floor pour cohérence avec le plafond CGI, base absorbe le résidu)
+    import math as _math
+    pct_indem_total = pct_transport + pct_logement + pct_cherte
+    plafond_indem = _math.floor(brut * pct_indem_total / 100)
+    m_transport = _math.floor(brut * pct_transport / 100)
+    m_logement = _math.floor(brut * pct_logement / 100)
+    # Cherté absorbe le résidu d'arrondi pour que le total indemnités = plafond exact
+    m_cherte = plafond_indem - m_transport - m_logement
+    m_base = brut - plafond_indem  # reste sur la base
 
     composantes = [
         {'cle': 'salaire_base', 'label': 'Salaire de base', 'pct': pct_base, 'montant': m_base},
@@ -4904,10 +4908,12 @@ def api_proposition_complete(request):
     pct_cherte    = round(pct_indem * 0.2, 1)
     # Utiliser floor (comme _floor_gnf et JS Math.floor) pour éviter le +1 GNF
     import math as _math
+    plafond_indem = _math.floor(brut_calcule * pct_indem / 100)
     montant_transport = _math.floor(brut_calcule * pct_transport / 100)
     montant_logement  = _math.floor(brut_calcule * pct_logement / 100)
-    montant_cherte    = _math.floor(brut_calcule * pct_cherte / 100)
-    montant_base      = brut_calcule - montant_transport - montant_logement - montant_cherte
+    # Cherté absorbe le résidu d'arrondi pour que le total indemnités = plafond exact
+    montant_cherte    = plafond_indem - montant_transport - montant_logement
+    montant_base      = brut_calcule - plafond_indem
     recommandation_composantes = [
         {'cle': 'salaire_base', 'pct': pct_base, 'montant': montant_base},
         {'cle': 'transport',    'pct': pct_transport, 'montant': montant_transport},
