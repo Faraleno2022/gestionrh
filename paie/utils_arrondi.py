@@ -16,3 +16,14 @@ def money(value) -> Decimal:
 def money_int(value) -> int:
     """Retourne un int GNF — pour les contextes qui attendent un entier."""
     return int(money(value))
+
+
+def precise(value) -> Decimal:
+    """
+    Conversion pour calcul interne — précision maximale, sans arrondi.
+    À utiliser dans les intermédiaires, boucles et multiplicateurs.
+    Ne jamais appeler money() sur un résultat qui sert encore de base.
+    """
+    if isinstance(value, Decimal):
+        return value
+    return Decimal(str(value))
