@@ -5638,7 +5638,8 @@ def api_simulation_pdf(request):
 
 
 @login_required
-@permission_required('paie.view_bulletinpaie', raise_exception=True)
+@entreprise_active_required
+@reauth_required
 def bulletin_audit_json(request, bulletin_id):
     """Vue audit — expose le pipeline complet du calcul en JSON."""
     from django.http import JsonResponse
@@ -5657,7 +5658,8 @@ def bulletin_audit_json(request, bulletin_id):
 
 
 @login_required
-@permission_required('paie.view_bulletinpaie', raise_exception=True)
+@entreprise_active_required
+@reauth_required
 def bulletin_audit_pdf(request, bulletin_id):
     # Isolation multi-tenant : un user ne voit que son entreprise
     _bulletin_check = get_object_or_404(BulletinPaie, pk=bulletin_id)
