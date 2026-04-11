@@ -6,7 +6,7 @@ from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.db import transaction
 from django.views.decorators.http import require_POST, require_GET
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import datetime, date
 import json
 
@@ -4601,7 +4601,7 @@ def api_optimiser_decomposition(request):
         elif cle == 'salaire_base':
             final[cle] = base_optimale
         elif nb_indem_libres > 0:
-            final[cle] = round(indem_totale_a_repartir / nb_indem_libres)
+            final[cle] = int((Decimal(str(indem_totale_a_repartir)) / Decimal(str(nb_indem_libres))).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
         else:
             final[cle] = 0
 
