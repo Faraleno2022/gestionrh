@@ -688,6 +688,25 @@ class MoteurCalculPaie:
                 actif=True
             ).first()
             
+            # Auto-création de la rubrique HS si absente
+            if not rubrique_hs:
+                rubrique_hs, _ = RubriquePaie.objects.get_or_create(
+                    code_rubrique='HS_NORM',
+                    defaults={
+                        'libelle_rubrique': 'Heures supplémentaires',
+                        'type_rubrique': 'gain',
+                        'categorie_rubrique': 'autre',
+                        'mode_calcul': 'horaire',
+                        'soumis_cnss': True,
+                        'soumis_irg': True,
+                        'inclus_brut': True,
+                        'exonere_rts': False,
+                        'ordre_calcul': 50,
+                        'ordre_affichage': 15,
+                        'actif': True,
+                        'entreprise': self.employe.entreprise if hasattr(self.employe, 'entreprise') else None,
+                    }
+                )
             if rubrique_hs:
                 # Ligne récapitulative des heures supplémentaires
                 # Calculer le taux de majoration moyen (en pourcentage de majoration, pas le coefficient appliqué)
