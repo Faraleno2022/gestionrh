@@ -3,7 +3,7 @@ Vues pour la gestion des réclamations employés.
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from gestionrh.decorators import reauth_required
+from core.decorators import reauth_required
 from django.contrib import messages
 from django.db.models import Count, Q
 from django.utils import timezone

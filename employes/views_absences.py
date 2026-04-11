@@ -11,7 +11,7 @@ from collections import defaultdict
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from gestionrh.decorators import reauth_required
+from core.decorators import reauth_required
 from django.http import HttpResponse
 from django.db.models import Sum, Count, Q
 
