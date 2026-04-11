@@ -3,6 +3,7 @@ Vues pour la gestion des visites medicales.
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from gestionrh.decorators import reauth_required
 from django.contrib import messages
 from django.db.models import Count, Q
 from datetime import date, timedelta
@@ -10,6 +11,7 @@ from datetime import date, timedelta
 from .models import Employe, VisiteMedicale
 
 
+@reauth_required
 @login_required
 def liste_visites_medicales(request):
     visites = VisiteMedicale.objects.filter(
@@ -57,6 +59,7 @@ def liste_visites_medicales(request):
     })
 
 
+@reauth_required
 @login_required
 def planifier_visite(request):
     if request.method == 'POST':
@@ -91,6 +94,7 @@ def planifier_visite(request):
     })
 
 
+@reauth_required
 @login_required
 def detail_visite(request, pk):
     visite = get_object_or_404(VisiteMedicale, pk=pk, employe__entreprise=request.user.entreprise)
@@ -103,6 +107,7 @@ def detail_visite(request, pk):
     })
 
 
+@reauth_required
 @login_required
 def enregistrer_resultat(request, pk):
     visite = get_object_or_404(VisiteMedicale, pk=pk, employe__entreprise=request.user.entreprise)
@@ -125,6 +130,7 @@ def enregistrer_resultat(request, pk):
     })
 
 
+@reauth_required
 @login_required
 def supprimer_visite(request, pk):
     visite = get_object_or_404(VisiteMedicale, pk=pk, employe__entreprise=request.user.entreprise)
@@ -133,6 +139,7 @@ def supprimer_visite(request, pk):
     return redirect('employes:liste_visites_medicales')
 
 
+@reauth_required
 @login_required
 def tableau_bord_medical(request):
     today = date.today()
@@ -167,6 +174,7 @@ def tableau_bord_medical(request):
     })
 
 
+@reauth_required
 @login_required
 def suivi_medical_employe(request, employe_id):
     employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)

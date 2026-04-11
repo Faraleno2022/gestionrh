@@ -11,6 +11,7 @@ from collections import defaultdict
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from gestionrh.decorators import reauth_required
 from django.http import HttpResponse
 from django.db.models import Sum, Count, Q
 
@@ -54,6 +55,7 @@ def _cout_journalier_moyen(entreprise, annee, mois):
     return COUT_JOURNALIER_DEFAUT
 
 
+@reauth_required
 @login_required
 @entreprise_active_required
 @reauth_required
@@ -218,6 +220,7 @@ def tableau_bord_absences(request):
     return render(request, 'employes/tableau_bord_absences.html', context)
 
 
+@reauth_required
 @login_required
 @entreprise_active_required
 @reauth_required

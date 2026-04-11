@@ -4,6 +4,7 @@ Vues pour le module Trésorerie Avancée
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from gestionrh.decorators import reauth_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Sum, Q
@@ -19,6 +20,7 @@ from .models_tresorerie import (
 )
 
 
+@reauth_required
 @login_required
 def dashboard_tresorerie(request):
     """Tableau de bord trésorerie avancée"""
@@ -85,6 +87,7 @@ def dashboard_tresorerie(request):
     return render(request, 'comptabilite/tresorerie/dashboard.html', context)
 
 
+@reauth_required
 @login_required
 def situation_tresorerie_list(request):
     """Liste des situations de trésorerie"""
@@ -115,6 +118,7 @@ def situation_tresorerie_list(request):
     return render(request, 'comptabilite/tresorerie/situation_list.html', context)
 
 
+@reauth_required
 @login_required
 def situation_tresorerie_detail(request, pk):
     """Détail d'une situation de trésorerie"""
@@ -122,6 +126,7 @@ def situation_tresorerie_detail(request, pk):
     return render(request, 'comptabilite/tresorerie/situation_detail.html', {'situation': situation})
 
 
+@reauth_required
 @login_required
 def generer_situation_journaliere(request):
     """Génère la situation de trésorerie du jour"""
@@ -173,6 +178,7 @@ def generer_situation_journaliere(request):
 # ÉCHÉANCIER
 # ============================================================================
 
+@reauth_required
 @login_required
 def echeancier_list(request):
     """Liste de l'échéancier de trésorerie"""
@@ -206,6 +212,7 @@ def echeancier_list(request):
     return render(request, 'comptabilite/tresorerie/echeancier_list.html', context)
 
 
+@reauth_required
 @login_required
 def echeancier_create(request):
     """Créer une échéance"""
@@ -248,6 +255,7 @@ def echeancier_create(request):
     return render(request, 'comptabilite/tresorerie/echeancier_form.html', context)
 
 
+@reauth_required
 @login_required
 def echeancier_detail(request, pk):
     """Détail d'une échéance"""
@@ -255,6 +263,7 @@ def echeancier_detail(request, pk):
     return render(request, 'comptabilite/tresorerie/echeancier_detail.html', {'echeance': echeance})
 
 
+@reauth_required
 @login_required
 def echeancier_update(request, pk):
     """Modifier une échéance"""
@@ -283,6 +292,7 @@ def echeancier_update(request, pk):
     return render(request, 'comptabilite/tresorerie/echeancier_form.html', context)
 
 
+@reauth_required
 @login_required
 def echeancier_realiser(request, pk):
     """Marquer une échéance comme réalisée"""
@@ -302,6 +312,7 @@ def echeancier_realiser(request, pk):
 # SYNCHRONISATION BANCAIRE
 # ============================================================================
 
+@reauth_required
 @login_required
 def synchronisation_list(request):
     """Liste des synchronisations bancaires"""
@@ -314,6 +325,7 @@ def synchronisation_list(request):
     return render(request, 'comptabilite/tresorerie/synchronisation_list.html', context)
 
 
+@reauth_required
 @login_required
 def synchronisation_create(request):
     """Créer une synchronisation bancaire"""
@@ -343,6 +355,7 @@ def synchronisation_create(request):
     return render(request, 'comptabilite/tresorerie/synchronisation_form.html', context)
 
 
+@reauth_required
 @login_required
 def synchronisation_executer(request, pk):
     """Exécuter une synchronisation"""
@@ -370,6 +383,7 @@ def synchronisation_executer(request, pk):
 # ALERTES TRÉSORERIE
 # ============================================================================
 
+@reauth_required
 @login_required
 def alertes_tresorerie_list(request):
     """Liste des alertes de trésorerie"""
@@ -392,6 +406,7 @@ def alertes_tresorerie_list(request):
     return render(request, 'comptabilite/tresorerie/alertes_list.html', context)
 
 
+@reauth_required
 @login_required
 def alerte_acquitter(request, pk):
     """Acquitter une alerte"""
@@ -412,6 +427,7 @@ def alerte_acquitter(request, pk):
 # SEUILS DE LIQUIDITÉ
 # ============================================================================
 
+@reauth_required
 @login_required
 def seuils_liquidite_list(request):
     """Liste des seuils de liquidité"""
@@ -424,6 +440,7 @@ def seuils_liquidite_list(request):
     return render(request, 'comptabilite/tresorerie/seuils_list.html', context)
 
 
+@reauth_required
 @login_required
 def seuil_liquidite_create(request):
     """Créer un seuil de liquidité"""
@@ -457,6 +474,7 @@ def seuil_liquidite_create(request):
 # GESTION NUMÉRAIRE
 # ============================================================================
 
+@reauth_required
 @login_required
 def numeraire_list(request):
     """Liste des mouvements de numéraire"""
@@ -479,6 +497,7 @@ def numeraire_list(request):
     return render(request, 'comptabilite/tresorerie/numeraire_list.html', context)
 
 
+@reauth_required
 @login_required
 def numeraire_create(request):
     """Créer un mouvement de numéraire"""
@@ -514,6 +533,7 @@ def numeraire_create(request):
     return render(request, 'comptabilite/tresorerie/numeraire_form.html', context)
 
 
+@reauth_required
 @login_required
 def numeraire_valider(request, pk):
     """Valider un mouvement de numéraire"""
@@ -533,6 +553,7 @@ def numeraire_valider(request, pk):
 # OPTIMISATION TRÉSORERIE
 # ============================================================================
 
+@reauth_required
 @login_required
 def optimisation_list(request):
     """Liste des stratégies d'optimisation"""
@@ -545,6 +566,7 @@ def optimisation_list(request):
     return render(request, 'comptabilite/tresorerie/optimisation_list.html', context)
 
 
+@reauth_required
 @login_required
 def optimisation_create(request):
     """Créer une stratégie d'optimisation"""
@@ -575,6 +597,7 @@ def optimisation_create(request):
     return render(request, 'comptabilite/tresorerie/optimisation_form.html', context)
 
 
+@reauth_required
 @login_required
 def optimisation_detail(request, pk):
     """Détail d'une stratégie d'optimisation"""
@@ -586,6 +609,7 @@ def optimisation_detail(request, pk):
 # FLUX JOURNALIERS
 # ============================================================================
 
+@reauth_required
 @login_required
 def flux_journaliers_list(request):
     """Liste des flux journaliers"""
@@ -612,6 +636,7 @@ def flux_journaliers_list(request):
     return render(request, 'comptabilite/tresorerie/flux_journaliers_list.html', context)
 
 
+@reauth_required
 @login_required
 def flux_journalier_detail(request, pk):
     """Détail d'un flux journalier"""
@@ -623,6 +648,7 @@ def flux_journalier_detail(request, pk):
 # API JSON pour graphiques
 # ============================================================================
 
+@reauth_required
 @login_required
 def api_previsions_tresorerie(request):
     """API pour les prévisions de trésorerie (graphiques)"""
@@ -652,6 +678,7 @@ def api_previsions_tresorerie(request):
     return JsonResponse(data)
 
 
+@reauth_required
 @login_required
 def api_echeances_calendrier(request):
     """API pour le calendrier des échéances"""

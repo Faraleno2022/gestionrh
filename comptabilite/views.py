@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from gestionrh.decorators import reauth_required
 from django.contrib import messages
 from django.db.models import Sum, Q, F, Count
 from django.db import transaction
@@ -80,6 +81,7 @@ def generer_numero_unique(entreprise, prefixe, modele, champ='numero'):
     return f"{prefixe}{annee}-{timestamp:04d}"
 
 
+@reauth_required
 @login_required
 @compta_required
 def dashboard(request):
@@ -121,6 +123,7 @@ def dashboard(request):
 
 # ==================== PLAN COMPTABLE ====================
 
+@reauth_required
 @login_required
 @compta_required
 def plan_comptable_list(request):
@@ -153,6 +156,7 @@ def plan_comptable_list(request):
     return render(request, 'comptabilite/plan_comptable/list.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def plan_comptable_create(request):
@@ -178,6 +182,7 @@ def plan_comptable_create(request):
     return render(request, 'comptabilite/plan_comptable/form.html', {'form': form})
 
 
+@reauth_required
 @login_required
 @compta_required
 def plan_comptable_detail(request, pk):
@@ -196,6 +201,7 @@ def plan_comptable_detail(request, pk):
     return render(request, 'comptabilite/plan_comptable/detail.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def plan_comptable_update(request, pk):
@@ -214,6 +220,7 @@ def plan_comptable_update(request, pk):
     return render(request, 'comptabilite/plan_comptable/form.html', {'form': form, 'compte': compte})
 
 
+@reauth_required
 @login_required
 @compta_required
 def plan_comptable_delete(request, pk):
@@ -236,6 +243,7 @@ def plan_comptable_delete(request, pk):
 
 # ==================== JOURNAUX ====================
 
+@reauth_required
 @login_required
 @compta_required
 def journal_list(request):
@@ -244,6 +252,7 @@ def journal_list(request):
     return render(request, 'comptabilite/journaux/list.html', {'journaux': journaux})
 
 
+@reauth_required
 @login_required
 @compta_required
 def journal_create(request):
@@ -268,6 +277,7 @@ def journal_create(request):
     return render(request, 'comptabilite/journaux/form.html', {'form': form})
 
 
+@reauth_required
 @login_required
 @compta_required
 def journal_update(request, pk):
@@ -286,6 +296,7 @@ def journal_update(request, pk):
     return render(request, 'comptabilite/journaux/form.html', {'form': form, 'journal': journal})
 
 
+@reauth_required
 @login_required
 @compta_required
 def journal_detail(request, pk):
@@ -300,6 +311,7 @@ def journal_detail(request, pk):
     })
 
 
+@reauth_required
 @login_required
 @compta_required
 def journal_delete(request, pk):
@@ -322,6 +334,7 @@ def journal_delete(request, pk):
 
 # ==================== EXERCICES ====================
 
+@reauth_required
 @login_required
 @compta_required
 def exercice_list(request):
@@ -330,6 +343,7 @@ def exercice_list(request):
     return render(request, 'comptabilite/exercices/list.html', {'exercices': exercices})
 
 
+@reauth_required
 @login_required
 @compta_required
 def exercice_create(request):
@@ -354,6 +368,7 @@ def exercice_create(request):
     return render(request, 'comptabilite/exercices/form.html', {'form': form})
 
 
+@reauth_required
 @login_required
 @compta_required
 def exercice_update(request, pk):
@@ -372,6 +387,7 @@ def exercice_update(request, pk):
     return render(request, 'comptabilite/exercices/form.html', {'form': form, 'exercice': exercice})
 
 
+@reauth_required
 @login_required
 @compta_required
 def exercice_detail(request, pk):
@@ -397,6 +413,7 @@ def exercice_detail(request, pk):
     })
 
 
+@reauth_required
 @login_required
 @compta_required
 def exercice_delete(request, pk):
@@ -419,6 +436,7 @@ def exercice_delete(request, pk):
 
 # ==================== ÉCRITURES ====================
 
+@reauth_required
 @login_required
 @compta_required
 def ecriture_list(request):
@@ -454,6 +472,7 @@ def ecriture_list(request):
     return render(request, 'comptabilite/ecritures/list.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def ecriture_create(request):
@@ -501,6 +520,7 @@ def ecriture_create(request):
     return render(request, 'comptabilite/ecritures/form.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def ecriture_detail(request, pk):
@@ -512,6 +532,7 @@ def ecriture_detail(request, pk):
     return render(request, 'comptabilite/ecritures/detail.html', {'ecriture': ecriture})
 
 
+@reauth_required
 @login_required
 @compta_required
 def ecriture_update(request, pk):
@@ -564,6 +585,7 @@ def ecriture_update(request, pk):
     return render(request, 'comptabilite/ecritures/form.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def ecriture_valider(request, pk):
@@ -583,6 +605,7 @@ def ecriture_valider(request, pk):
     return redirect('comptabilite:ecriture_detail', pk=pk)
 
 
+@reauth_required
 @login_required
 @compta_required
 def ecriture_delete(request, pk):
@@ -606,6 +629,7 @@ def ecriture_delete(request, pk):
 
 # ==================== TIERS ====================
 
+@reauth_required
 @login_required
 @compta_required
 def tiers_list(request):
@@ -634,6 +658,7 @@ def tiers_list(request):
     return render(request, 'comptabilite/tiers/list.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def tiers_create(request):
@@ -658,6 +683,7 @@ def tiers_create(request):
     return render(request, 'comptabilite/tiers/form.html', {'form': form})
 
 
+@reauth_required
 @login_required
 @compta_required
 def tiers_detail(request, pk):
@@ -672,6 +698,7 @@ def tiers_detail(request, pk):
     return render(request, 'comptabilite/tiers/detail.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def tiers_update(request, pk):
@@ -690,6 +717,7 @@ def tiers_update(request, pk):
     return render(request, 'comptabilite/tiers/form.html', {'form': form, 'tiers': tiers})
 
 
+@reauth_required
 @login_required
 @compta_required
 def tiers_delete(request, pk):
@@ -712,6 +740,7 @@ def tiers_delete(request, pk):
 
 # ==================== FACTURES ====================
 
+@reauth_required
 @login_required
 @compta_required
 def facture_list(request):
@@ -739,6 +768,7 @@ def facture_list(request):
     return render(request, 'comptabilite/factures/list.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def facture_create(request):
@@ -790,6 +820,7 @@ def facture_create(request):
     return render(request, 'comptabilite/factures/form.html', {'form': form, 'type_facture': type_facture})
 
 
+@reauth_required
 @login_required
 @compta_required
 def facture_detail(request, pk):
@@ -801,6 +832,7 @@ def facture_detail(request, pk):
     return render(request, 'comptabilite/factures/detail.html', {'facture': facture})
 
 
+@reauth_required
 @login_required
 @compta_required
 def facture_update(request, pk):
@@ -823,6 +855,7 @@ def facture_update(request, pk):
     return render(request, 'comptabilite/factures/form.html', {'form': form, 'facture': facture})
 
 
+@reauth_required
 @login_required
 @compta_required
 def facture_valider(request, pk):
@@ -840,6 +873,7 @@ def facture_valider(request, pk):
     return redirect('comptabilite:facture_detail', pk=pk)
 
 
+@reauth_required
 @login_required
 @compta_required
 def facture_print(request, pk):
@@ -851,6 +885,7 @@ def facture_print(request, pk):
     return render(request, 'comptabilite/factures/print.html', {'facture': facture})
 
 
+@reauth_required
 @login_required
 @compta_required
 def facture_delete(request, pk):
@@ -874,6 +909,7 @@ def facture_delete(request, pk):
 
 # ==================== RÈGLEMENTS ====================
 
+@reauth_required
 @login_required
 @compta_required
 def reglement_list(request):
@@ -889,6 +925,7 @@ def reglement_list(request):
     return render(request, 'comptabilite/reglements/list.html', {'reglements': reglements})
 
 
+@reauth_required
 @login_required
 @compta_required
 def reglement_create(request):
@@ -946,6 +983,7 @@ def reglement_create(request):
     return render(request, 'comptabilite/reglements/form.html', {'form': form})
 
 
+@reauth_required
 @login_required
 @compta_required
 def reglement_detail(request, pk):
@@ -957,6 +995,7 @@ def reglement_detail(request, pk):
     return render(request, 'comptabilite/reglements/detail.html', {'reglement': reglement})
 
 
+@reauth_required
 @login_required
 @compta_required
 def reglement_update(request, pk):
@@ -989,6 +1028,7 @@ def reglement_update(request, pk):
     return render(request, 'comptabilite/reglements/form.html', {'form': form, 'reglement': reglement})
 
 
+@reauth_required
 @login_required
 @compta_required
 def reglement_delete(request, pk):
@@ -1017,6 +1057,7 @@ def reglement_delete(request, pk):
 
 # ==================== ÉTATS FINANCIERS ====================
 
+@reauth_required
 @login_required
 @compta_required
 def grand_livre(request):
@@ -1106,6 +1147,7 @@ def _get_grand_livre_data(request):
     return comptes_groupes, entreprise, date_debut, date_fin
 
 
+@reauth_required
 @login_required
 @compta_required
 def grand_livre_excel(request):
@@ -1205,6 +1247,7 @@ def grand_livre_excel(request):
     return response
 
 
+@reauth_required
 @login_required
 @compta_required
 def grand_livre_pdf(request):
@@ -1282,6 +1325,7 @@ def grand_livre_pdf(request):
     return response
 
 
+@reauth_required
 @login_required
 @compta_required
 def balance(request):
@@ -1361,6 +1405,7 @@ def _get_balance_data(request):
     return comptes_avec_mvt, entreprise, total_debit, total_credit, total_solde_debit, total_solde_credit
 
 
+@reauth_required
 @login_required
 @compta_required
 def balance_excel(request):
@@ -1446,6 +1491,7 @@ def balance_excel(request):
     return response
 
 
+@reauth_required
 @login_required
 @compta_required
 def balance_pdf(request):
@@ -1516,6 +1562,7 @@ def balance_pdf(request):
     return response
 
 
+@reauth_required
 @login_required
 @compta_required
 def journal_general(request):
@@ -1548,6 +1595,7 @@ def journal_general(request):
     return render(request, 'comptabilite/etats/journal_general.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def bilan(request):
@@ -1621,6 +1669,7 @@ def bilan(request):
     return render(request, 'comptabilite/etats/bilan.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def compte_resultat(request):
@@ -1701,6 +1750,7 @@ def _get_journal_general_data(request):
     return ecritures.order_by('date_ecriture', 'numero_ecriture'), entreprise, journal_id, date_debut, date_fin
 
 
+@reauth_required
 @login_required
 @compta_required
 def journal_general_excel(request):
@@ -1769,6 +1819,7 @@ def journal_general_excel(request):
     return response
 
 
+@reauth_required
 @login_required
 @compta_required
 def journal_general_pdf(request):
@@ -1876,6 +1927,7 @@ def _get_bilan_data(request):
     return actif_immobilise, actif_circulant, capitaux_propres, dettes, total_actif, total_passif, entreprise, exercice
 
 
+@reauth_required
 @login_required
 @compta_required
 def bilan_excel(request):
@@ -1990,6 +2042,7 @@ def bilan_excel(request):
     return response
 
 
+@reauth_required
 @login_required
 @compta_required
 def bilan_pdf(request):
@@ -2107,6 +2160,7 @@ def _get_compte_resultat_data(request):
     return charges_exploitation, charges_financieres, produits_exploitation, produits_financiers, total_charges, total_produits, resultat, entreprise, exercice
 
 
+@reauth_required
 @login_required
 @compta_required
 def compte_resultat_excel(request):
@@ -2225,6 +2279,7 @@ def compte_resultat_excel(request):
     return response
 
 
+@reauth_required
 @login_required
 @compta_required
 def compte_resultat_pdf(request):
@@ -2313,6 +2368,7 @@ def compte_resultat_pdf(request):
 
 # ============ MODULE CLIENTS & FOURNISSEURS DÉTAILLÉS ============
 
+@reauth_required
 @login_required
 @compta_required
 def compte_client_list(request):
@@ -2347,6 +2403,7 @@ def compte_client_list(request):
     return render(request, 'comptabilite/clients_fournisseurs/compte_client_list.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def compte_client_detail(request, pk):
@@ -2415,6 +2472,7 @@ def compte_client_detail(request, pk):
     return render(request, 'comptabilite/clients_fournisseurs/compte_client_detail.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def compte_fournisseur_list(request):
@@ -2448,6 +2506,7 @@ def compte_fournisseur_list(request):
     return render(request, 'comptabilite/clients_fournisseurs/compte_fournisseur_list.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def compte_fournisseur_detail(request, pk):
@@ -2513,6 +2572,7 @@ def compte_fournisseur_detail(request, pk):
     return render(request, 'comptabilite/clients_fournisseurs/compte_fournisseur_detail.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def vieillissement_creances(request):
@@ -2572,6 +2632,7 @@ def vieillissement_creances(request):
     return render(request, 'comptabilite/clients_fournisseurs/vieillissement_creances.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def vieillissement_dettes(request):
@@ -2629,6 +2690,7 @@ def vieillissement_dettes(request):
     return render(request, 'comptabilite/clients_fournisseurs/vieillissement_dettes.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def impayes_clients(request):
@@ -2662,6 +2724,7 @@ def impayes_clients(request):
     return render(request, 'comptabilite/clients_fournisseurs/impayes_clients.html', context)
 
 
+@reauth_required
 @login_required
 @compta_required
 def impayes_fournisseurs(request):

@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from gestionrh.decorators import reauth_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
@@ -514,6 +515,7 @@ class EmployeDeleteView(EntrepriseEmployeQuerysetMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
+@reauth_required
 @login_required
 def employe_export_excel(request):
     """Export de la liste des employés en Excel"""
@@ -576,6 +578,7 @@ def employe_export_excel(request):
     return response
 
 
+@reauth_required
 @login_required
 def employe_contrat_create(request, employe_id):
     """Créer un nouveau contrat pour un employé"""
@@ -607,6 +610,7 @@ def employe_contrat_create(request, employe_id):
     })
 
 
+@reauth_required
 @login_required
 def evaluation_list(request, employe_id):
     employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
@@ -617,6 +621,7 @@ def evaluation_list(request, employe_id):
     })
 
 
+@reauth_required
 @login_required
 def evaluation_create(request, employe_id):
     employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
@@ -647,6 +652,7 @@ def evaluation_create(request, employe_id):
     })
 
 
+@reauth_required
 @login_required
 def evaluation_detail(request, pk):
     evaluation = get_object_or_404(EvaluationEmploye, pk=pk, employe__entreprise=request.user.entreprise)
@@ -656,6 +662,7 @@ def evaluation_detail(request, pk):
     })
 
 
+@reauth_required
 @login_required
 def evaluation_delete(request, pk):
     evaluation = get_object_or_404(EvaluationEmploye, pk=pk, employe__entreprise=request.user.entreprise)
@@ -682,6 +689,7 @@ def evaluation_delete(request, pk):
     })
 
 
+@reauth_required
 @login_required
 def sanction_list(request, employe_id):
     employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
@@ -692,6 +700,7 @@ def sanction_list(request, employe_id):
     })
 
 
+@reauth_required
 @login_required
 def sanction_create(request, employe_id):
     employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
@@ -722,6 +731,7 @@ def sanction_create(request, employe_id):
     })
 
 
+@reauth_required
 @login_required
 def sanction_detail(request, pk):
     sanction = get_object_or_404(SanctionDisciplinaire, pk=pk, employe__entreprise=request.user.entreprise)
@@ -731,6 +741,7 @@ def sanction_detail(request, pk):
     })
 
 
+@reauth_required
 @login_required
 def sanction_delete(request, pk):
     sanction = get_object_or_404(SanctionDisciplinaire, pk=pk, employe__entreprise=request.user.entreprise)
@@ -757,6 +768,7 @@ def sanction_delete(request, pk):
     })
 
 
+@reauth_required
 @login_required
 def employe_document_upload(request, employe_id):
     """Télécharger un document pour un employé"""
@@ -805,6 +817,7 @@ def employe_document_upload(request, employe_id):
     return redirect('employes:detail', pk=employe.id)
 
 
+@reauth_required
 @login_required
 def employe_document_delete(request, document_id):
     """Supprimer un document d'employé"""
@@ -831,6 +844,7 @@ def employe_document_delete(request, document_id):
     return redirect('employes:detail', pk=employe.id)
 
 
+@reauth_required
 @login_required
 def sauvegarder_conjoint(request, employe_id):
     """Ajouter ou modifier le conjoint d'un employé"""
@@ -883,6 +897,7 @@ def sauvegarder_conjoint(request, employe_id):
     return redirect('employes:detail', pk=employe.id)
 
 
+@reauth_required
 @login_required
 def sauvegarder_enfant(request, employe_id):
     """Ajouter ou modifier un enfant d'un employé"""
@@ -938,6 +953,7 @@ def sauvegarder_enfant(request, employe_id):
     return redirect('employes:detail', pk=employe.id)
 
 
+@reauth_required
 @login_required
 def supprimer_enfant(request, enfant_id):
     """Supprimer un enfant d'un employé"""
@@ -965,6 +981,7 @@ def supprimer_enfant(request, enfant_id):
 
 # ============= VUES GLOBALES RH =============
 
+@reauth_required
 @login_required
 def liste_contrats(request):
     """Liste globale de tous les contrats"""
@@ -999,6 +1016,7 @@ def liste_contrats(request):
     })
 
 
+@reauth_required
 @login_required
 def liste_carrieres(request):
     """Liste globale des mouvements de carrière"""
@@ -1028,6 +1046,7 @@ def liste_carrieres(request):
     })
 
 
+@reauth_required
 @login_required
 def liste_documents(request):
     """Liste globale des documents employés"""
@@ -1057,6 +1076,7 @@ def liste_documents(request):
     })
 
 
+@reauth_required
 @login_required
 def liste_sanctions_global(request):
     """Liste globale des sanctions disciplinaires"""
@@ -1085,6 +1105,7 @@ def liste_sanctions_global(request):
     })
 
 
+@reauth_required
 @login_required
 def liste_accidents(request):
     """Liste globale des accidents du travail"""

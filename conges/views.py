@@ -4,6 +4,7 @@ Interface dédiée pour la gestion des congés
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from gestionrh.decorators import reauth_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Sum, Q
@@ -14,6 +15,7 @@ from employes.models import Employe
 from paie.models import ConfigurationPaieEntreprise
 
 
+@reauth_required
 @login_required
 def liste_conges(request):
     """Liste des demandes de congés"""
@@ -52,6 +54,7 @@ def liste_conges(request):
     })
 
 
+@reauth_required
 @login_required
 def soldes_conges(request):
     """Afficher les soldes de congés par employé"""
@@ -73,6 +76,7 @@ def soldes_conges(request):
     })
 
 
+@reauth_required
 @login_required
 def demander_conge(request):
     """Formulaire de demande de congé"""
@@ -111,6 +115,7 @@ def demander_conge(request):
     })
 
 
+@reauth_required
 @login_required
 def approuver_conge(request, pk):
     """Approuver ou rejeter une demande de congé"""

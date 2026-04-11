@@ -7,6 +7,7 @@ Vues pour la gestion des missions et déplacements.
 from django.shortcuts import render, redirect, get_object_or_404
 
 from django.contrib.auth.decorators import login_required
+from gestionrh.decorators import reauth_required
 
 from django.contrib import messages
 
@@ -28,6 +29,7 @@ from .models_mission import Mission, FraisMission, BaremeIndemnite
 
 
 
+@reauth_required
 @login_required
 
 def liste_missions(request):
@@ -126,6 +128,7 @@ def liste_missions(request):
 
 
 
+@reauth_required
 @login_required
 
 def creer_mission(request):
@@ -250,6 +253,7 @@ def creer_mission(request):
 
 
 
+@reauth_required
 @login_required
 
 def detail_mission(request, pk):
@@ -288,6 +292,7 @@ def detail_mission(request, pk):
 
 
 
+@reauth_required
 @login_required
 
 def modifier_mission(request, pk):
@@ -370,6 +375,7 @@ def modifier_mission(request, pk):
 
 
 
+@reauth_required
 @login_required
 
 def demarrer_mission(request, pk):
@@ -410,6 +416,7 @@ def demarrer_mission(request, pk):
 
 
 
+@reauth_required
 @login_required
 
 def terminer_mission(request, pk):
@@ -474,6 +481,7 @@ def terminer_mission(request, pk):
 
 
 
+@reauth_required
 @login_required
 
 def annuler_mission(request, pk):
@@ -514,6 +522,7 @@ def annuler_mission(request, pk):
 
 
 
+@reauth_required
 @login_required
 
 def supprimer_mission(request, pk):
@@ -550,6 +559,7 @@ def supprimer_mission(request, pk):
 
 
 
+@reauth_required
 @login_required
 
 def ajouter_frais_mission(request, pk):
@@ -618,6 +628,7 @@ def ajouter_frais_mission(request, pk):
 
 
 
+@reauth_required
 @login_required
 
 def supprimer_frais_mission(request, pk, frais_pk):
@@ -650,6 +661,7 @@ def supprimer_frais_mission(request, pk, frais_pk):
 
 
 
+@reauth_required
 @login_required
 
 def accorder_avance(request, pk):
@@ -688,6 +700,7 @@ def accorder_avance(request, pk):
 
 
 
+@reauth_required
 @login_required
 
 def recap_missions(request):
@@ -784,6 +797,7 @@ def recap_missions(request):
 
 
 
+@reauth_required
 @login_required
 
 def gestion_baremes_indemnites(request):

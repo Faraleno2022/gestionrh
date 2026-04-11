@@ -10,6 +10,7 @@ from datetime import datetime, date
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from gestionrh.decorators import reauth_required
 from django.contrib import messages
 from django.db import transaction
 from django.http import HttpResponse
@@ -145,6 +146,7 @@ def _clean_str(value):
 # ============================================================
 #  TÉLÉCHARGER LE TEMPLATE D'IMPORTATION
 # ============================================================
+@reauth_required
 @login_required
 def telecharger_template_import(request):
     """Génère et télécharge le template Excel d'importation des employés"""
@@ -320,6 +322,7 @@ def telecharger_template_import(request):
 # ============================================================
 #  PAGE D'IMPORTATION
 # ============================================================
+@reauth_required
 @login_required
 def import_employes_page(request):
     """Page d'importation des employés"""
@@ -329,6 +332,7 @@ def import_employes_page(request):
 # ============================================================
 #  PRÉVISUALISATION AVANT IMPORT
 # ============================================================
+@reauth_required
 @login_required
 def import_employes_preview(request):
     """Analyse le fichier uploadé et affiche un aperçu avant importation"""
@@ -599,6 +603,7 @@ def _read_csv(fichier):
 # ============================================================
 #  IMPORTATION EFFECTIVE
 # ============================================================
+@reauth_required
 @login_required
 def import_employes_execute(request):
     """Exécute l'importation après prévisualisation"""
@@ -798,6 +803,7 @@ def import_employes_execute(request):
 # ============================================================
 #  TEMPLATE D'IMPORTATION DES ÉLÉMENTS DE SALAIRE
 # ============================================================
+@reauth_required
 @login_required
 def telecharger_template_import_salaires(request):
     """Template pour l'import des éléments de salaire"""

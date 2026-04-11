@@ -3,6 +3,7 @@ Vues pour la gestion des réclamations employés.
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from gestionrh.decorators import reauth_required
 from django.contrib import messages
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -12,6 +13,7 @@ from .models import Employe
 from .models_reclamation import CategorieReclamation, Reclamation, CommentaireReclamation
 
 
+@reauth_required
 @login_required
 def liste_reclamations(request):
     """Liste des réclamations"""
@@ -65,6 +67,7 @@ def liste_reclamations(request):
     })
 
 
+@reauth_required
 @login_required
 def creer_reclamation(request):
     """Créer une nouvelle réclamation"""
@@ -112,6 +115,7 @@ def creer_reclamation(request):
     })
 
 
+@reauth_required
 @login_required
 def detail_reclamation(request, pk):
     """Détail d'une réclamation"""
@@ -136,6 +140,7 @@ def detail_reclamation(request, pk):
     })
 
 
+@reauth_required
 @login_required
 def prendre_en_charge(request, pk):
     """Prendre en charge une réclamation"""
@@ -161,6 +166,7 @@ def prendre_en_charge(request, pk):
     return redirect('employes:detail_reclamation', pk=pk)
 
 
+@reauth_required
 @login_required
 def assigner_reclamation(request, pk):
     """Assigner une réclamation à un responsable"""
@@ -185,6 +191,7 @@ def assigner_reclamation(request, pk):
     return redirect('employes:detail_reclamation', pk=pk)
 
 
+@reauth_required
 @login_required
 def ajouter_commentaire(request, pk):
     """Ajouter un commentaire à une réclamation"""
@@ -214,6 +221,7 @@ def ajouter_commentaire(request, pk):
     return redirect('employes:detail_reclamation', pk=pk)
 
 
+@reauth_required
 @login_required
 def resoudre_reclamation(request, pk):
     """Résoudre une réclamation"""
@@ -243,6 +251,7 @@ def resoudre_reclamation(request, pk):
     })
 
 
+@reauth_required
 @login_required
 def rejeter_reclamation(request, pk):
     """Rejeter une réclamation"""
@@ -265,6 +274,7 @@ def rejeter_reclamation(request, pk):
     return redirect('employes:detail_reclamation', pk=pk)
 
 
+@reauth_required
 @login_required
 def fermer_reclamation(request, pk):
     """Fermer une réclamation résolue"""
@@ -286,6 +296,7 @@ def fermer_reclamation(request, pk):
     return redirect('employes:liste_reclamations')
 
 
+@reauth_required
 @login_required
 def noter_satisfaction(request, pk):
     """Noter la satisfaction pour une réclamation résolue"""
@@ -308,6 +319,7 @@ def noter_satisfaction(request, pk):
     return redirect('employes:detail_reclamation', pk=pk)
 
 
+@reauth_required
 @login_required
 def recap_reclamations(request):
     """Récapitulatif des réclamations"""
@@ -356,6 +368,7 @@ def recap_reclamations(request):
     })
 
 
+@reauth_required
 @login_required
 def gestion_categories_reclamations(request):
     """Gestion des catégories de réclamations"""

@@ -4,6 +4,7 @@ Vues pour le module Consolidation & Reporting
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from gestionrh.decorators import reauth_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db.models import Sum, Q
@@ -21,6 +22,7 @@ from .models_consolidation import (
 from core.models import Entreprise, Devise
 
 
+@reauth_required
 @login_required
 def dashboard_consolidation(request):
     """Tableau de bord consolidation"""
@@ -61,6 +63,7 @@ def dashboard_consolidation(request):
 # MATRICE DE CONSOLIDATION
 # ============================================================================
 
+@reauth_required
 @login_required
 def matrice_list(request):
     """Liste des participations (matrice)"""
@@ -74,6 +77,7 @@ def matrice_list(request):
     return render(request, 'comptabilite/consolidation/matrice_list.html', context)
 
 
+@reauth_required
 @login_required
 def matrice_create(request):
     """Créer une participation"""
@@ -107,6 +111,7 @@ def matrice_create(request):
     return render(request, 'comptabilite/consolidation/matrice_form.html', context)
 
 
+@reauth_required
 @login_required
 def matrice_detail(request, pk):
     """Détail d'une participation"""
@@ -114,6 +119,7 @@ def matrice_detail(request, pk):
     return render(request, 'comptabilite/consolidation/matrice_detail.html', {'participation': participation})
 
 
+@reauth_required
 @login_required
 def matrice_update(request, pk):
     """Modifier une participation"""
@@ -141,6 +147,7 @@ def matrice_update(request, pk):
 # CONSOLIDATION FILIALES
 # ============================================================================
 
+@reauth_required
 @login_required
 def consolidation_list(request):
     """Liste des consolidations"""
@@ -165,6 +172,7 @@ def consolidation_list(request):
     return render(request, 'comptabilite/consolidation/consolidation_list.html', context)
 
 
+@reauth_required
 @login_required
 def consolidation_create(request):
     """Créer une consolidation"""
@@ -215,6 +223,7 @@ def consolidation_create(request):
     return render(request, 'comptabilite/consolidation/consolidation_form.html', context)
 
 
+@reauth_required
 @login_required
 def consolidation_detail(request, pk):
     """Détail d'une consolidation"""
@@ -233,6 +242,7 @@ def consolidation_detail(request, pk):
     return render(request, 'comptabilite/consolidation/consolidation_detail.html', context)
 
 
+@reauth_required
 @login_required
 def consolidation_valider(request, pk):
     """Valider une consolidation"""
@@ -252,6 +262,7 @@ def consolidation_valider(request, pk):
 # ÉLIMINATIONS IGF
 # ============================================================================
 
+@reauth_required
 @login_required
 def elimination_list(request, consolidation_pk):
     """Liste des éliminations d'une consolidation"""
@@ -267,6 +278,7 @@ def elimination_list(request, consolidation_pk):
     return render(request, 'comptabilite/consolidation/elimination_list.html', context)
 
 
+@reauth_required
 @login_required
 def elimination_create(request, consolidation_pk):
     """Créer une élimination"""
@@ -303,6 +315,7 @@ def elimination_create(request, consolidation_pk):
 # AJUSTEMENTS
 # ============================================================================
 
+@reauth_required
 @login_required
 def ajustement_list(request, consolidation_pk):
     """Liste des ajustements d'une consolidation"""
@@ -318,6 +331,7 @@ def ajustement_list(request, consolidation_pk):
     return render(request, 'comptabilite/consolidation/ajustement_list.html', context)
 
 
+@reauth_required
 @login_required
 def ajustement_create(request, consolidation_pk):
     """Créer un ajustement"""
@@ -353,6 +367,7 @@ def ajustement_create(request, consolidation_pk):
 # AFFECTATION DU RÉSULTAT
 # ============================================================================
 
+@reauth_required
 @login_required
 def affectation_list(request):
     """Liste des affectations de résultat"""
@@ -365,6 +380,7 @@ def affectation_list(request):
     return render(request, 'comptabilite/consolidation/affectation_list.html', context)
 
 
+@reauth_required
 @login_required
 def affectation_create(request):
     """Créer une affectation de résultat"""
@@ -397,6 +413,7 @@ def affectation_create(request):
 # VARIATION DES CAPITAUX
 # ============================================================================
 
+@reauth_required
 @login_required
 def variation_capitaux_list(request):
     """Tableau de variation des capitaux propres"""
@@ -416,6 +433,7 @@ def variation_capitaux_list(request):
     return render(request, 'comptabilite/consolidation/variation_capitaux_list.html', context)
 
 
+@reauth_required
 @login_required
 def variation_capitaux_create(request):
     """Créer une variation de capitaux"""
@@ -450,6 +468,7 @@ def variation_capitaux_create(request):
 # NOTES EXPLICATIVES
 # ============================================================================
 
+@reauth_required
 @login_required
 def notes_list(request):
     """Liste des notes explicatives"""
@@ -474,6 +493,7 @@ def notes_list(request):
     return render(request, 'comptabilite/consolidation/notes_list.html', context)
 
 
+@reauth_required
 @login_required
 def note_create(request):
     """Créer une note explicative"""
@@ -501,6 +521,7 @@ def note_create(request):
     return render(request, 'comptabilite/consolidation/note_form.html', context)
 
 
+@reauth_required
 @login_required
 def note_detail(request, pk):
     """Détail d'une note"""
@@ -508,6 +529,7 @@ def note_detail(request, pk):
     return render(request, 'comptabilite/consolidation/note_detail.html', {'note': note})
 
 
+@reauth_required
 @login_required
 def note_update(request, pk):
     """Modifier une note"""
@@ -533,6 +555,7 @@ def note_update(request, pk):
 # ÉTATS FINANCIERS CONSOLIDÉS
 # ============================================================================
 
+@reauth_required
 @login_required
 def bilan_consolide(request, consolidation_pk):
     """Bilan consolidé"""
@@ -554,6 +577,7 @@ def bilan_consolide(request, consolidation_pk):
     return render(request, 'comptabilite/consolidation/bilan_consolide.html', context)
 
 
+@reauth_required
 @login_required
 def compte_resultat_consolide(request, consolidation_pk):
     """Compte de résultat consolidé"""
@@ -575,6 +599,7 @@ def compte_resultat_consolide(request, consolidation_pk):
     return render(request, 'comptabilite/consolidation/compte_resultat_consolide.html', context)
 
 
+@reauth_required
 @login_required
 def flux_tresorerie_consolide(request, consolidation_pk):
     """Tableau des flux de trésorerie consolidé"""
@@ -596,6 +621,7 @@ def flux_tresorerie_consolide(request, consolidation_pk):
     return render(request, 'comptabilite/consolidation/flux_tresorerie_consolide.html', context)
 
 
+@reauth_required
 @login_required
 def tableau_capitaux_consolide(request, consolidation_pk):
     """Tableau de variation des capitaux propres consolidés"""
@@ -611,6 +637,7 @@ def tableau_capitaux_consolide(request, consolidation_pk):
     return render(request, 'comptabilite/consolidation/tableau_capitaux_consolide.html', context)
 
 
+@reauth_required
 @login_required
 def annexes_consolidees(request, consolidation_pk):
     """Annexes détaillées consolidées"""
@@ -630,6 +657,7 @@ def annexes_consolidees(request, consolidation_pk):
 # DOCUMENTATION
 # ============================================================================
 
+@reauth_required
 @login_required
 def documentation_list(request, consolidation_pk):
     """Liste de la documentation d'une consolidation"""
@@ -645,6 +673,7 @@ def documentation_list(request, consolidation_pk):
     return render(request, 'comptabilite/consolidation/documentation_list.html', context)
 
 
+@reauth_required
 @login_required
 def documentation_upload(request, consolidation_pk):
     """Uploader un document"""
@@ -673,6 +702,7 @@ def documentation_upload(request, consolidation_pk):
 # API JSON
 # ============================================================================
 
+@reauth_required
 @login_required
 def api_perimetre_consolidation(request, consolidation_pk):
     """API pour le périmètre de consolidation"""
@@ -692,6 +722,7 @@ def api_perimetre_consolidation(request, consolidation_pk):
     return JsonResponse({'perimetre': perimetre})
 
 
+@reauth_required
 @login_required
 def api_synthese_consolidation(request, consolidation_pk):
     """API pour la synthèse d'une consolidation"""

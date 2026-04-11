@@ -3,6 +3,7 @@ Vues pour la gestion des évaluations de performance.
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from gestionrh.decorators import reauth_required
 from django.contrib import messages
 from django.db.models import Avg, Count, Q
 from django.utils import timezone
@@ -13,6 +14,7 @@ from .models import Employe
 from .models_evaluation import CampagneEvaluation, Evaluation, ObjectifEvaluation, CompetenceEvaluation
 
 
+@reauth_required
 @login_required
 def liste_campagnes(request):
     """Liste des campagnes d'évaluation"""
@@ -28,6 +30,7 @@ def liste_campagnes(request):
     })
 
 
+@reauth_required
 @login_required
 def creer_campagne(request):
     """Créer une nouvelle campagne d'évaluation"""
@@ -63,6 +66,7 @@ def creer_campagne(request):
     })
 
 
+@reauth_required
 @login_required
 def detail_campagne(request, pk):
     """Détail d'une campagne avec ses évaluations"""
@@ -91,6 +95,7 @@ def detail_campagne(request, pk):
     })
 
 
+@reauth_required
 @login_required
 def lancer_campagne(request, pk):
     """Lancer une campagne et créer les évaluations pour tous les employés"""
@@ -136,6 +141,7 @@ def lancer_campagne(request, pk):
     return redirect('employes:detail_campagne', pk=pk)
 
 
+@reauth_required
 @login_required
 def detail_evaluation(request, pk):
     """Détail d'une évaluation individuelle"""
@@ -155,6 +161,7 @@ def detail_evaluation(request, pk):
     })
 
 
+@reauth_required
 @login_required
 def modifier_evaluation(request, pk):
     """Modifier une évaluation"""
@@ -213,6 +220,7 @@ def modifier_evaluation(request, pk):
     })
 
 
+@reauth_required
 @login_required
 def ajouter_objectif(request, evaluation_id):
     """Ajouter un objectif à une évaluation"""
@@ -237,6 +245,7 @@ def ajouter_objectif(request, evaluation_id):
     return redirect('employes:detail_evaluation', pk=evaluation_id)
 
 
+@reauth_required
 @login_required
 def evaluer_objectif(request, pk):
     """Évaluer un objectif"""
@@ -252,6 +261,7 @@ def evaluer_objectif(request, pk):
     return redirect('employes:detail_evaluation', pk=objectif.evaluation.pk)
 
 
+@reauth_required
 @login_required
 def ajouter_competence(request, evaluation_id):
     """Ajouter une compétence à évaluer"""
@@ -275,6 +285,7 @@ def ajouter_competence(request, evaluation_id):
     return redirect('employes:detail_evaluation', pk=evaluation_id)
 
 
+@reauth_required
 @login_required
 def synthese_evaluations(request):
     """Synthèse des évaluations de l'entreprise"""
