@@ -184,4 +184,5 @@ urlpatterns = [
     path('api/historique-simulations/<int:employe_id>/', views.api_historique_simulations_employe, name='api_historique_simulations_employe'),
     path('api/avancer-dates-elements/', views.api_avancer_dates_elements, name='api_avancer_dates_elements'),
     path('api/simulation-pdf/', views.api_simulation_pdf, name='api_simulation_pdf'),
+    path('bulletins/<int:bulletin_id>/audit/', views.bulletin_audit_json, name='bulletin_audit_json'),
 ]
