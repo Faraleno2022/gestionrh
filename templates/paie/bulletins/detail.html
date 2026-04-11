@@ -33,6 +33,10 @@
                     <a href="{% url 'paie:envoyer_whatsapp' bulletin.pk %}" class="btn btn-success">
                         <i class="fab fa-whatsapp me-2"></i>WhatsApp
                     </a>
+                    <a href="{% url 'paie:bulletin_audit_json' bulletin.pk %}" 
+                       class="btn btn-outline-info" target="_blank" title="Trace complète du calcul">
+                        <i class="bi bi-calculator"></i> Détail du calcul
+                    </a>
                     <a href="{% url 'paie:liste_bulletins' %}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Retour
                     </a>
