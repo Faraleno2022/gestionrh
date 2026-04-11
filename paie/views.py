@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.db.models import Sum, Count, Q
 from django.http import JsonResponse, HttpResponse
@@ -5655,6 +5655,8 @@ def bulletin_audit_json(request, bulletin_id):
 
 
 @login_required
+@login_required
+@permission_required('paie.view_bulletinpaie', raise_exception=True)
 def bulletin_audit_pdf(request, bulletin_id):
     """PDF d'audit — trace complète et officielle du calcul de paie."""
     from django.shortcuts import get_object_or_404
