@@ -5657,7 +5657,6 @@ from django.shortcuts import get_object_or_404
 
 
 @login_required
-@login_required
 @permission_required('paie.view_bulletinpaie', raise_exception=True)
 def bulletin_audit_pdf(request, bulletin_id):
     # Isolation multi-tenant : un user ne voit que son entreprise
