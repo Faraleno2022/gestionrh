@@ -62,6 +62,9 @@ def parametres_calcul_paie(request):
 
         # --- Indemnités forfaitaires ---
         nouveau_mode_exo = request.POST.get('mode_exoneration_indemnites', 'plafond_pct')
+        # ── Verrouillage CGI : seul le mode plafond_pct est autorisé ──
+        if nouveau_mode_exo not in ('plafond_pct',):
+            nouveau_mode_exo = 'plafond_pct'
         _enregistrer_historique(
             params, request.user,
             'mode_exoneration_indemnites',
@@ -76,6 +79,12 @@ def parametres_calcul_paie(request):
             nouveau_pct = Decimal(pct_raw)
         except Exception:
             nouveau_pct = Decimal('25')
+        # ── Verrouillage CGI : plafond max 25% ──
+        PLAFOND_MAX_CGI = Decimal('25')
+        if nouveau_pct > PLAFOND_MAX_CGI:
+            nouveau_pct = PLAFOND_MAX_CGI
+        if nouveau_pct < Decimal('0'):
+            nouveau_pct = Decimal('0')
         _enregistrer_historique(
             params, request.user,
             'plafond_exoneration_pct',

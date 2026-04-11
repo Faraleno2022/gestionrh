@@ -1156,8 +1156,9 @@ class ParametresCalculPaie(models.Model):
     # Exonération indemnités forfaitaires
     MODE_EXONERATION = [
         ('plafond_pct', 'Plafond % du brut (CGI strict)'),
-        ('integrale', 'Exonération intégrale'),
-        ('formule', 'Formule personnalisée'),
+        # Modes ci-dessous désactivés — non conformes CGI
+        # ('integrale', 'Exonération intégrale'),
+        # ('formule', 'Formule personnalisée'),
     ]
     mode_exoneration_indemnites = models.CharField(
         max_length=20, choices=MODE_EXONERATION, default='plafond_pct'
