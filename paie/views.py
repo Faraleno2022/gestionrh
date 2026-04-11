@@ -5638,6 +5638,7 @@ def api_simulation_pdf(request):
 
 
 @login_required
+@permission_required('paie.view_bulletinpaie', raise_exception=True)
 def bulletin_audit_json(request, bulletin_id):
     """Vue audit — expose le pipeline complet du calcul en JSON."""
     from django.http import JsonResponse
