@@ -5652,3 +5652,222 @@ def bulletin_audit_json(request, bulletin_id):
         'meta': snap.get('meta', {}),
         'audit': snap.get('audit_calcul', {}),
     }, json_dumps_params={'ensure_ascii': False, 'indent': 2})
+
+
+@login_required
+def bulletin_audit_pdf(request, bulletin_id):
+    """PDF d'audit — trace complète et officielle du calcul de paie."""
+    from django.shortcuts import get_object_or_404
+    from django.http import HttpResponse
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    import io
+
+    bulletin = get_object_or_404(BulletinPaie, pk=bulletin_id)
+    snap     = bulletin.snapshot_parametres or {}
+    meta     = snap.get('meta', {})
+    audit    = snap.get('audit_calcul', {})
+    pipeline = audit.get('pipeline', {})
+
+    if not pipeline:
+        from django.http import HttpResponseNotFound
+        return HttpResponseNotFound("Audit non disponible — recalculer le bulletin.")
+
+    # ── Setup document ──
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+                            leftMargin=1.5*cm, rightMargin=1.5*cm,
+                            topMargin=1.5*cm, bottomMargin=1.5*cm)
+
+    BLEU      = colors.HexColor('#003E7E')
+    BLEU_CLAR = colors.HexColor('#E8F0F8')
+    VERT      = colors.HexColor('#1A7A4A')
+    ROUGE     = colors.HexColor('#C0392B')
+    GRIS      = colors.HexColor('#F5F5F5')
+
+    styles = getSampleStyleSheet()
+    titre_style  = ParagraphStyle('titre',  fontSize=16, textColor=BLEU,   spaceAfter=4,  alignment=TA_CENTER, fontName='Helvetica-Bold')
+    sous_titre   = ParagraphStyle('sous',   fontSize=10, textColor=colors.grey, spaceAfter=12, alignment=TA_CENTER)
+    section_style= ParagraphStyle('section',fontSize=11, textColor=BLEU,   spaceBefore=10, spaceAfter=4, fontName='Helvetica-Bold')
+    note_style   = ParagraphStyle('note',   fontSize=7,  textColor=colors.grey, alignment=TA_CENTER, spaceBefore=8)
+
+    def fmt(n):
+        try: return f"{int(n):,}".replace(',', ' ') + " GNF"
+        except: return str(n)
+
+    def table_section(data, col_widths, header_color=BLEU_CLAR):
+        t = Table(data, colWidths=col_widths)
+        style = TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), header_color),
+            ('TEXTCOLOR',  (0,0), (-1,0), BLEU),
+            ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE',   (0,0), (-1,-1), 8),
+            ('GRID',       (0,0), (-1,-1), 0.3, colors.lightgrey),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, GRIS]),
+            ('ALIGN',      (1,0), (-1,-1), 'RIGHT'),
+            ('LEFTPADDING', (0,0), (-1,-1), 6),
+            ('RIGHTPADDING',(0,0), (-1,-1), 6),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING',(0,0),(-1,-1), 4),
+        ])
+        t.setStyle(style)
+        return t
+
+    story = []
+
+    # ── En-tête ──
+    story.append(Paragraph("DOCUMENT D'AUDIT DE PAIE", titre_style))
+    story.append(Paragraph(
+        f"Bulletin N° {bulletin.numero_bulletin} — "
+        f"{bulletin.employe} — "
+        f"Période {bulletin.mois_paie:02d}/{bulletin.annee_paie}",
+        sous_titre))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=BLEU))
+    story.append(Spacer(1, 0.3*cm))
+
+    # ── 1. Gains ──
+    g = pipeline.get('1_gains', {})
+    hs = g.get('heures_sup', {})
+    story.append(Paragraph("1. ÉLÉMENTS DE RÉMUNÉRATION (GAINS)", section_style))
+    gains_data = [['Composante', 'Montant']]
+    gains_data.append(['Salaire de base', fmt(g.get('salaire_base', 0))])
+    gains_data.append(['Indemnités forfaitaires', fmt(g.get('indemnites', 0))])
+    if hs and hs.get('total', 0) > 0:
+        gains_data.append([f"Heures supplémentaires (taux horaire: {fmt(hs.get('taux_horaire',0))})", fmt(hs.get('total', 0))])
+    gains_data.append(['SALAIRE BRUT TOTAL', fmt(g.get('brut', 0))])
+    story.append(table_section(gains_data, [11*cm, 5*cm]))
+    story.append(Spacer(1, 0.2*cm))
+
+    # ── 2. Cotisations CNSS ──
+    c = pipeline.get('2_cotisations', {})
+    story.append(Paragraph("2. COTISATIONS CNSS", section_style))
+    cnss_data = [
+        ['Élément', 'Montant'],
+        ['Base CNSS', fmt(c.get('cnss_base', 0))],
+        [f"Plafond CNSS", fmt(c.get('cnss_plafond', 0))],
+        ['CNSS employé (5%)', fmt(c.get('cnss_employe', 0))],
+    ]
+    story.append(table_section(cnss_data, [11*cm, 5*cm]))
+    story.append(Spacer(1, 0.2*cm))
+
+    # ── 3. Base imposable et RTS ──
+    f_ = pipeline.get('3_fiscal', {})
+    story.append(Paragraph("3. BASE IMPOSABLE ET RTS (CGI 2022)", section_style))
+    fiscal_data = [
+        ['Élément', 'Montant'],
+        ['Salaire brut', fmt(g.get('brut', 0))],
+        ['− Indemnités exonérées (≤25% brut)', fmt(f_.get('indemnites_exonerees', 0))],
+        ['− CNSS employé', fmt(c.get('cnss_employe', 0))],
+        ['= BASE IMPOSABLE RTS', fmt(f_.get('base_imposable', 0))],
+    ]
+    story.append(table_section(fiscal_data, [11*cm, 5*cm]))
+    story.append(Spacer(1, 0.15*cm))
+
+    # Tranches RTS
+    tranches = f_.get('tranches_rts', [])
+    if tranches:
+        story.append(Paragraph("Détail par tranche RTS :", ParagraphStyle('sub', fontSize=9, textColor=BLEU, spaceBefore=4)))
+        tr_data = [['Tranche', 'De (GNF)', 'À (GNF)', 'Taux', 'Base', 'Impôt']]
+        for t in tranches:
+            tr_data.append([
+                f"Tranche {t.get('numero','')}",
+                f"{t.get('de',0):,}".replace(',', ' '),
+                f"{t.get('a','∞'):,}".replace(',', ' ') if t.get('a') else '∞',
+                f"{t.get('taux_pct',0)}%",
+                f"{t.get('base',0):,}".replace(',', ' '),
+                f"{t.get('impot',0):,}".replace(',', ' '),
+            ])
+        tr_data.append(['', '', '', '', 'TOTAL RTS', fmt(f_.get('rts_total', 0))])
+        t_table = Table(tr_data, colWidths=[2.5*cm, 2.5*cm, 2.5*cm, 1.5*cm, 2.5*cm, 2.5*cm])
+        t_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), BLEU_CLAR),
+            ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTNAME',   (0,-1),(-1,-1),'Helvetica-Bold'),
+            ('FONTSIZE',   (0,0), (-1,-1), 8),
+            ('GRID',       (0,0), (-1,-1), 0.3, colors.lightgrey),
+            ('ROWBACKGROUNDS', (0,1), (-1,-2), [colors.white, GRIS]),
+            ('ALIGN',      (1,0), (-1,-1), 'RIGHT'),
+            ('LEFTPADDING', (0,0),(-1,-1), 5),
+            ('RIGHTPADDING',(0,0),(-1,-1), 5),
+            ('TOPPADDING', (0,0),(-1,-1), 3),
+            ('BOTTOMPADDING',(0,0),(-1,-1), 3),
+        ]))
+        story.append(t_table)
+    story.append(Spacer(1, 0.2*cm))
+
+    # ── 4. Retenues ──
+    r = pipeline.get('4_retenues', {})
+    story.append(Paragraph("4. RETENUES TOTALES", section_style))
+    ret_data = [
+        ['Retenue', 'Montant'],
+        ['CNSS employé', fmt(r.get('cnss_employe', 0))],
+        ['RTS (impôt)', fmt(r.get('rts', 0))],
+        ['Avances / autres', fmt(r.get('avances', 0))],
+        ['TOTAL RETENUES', fmt(r.get('total_retenues', 0))],
+    ]
+    story.append(table_section(ret_data, [11*cm, 5*cm]))
+    story.append(Spacer(1, 0.2*cm))
+
+    # ── 5. Net ──
+    n = pipeline.get('5_net', {})
+    story.append(Paragraph("5. NET À PAYER", section_style))
+    verif = r.get('verification', '')
+    net_data = [
+        ['Élément', 'Montant'],
+        ['Salaire brut', fmt(n.get('brut', 0))],
+        ['− Total retenues', fmt(n.get('total_retenues', 0))],
+        ['= NET À PAYER', fmt(n.get('net_a_payer', 0))],
+        ['Vérification', verif],
+    ]
+    t_net = Table(net_data, colWidths=[11*cm, 5*cm])
+    t_net.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), BLEU_CLAR),
+        ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTNAME',   (0,3), (-1,3), 'Helvetica-Bold'),
+        ('TEXTCOLOR',  (0,3), (-1,3), VERT),
+        ('FONTSIZE',   (0,0), (-1,-1), 8),
+        ('GRID',       (0,0), (-1,-1), 0.3, colors.lightgrey),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, GRIS]),
+        ('ALIGN',      (1,0), (-1,-1), 'RIGHT'),
+        ('LEFTPADDING',(0,0),(-1,-1), 6),
+        ('RIGHTPADDING',(0,0),(-1,-1), 6),
+        ('TOPPADDING', (0,0),(-1,-1), 4),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 4),
+    ]))
+    story.append(t_net)
+    story.append(Spacer(1, 0.2*cm))
+
+    # ── 6. Charges patronales ──
+    cp = pipeline.get('6_charges_patronales', {})
+    story.append(Paragraph("6. CHARGES PATRONALES", section_style))
+    cp_data = [
+        ['Charge', 'Montant'],
+        ['CNSS employeur (18%)', fmt(cp.get('cnss_employeur', 0))],
+        ['Versement forfaitaire VF (6%)', fmt(cp.get('vf', 0))],
+        ['Taxe apprentissage TA (1.5%)', fmt(cp.get('ta', 0))],
+        ['ONFPP (1.5%)', fmt(cp.get('onfpp', 0))],
+        ['TOTAL CHARGES PATRONALES', fmt(cp.get('total', 0))],
+        ['COÛT TOTAL EMPLOYEUR', fmt(cp.get('cout_total_employeur', 0))],
+    ]
+    story.append(table_section(cp_data, [11*cm, 5*cm]))
+
+    # ── Pied de page ──
+    story.append(Spacer(1, 0.5*cm))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.lightgrey))
+    story.append(Paragraph(
+        f"Document généré automatiquement — conforme au calcul interne GestionRH "
+        f"({meta.get('version_bareme', 'GN-v1')}) | "
+        f"Généré le {meta.get('generated_at', '')}",
+        note_style))
+
+    doc.build(story)
+    buffer.seek(0)
+
+    filename = f"audit_{bulletin.numero_bulletin}.pdf"
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
+    return response

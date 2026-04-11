@@ -185,4 +185,5 @@ urlpatterns = [
     path('api/avancer-dates-elements/', views.api_avancer_dates_elements, name='api_avancer_dates_elements'),
     path('api/simulation-pdf/', views.api_simulation_pdf, name='api_simulation_pdf'),
     path('bulletins/<int:bulletin_id>/audit/', views.bulletin_audit_json, name='bulletin_audit_json'),
+    path('bulletins/<int:bulletin_id>/audit/pdf/', views.bulletin_audit_pdf, name='bulletin_audit_pdf'),
 ]
