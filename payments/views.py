@@ -12,6 +12,7 @@ import logging
 
 from .models import PlanAbonnement, Transaction, Abonnement
 from .services import CinetPayService, activer_abonnement
+from .services_paycard import PaycardService
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,8 @@ def checkout(request, plan_slug):
         duree = request.POST.get('duree', 'mensuel')
         duree_mois = 12 if duree == 'annuel' else 1
         montant = plan.prix_annuel if duree == 'annuel' else plan.prix_mensuel
+        payment_method = request.POST.get('payment_method', '')  # ORANGE_MONEY, MOMO, CREDIT_CARD, PAYCARD
+        passerelle = request.POST.get('passerelle', 'paycard')
         
         # Créer la transaction
         transaction = Transaction.objects.create(
@@ -67,22 +70,27 @@ def checkout(request, plan_slug):
             type_transaction=type_transaction,
             montant=montant,
             duree_mois=duree_mois,
+            passerelle=passerelle,
             cree_par=request.user,
         )
         
-        # Initialiser CinetPay
-        service = CinetPayService()
-        
         # URLs de callback
         base_url = request.build_absolute_uri('/')[:-1]
-        return_url = f"{base_url}{reverse('payments:success')}?ref={transaction.reference}"
-        cancel_url = f"{base_url}{reverse('payments:cancel')}?ref={transaction.reference}"
-        notify_url = f"{base_url}{reverse('payments:webhook')}"
         
-        result = service.creer_paiement(transaction, return_url, cancel_url, notify_url)
+        if passerelle == 'paycard':
+            # --- Paycard ---
+            callback_url = f"{base_url}{reverse('payments:paycard_callback')}?ref={transaction.reference}"
+            service = PaycardService()
+            result = service.creer_paiement(transaction, callback_url, payment_method or None)
+        else:
+            # --- CinetPay (legacy) ---
+            return_url = f"{base_url}{reverse('payments:success')}?ref={transaction.reference}"
+            cancel_url = f"{base_url}{reverse('payments:cancel')}?ref={transaction.reference}"
+            notify_url = f"{base_url}{reverse('payments:webhook')}"
+            service = CinetPayService()
+            result = service.creer_paiement(transaction, return_url, cancel_url, notify_url)
         
         if result.get('success'):
-            # Rediriger vers CinetPay ou la page de simulation
             if result.get('simulation'):
                 return redirect('payments:simulate', token=result['token'])
             return redirect(result['url'])
@@ -139,8 +147,12 @@ def payment_success(request):
     
     # Vérifier le paiement si pas encore confirmé
     if transaction and transaction.statut == 'pending':
-        service = CinetPayService()
-        result = service.verifier_paiement(f"GRH-{transaction.reference}", transaction.token_paydunya)
+        if getattr(transaction, 'passerelle', '') == 'paycard':
+            service = PaycardService()
+            result = service.verifier_paiement(transaction.reference)
+        else:
+            service = CinetPayService()
+            result = service.verifier_paiement(f"GRH-{transaction.reference}", transaction.token_paydunya)
         
         if result.get('success') and result.get('status') == 'completed':
             activer_abonnement(transaction)
@@ -227,6 +239,65 @@ def historique_transactions(request):
     return render(request, 'payments/historique.html', {
         'transactions': transactions,
     })
+
+
+def paycard_callback(request):
+    """
+    Callback GET de Paycard après paiement.
+    Paycard envoie : ?paycard-operation-reference=REF&ref=REF
+    """
+    # Récupérer la référence (Paycard envoie paycard-operation-reference)
+    reference = (
+        request.GET.get('paycard-operation-reference')
+        or request.GET.get('ref')
+    )
+
+    if not reference:
+        messages.error(request, "Référence de paiement manquante.")
+        return redirect('payments:plans')
+
+    transaction = Transaction.objects.filter(reference=reference).first()
+    if not transaction:
+        messages.error(request, "Transaction introuvable.")
+        return redirect('payments:plans')
+
+    # Vérifier le statut auprès de Paycard
+    if transaction.statut == 'pending':
+        service = PaycardService()
+        result = service.verifier_paiement(reference)
+
+        if result.get('success'):
+            status = result.get('status', 'pending')
+            if status == 'completed':
+                # Mapper la méthode de paiement
+                pm = result.get('payment_method', '')
+                method_map = {
+                    'ORANGE_MONEY': 'orange_money',
+                    'MOMO': 'mtn_money',
+                    'CREDIT_CARD': 'visa',
+                    'PAYCARD': 'paycard',
+                }
+                transaction.methode_paiement = method_map.get(pm, 'paycard')
+                transaction.response_code = 'success'
+                transaction.response_message = json.dumps(result.get('raw_data', {}))
+                transaction.save(update_fields=['methode_paiement', 'response_code', 'response_message'])
+                activer_abonnement(transaction)
+                messages.success(request, "Paiement effectué avec succès !")
+                return redirect(f"{reverse('payments:success')}?ref={reference}")
+            elif status == 'failed':
+                transaction.statut = 'failed'
+                transaction.response_message = 'Paiement refusé par Paycard'
+                transaction.save()
+                messages.error(request, "Le paiement a échoué.")
+                return redirect(f"{reverse('payments:cancel')}?ref={reference}")
+        else:
+            logger.warning(f"Paycard callback: vérification échouée pour {reference}")
+
+    # Si déjà complété ou en attente
+    if transaction.statut == 'completed':
+        return redirect(f"{reverse('payments:success')}?ref={reference}")
+
+    return redirect(f"{reverse('payments:cancel')}?ref={reference}")
 
 
 @login_required

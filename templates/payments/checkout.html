@@ -87,13 +87,35 @@
                         <!-- Méthodes de paiement -->
                         <div class="mb-4">
                             <label class="form-label fw-bold">Mode de paiement</label>
-                            <p class="text-muted small">Vous serez redirigé vers PayDunya pour choisir votre méthode de paiement (Orange Money, MTN, Visa, etc.)</p>
-                            <div class="d-flex gap-3 flex-wrap">
-                                <img src="{% static 'img/orange-money.png' %}" alt="Orange Money" height="30" onerror="this.outerHTML='<span class=\'badge bg-warning\'>Orange Money</span>'">
-                                <img src="{% static 'img/mtn-money.png' %}" alt="MTN" height="30" onerror="this.outerHTML='<span class=\'badge bg-warning\'>MTN Money</span>'">
-                                <img src="{% static 'img/visa.png' %}" alt="Visa" height="30" onerror="this.outerHTML='<span class=\'badge bg-primary\'>Visa</span>'">
-                                <img src="{% static 'img/mastercard.png' %}" alt="Mastercard" height="30" onerror="this.outerHTML='<span class=\'badge bg-danger\'>Mastercard</span>'">
+                            <input type="hidden" name="passerelle" value="paycard">
+                            <div class="row g-2">
+                                <div class="col-6 col-md-3">
+                                    <div class="card text-center p-2 payment-method-card" data-method="ORANGE_MONEY" style="cursor:pointer;">
+                                        <img src="{% static 'img/orange-money.png' %}" alt="Orange Money" height="40" class="mx-auto mb-1" onerror="this.outerHTML='<i class=\'bi bi-phone fs-1 text-warning\'></i>'">
+                                        <small>Orange Money</small>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="card text-center p-2 payment-method-card" data-method="MOMO" style="cursor:pointer;">
+                                        <img src="{% static 'img/mtn-money.png' %}" alt="MTN MoMo" height="40" class="mx-auto mb-1" onerror="this.outerHTML='<i class=\'bi bi-phone fs-1 text-warning\'></i>'">
+                                        <small>MTN MoMo</small>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="card text-center p-2 payment-method-card" data-method="CREDIT_CARD" style="cursor:pointer;">
+                                        <img src="{% static 'img/visa.png' %}" alt="Carte bancaire" height="40" class="mx-auto mb-1" onerror="this.outerHTML='<i class=\'bi bi-credit-card fs-1 text-primary\'></i>'">
+                                        <small>Carte bancaire</small>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="card text-center p-2 payment-method-card" data-method="PAYCARD" style="cursor:pointer;">
+                                        <img src="{% static 'img/paycard.png' %}" alt="Paycard" height="40" class="mx-auto mb-1" onerror="this.outerHTML='<i class=\'bi bi-wallet2 fs-1 text-success\'></i>'">
+                                        <small>Paycard</small>
+                                    </div>
+                                </div>
                             </div>
+                            <input type="hidden" name="payment_method" id="payment_method" value="">
+                            <small class="text-muted mt-1 d-block">Sélectionnez un mode ou laissez vide pour choisir sur Paycard</small>
                         </div>
                         
                         <!-- Boutons -->
@@ -108,7 +130,7 @@
                     </form>
                 </div>
                 <div class="card-footer text-center text-muted small">
-                    <i class="bi bi-shield-check"></i> Paiement sécurisé via PayDunya
+                    <i class="bi bi-shield-check"></i> Paiement sécurisé via Paycard
                 </div>
             </div>
         </div>
@@ -144,6 +166,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     mensuelRadio.addEventListener('change', updatePrix);
     annuelRadio.addEventListener('change', updatePrix);
+    
+    // Sélection du mode de paiement
+    document.querySelectorAll('.payment-method-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+            document.querySelectorAll('.payment-method-card').forEach(function(c) {
+                c.classList.remove('border-primary', 'shadow-sm');
+            });
+            this.classList.add('border-primary', 'shadow-sm');
+            document.getElementById('payment_method').value = this.dataset.method;
+        });
+    });
     
     // Désactiver le bouton lors de la soumission
     document.getElementById('checkout-form').addEventListener('submit', function() {

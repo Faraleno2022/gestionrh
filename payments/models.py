@@ -69,6 +69,12 @@ class Transaction(models.Model):
         ('visa', 'Carte Visa'),
         ('mastercard', 'Carte Mastercard'),
         ('paydunya', 'PayDunya'),
+        ('paycard', 'Paycard'),
+    )
+
+    PASSERELLES = (
+        ('cinetpay', 'CinetPay'),
+        ('paycard', 'Paycard'),
     )
     
     TYPES = (
@@ -88,6 +94,7 @@ class Transaction(models.Model):
     
     type_transaction = models.CharField(max_length=20, choices=TYPES, default='abonnement')
     methode_paiement = models.CharField(max_length=20, choices=METHODES, blank=True, null=True)
+    passerelle = models.CharField(max_length=20, choices=PASSERELLES, default='paycard', blank=True)
     
     # Montants
     montant = models.DecimalField(max_digits=12, decimal_places=0)
