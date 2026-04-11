@@ -1,3 +1,4 @@
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
@@ -5640,7 +5641,8 @@ def api_simulation_pdf(request):
 def bulletin_audit_json(request, bulletin_id):
     """Vue audit — expose le pipeline complet du calcul en JSON."""
     from django.http import JsonResponse
-    from django.shortcuts import get_object_or_404
+    from django.core.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404
     bulletin = get_object_or_404(BulletinPaie, pk=bulletin_id)
     # Vérification accès tenant
     snap = bulletin.snapshot_parametres or {}
@@ -5658,8 +5660,14 @@ def bulletin_audit_json(request, bulletin_id):
 @login_required
 @permission_required('paie.view_bulletinpaie', raise_exception=True)
 def bulletin_audit_pdf(request, bulletin_id):
+    # Isolation multi-tenant : un user ne voit que son entreprise
+    _bulletin_check = get_object_or_404(BulletinPaie, pk=bulletin_id)
+    if (request.user.entreprise and
+            _bulletin_check.employe.entreprise != request.user.entreprise):
+        raise PermissionDenied
     """PDF d'audit — trace complète et officielle du calcul de paie."""
-    from django.shortcuts import get_object_or_404
+    from django.core.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404
     from django.http import HttpResponse
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
