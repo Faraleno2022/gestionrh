@@ -5665,7 +5665,6 @@ def bulletin_audit_pdf(request, bulletin_id):
         raise PermissionDenied
     """PDF d'audit — trace complète et officielle du calcul de paie."""
     from django.core.exceptions import PermissionDenied
-from django.shortcuts import get_object_or_404
     from django.http import HttpResponse
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
