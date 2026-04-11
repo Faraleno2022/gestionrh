@@ -650,7 +650,8 @@ class MoteurCalculPaie:
         if heures_mensuelles <= 0:
             heures_mensuelles = Decimal('173.33')  # 40h x 52 semaines / 12 mois
         
-        salaire_horaire = self._arrondir(salaire_base / heures_mensuelles)
+        salaire_horaire_exact = salaire_base / heures_mensuelles
+        salaire_horaire = self._arrondir(salaire_horaire_exact)
         
         # Taux des heures supplémentaires selon le Code du Travail guinéen (Art. 221)
         TAUX_HS_30 = self.constantes.get('TAUX_HS_4PREM', Decimal('130'))      # 4 premières HS: +30% (130%)
@@ -660,11 +661,11 @@ class MoteurCalculPaie:
         TAUX_HS_FERIE_N = self.constantes.get('TAUX_HS_FERIE_NUIT', Decimal('200'))  # Férié nuit: +100% (200%)
         
         # Calculer le montant pour chaque type d'heures supplémentaires
-        montant_hs_30 = self._arrondir(salaire_horaire * heures_sup_30 * TAUX_HS_30 / Decimal('100'))
-        montant_hs_60 = self._arrondir(salaire_horaire * heures_sup_60 * TAUX_HS_60 / Decimal('100'))
-        montant_hs_nuit = self._arrondir(salaire_horaire * heures_sup_nuit * TAUX_HS_NUIT / Decimal('100'))
-        montant_hs_ferie_j = self._arrondir(salaire_horaire * heures_sup_ferie_jour * TAUX_HS_FERIE_J / Decimal('100'))
-        montant_hs_ferie_n = self._arrondir(salaire_horaire * heures_sup_ferie_nuit * TAUX_HS_FERIE_N / Decimal('100'))
+        montant_hs_30 = self._arrondir(salaire_horaire_exact * heures_sup_30 * TAUX_HS_30 / Decimal('100'))
+        montant_hs_60 = self._arrondir(salaire_horaire_exact * heures_sup_60 * TAUX_HS_60 / Decimal('100'))
+        montant_hs_nuit = self._arrondir(salaire_horaire_exact * heures_sup_nuit * TAUX_HS_NUIT / Decimal('100'))
+        montant_hs_ferie_j = self._arrondir(salaire_horaire_exact * heures_sup_ferie_jour * TAUX_HS_FERIE_J / Decimal('100'))
+        montant_hs_ferie_n = self._arrondir(salaire_horaire_exact * heures_sup_ferie_nuit * TAUX_HS_FERIE_N / Decimal('100'))
         
         montant_hs_total = montant_hs_30 + montant_hs_60 + montant_hs_nuit + montant_hs_ferie_j + montant_hs_ferie_n
         
