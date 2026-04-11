@@ -1504,6 +1504,15 @@ class MoteurCalculPaie:
             })
 
         from datetime import datetime
+
+        # ── Traçabilité verrou CGI indemnités ──
+        params = getattr(self.employe.entreprise, 'parametres_calcul_paie', None)
+        plafond_pct_applique = Decimal(str(params.plafond_exoneration_pct)) if params else Decimal('25')
+        mode_exo = params.mode_exoneration_indemnites if params else 'plafond_pct'
+        total_ind = self.montants.get('indemnites_forfaitaires', Decimal('0'))
+        plafond_val = self.montants.get('plafond_indemnites', Decimal('0'))
+        tentative_depassement = total_ind > plafond_val if plafond_val > 0 else False
+
         return {
             'version': '2.0',
             'meta': {
@@ -1516,6 +1525,13 @@ class MoteurCalculPaie:
             'constantes': constantes_snapshot,
             'bareme_rts': bareme_rts,
             'audit_calcul': self._construire_audit_calcul(),
+            'verrou_cgi': {
+                'plafond_indemnites_pct': str(plafond_pct_applique),
+                'plafond_applique': True,
+                'mode_force': mode_exo,
+                'tentative_depassement': tentative_depassement,
+                'plafond_max_autorise': '25',
+            },
         }
 
     @transaction.atomic
