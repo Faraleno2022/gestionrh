@@ -393,6 +393,7 @@ def liste_bulletins(request):
 
 
 @login_required
+@reauth_required
 @entreprise_active_required
 @require_POST
 def recalculer_cnss_bulletin(request, pk):
@@ -529,6 +530,7 @@ def imprimer_bulletin(request, pk):
 
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def telecharger_bulletin_pdf(request, pk):
     """Télécharger un bulletin de paie en PDF (modele=1 classique, modele=2 SDBK)"""
@@ -1721,6 +1723,8 @@ def telecharger_bulletin_public(request, token):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def livre_paie(request):
     """Livre de paie conforme"""
     # Filtres
@@ -1766,6 +1770,7 @@ def livre_paie(request):
 
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def telecharger_livre_paie_pdf(request):
     """Télécharger le livre de paie en PDF"""
@@ -1922,6 +1927,8 @@ def telecharger_livre_paie_pdf(request):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def declarations_sociales(request):
     """Déclarations sociales (CNSS, RTS, INAM)"""
     # Filtres
@@ -2019,6 +2026,8 @@ def declarations_sociales(request):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def declarations_sociales_pdf(request):
     """Générer le PDF des déclarations sociales"""
     from reportlab.lib import colors
@@ -2128,6 +2137,8 @@ def declarations_sociales_pdf(request):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def liste_elements_salaire(request):
     """
     Liste les employés avec leur résumé d'éléments de salaire.
@@ -2206,6 +2217,8 @@ def liste_elements_salaire(request):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def elements_salaire_employe(request, employe_id):
     """Éléments de salaire d'un employé spécifique"""
     employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
@@ -2267,6 +2280,8 @@ def elements_salaire_employe(request, employe_id):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def ajouter_element_salaire(request, employe_id):
     """Ajouter un élément de salaire à un employé"""
     employe = get_object_or_404(Employe, pk=employe_id, entreprise=request.user.entreprise)
@@ -2342,6 +2357,8 @@ def ajouter_element_salaire(request, employe_id):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def modifier_element_salaire(request, pk):
     """Modifier un élément de salaire"""
     element = get_object_or_404(ElementSalaire, pk=pk, employe__entreprise=request.user.entreprise)
@@ -2377,6 +2394,8 @@ def modifier_element_salaire(request, pk):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def supprimer_element_salaire(request, pk):
     """Supprimer un élément de salaire"""
     try:
@@ -2399,6 +2418,8 @@ def supprimer_element_salaire(request, pk):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def api_avancer_dates_elements(request):
     """
     POST JSON → met à jour date_debut (et date_fin) de tous les éléments de salaire.
@@ -2470,6 +2491,8 @@ def api_avancer_dates_elements(request):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def liste_rubriques(request):
     """Liste des rubriques de paie"""
     type_rubrique = request.GET.get('type')
@@ -2494,6 +2517,8 @@ def liste_rubriques(request):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def creer_rubrique(request):
     """Créer une nouvelle rubrique de paie"""
     if request.method == 'POST':
@@ -2541,6 +2566,8 @@ def creer_rubrique(request):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def detail_rubrique(request, pk):
     """Détail d'une rubrique de paie"""
     rubrique = get_object_or_404(RubriquePaie, pk=pk, entreprise=request.user.entreprise)
@@ -2566,6 +2593,8 @@ def detail_rubrique(request, pk):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def supprimer_rubrique(request, pk):
     """Supprimer une rubrique de paie"""
     rubrique = get_object_or_404(RubriquePaie, pk=pk, entreprise=request.user.entreprise)
@@ -2597,6 +2626,7 @@ def supprimer_rubrique(request, pk):
 
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def tableau_bord_echeances(request):
     """Tableau de bord des échéances de déclarations sociales"""
@@ -2669,6 +2699,7 @@ def tableau_bord_echeances(request):
 
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def marquer_alerte_traitee(request, pk):
     """Marque une alerte comme traitée"""
@@ -2684,6 +2715,7 @@ def marquer_alerte_traitee(request, pk):
 
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def api_alertes_echeances(request):
     """API pour récupérer les alertes (pour le header/notifications)"""
@@ -2715,6 +2747,7 @@ def api_alertes_echeances(request):
 
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def historique_bulletins(request):
     """Historique des bulletins de paie avec recherche"""
@@ -2785,6 +2818,7 @@ def historique_bulletins(request):
 
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def telecharger_bulletins_masse(request):
     """Télécharge plusieurs bulletins en ZIP"""
@@ -2831,6 +2865,7 @@ def telecharger_bulletins_masse(request):
 
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def attestation_salaire(request, employe_id):
     """Génère une attestation de salaire pour un employé"""
@@ -2868,6 +2903,7 @@ def attestation_salaire(request, employe_id):
 
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def simulation_paie(request):
     """Simulateur de paie - Calcul sans enregistrement"""
@@ -3103,6 +3139,7 @@ def simulation_paie(request):
 # ============================================
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def liste_archives(request):
     """Liste des bulletins archivés avec statistiques"""
@@ -3143,6 +3180,7 @@ def liste_archives(request):
 
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def telecharger_archive(request, pk):
     """Télécharger un bulletin archivé"""
@@ -3165,6 +3203,7 @@ def telecharger_archive(request, pk):
 
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def verifier_integrite_archive(request, pk):
     """Vérifier l'intégrité d'une archive"""
@@ -3185,6 +3224,7 @@ def verifier_integrite_archive(request, pk):
 
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def config_paie_entreprise(request):
     """Configuration des paramètres de paie par entreprise (HS, Congés, CNSS)"""
@@ -3386,6 +3426,8 @@ def bulletins_groupes_pdf(request):
 # ============================================================================
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def api_cout_total(request):
     """
     POST JSON : calcule brut + net depuis un budget total employeur.
@@ -3486,6 +3528,8 @@ def api_cout_total(request):
 # ============================================================================
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def api_retropaie(request):
     """
     Endpoint AJAX : calcul rétrograde net → brut.
@@ -3653,6 +3697,8 @@ def api_retropaie(request):
 # ============================================================================
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def retropaie_pdf(request):
     """
     Génère un PDF de la simulation rétrograde Net → Brut.
@@ -3935,6 +3981,8 @@ def _log_audit(request, action, simulation=None, metadata=None):
 # ============================================================================
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def api_decomposer_brut(request):
     """
     POST JSON → retourne une proposition de décomposition du brut.
@@ -4063,6 +4111,8 @@ def api_decomposer_brut(request):
 
 
 @login_required
+@entreprise_active_required
+@reauth_required
 @require_POST
 def api_creer_elements_lot(request, employe_id):
     if not hasattr(request.user, 'entreprise') or not request.user.entreprise:
@@ -4315,6 +4365,8 @@ def _generer_messages_optimisation(brut, roi_pct, taux_charges, gain_mensuel,
 # ============================================================================
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def api_impact_fiscal(request):
     """
     POST JSON → calcul instantané de l'impact fiscal d'une décomposition.
@@ -4480,6 +4532,8 @@ def api_impact_fiscal(request):
 # ============================================================================
 
 @login_required
+@entreprise_active_required
+@reauth_required
 def api_optimiser_decomposition(request):
     """
     POST JSON → trouve la répartition optimale du brut.
@@ -4759,6 +4813,8 @@ def api_optimiser_decomposition(request):
 # ============================================================================
 
 @login_required
+@entreprise_active_required
+@reauth_required
 @require_POST
 def api_proposition_complete(request):
     """
@@ -5062,6 +5118,7 @@ def api_proposition_complete(request):
 # ============================================================================
 
 @login_required
+@reauth_required
 @entreprise_active_required
 @require_POST
 def api_valider_simulation(request):
@@ -5219,6 +5276,7 @@ def api_valider_simulation(request):
 # ============================================================================
 
 @login_required
+@reauth_required
 @entreprise_active_required
 @require_GET
 def api_historique_simulations_employe(request, employe_id):
@@ -5285,6 +5343,7 @@ def api_historique_simulations_employe(request, employe_id):
 # ============================================================================
 
 @login_required
+@reauth_required
 @entreprise_active_required
 def api_simulation_pdf(request):
     """
