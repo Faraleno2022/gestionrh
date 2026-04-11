@@ -5634,3 +5634,21 @@ def api_simulation_pdf(request):
 
 
 
+
+
+@login_required
+def bulletin_audit_json(request, bulletin_id):
+    """Vue audit — expose le pipeline complet du calcul en JSON."""
+    from django.http import JsonResponse
+    from django.shortcuts import get_object_or_404
+    bulletin = get_object_or_404(BulletinPaie, pk=bulletin_id)
+    # Vérification accès tenant
+    snap = bulletin.snapshot_parametres or {}
+    return JsonResponse({
+        'bulletin_id': bulletin.id,
+        'numero': bulletin.numero_bulletin,
+        'employe': str(bulletin.employe),
+        'periode': f"{bulletin.mois_paie:02d}/{bulletin.annee_paie}",
+        'meta': snap.get('meta', {}),
+        'audit': snap.get('audit_calcul', {}),
+    }, json_dumps_params={'ensure_ascii': False, 'indent': 2})

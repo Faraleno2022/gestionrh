@@ -1428,6 +1428,10 @@ class MoteurCalculPaie:
                 'total':         int(m.get('montant_heures_sup', Decimal('0'))),
             }
 
+        brut     = int(money(m.get('brut', Decimal('0'))))
+        retenues = int(money(m.get('total_retenues', Decimal('0'))))
+        net      = int(money(m.get('net', Decimal('0'))))
+
         return {
             'version': '2.0',
             'pipeline': {
@@ -1436,33 +1440,44 @@ class MoteurCalculPaie:
                     'indemnites':          int(money(m.get('indemnites_forfaitaires', Decimal('0')))),
                     'heures_sup':          hs,
                     'total_gains':         int(money(m.get('total_gains', Decimal('0')))),
-                    'brut':                int(money(m.get('brut', Decimal('0')))),
+                    'brut':                brut,
                 },
                 '2_cotisations': {
                     'cnss_base':           int(money(m.get('cnss_base', Decimal('0')))),
                     'cnss_plafond':        int(self.constantes.get('PLAFOND_CNSS', Decimal('2500000'))),
                     'cnss_employe':        int(money(m.get('cnss_employe', Decimal('0')))),
-                    'cnss_employeur':      int(money(m.get('cnss_employeur', Decimal('0')))),
                 },
                 '3_fiscal': {
                     'indemnites_exonerees':int(money(m.get('indemnites_forfaitaires', Decimal('0')))),
                     'plafond_25pct':       int(money(m.get('brut', Decimal('0')) * Decimal('0.25'))),
                     'base_imposable':      int(money(m.get('base_rts', Decimal('0')))),
+                    'formule':             'brut - cnss_employe - indemnites_exonerees',
                     'tranches_rts':        tranches_detail,
                     'rts_total':           int(money(m.get('irg', Decimal('0')))),
                     'taux_effectif_pct':   float(m.get('taux_effectif_rts', Decimal('0'))),
                 },
-                '4_charges_patronales': {
+                '4_retenues': {
+                    'cnss_employe':        int(money(m.get('cnss_employe', Decimal('0')))),
+                    'rts':                 int(money(m.get('irg', Decimal('0')))),
+                    'avances':             int(money(m.get('total_retenues', Decimal('0'))
+                                               - m.get('cnss_employe', Decimal('0'))
+                                               - m.get('irg', Decimal('0')))),
+                    'total_retenues':      retenues,
+                    'formule':             'brut - total_retenues = net',
+                    'verification':        f"{brut} - {retenues} = {brut - retenues} ({'✅ OK' if brut - retenues == net else '❌ ECART'})",
+                },
+                '5_net': {
+                    'brut':                brut,
+                    'total_retenues':      retenues,
+                    'net_a_payer':         net,
+                },
+                '6_charges_patronales': {
+                    'cnss_employeur':      int(money(m.get('cnss_employeur', Decimal('0')))),
                     'vf':                  int(money(m.get('versement_forfaitaire', Decimal('0')))),
                     'ta':                  int(money(m.get('taxe_apprentissage', Decimal('0')))),
                     'onfpp':               int(money(m.get('contribution_onfpp', Decimal('0')))),
-                    'cnss_employeur':      int(money(m.get('cnss_employeur', Decimal('0')))),
                     'total':               int(money(m.get('total_charges_patronales', Decimal('0')))),
-                },
-                '5_net': {
-                    'brut':                int(money(m.get('brut', Decimal('0')))),
-                    'total_retenues':      int(money(m.get('total_retenues', Decimal('0')))),
-                    'net_a_payer':         int(money(m.get('net', Decimal('0')))),
+                    'cout_total_employeur':brut + int(money(m.get('total_charges_patronales', Decimal('0')))),
                 },
             },
         }
@@ -1488,12 +1503,18 @@ class MoteurCalculPaie:
                 'taux': str(t.get('taux_irg', 0)),
             })
 
+        from datetime import datetime
         return {
             'version': '2.0',
+            'meta': {
+                'generated_at': datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+                'version_bareme': f"GN-{self.periode.annee}-v1",
+                'periode': f"{self.periode.mois:02d}/{self.periode.annee}",
+                'nb_salaries': self.nb_salaries,
+                'devise': str(self.devise_employe) if self.devise_employe else None,
+            },
             'constantes': constantes_snapshot,
             'bareme_rts': bareme_rts,
-            'nb_salaries': self.nb_salaries,
-            'devise': str(self.devise_employe) if self.devise_employe else None,
             'audit_calcul': self._construire_audit_calcul(),
         }
 
