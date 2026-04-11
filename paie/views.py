@@ -4595,13 +4595,22 @@ def api_optimiser_decomposition(request):
 
     # Répartir les indemnités libres équitablement
     final = {}
+    indem_libres_restant = indem_totale_a_repartir
+    indem_libres_placees = 0
     for cle in ['salaire_base', 'transport', 'logement', 'cherte_vie']:
         if cle in verrous_montants:
             final[cle] = verrous_montants[cle]
         elif cle == 'salaire_base':
             final[cle] = base_optimale
         elif nb_indem_libres > 0:
-            final[cle] = int((Decimal(str(indem_totale_a_repartir)) / Decimal(str(nb_indem_libres))).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+            indem_libres_placees += 1
+            if indem_libres_placees == nb_indem_libres:
+                # Dernière indemnité libre : absorbe le reste pour éviter tout écart d'arrondi
+                final[cle] = indem_libres_restant
+            else:
+                part = int((Decimal(str(indem_totale_a_repartir)) / Decimal(str(nb_indem_libres))).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+                final[cle] = part
+                indem_libres_restant -= part
         else:
             final[cle] = 0
 
