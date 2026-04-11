@@ -5642,7 +5642,6 @@ def bulletin_audit_json(request, bulletin_id):
     """Vue audit — expose le pipeline complet du calcul en JSON."""
     from django.http import JsonResponse
     from django.core.exceptions import PermissionDenied
-from django.shortcuts import get_object_or_404
     bulletin = get_object_or_404(BulletinPaie, pk=bulletin_id)
     # Vérification accès tenant
     snap = bulletin.snapshot_parametres or {}
