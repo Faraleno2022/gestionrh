@@ -4973,6 +4973,9 @@ def api_proposition_complete(request):
     montant_transport = _math.floor(brut_calcule * pct_transport / 100)
     montant_logement  = _math.floor(brut_calcule * pct_logement / 100)
     montant_cherte    = _math.floor(brut_calcule * pct_cherte / 100)
+    # Ajustement floor : somme indemnités = floor(brut × pct_indem%)
+    _total_cible = _math.floor(brut_calcule * pct_indem / 100)
+    montant_cherte += _total_cible - (montant_transport + montant_logement + montant_cherte)
     montant_base      = brut_calcule - montant_transport - montant_logement - montant_cherte
     recommandation_composantes = [
         {'cle': 'salaire_base', 'pct': pct_base, 'montant': montant_base},
