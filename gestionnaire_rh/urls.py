@@ -65,7 +65,7 @@ urlpatterns = [
     path('robots.txt', robots_txt, name='robots_txt'),
     path('sitemap.xml', sitemap_xml, name='sitemap_xml'),
     path('google47b11a2550ab2dda.html', google_verification, name='google_verification'),
-    path('admin/', admin.site.urls),
+    path('gestion-admin-rh/', admin.site.urls),
     path('', include('core.urls')),
     path('dashboard/', include('dashboard.urls')),
     path('employes/', include('employes.urls')),

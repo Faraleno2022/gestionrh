@@ -28,7 +28,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-produc
 if PYINSTALLER_MODE:
     DEBUG = True
 else:
-    DEBUG = config('DEBUG', default=True, cast=bool)
+    DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Bloquer temporairement les inscriptions (True = inscriptions bloquées)
 REGISTRATION_DISABLED = config('REGISTRATION_DISABLED', default=True, cast=bool)
@@ -89,7 +89,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Security middlewares
     'axes.middleware.AxesMiddleware',
-    # 'csp.middleware.CSPMiddleware',  # Remplacé par SecurityHeadersMiddleware
+    'csp.middleware.CSPMiddleware',
+    'core.middleware.SecurityHeadersMiddleware',
     'core.middleware.SQLInjectionProtectionMiddleware',
     'core.middleware.XSSProtectionMiddleware',
     'core.middleware.RequestLoggingMiddleware',
@@ -334,11 +335,16 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_USE_SESSIONS = False
 CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 
-# Désactiver CSP temporairement pour debug
-CSP_ENABLED = True
-
 # Clickjacking Protection
 X_FRAME_OPTIONS = 'DENY'
+
+# Referrer & Permissions Policy
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+PERMISSIONS_POLICY = {
+    'camera': [],
+    'microphone': [],
+    'geolocation': [],
+}
 
 # Content Security Policy (django-csp 4.0+ format)
 # Configuration assouplie pour la production

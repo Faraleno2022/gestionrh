@@ -1024,9 +1024,24 @@ def telecharger_documentation(request):
 def demande_partenariat(request):
     """Vue publique pour soumettre une demande de partenariat"""
     from .models import DemandePartenariat
+
+    ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 Mo
+
+    def _valider_fichier(f):
+        ext = f.name.rsplit('.', 1)[-1].lower() if '.' in f.name else ''
+        if ext not in ALLOWED_EXTENSIONS:
+            raise ValueError(f'Type de fichier non autorisé : .{ext}')
+        if f.size > MAX_FILE_SIZE:
+            raise ValueError(f'Fichier trop volumineux ({f.size // 1024 // 1024} Mo max 5 Mo)')
     
     if request.method == 'POST':
         try:
+            # Valider les fichiers AVANT création
+            for field in ('document_cgi', 'autre_document'):
+                if request.FILES.get(field):
+                    _valider_fichier(request.FILES[field])
+
             demande = DemandePartenariat.objects.create(
                 nom_entreprise=request.POST.get('nom_entreprise'),
                 secteur_activite=request.POST.get('secteur_activite'),
@@ -1043,7 +1058,7 @@ def demande_partenariat(request):
                 motivation=request.POST.get('motivation'),
             )
             
-            # Gérer les fichiers uploadés
+            # Gérer les fichiers uploadés (déjà validés)
             if request.FILES.get('document_cgi'):
                 demande.document_cgi = request.FILES['document_cgi']
             if request.FILES.get('autre_document'):
