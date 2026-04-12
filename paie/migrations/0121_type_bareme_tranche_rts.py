@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('paie', '0120_snapshot_parametres_bulletin'),
+        ('paie', '0119_alter_bulletinpaie_heures_feries_and_more'),
     ]
 
     operations = [
