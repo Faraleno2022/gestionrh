@@ -33,6 +33,17 @@ class SecurityHeadersMiddleware:
         # Permissions Policy
         response['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
         
+        response['X-CSP-Test'] = 'ok'
+        # Content Security Policy
+        response['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com fonts.googleapis.com; "
+            "font-src 'self' fonts.gstatic.com cdn.jsdelivr.net; "
+            "img-src 'self' data: blob:; "
+            "connect-src 'self';"
+        )
+
         return response
 
 

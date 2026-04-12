@@ -78,6 +78,7 @@ MIDDLEWARE = [
     'gestionnaire_rh.static_middleware.PyInstallerStaticMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'core.middleware.SecurityHeadersMiddleware',
     'django.middleware.gzip.GZipMiddleware',  # Compression GZip pour rapidité
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -88,8 +89,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Security middlewares
     'axes.middleware.AxesMiddleware',
-    # 'csp.middleware.CSPMiddleware',  # Désactivé temporairement
-    'core.middleware.SecurityHeadersMiddleware',
+    # 'csp.middleware.CSPMiddleware',  # Remplacé par SecurityHeadersMiddleware
     'core.middleware.SQLInjectionProtectionMiddleware',
     'core.middleware.XSSProtectionMiddleware',
     'core.middleware.RequestLoggingMiddleware',
@@ -335,7 +335,7 @@ CSRF_USE_SESSIONS = False
 CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 
 # Désactiver CSP temporairement pour debug
-CSP_ENABLED = False
+CSP_ENABLED = True
 
 # Clickjacking Protection
 X_FRAME_OPTIONS = 'DENY'
@@ -579,3 +579,12 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000  # Pour les gros formulaires
 # Prefetch/Select related batch size
 PREFETCH_BATCH_SIZE = 1000
 
+
+# ── Content Security Policy ──
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com")
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "fonts.googleapis.com")
+CSP_FONT_SRC = ("'self'", "fonts.gstatic.com", "cdn.jsdelivr.net")
+CSP_IMG_SRC = ("'self'", "data:", "blob:")
+CSP_CONNECT_SRC = ("'self'",)
+CSP_FRAME_ANCESTORS = ("'none'",)
