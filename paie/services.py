@@ -777,7 +777,7 @@ class MoteurCalculPaie:
         automatiquement les rubriques par code et libellé.
         """
         # Totaliser les indemnités forfaitaires détectées (arrondi à l'unité)
-        total_indemnites = self._arrondir(sum(montant for _, montant, _ in self._indemnites_detectees))
+        total_indemnites = Decimal(str(sum(montant for _, montant, _ in self._indemnites_detectees))).quantize(Decimal("1"), rounding=ROUND_FLOOR)
         salaire_brut = self.montants['total_gains']
 
         self.montants['indemnites_forfaitaires'] = total_indemnites
