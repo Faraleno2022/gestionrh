@@ -1311,6 +1311,10 @@
         mt.transport = Math.floor(brutTotal * pcts.transport / 100);
         mt.logement  = Math.floor(brutTotal * pcts.logement / 100);
         mt.cherte_vie = Math.floor(brutTotal * pcts.cherte_vie / 100);
+        // Ajustement floor : somme indemnités = floor(brut × pctIndem%)
+        var _pctIndem = pcts.transport + pcts.logement + pcts.cherte_vie;
+        var _cible = Math.floor(brutTotal * _pctIndem / 100);
+        mt.cherte_vie += (_cible - (mt.transport + mt.logement + mt.cherte_vie));
         mt.salaire_base = brutTotal - mt.transport - mt.logement - mt.cherte_vie;
 
         composantes = CLES.map(function(c) {
