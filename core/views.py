@@ -5,7 +5,12 @@ from django.contrib import messages
 from django.utils import timezone
 from django.conf import settings
 from django.db import models, IntegrityError
-from .models import LogActivite, Utilisateur
+import hmac
+import logging
+from .models import LogActivite, Utilisateur, TentativeCodeAcces
+from .decorators import rate_limit
+
+logger = logging.getLogger(__name__)
 
 
 def get_client_ip(request):
@@ -186,6 +191,7 @@ def csrf_failure(request, reason=""):
     }, status=403)
 
 
+@rate_limit(max_requests=10, time_window=300)
 def register_entreprise(request):
     """Vue d'inscription d'une nouvelle entreprise"""
     from django.conf import settings
@@ -193,20 +199,52 @@ def register_entreprise(request):
     
     # Vérifier si les inscriptions sont désactivées
     if getattr(settings, 'REGISTRATION_DISABLED', False):
-        # Vérifier le code admin dans la session ou le paramètre GET
         admin_code = getattr(settings, 'ADMIN_REGISTRATION_CODE', '')
+        ip = get_client_ip(request)
+        
+        # Vérifier si l'IP est bloquée (trop de tentatives échouées)
+        max_tentatives = getattr(settings, 'CODE_ACCES_MAX_TENTATIVES', 5)
+        duree_blocage = getattr(settings, 'CODE_ACCES_DUREE_BLOCAGE', 30)  # minutes
+        
+        if TentativeCodeAcces.ip_bloquee(ip, max_tentatives, duree_blocage):
+            logger.warning(f"IP bloquée pour tentatives excessives: {ip}")
+            messages.error(
+                request,
+                f"Trop de tentatives échouées. Réessayez dans {duree_blocage} minutes."
+            )
+            return render(request, 'core/registration_disabled.html', {'bloquee': True})
+        
         code_saisi = request.GET.get('code', '') or request.session.get('admin_registration_code', '')
         
-        # Si code fourni en GET, le sauvegarder en session
+        # Si code fourni en GET, valider avec comparaison à temps constant
         if request.GET.get('code'):
-            if request.GET.get('code') == admin_code:
-                request.session['admin_registration_code'] = request.GET.get('code')
+            code_soumis = request.GET.get('code')
+            code_valide = hmac.compare_digest(code_soumis, admin_code)
+            
+            # Enregistrer la tentative
+            TentativeCodeAcces.enregistrer(request, code_soumis, code_valide)
+            
+            if code_valide:
+                request.session['admin_registration_code'] = 'validated'
+                code_saisi = admin_code  # Pour passer le check suivant
             else:
-                messages.error(request, "Code de vérification incorrect.")
+                nb_restantes = max_tentatives - TentativeCodeAcces.tentatives_recentes(ip, duree_blocage)
+                if nb_restantes > 0:
+                    messages.error(
+                        request,
+                        f"Code de vérification incorrect. {nb_restantes} tentative(s) restante(s)."
+                    )
+                else:
+                    messages.error(
+                        request,
+                        f"Code incorrect. IP bloquée pour {duree_blocage} minutes."
+                    )
                 return render(request, 'core/registration_disabled.html')
         
         # Si pas de code valide, afficher la page de blocage
-        if code_saisi != admin_code:
+        # Vérifier soit le code direct, soit le marqueur de session
+        session_code = request.session.get('admin_registration_code', '')
+        if session_code != 'validated' and not hmac.compare_digest(code_saisi, admin_code):
             return render(request, 'core/registration_disabled.html')
     
     if request.method == 'POST':

@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import (
     Entreprise, Utilisateur, ProfilUtilisateur, DroitAcces, LogActivite,
-    Societe, Etablissement, Service, Poste
+    Societe, Etablissement, Service, Poste, TentativeCodeAcces
 )
 
 
@@ -73,6 +73,25 @@ class LogActiviteAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
     
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(TentativeCodeAcces)
+class TentativeCodeAccesAdmin(admin.ModelAdmin):
+    list_display = ['adresse_ip', 'succes', 'date_tentative', 'user_agent_court']
+    list_filter = ['succes', 'date_tentative']
+    search_fields = ['adresse_ip']
+    readonly_fields = ['adresse_ip', 'code_saisi', 'succes', 'date_tentative', 'user_agent']
+    list_per_page = 50
+
+    def user_agent_court(self, obj):
+        return (obj.user_agent or '')[:80]
+    user_agent_court.short_description = 'User Agent'
+
+    def has_add_permission(self, request):
+        return False
+
     def has_change_permission(self, request, obj=None):
         return False
 

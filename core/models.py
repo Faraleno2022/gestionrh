@@ -898,3 +898,51 @@ class DemandePartenariat(models.Model):
     
     def __str__(self):
         return f"{self.nom_entreprise} - {self.get_type_partenariat_display()} ({self.get_statut_display()})"
+
+
+class TentativeCodeAcces(models.Model):
+    """Journal des tentatives de saisie du code d'accès inscription"""
+    adresse_ip = models.GenericIPAddressField()
+    code_saisi = models.CharField(max_length=20)
+    succes = models.BooleanField(default=False)
+    date_tentative = models.DateTimeField(auto_now_add=True)
+    user_agent = models.CharField(max_length=500, blank=True, null=True)
+
+    class Meta:
+        db_table = 'tentatives_code_acces'
+        verbose_name = 'Tentative code d\'accès'
+        verbose_name_plural = 'Tentatives code d\'accès'
+        ordering = ['-date_tentative']
+        indexes = [
+            models.Index(fields=['adresse_ip', 'date_tentative']),
+        ]
+
+    def __str__(self):
+        status = "✓" if self.succes else "✗"
+        return f"{status} {self.adresse_ip} - {self.date_tentative:%d/%m/%Y %H:%M}"
+
+    @classmethod
+    def tentatives_recentes(cls, ip, minutes=30):
+        """Nombre de tentatives échouées récentes pour une IP"""
+        depuis = timezone.now() - timezone.timedelta(minutes=minutes)
+        return cls.objects.filter(
+            adresse_ip=ip,
+            succes=False,
+            date_tentative__gte=depuis
+        ).count()
+
+    @classmethod
+    def ip_bloquee(cls, ip, max_tentatives=5, minutes=30):
+        """Vérifie si une IP est bloquée suite à trop de tentatives"""
+        return cls.tentatives_recentes(ip, minutes) >= max_tentatives
+
+    @classmethod
+    def enregistrer(cls, request, code_saisi, succes):
+        """Enregistre une tentative"""
+        from .views import get_client_ip
+        cls.objects.create(
+            adresse_ip=get_client_ip(request),
+            code_saisi=code_saisi[:20] if not succes else '***',
+            succes=succes,
+            user_agent=(request.META.get('HTTP_USER_AGENT', '') or '')[:500]
+        )
