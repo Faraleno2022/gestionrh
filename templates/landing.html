@@ -1685,7 +1685,7 @@
                                 <i class="bi bi-clock"></i> {{ offre.date_publication|date:"d/m/Y" }}
                             </span>
                             <div class="d-flex gap-1">
-                                <a href="{% url 'recrutement:offre_public' offre.pk %}" class="btn btn-sm btn-outline-primary" style="font-size:0.78rem;">
+                                <a href="{% url 'recrutement:offre_public' offre.uuid %}" class="btn btn-sm btn-outline-primary" style="font-size:0.78rem;">
                                     <i class="bi bi-eye me-1"></i>Voir
                                 </a>
                                 {% if offre.date_limite_candidature and offre.date_limite_candidature < today %}
@@ -1693,7 +1693,7 @@
                                     <i class="bi bi-x-circle me-1"></i>Expiré
                                 </span>
                                 {% else %}
-                                <a href="{% url 'recrutement:postuler' offre.pk %}" class="btn btn-sm btn-success" style="font-size:0.78rem;">
+                                <a href="{% url 'recrutement:postuler' offre.uuid %}" class="btn btn-sm btn-success" style="font-size:0.78rem;">
                                     <i class="bi bi-send me-1"></i>Postuler
                                 </a>
                                 {% endif %}

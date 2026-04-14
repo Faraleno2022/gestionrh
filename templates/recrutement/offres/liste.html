@@ -102,13 +102,13 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{% url 'recrutement:detail_offre' offre.pk %}" class="btn btn-sm btn-info" title="Détails">
+                            <a href="{% url 'recrutement:detail_offre' offre.uuid %}" class="btn btn-sm btn-info" title="Détails">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            <a href="{% url 'recrutement:modifier_offre' offre.pk %}" class="btn btn-sm btn-warning" title="Modifier">
+                            <a href="{% url 'recrutement:modifier_offre' offre.uuid %}" class="btn btn-sm btn-warning" title="Modifier">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <a href="{% url 'recrutement:supprimer_offre' offre.pk %}" class="btn btn-sm btn-danger" title="Supprimer" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette offre ?');">
+                            <a href="{% url 'recrutement:supprimer_offre' offre.uuid %}" class="btn btn-sm btn-danger" title="Supprimer" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette offre ?');">
                                 <i class="bi bi-trash"></i>
                             </a>
                         </td>

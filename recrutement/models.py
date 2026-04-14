@@ -1,6 +1,28 @@
+import os
+import uuid
+
 from django.db import models
 from core.models import Poste, Service, Entreprise
+from core.validators import valider_cv, valider_image_document, valider_image
 from employes.models import Employe
+
+
+def _chemin_securise(sous_dossier, instance, filename):
+    """Génère un chemin sécurisé avec UUID pour éviter les collisions et le path traversal."""
+    ext = os.path.splitext(filename)[1].lower()
+    return f"candidatures/{sous_dossier}/{uuid.uuid4().hex}{ext}"
+
+
+def chemin_cv(instance, filename):
+    return _chemin_securise('cv', instance, filename)
+
+
+def chemin_lettre(instance, filename):
+    return _chemin_securise('lettres', instance, filename)
+
+
+def chemin_autre_doc(instance, filename):
+    return _chemin_securise('docs', instance, filename)
 
 
 class OffreEmploi(models.Model):
@@ -31,6 +53,7 @@ class OffreEmploi(models.Model):
     )
     
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='offres_emploi', null=True, blank=True)
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     reference_offre = models.CharField(max_length=50, unique=True)
     reference_poste = models.CharField(max_length=50, blank=True, null=True, help_text="Référence interne du poste")
     intitule_poste = models.CharField(max_length=200)
@@ -53,8 +76,8 @@ class OffreEmploi(models.Model):
     salaire_propose_min = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     salaire_propose_max = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     avantages = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to='offres_emploi/', blank=True, null=True, help_text="Image de présentation de l'offre")
-    document_pdf = models.FileField(upload_to='offres_emploi/documents/', blank=True, null=True, help_text="Document PDF (fiche de poste, description...)")
+    image = models.ImageField(upload_to='offres_emploi/', blank=True, null=True, validators=[valider_image], help_text="Image de présentation de l'offre (JPEG/PNG)")
+    document_pdf = models.FileField(upload_to='offres_emploi/documents/', blank=True, null=True, validators=[valider_cv], help_text="Document PDF (fiche de poste, description...)")
     statut_offre = models.CharField(max_length=20, choices=STATUTS, default='ouverte')
     responsable_recrutement = models.ForeignKey(Employe, on_delete=models.SET_NULL, null=True, blank=True)
     
@@ -98,9 +121,9 @@ class Candidature(models.Model):
     formation_niveau = models.CharField(max_length=100, blank=True, null=True)
     experience_annees = models.IntegerField(blank=True, null=True)
     date_candidature = models.DateField(auto_now_add=True)
-    cv_fichier = models.FileField(upload_to='candidatures/cv/', blank=True, null=True, help_text="CV au format PDF")
-    lettre_motivation = models.FileField(upload_to='candidatures/lettres/', blank=True, null=True, help_text="Lettre de motivation")
-    autres_documents = models.FileField(upload_to='candidatures/autres/', blank=True, null=True, help_text="Autres documents (diplômes, certificats, etc.)")
+    cv_fichier = models.FileField(upload_to=chemin_cv, blank=True, null=True, validators=[valider_cv], help_text="CV au format PDF ou Word, max 5 Mo")
+    lettre_motivation = models.FileField(upload_to=chemin_lettre, blank=True, null=True, validators=[valider_cv], help_text="Lettre de motivation (PDF ou Word)")
+    autres_documents = models.FileField(upload_to=chemin_autre_doc, blank=True, null=True, validators=[valider_image_document], help_text="Autres documents (PDF, Word, JPEG, PNG)")
     statut_candidature = models.CharField(max_length=20, choices=STATUTS, default='recue')
     score_evaluation = models.IntegerField(blank=True, null=True)
     commentaires = models.TextField(blank=True, null=True)

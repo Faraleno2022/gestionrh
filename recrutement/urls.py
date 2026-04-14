@@ -10,16 +10,16 @@ urlpatterns = [
     path('', views.recrutement_home, name='home'),
     
     # Vues publiques (sans authentification)
-    path('offre/<int:pk>/', views_public.offre_detail_public, name='offre_public'),
-    path('offre/<int:pk>/postuler/', views_public.postuler, name='postuler'),
+    path('offre/<uuid:offre_uuid>/', views_public.offre_detail_public, name='offre_public'),
+    path('offre/<uuid:offre_uuid>/postuler/', views_public.postuler, name='postuler'),
     path('candidature/confirmation/<str:numero>/', views_public.candidature_confirmee, name='candidature_confirmee'),
     
     # Offres d'emploi
     path('offres/', views.liste_offres, name='offres'),
     path('offres/creer/', views.creer_offre, name='creer_offre'),
-    path('offres/<int:pk>/', views.detail_offre, name='detail_offre'),
-    path('offres/<int:pk>/modifier/', views.modifier_offre, name='modifier_offre'),
-    path('offres/<int:pk>/supprimer/', views.supprimer_offre, name='supprimer_offre'),
+    path('offres/<uuid:offre_uuid>/', views.detail_offre, name='detail_offre'),
+    path('offres/<uuid:offre_uuid>/modifier/', views.modifier_offre, name='modifier_offre'),
+    path('offres/<uuid:offre_uuid>/supprimer/', views.supprimer_offre, name='supprimer_offre'),
     
     # Candidatures
     path('candidatures/', views.liste_candidatures, name='candidatures'),
@@ -27,6 +27,7 @@ urlpatterns = [
     path('candidatures/<int:pk>/', views.detail_candidature, name='detail_candidature'),
     path('candidatures/<int:pk>/evaluer/', views.evaluer_candidature, name='evaluer_candidature'),
     path('candidatures/<int:pk>/supprimer-document/', views.supprimer_document_candidature, name='supprimer_document_candidature'),
+    path('candidatures/<int:pk>/telecharger/<str:type_doc>/', views.telecharger_document_candidature, name='telecharger_document'),
     
     # Entretiens
     path('entretiens/', views.liste_entretiens, name='entretiens'),

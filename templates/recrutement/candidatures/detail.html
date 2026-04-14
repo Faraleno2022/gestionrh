@@ -209,7 +209,7 @@
                 <span class="badge bg-secondary">{{ candidature.offre.type_contrat }}</span>
                 {% endif %}
                 <hr>
-                <a href="{% url 'recrutement:detail_offre' candidature.offre.pk %}" class="btn btn-sm btn-outline-primary">
+                <a href="{% url 'recrutement:detail_offre' candidature.offre.uuid %}" class="btn btn-sm btn-outline-primary">
                     <i class="bi bi-eye"></i> Voir l'offre
                 </a>
             </div>

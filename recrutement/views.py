@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import datetime, date
@@ -9,6 +10,7 @@ import string
 
 from .models import OffreEmploi, Candidature, EntretienRecrutement
 from core.models import Poste, Service
+from core.validators import valider_cv, valider_image_document, valider_image
 from employes.models import Employe
 from core.decorators import entreprise_active_required
 
@@ -118,6 +120,24 @@ def creer_offre(request):
             # Générer une référence unique
             reference = f"OFF-{date.today().year}-{''.join(random.choices(string.digits, k=4))}"
             
+            # Valider les fichiers avant création
+            image_file = None
+            pdf_file = None
+            if 'image' in request.FILES:
+                try:
+                    valider_image(request.FILES['image'])
+                    image_file = request.FILES['image']
+                except ValidationError as e:
+                    messages.error(request, f'Image : {e.message}')
+                    raise
+            if 'document_pdf' in request.FILES:
+                try:
+                    valider_cv(request.FILES['document_pdf'])
+                    pdf_file = request.FILES['document_pdf']
+                except ValidationError as e:
+                    messages.error(request, f'Document PDF : {e.message}')
+                    raise
+
             offre = OffreEmploi.objects.create(
                 entreprise=request.user.entreprise,
                 reference_offre=reference,
@@ -140,14 +160,14 @@ def creer_offre(request):
                 salaire_propose_min=request.POST.get('salaire_min') if request.POST.get('salaire_min') else None,
                 salaire_propose_max=request.POST.get('salaire_max') if request.POST.get('salaire_max') else None,
                 avantages=request.POST.get('avantages'),
-                image=request.FILES.get('image') if 'image' in request.FILES else None,
-                document_pdf=request.FILES.get('document_pdf') if 'document_pdf' in request.FILES else None,
+                image=image_file,
+                document_pdf=pdf_file,
                 responsable_recrutement_id=request.POST.get('responsable') if request.POST.get('responsable') else None,
                 statut_offre='ouverte'
             )
             
             messages.success(request, f'Offre {reference} créée avec succès.')
-            return redirect('recrutement:detail_offre', pk=offre.pk)
+            return redirect('recrutement:detail_offre', offre_uuid=offre.uuid)
             
         except Exception as e:
             messages.error(request, f'Erreur lors de la création : {str(e)}')
@@ -171,9 +191,9 @@ def creer_offre(request):
 
 @login_required
 @entreprise_active_required
-def detail_offre(request, pk):
+def detail_offre(request, offre_uuid):
     """Détail d'une offre d'emploi"""
-    offre = get_object_or_404(OffreEmploi, pk=pk, entreprise=request.user.entreprise)
+    offre = get_object_or_404(OffreEmploi, uuid=offre_uuid, entreprise=request.user.entreprise)
     candidatures = offre.candidatures.all()
     
     # Statistiques des candidatures
@@ -195,9 +215,9 @@ def detail_offre(request, pk):
 
 @login_required
 @entreprise_active_required
-def modifier_offre(request, pk):
+def modifier_offre(request, offre_uuid):
     """Modifier une offre d'emploi"""
-    offre = get_object_or_404(OffreEmploi, pk=pk, entreprise=request.user.entreprise)
+    offre = get_object_or_404(OffreEmploi, uuid=offre_uuid, entreprise=request.user.entreprise)
     
     if request.method == 'POST':
         try:
@@ -224,13 +244,15 @@ def modifier_offre(request, pk):
             offre.responsable_texte = request.POST.get('responsable_texte') if request.POST.get('responsable_texte') else None
             
             if 'image' in request.FILES:
+                valider_image(request.FILES['image'])
                 offre.image = request.FILES['image']
             if 'document_pdf' in request.FILES:
+                valider_cv(request.FILES['document_pdf'])
                 offre.document_pdf = request.FILES['document_pdf']
             offre.save()
             
             messages.success(request, 'Offre modifiée avec succès.')
-            return redirect('recrutement:detail_offre', pk=offre.pk)
+            return redirect('recrutement:detail_offre', offre_uuid=offre.uuid)
             
         except Exception as e:
             messages.error(request, f'Erreur lors de la modification : {str(e)}')
@@ -249,12 +271,12 @@ def modifier_offre(request, pk):
 
 @login_required
 @entreprise_active_required
-def supprimer_offre(request, pk):
+def supprimer_offre(request, offre_uuid):
     """Supprimer une offre d'emploi"""
     try:
-        offre = OffreEmploi.objects.get(pk=pk, entreprise=request.user.entreprise)
+        offre = OffreEmploi.objects.get(uuid=offre_uuid, entreprise=request.user.entreprise)
     except OffreEmploi.DoesNotExist:
-        messages.error(request, f"L'offre d'emploi #{pk} n'existe pas ou a déjà été supprimée.")
+        messages.error(request, "L'offre d'emploi n'existe pas ou a déjà été supprimée.")
         return redirect('recrutement:offres')
     
     if request.method == 'POST':
@@ -353,11 +375,21 @@ def creer_candidature(request):
                 statut_candidature='recue'
             )
             
-            # Gérer les fichiers
+            # Gérer les fichiers avec validation
             if request.FILES.get('cv'):
-                candidature.cv_fichier = request.FILES['cv']
+                try:
+                    valider_cv(request.FILES['cv'])
+                    candidature.cv_fichier = request.FILES['cv']
+                except ValidationError as e:
+                    messages.error(request, f'CV : {e.message}')
+                    return redirect('recrutement:creer_candidature')
             if request.FILES.get('lettre'):
-                candidature.lettre_motivation = request.FILES['lettre']
+                try:
+                    valider_cv(request.FILES['lettre'])
+                    candidature.lettre_motivation = request.FILES['lettre']
+                except ValidationError as e:
+                    messages.error(request, f'Lettre : {e.message}')
+                    return redirect('recrutement:creer_candidature')
             candidature.save()
             
             messages.success(request, f'Candidature {numero} enregistrée avec succès.')
@@ -553,3 +585,41 @@ def evaluer_entretien(request, pk):
     return render(request, 'recrutement/entretiens/evaluer.html', {
         'entretien': entretien
     })
+
+
+# ============= TÉLÉCHARGEMENT SÉCURISÉ =============
+
+@login_required
+@entreprise_active_required
+def telecharger_document_candidature(request, pk, type_doc):
+    """Téléchargement sécurisé des documents de candidature (CV, lettre, autres)."""
+    import os
+    from django.http import FileResponse, Http404
+
+    candidature = get_object_or_404(Candidature, pk=pk, offre__entreprise=request.user.entreprise)
+
+    champs = {
+        'cv': ('cv_fichier', f"CV_{candidature.nom}_{candidature.prenoms}"),
+        'lettre': ('lettre_motivation', f"Lettre_{candidature.nom}_{candidature.prenoms}"),
+        'autre': ('autres_documents', f"Doc_{candidature.nom}_{candidature.prenoms}"),
+    }
+
+    if type_doc not in champs:
+        raise Http404("Type de document invalide.")
+
+    champ, nom_base = champs[type_doc]
+    fichier_field = getattr(candidature, champ)
+
+    if not fichier_field:
+        raise Http404("Aucun fichier disponible.")
+
+    chemin = fichier_field.path
+    if not os.path.exists(chemin):
+        raise Http404("Fichier introuvable sur le serveur.")
+
+    ext = os.path.splitext(chemin)[1]
+    return FileResponse(
+        open(chemin, 'rb'),
+        as_attachment=True,
+        filename=f"{nom_base}{ext}",
+    )
