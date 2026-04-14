@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'axes',
     'csp',
+    'django_permissions_policy',
     
     # Local apps
     'core',
@@ -78,6 +79,7 @@ MIDDLEWARE = [
     'gestionnaire_rh.static_middleware.PyInstallerStaticMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'csp.middleware.CSPMiddleware',
     'core.middleware.SecurityHeadersMiddleware',
     'django.middleware.gzip.GZipMiddleware',  # Compression GZip pour rapidité
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -89,8 +91,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Security middlewares
     'axes.middleware.AxesMiddleware',
-    'csp.middleware.CSPMiddleware',
-    'core.middleware.SecurityHeadersMiddleware',
+    'django_permissions_policy.PermissionsPolicyMiddleware',
     'core.middleware.SQLInjectionProtectionMiddleware',
     'core.middleware.XSSProtectionMiddleware',
     'core.middleware.RequestLoggingMiddleware',
@@ -320,8 +321,8 @@ if PYINSTALLER_MODE:
 else:
     SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_AGE = 3600  # 1 hour
+SESSION_COOKIE_SAMESITE = 'Strict'
+SESSION_COOKIE_AGE = 8 * 60 * 60  # 8 heures
 SESSION_SAVE_EVERY_REQUEST = False  # Sauvegarder la session uniquement quand modifiée
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
@@ -331,7 +332,7 @@ if PYINSTALLER_MODE:
 else:
     CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=True, cast=bool)
 CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Strict'
 CSRF_USE_SESSIONS = False
 CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 
@@ -341,9 +342,16 @@ X_FRAME_OPTIONS = 'DENY'
 # Referrer & Permissions Policy
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 PERMISSIONS_POLICY = {
+    'accelerometer': [],
     'camera': [],
-    'microphone': [],
     'geolocation': [],
+    'gyroscope': [],
+    'magnetometer': [],
+    'microphone': [],
+    'payment': [],
+    'usb': [],
+    'autoplay': [],
+    'fullscreen': ['self'],
 }
 
 # Content Security Policy (django-csp 4.0+ format)

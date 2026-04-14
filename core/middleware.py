@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 class SecurityHeadersMiddleware:
     """
     Ajoute des en-têtes de sécurité supplémentaires
+    non couverts nativement par Django ou django-csp.
     """
     def __init__(self, get_response):
         self.get_response = get_response
@@ -30,19 +31,18 @@ class SecurityHeadersMiddleware:
         # Référer Policy
         response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         
-        # Permissions Policy
-        response['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
-        
-        response['X-CSP-Test'] = 'ok'
-        # Content Security Policy
-        response['Content-Security-Policy'] = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com; "
-            "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com fonts.googleapis.com; "
-            "font-src 'self' fonts.gstatic.com cdn.jsdelivr.net; "
-            "img-src 'self' data: blob:; "
-            "connect-src 'self';"
-        )
+        # Cross-Origin policies
+        response['Cross-Origin-Opener-Policy'] = 'same-origin'
+        response['Cross-Origin-Resource-Policy'] = 'same-origin'
+
+        # Masquer la version du serveur
+        response['Server'] = 'GuinéeRH'
+
+        # Empêcher la mise en cache de pages sensibles
+        if request.path.startswith(('/paie/', '/employes/', '/comptabilite/', '/portail/')):
+            response['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
 
         return response
 
