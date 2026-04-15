@@ -460,11 +460,31 @@ def detail_bulletin(request, pk):
     # Séparer les gains et retenues
     gains = lignes.filter(rubrique__type_rubrique='gain')
     retenues = lignes.filter(rubrique__type_rubrique__in=['retenue', 'cotisation'])
-    
+
+    # Récupérer les alertes de conformité depuis le snapshot
+    import json
+    alertes_conformite = []
+    conformite_resume = {}
+    recommandations = {}
+    snapshot = bulletin.snapshot_parametres
+    if snapshot:
+        if isinstance(snapshot, str):
+            try:
+                snapshot = json.loads(snapshot)
+            except (json.JSONDecodeError, TypeError):
+                snapshot = {}
+        conformite = snapshot.get('conformite_indemnites', {})
+        alertes_conformite = conformite.get('alertes', [])
+        conformite_resume = conformite.get('resume', {})
+        recommandations = conformite.get('recommandation', {})
+
     return render(request, 'paie/bulletins/detail.html', {
         'bulletin': bulletin,
         'gains': gains,
-        'retenues': retenues
+        'retenues': retenues,
+        'alertes_conformite': alertes_conformite,
+        'conformite_resume': conformite_resume,
+        'recommandations': recommandations,
     })
 
 

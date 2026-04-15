@@ -840,7 +840,32 @@ class MoteurCalculPaie:
              'montant': m, 'raison': raison}
             for r, m, raison in self._indemnites_detectees
         ]
-    
+
+        # --- Analyse de conformité intelligente ---
+        try:
+            analyseur = AnalyseurConformiteIndemnites(
+                employe=self.employe,
+                montants=self.montants,
+                indemnites_detectees=self._indemnites_detectees,
+            )
+            resultat_conformite = analyseur.analyser()
+            self.montants['conformite_indemnites'] = resultat_conformite
+
+            # Fusionner les alertes de conformité dans les alertes globales
+            if 'alertes' not in self.montants:
+                self.montants['alertes'] = []
+            for alerte in resultat_conformite.get('alertes', []):
+                icone = {'info': '🟢', 'attention': '🟡', 'risque': '🔴'}.get(alerte['niveau'], '⚪')
+                self.montants['alertes'].append({
+                    'type': alerte['niveau'],
+                    'message': f"{icone} {alerte['message']}",
+                    'action': alerte.get('action', ''),
+                })
+        except Exception as e:
+            logger_conformite.warning(
+                "Erreur analyse conformité indemnités (%s): %s", self.employe, e
+            )
+
     def _calculer_cotisations_sociales(self):
         """Calculer les cotisations sociales (CNSS, etc.)
         
@@ -1532,6 +1557,7 @@ class MoteurCalculPaie:
                 'tentative_depassement': tentative_depassement,
                 'plafond_max_autorise': '25',
             },
+            'conformite_indemnites': self.montants.get('conformite_indemnites', {}),
         }
 
     @transaction.atomic
@@ -1799,6 +1825,379 @@ class MoteurCalculPaie:
             # En cas d'erreur, retourner 0 sans bloquer le bulletin
             print(f"⚠️  Erreur calcul congés ({self.employe}): {str(e)}")
             return Decimal('0')
+
+
+# ============================================================================
+# ANALYSEUR DE CONFORMITÉ DES INDEMNITÉS
+# ============================================================================
+
+import logging
+logger_conformite = logging.getLogger('paie.conformite')
+
+# Mapping type d'indemnité → mots-clés de détection
+_MAPPING_TYPE_INDEMNITE = {
+    'transport': ['transport', 'deplacement', 'déplacement'],
+    'logement': ['logement', 'hébergement', 'hebergement', 'allocation logement'],
+    'cherte_vie': ['cherté', 'cherte', 'vie chère', 'vie chere'],
+    'panier': ['panier', 'repas', 'nourriture', 'restauration'],
+    'deplacement': ['deplacement', 'déplacement', 'mission'],
+    'representation': ['représentation', 'representation'],
+}
+
+
+class AnalyseurConformiteIndemnites:
+    """
+    Moteur d'analyse de conformité des indemnités forfaitaires.
+
+    Produit des alertes à 3 niveaux :
+      🟢 info      — conforme
+      🟡 attention  — hors fourchette mais total OK
+      🔴 risque     — risque de requalification fiscale
+
+    Fournit aussi une recommandation d'optimisation.
+    """
+
+    VERSION_MOTEUR = '1.1'
+
+    # Fourchettes par défaut (appliquées si aucune RegleIndemnite n'est définie)
+    DEFAULTS = {
+        'transport':       {'min': Decimal('5'),  'max': Decimal('8'),  'justification': 'Déplacement domicile-travail'},
+        'logement':        {'min': Decimal('10'), 'max': Decimal('15'), 'justification': 'Bail ou attestation de résidence'},
+        'cherte_vie':      {'min': Decimal('0'),  'max': Decimal('10'), 'justification': 'Coût de la vie local'},
+        'panier':          {'min': Decimal('0'),  'max': Decimal('5'),  'justification': 'Frais de repas sur site'},
+        'deplacement':     {'min': Decimal('0'),  'max': Decimal('8'),  'justification': 'Ordre de mission'},
+        'representation':  {'min': Decimal('0'),  'max': Decimal('5'),  'justification': 'Frais de représentation'},
+    }
+
+    # Fourchettes adaptées par catégorie (plafonds différenciés)
+    AJUSTEMENTS_CATEGORIE = {
+        'cadre':          {'logement': Decimal('15'), 'transport': Decimal('8'),  'representation': Decimal('5')},
+        'agent_maitrise': {'logement': Decimal('12'), 'transport': Decimal('7'),  'representation': Decimal('3')},
+        'employe':        {'logement': Decimal('10'), 'transport': Decimal('6'),  'representation': Decimal('2')},
+        'ouvrier':        {'logement': Decimal('8'),  'transport': Decimal('5'),  'representation': Decimal('1')},
+    }
+
+    PLAFOND_TOTAL_PCT = Decimal('25')  # CGI Guinée
+
+    def __init__(self, employe, montants, indemnites_detectees):
+        """
+        :param employe: instance Employe
+        :param montants: dict des montants calculés par MoteurCalculPaie
+        :param indemnites_detectees: list de (rubrique, montant, raison)
+        """
+        self.employe = employe
+        self.montants = montants
+        self.indemnites_detectees = indemnites_detectees
+        self._regles_cache = None
+
+    # ------------------------------------------------------------------
+    # API publique
+    # ------------------------------------------------------------------
+
+    def analyser(self):
+        """
+        Analyse complète des indemnités.
+
+        Returns:
+            dict {
+                'alertes': [...],         # chaque alerte a un champ 'action'
+                'recommandation': {...},
+                'resume': {'niveau_global', 'score', ...},
+                'conformite_meta': {...}  # signature d'audit
+            }
+        """
+        from datetime import datetime
+
+        salaire_base = self._obtenir_salaire_base()
+        total_gains = self.montants.get('total_gains', Decimal('0'))
+
+        if salaire_base <= 0 or not self.indemnites_detectees:
+            return {
+                'alertes': [], 'recommandation': None,
+                'resume': {'niveau_global': 'info', 'score': 100},
+                'conformite_meta': self._meta_signature(datetime.now()),
+            }
+
+        alertes = []
+        penalites_score = Decimal('0')  # déductions sur le score /100
+        categorie = self._categorie_employe()
+
+        # 1. Analyse par type d'indemnité
+        for rubrique, montant, raison in self.indemnites_detectees:
+            type_ind = self._detecter_type(rubrique)
+            regle = self._obtenir_regle(type_ind, categorie)
+
+            ratio = (montant / salaire_base * Decimal('100')).quantize(Decimal('0.01'))
+
+            if ratio > regle['max']:
+                depassement_pct = ratio - regle['max']
+                montant_cible = (salaire_base * regle['max'] / Decimal('100')).quantize(Decimal('1'))
+                alertes.append({
+                    'niveau': 'attention',
+                    'rubrique': rubrique.libelle_rubrique,
+                    'type': type_ind,
+                    'ratio_pct': ratio,
+                    'seuil_max_pct': regle['max'],
+                    'message': (
+                        f"{rubrique.libelle_rubrique} = {ratio}% du base "
+                        f"(fourchette recommandée : {regle['min']}–{regle['max']}%)"
+                    ),
+                    'action': (
+                        f"Réduire à {montant_cible:,.0f} GNF ({regle['max']}%) "
+                        f"ou fournir un justificatif : {regle['justification']}"
+                    ),
+                })
+                # -5 pts par % au-dessus du seuil max
+                penalites_score += min(depassement_pct * Decimal('5'), Decimal('25'))
+
+            elif ratio < regle['min'] and montant > 0:
+                alertes.append({
+                    'niveau': 'info',
+                    'rubrique': rubrique.libelle_rubrique,
+                    'type': type_ind,
+                    'ratio_pct': ratio,
+                    'message': (
+                        f"{rubrique.libelle_rubrique} = {ratio}% du base "
+                        f"(en-dessous de la fourchette {regle['min']}–{regle['max']}%)"
+                    ),
+                    'action': (
+                        f"Montant conforme mais inférieur à la norme. "
+                        f"Possibilité d'augmenter jusqu'à {regle['min']}% sans risque."
+                    ),
+                })
+            else:
+                # Conforme — pas de pénalité
+                pass
+
+        # 2. Vérification plafond global 25%
+        total_indemnites = sum(m for _, m, _ in self.indemnites_detectees)
+        ratio_global = (total_indemnites / total_gains * Decimal('100')).quantize(Decimal('0.01')) if total_gains > 0 else Decimal('0')
+
+        if ratio_global > self.PLAFOND_TOTAL_PCT:
+            excedent = total_indemnites - (total_gains * self.PLAFOND_TOTAL_PCT / Decimal('100'))
+            alertes.append({
+                'niveau': 'risque',
+                'rubrique': 'TOTAL INDEMNITÉS',
+                'type': 'plafond_global',
+                'ratio_pct': ratio_global,
+                'seuil_max_pct': self.PLAFOND_TOTAL_PCT,
+                'message': (
+                    f"Total indemnités = {ratio_global}% du brut "
+                    f"(plafond CGI : {self.PLAFOND_TOTAL_PCT}%)"
+                ),
+                'action': (
+                    f"Réduire les indemnités de {excedent:,.0f} GNF pour rester "
+                    f"sous le plafond légal. Sinon l'excédent sera réintégré "
+                    f"dans la base imposable RTS."
+                ),
+            })
+            # -30 pts pour dépassement du plafond global
+            penalites_score += Decimal('30')
+
+        elif ratio_global > self.PLAFOND_TOTAL_PCT - Decimal('3'):
+            marge = self.PLAFOND_TOTAL_PCT - ratio_global
+            alertes.append({
+                'niveau': 'attention',
+                'rubrique': 'TOTAL INDEMNITÉS',
+                'type': 'plafond_global',
+                'ratio_pct': ratio_global,
+                'message': (
+                    f"Total indemnités = {ratio_global}% du brut "
+                    f"(marge restante : {marge}% avant plafond CGI)"
+                ),
+                'action': (
+                    f"Surveiller — marge de seulement {marge}% avant le plafond légal de 25%. "
+                    f"Éviter toute nouvelle indemnité sans justificatif."
+                ),
+            })
+            penalites_score += Decimal('10')
+
+        # 3. Niveau global + score
+        niveaux = [a['niveau'] for a in alertes]
+        if 'risque' in niveaux:
+            niveau_global = 'risque'
+        elif 'attention' in niveaux:
+            niveau_global = 'attention'
+        else:
+            niveau_global = 'info'
+
+        score = max(0, int(Decimal('100') - penalites_score))
+
+        # 4. Recommandation automatique (adaptée à la catégorie)
+        recommandation = self._generer_recommandation(salaire_base, categorie)
+
+        return {
+            'alertes': alertes,
+            'recommandation': recommandation,
+            'resume': {
+                'niveau_global': niveau_global,
+                'score': score,
+                'total_indemnites': total_indemnites,
+                'ratio_global_pct': ratio_global,
+                'salaire_base': salaire_base,
+                'categorie_employe': categorie,
+            },
+            'conformite_meta': self._meta_signature(datetime.now()),
+        }
+
+    # ------------------------------------------------------------------
+    # Méthodes internes
+    # ------------------------------------------------------------------
+
+    def _obtenir_salaire_base(self):
+        """Récupère le salaire de base depuis les éléments."""
+        base = ElementSalaire.objects.filter(
+            employe=self.employe,
+            rubrique__code_rubrique__icontains='SAL_BASE',
+            actif=True
+        ).first()
+        return base.montant if base and base.montant else Decimal('0')
+
+    def _categorie_employe(self):
+        """Retourne la catégorie professionnelle de l'employé."""
+        if hasattr(self.employe, 'poste') and self.employe.poste:
+            return self.employe.poste.categorie_professionnelle or 'tous'
+        return 'tous'
+
+    def _obtenir_regles(self):
+        """Charge les règles de l'entreprise (avec cache)."""
+        if self._regles_cache is None:
+            from .models import RegleIndemnite
+            self._regles_cache = list(
+                RegleIndemnite.objects.filter(
+                    entreprise=self.employe.entreprise,
+                    actif=True
+                )
+            )
+        return self._regles_cache
+
+    def _obtenir_regle(self, type_indemnite, categorie):
+        """
+        Cherche la règle la plus spécifique :
+        1. type + catégorie exacte
+        2. type + 'tous'
+        3. défaut hardcodé
+        """
+        regles = self._obtenir_regles()
+
+        # Recherche spécifique
+        for r in regles:
+            if r.type_indemnite == type_indemnite and r.categorie_employe == categorie:
+                return {
+                    'min': r.seuil_min_pct,
+                    'max': r.seuil_max_pct,
+                    'justification': r.justification_requise,
+                }
+
+        # Recherche générique
+        for r in regles:
+            if r.type_indemnite == type_indemnite and r.categorie_employe == 'tous':
+                return {
+                    'min': r.seuil_min_pct,
+                    'max': r.seuil_max_pct,
+                    'justification': r.justification_requise,
+                }
+
+        # Défaut
+        return self.DEFAULTS.get(type_indemnite, {
+            'min': Decimal('0'),
+            'max': Decimal('10'),
+            'justification': 'Justificatif selon nature de l\'indemnité',
+        })
+
+    def _detecter_type(self, rubrique):
+        """Détecte le type d'indemnité à partir du code/libellé."""
+        code = (rubrique.code_rubrique or '').upper()
+        libelle = (rubrique.libelle_rubrique or '').lower()
+
+        for type_ind, mots in _MAPPING_TYPE_INDEMNITE.items():
+            for mot in mots:
+                if mot.upper() in code or mot in libelle:
+                    return type_ind
+        return 'autre'
+
+    def _taux_optimal_pour_categorie(self, type_ind, categorie, regle):
+        """
+        Calcule le taux optimal en tenant compte de la catégorie.
+
+        Cadre → on vise le haut de la fourchette (max exonération).
+        Employé/ouvrier → on reste au 1er tiers (moins de suspicion fiscale).
+        """
+        ajustements = self.AJUSTEMENTS_CATEGORIE.get(categorie, {})
+        plafond_cat = ajustements.get(type_ind)
+
+        if plafond_cat is not None:
+            # Utiliser le min entre le plafond catégorie et le seuil max de la règle
+            max_effectif = min(plafond_cat, regle['max'])
+        else:
+            max_effectif = regle['max']
+
+        # Cadres → viser 75% de la fourchette (optimisation légitime)
+        # Employés/ouvriers → viser 40% de la fourchette (prudence)
+        if categorie == 'cadre':
+            position = Decimal('0.75')
+        elif categorie in ('employe', 'ouvrier'):
+            position = Decimal('0.40')
+        else:
+            position = Decimal('0.50')  # agent_maitrise ou 'tous'
+
+        taux = regle['min'] + (max_effectif - regle['min']) * position
+        return taux.quantize(Decimal('0.01'))
+
+    def _meta_signature(self, now):
+        """Signature d'audit pour traçabilité rétroactive."""
+        return {
+            'version_moteur': self.VERSION_MOTEUR,
+            'version_regles': self._version_regles(),
+            'date_analyse': now.strftime('%Y-%m-%dT%H:%M:%S'),
+            'moteur': 'AnalyseurConformiteIndemnites',
+        }
+
+    def _version_regles(self):
+        """Hash simplifié de la configuration active."""
+        regles = self._obtenir_regles()
+        if not regles:
+            return 'defaults'
+        ids = sorted(r.pk for r in regles)
+        return f"db-{len(ids)}-{ids[0]}-{ids[-1]}"
+
+    def _generer_recommandation(self, salaire_base, categorie):
+        """
+        Génère une structure recommandée conforme et optimisée,
+        adaptée à la catégorie professionnelle de l'employé.
+        """
+        recommandations = {}
+        total_recommande = Decimal('0')
+
+        for rubrique, montant, _ in self.indemnites_detectees:
+            type_ind = self._detecter_type(rubrique)
+            regle = self._obtenir_regle(type_ind, categorie)
+
+            taux_optimal = self._taux_optimal_pour_categorie(type_ind, categorie, regle)
+            montant_optimal = (salaire_base * taux_optimal / Decimal('100')).quantize(Decimal('1'))
+
+            recommandations[type_ind] = {
+                'rubrique': rubrique.libelle_rubrique,
+                'montant_actuel': montant,
+                'montant_recommande': montant_optimal,
+                'taux_recommande_pct': taux_optimal,
+                'fourchette': f"{regle['min']}–{regle['max']}%",
+                'categorie_appliquee': categorie,
+            }
+            total_recommande += montant_optimal
+
+        # Vérifier que le total recommandé ne dépasse pas 25%
+        brut = self.montants.get('total_gains', Decimal('0'))
+        if brut > 0:
+            ratio_recommande = total_recommande / brut * Decimal('100')
+            if ratio_recommande > self.PLAFOND_TOTAL_PCT:
+                facteur = self.PLAFOND_TOTAL_PCT / ratio_recommande
+                for key in recommandations:
+                    recommandations[key]['montant_recommande'] = (
+                        recommandations[key]['montant_recommande'] * facteur
+                    ).quantize(Decimal('1'))
+
+        return recommandations
 
 
 # Import manquant

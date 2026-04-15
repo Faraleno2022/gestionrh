@@ -353,6 +353,137 @@
             </div>
         </div>
     </div>
+
+    <!-- Alertes de conformité des indemnités -->
+    {% if alertes_conformite or conformite_resume.score %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-{% if conformite_resume.niveau_global == 'risque' %}danger{% elif conformite_resume.niveau_global == 'attention' %}warning{% else %}success{% endif %}">
+                <div class="card-header text-white bg-{% if conformite_resume.niveau_global == 'risque' %}danger{% elif conformite_resume.niveau_global == 'attention' %}warning{% else %}success{% endif %}">
+                    <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fas fa-shield-alt me-2"></i>Conformité des indemnités
+                            {% if conformite_resume.niveau_global == 'risque' %}
+                                — 🔴 Risque fiscal détecté
+                            {% elif conformite_resume.niveau_global == 'attention' %}
+                                — 🟡 Points d'attention
+                            {% else %}
+                                — 🟢 Conforme
+                            {% endif %}
+                        </span>
+                        {% if conformite_resume.score is not None %}
+                        <span class="badge fs-6 bg-{% if conformite_resume.score >= 90 %}success{% elif conformite_resume.score >= 70 %}warning text-dark{% else %}danger{% endif %}">
+                            Score : {{ conformite_resume.score }}/100
+                        </span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if conformite_resume.score is not None %}
+                    <div class="mb-3">
+                        <div class="progress" style="height: 24px;">
+                            <div class="progress-bar bg-{% if conformite_resume.score >= 90 %}success{% elif conformite_resume.score >= 70 %}warning{% else %}danger{% endif %}"
+                                 role="progressbar" style="width: {{ conformite_resume.score }}%"
+                                 aria-valuenow="{{ conformite_resume.score }}" aria-valuemin="0" aria-valuemax="100">
+                                {{ conformite_resume.score }}%
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            {% if conformite_resume.score >= 90 %}Structure salariale conforme aux normes CGI
+                            {% elif conformite_resume.score >= 70 %}Quelques ajustements recommandés
+                            {% else %}Risque fiscal — actions correctives nécessaires{% endif %}
+                        </small>
+                    </div>
+                    {% endif %}
+
+                    {% if conformite_resume.ratio_global_pct %}
+                    <p class="mb-3">
+                        <strong>Ratio global :</strong> {{ conformite_resume.ratio_global_pct }}% du brut
+                        (plafond CGI : 25%)
+                        {% if conformite_resume.categorie_employe and conformite_resume.categorie_employe != 'tous' %}
+                        — <span class="badge bg-info">{{ conformite_resume.categorie_employe }}</span>
+                        {% endif %}
+                    </p>
+                    {% endif %}
+
+                    {% if alertes_conformite %}
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width:5%">Niveau</th>
+                                <th style="width:20%">Rubrique</th>
+                                <th style="width:35%">Constat</th>
+                                <th style="width:40%"><i class="fas fa-hand-point-right me-1"></i>Action recommandée</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for alerte in alertes_conformite %}
+                            <tr class="{% if alerte.niveau == 'risque' %}table-danger{% elif alerte.niveau == 'attention' %}table-warning{% else %}table-success{% endif %}">
+                                <td>
+                                    {% if alerte.niveau == 'risque' %}🔴{% elif alerte.niveau == 'attention' %}🟡{% else %}🟢{% endif %}
+                                </td>
+                                <td><strong>{{ alerte.rubrique }}</strong></td>
+                                <td>{{ alerte.message }}</td>
+                                <td>
+                                    {% if alerte.action %}
+                                    <em>{{ alerte.action }}</em>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recommandations d'optimisation -->
+    {% if recommandations %}
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card shadow-sm border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Recommandations d'optimisation</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Rubrique</th>
+                                <th class="text-end">Montant actuel</th>
+                                <th class="text-end">Montant recommandé</th>
+                                <th>Fourchette</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for type, reco in recommandations.items %}
+                            <tr>
+                                <td>{{ reco.rubrique }}</td>
+                                <td class="text-end">{{ reco.montant_actuel|intcomma }} GNF</td>
+                                <td class="text-end fw-bold text-info">{{ reco.montant_recommande|intcomma }} GNF</td>
+                                <td><span class="badge bg-secondary">{{ reco.fourchette }}</span></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    <small class="text-muted mt-2 d-block">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Les montants recommandés sont adaptés au profil
+                        {% if conformite_resume.categorie_employe and conformite_resume.categorie_employe != 'tous' %}
+                            <strong>{{ conformite_resume.categorie_employe }}</strong>
+                        {% endif %}
+                        et respectent le plafond CGI de 25%.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     
     <!-- Observations -->
     {% if bulletin.observations %}

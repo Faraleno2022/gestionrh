@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     ParametrePaie, Constante, TrancheRTS, Variable,
     PeriodePaie, RubriquePaie, BulletinPaie, ElementSalaire,
-    LigneBulletin, CumulPaie, HistoriquePaie
+    LigneBulletin, CumulPaie, HistoriquePaie, RegleIndemnite
 )
 
 
@@ -209,3 +209,35 @@ class HistoriquePaieAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return qs
         return qs.filter(periode__entreprise=request.user.entreprise)
+
+
+@admin.register(RegleIndemnite)
+class RegleIndemniteAdmin(admin.ModelAdmin):
+    list_display = ['entreprise', 'type_indemnite', 'categorie_employe', 'seuil_min_pct', 'seuil_max_pct', 'actif']
+    list_filter = ['type_indemnite', 'categorie_employe', 'actif']
+    search_fields = ['type_indemnite']
+    ordering = ['entreprise', 'type_indemnite', 'categorie_employe']
+
+    fieldsets = (
+        ('Règle', {
+            'fields': ('entreprise', 'type_indemnite', 'categorie_employe')
+        }),
+        ('Seuils', {
+            'fields': ('seuil_min_pct', 'seuil_max_pct')
+        }),
+        ('Options', {
+            'fields': ('justification_requise', 'actif')
+        }),
+    )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(entreprise=request.user.entreprise)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser and db_field.name == 'entreprise':
+            from core.models import Entreprise
+            kwargs['queryset'] = Entreprise.objects.filter(pk=request.user.entreprise_id)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)

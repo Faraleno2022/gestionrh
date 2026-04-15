@@ -1300,6 +1300,72 @@ class AuditSimulation(models.Model):
         return f"{self.get_action_display()} — {self.utilisateur} — {self.timestamp:%d/%m/%Y %H:%M}"
 
 
+# ============================================================================
+# RÈGLES DE CONFORMITÉ INDEMNITÉS
+# ============================================================================
+
+class RegleIndemnite(models.Model):
+    """Règles de conformité par type d'indemnité (fourchettes marché + profil salarié)"""
+
+    TYPES_INDEMNITE = [
+        ('transport', 'Transport'),
+        ('logement', 'Logement'),
+        ('cherte_vie', 'Cherté de vie'),
+        ('panier', 'Panier'),
+        ('deplacement', 'Déplacement'),
+        ('representation', 'Représentation'),
+        ('autre', 'Autre'),
+    ]
+
+    NIVEAUX_RISQUE = [
+        ('info', '🟢 Conforme'),
+        ('attention', '🟡 À surveiller'),
+        ('risque', '🔴 Risque fiscal'),
+    ]
+
+    CATEGORIES_EMPLOYE = [
+        ('tous', 'Tous'),
+        ('cadre', 'Cadre'),
+        ('agent_maitrise', 'Agent de maîtrise'),
+        ('employe', 'Employé'),
+        ('ouvrier', 'Ouvrier'),
+    ]
+
+    entreprise = models.ForeignKey(
+        'core.Entreprise', on_delete=models.CASCADE,
+        related_name='regles_indemnites'
+    )
+    type_indemnite = models.CharField(max_length=30, choices=TYPES_INDEMNITE)
+    categorie_employe = models.CharField(
+        max_length=30, choices=CATEGORIES_EMPLOYE, default='tous',
+        help_text='Catégorie professionnelle concernée (tous = toutes)'
+    )
+    seuil_min_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        help_text='Seuil minimum recommandé (% du salaire de base)'
+    )
+    seuil_max_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=10,
+        help_text='Seuil maximum recommandé (% du salaire de base)'
+    )
+    justification_requise = models.CharField(
+        max_length=200, blank=True,
+        help_text='Justificatif attendu en cas de contrôle'
+    )
+    actif = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'regles_indemnites'
+        verbose_name = 'Règle indemnité'
+        verbose_name_plural = 'Règles indemnités'
+        unique_together = ['entreprise', 'type_indemnite', 'categorie_employe']
+        ordering = ['type_indemnite', 'categorie_employe']
+
+    def __str__(self):
+        cat = self.get_categorie_employe_display()
+        return f"{self.get_type_indemnite_display()} ({cat}) : {self.seuil_min_pct}–{self.seuil_max_pct}%"
+
+
 # Import des modèles de frais
 from .models_frais import CategoriesFrais, NoteFrais, LigneFrais, BaremeFrais
 
