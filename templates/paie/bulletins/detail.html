@@ -442,13 +442,63 @@
     </div>
     {% endif %}
 
-    <!-- Recommandations d'optimisation -->
+    <!-- Scénarios d'optimisation -->
+    {% if scenarios %}
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card shadow-sm border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-sliders-h me-2"></i>Scénarios d'optimisation
+                        {% if conformite_resume.strategie_recommandee %}
+                        <small class="ms-2 opacity-75">
+                            (recommandé : plafond {{ conformite_resume.plafond_recommande_pct }}%)
+                        </small>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="row g-0">
+                    {% for cle, scenario in scenarios.items %}
+                        <div class="col-md-4 {% if not forloop.last %}border-end{% endif %}">
+                            <div class="p-3 {% if scenario.est_recommande %}bg-light{% endif %}">
+                                <h6 class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>{{ scenario.icone }} {{ scenario.label }}</span>
+                                    {% if scenario.est_recommande %}
+                                    <span class="badge bg-success">Recommandé</span>
+                                    {% endif %}
+                                </h6>
+                                <p class="text-muted small mb-2">{{ scenario.description }}</p>
+                                <p class="fw-bold mb-1">
+                                    Plafond : {{ scenario.plafond_pct }}%
+                                    — Budget : {{ scenario.budget_total|intcomma }} GNF
+                                </p>
+                                <table class="table table-sm table-borderless mb-0 small">
+                                {% for type, rep in scenario.repartition.items %}
+                                    <tr>
+                                        <td>{{ rep.rubrique }}</td>
+                                        <td class="text-end">{{ rep.montant_scenario|intcomma }} GNF</td>
+                                        <td class="text-end text-muted">({{ rep.taux_pct }}%)</td>
+                                    </tr>
+                                {% endfor %}
+                                </table>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recommandations détaillées -->
     {% if recommandations %}
     <div class="row mt-3">
         <div class="col-12">
             <div class="card shadow-sm border-info">
                 <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Recommandations d'optimisation</h5>
+                    <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Recommandation détaillée (profil {{ conformite_resume.categorie_employe|default:"standard" }})</h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-sm mb-0">

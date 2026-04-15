@@ -477,6 +477,7 @@ def detail_bulletin(request, pk):
         alertes_conformite = conformite.get('alertes', [])
         conformite_resume = conformite.get('resume', {})
         recommandations = conformite.get('recommandation', {})
+        scenarios = conformite.get('scenarios', {})
 
     return render(request, 'paie/bulletins/detail.html', {
         'bulletin': bulletin,
@@ -485,6 +486,7 @@ def detail_bulletin(request, pk):
         'alertes_conformite': alertes_conformite,
         'conformite_resume': conformite_resume,
         'recommandations': recommandations,
+        'scenarios': scenarios,
     })
 
 

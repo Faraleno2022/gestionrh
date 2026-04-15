@@ -1857,7 +1857,7 @@ class AnalyseurConformiteIndemnites:
     Fournit aussi une recommandation d'optimisation.
     """
 
-    VERSION_MOTEUR = '1.1'
+    VERSION_MOTEUR = '1.2'
 
     # Fourchettes par défaut (appliquées si aucune RegleIndemnite n'est définie)
     DEFAULTS = {
@@ -1878,6 +1878,39 @@ class AnalyseurConformiteIndemnites:
     }
 
     PLAFOND_TOTAL_PCT = Decimal('25')  # CGI Guinée
+
+    # Stratégies d'optimisation
+    # Les plafonds recommandés varient selon le salaire brut
+    # pour rester crédible vis-à-vis de l'administration fiscale.
+    STRATEGIES = {
+        'maximale': {
+            'label': 'Optimisation maximale',
+            'icone': '🟢',
+            'description': 'Plafond CGI utilisé intégralement (25%). Légal mais peut attirer l\'attention.',
+            'pct': Decimal('25'),
+        },
+        'recommandee': {
+            'label': 'Optimisation recommandée',
+            'icone': '🟡',
+            'description': 'Structure crédible et défendable devant un inspecteur.',
+            'pct': Decimal('20'),
+        },
+        'prudente': {
+            'label': 'Optimisation prudente',
+            'icone': '🟦',
+            'description': 'Très conservateur. Aucun risque de contrôle.',
+            'pct': Decimal('15'),
+        },
+    }
+
+    # Seuils salaire brut pour ajuster la stratégie recommandée
+    SEUILS_SALAIRE = [
+        # (seuil_brut_gnf, plafond_recommandé_pct, raison)
+        (Decimal('10000000'), Decimal('25'), 'Cadre supérieur / direction — 25% justifiable'),
+        (Decimal('6000000'),  Decimal('22'), 'Cadre intermédiaire — 22% crédible'),
+        (Decimal('3000000'),  Decimal('20'), 'Salaire moyen — 20% recommandé'),
+        (Decimal('0'),        Decimal('15'), 'Petit salaire — 15% prudent'),
+    ]
 
     def __init__(self, employe, montants, indemnites_detectees):
         """
@@ -1921,6 +1954,10 @@ class AnalyseurConformiteIndemnites:
         alertes = []
         penalites_score = Decimal('0')  # déductions sur le score /100
         categorie = self._categorie_employe()
+
+        # Déterminer la stratégie recommandée selon salaire + catégorie
+        strategie = self._determiner_strategie(total_gains, categorie)
+        plafond_recommande = strategie['plafond_recommande']
 
         # 1. Analyse par type d'indemnité
         for rubrique, montant, raison in self.indemnites_detectees:
@@ -1991,8 +2028,27 @@ class AnalyseurConformiteIndemnites:
                     f"dans la base imposable RTS."
                 ),
             })
-            # -30 pts pour dépassement du plafond global
             penalites_score += Decimal('30')
+
+        elif ratio_global > plafond_recommande and ratio_global <= self.PLAFOND_TOTAL_PCT:
+            # Légal mais au-dessus du plafond recommandé pour ce profil
+            alertes.append({
+                'niveau': 'attention',
+                'rubrique': 'TOTAL INDEMNITÉS',
+                'type': 'credibilite',
+                'ratio_pct': ratio_global,
+                'seuil_max_pct': plafond_recommande,
+                'message': (
+                    f"Total indemnités = {ratio_global}% du brut — légal (≤25%) "
+                    f"mais au-dessus du seuil recommandé de {plafond_recommande}% "
+                    f"pour ce profil ({strategie['raison']})"
+                ),
+                'action': (
+                    f"Réduire à {plafond_recommande}% pour une structure plus crédible. "
+                    f"Un ratio systématique à 25% peut déclencher un contrôle fiscal."
+                ),
+            })
+            penalites_score += Decimal('8')
 
         elif ratio_global > self.PLAFOND_TOTAL_PCT - Decimal('3'):
             marge = self.PLAFOND_TOTAL_PCT - ratio_global
@@ -2026,9 +2082,13 @@ class AnalyseurConformiteIndemnites:
         # 4. Recommandation automatique (adaptée à la catégorie)
         recommandation = self._generer_recommandation(salaire_base, categorie)
 
+        # 5. Générer les 3 scénarios d'optimisation
+        scenarios = self._generer_scenarios(salaire_base, total_gains, categorie)
+
         return {
             'alertes': alertes,
             'recommandation': recommandation,
+            'scenarios': scenarios,
             'resume': {
                 'niveau_global': niveau_global,
                 'score': score,
@@ -2036,6 +2096,8 @@ class AnalyseurConformiteIndemnites:
                 'ratio_global_pct': ratio_global,
                 'salaire_base': salaire_base,
                 'categorie_employe': categorie,
+                'strategie_recommandee': strategie['nom'],
+                'plafond_recommande_pct': plafond_recommande,
             },
             'conformite_meta': self._meta_signature(datetime.now()),
         }
@@ -2160,6 +2222,96 @@ class AnalyseurConformiteIndemnites:
             return 'defaults'
         ids = sorted(r.pk for r in regles)
         return f"db-{len(ids)}-{ids[0]}-{ids[-1]}"
+
+    def _determiner_strategie(self, salaire_brut, categorie):
+        """
+        Détermine le plafond recommandé selon le salaire brut + catégorie.
+
+        Un cadre à 10M+ peut justifier 25%.
+        Un employé à 3M ne devrait pas dépasser 20%.
+        """
+        # Les cadres bénéficient d'un bonus de +3% sur le plafond recommandé
+        bonus_cadre = Decimal('3') if categorie == 'cadre' else Decimal('0')
+
+        for seuil, pct, raison in self.SEUILS_SALAIRE:
+            if salaire_brut >= seuil:
+                plafond = min(pct + bonus_cadre, self.PLAFOND_TOTAL_PCT)
+                return {
+                    'nom': self._nom_strategie(plafond),
+                    'plafond_recommande': plafond,
+                    'raison': raison,
+                }
+
+        return {
+            'nom': 'prudente',
+            'plafond_recommande': Decimal('15'),
+            'raison': 'Profil non identifié — prudence par défaut',
+        }
+
+    def _nom_strategie(self, plafond):
+        """Détermine le nom de la stratégie à partir du plafond."""
+        if plafond >= Decimal('25'):
+            return 'maximale'
+        elif plafond >= Decimal('20'):
+            return 'recommandee'
+        return 'prudente'
+
+    def _generer_scenarios(self, salaire_base, total_gains, categorie):
+        """
+        Génère 3 scénarios d'optimisation pour que le client choisisse.
+
+        Chaque scénario montre la répartition recommandée des indemnités
+        sous le plafond correspondant.
+        """
+        scenarios = {}
+        strategie_reco = self._determiner_strategie(total_gains, categorie)
+
+        for cle, strat in self.STRATEGIES.items():
+            plafond_pct = strat['pct']
+            # Budget total indemnités pour ce scénario
+            budget = (total_gains * plafond_pct / Decimal('100')).quantize(Decimal('1'))
+
+            # Répartir le budget selon les types d'indemnité détectés
+            repartition = {}
+            nb_types = max(1, len(self.indemnites_detectees))
+
+            for rubrique, montant_actuel, _ in self.indemnites_detectees:
+                type_ind = self._detecter_type(rubrique)
+                regle = self._obtenir_regle(type_ind, categorie)
+
+                # Proportionner le budget selon les fourchettes
+                taux = self._taux_optimal_pour_categorie(type_ind, categorie, regle)
+                montant_scenario = (salaire_base * taux / Decimal('100')).quantize(Decimal('1'))
+
+                repartition[type_ind] = {
+                    'rubrique': rubrique.libelle_rubrique,
+                    'montant_actuel': montant_actuel,
+                    'montant_scenario': montant_scenario,
+                    'taux_pct': taux,
+                }
+
+            # Vérifier que le total du scénario ne dépasse pas le budget
+            total_scenario = sum(r['montant_scenario'] for r in repartition.values())
+            if total_scenario > budget and total_scenario > 0:
+                facteur = budget / total_scenario
+                for key in repartition:
+                    repartition[key]['montant_scenario'] = (
+                        repartition[key]['montant_scenario'] * facteur
+                    ).quantize(Decimal('1'))
+                total_scenario = budget
+
+            scenarios[cle] = {
+                'label': strat['label'],
+                'icone': strat['icone'],
+                'description': strat['description'],
+                'plafond_pct': plafond_pct,
+                'budget_total': budget,
+                'total_scenario': total_scenario,
+                'repartition': repartition,
+                'est_recommande': (cle == strategie_reco['nom']),
+            }
+
+        return scenarios
 
     def _generer_recommandation(self, salaire_base, categorie):
         """
