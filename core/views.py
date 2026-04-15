@@ -47,6 +47,12 @@ def documentation_legale_print(request):
     return render(request, 'core/documentation_legale_print.html')
 
 
+@login_required
+def guide_utilisateur(request):
+    """Guide utilisateur complet de GuinéeRH"""
+    return render(request, 'documentation/guide_utilisateur.html')
+
+
 def login_view(request):
     """Vue de connexion"""
     if request.user.is_authenticated:
