@@ -2079,10 +2079,15 @@ class AnalyseurConformiteIndemnites:
 
         score = max(0, int(Decimal('100') - penalites_score))
 
-        # 4. Recommandation automatique (adaptée à la catégorie)
+        # 4. Évaluation du risque fiscal global
+        risque_fiscal = self._evaluer_risque_fiscal(
+            ratio_global, plafond_recommande, categorie, alertes, score
+        )
+
+        # 5. Recommandation automatique (adaptée à la catégorie)
         recommandation = self._generer_recommandation(salaire_base, categorie)
 
-        # 5. Générer les 3 scénarios d'optimisation
+        # 6. Générer les 3 scénarios d'optimisation
         scenarios = self._generer_scenarios(salaire_base, total_gains, categorie)
 
         return {
@@ -2092,6 +2097,7 @@ class AnalyseurConformiteIndemnites:
             'resume': {
                 'niveau_global': niveau_global,
                 'score': score,
+                'risque_fiscal': risque_fiscal,
                 'total_indemnites': total_indemnites,
                 'ratio_global_pct': ratio_global,
                 'salaire_base': salaire_base,
@@ -2205,6 +2211,82 @@ class AnalyseurConformiteIndemnites:
 
         taux = regle['min'] + (max_effectif - regle['min']) * position
         return taux.quantize(Decimal('0.01'))
+
+    def _evaluer_risque_fiscal(self, ratio_global, plafond_recommande, categorie, alertes, score):
+        """
+        Évalue le niveau de risque fiscal global.
+
+        Combine 3 facteurs :
+        1. Écart entre le ratio réel et le seuil recommandé
+        2. Cohérence de la structure (nb d'alertes attention/risque)
+        3. Catégorie du salarié (cadre = plus de marge)
+
+        Returns:
+            dict {'niveau': 'faible'|'modere'|'eleve', 'label': ..., 'explication': ...}
+        """
+        nb_alertes_risque = sum(1 for a in alertes if a['niveau'] == 'risque')
+        nb_alertes_attention = sum(1 for a in alertes if a['niveau'] == 'attention')
+
+        # Facteur 1 : position du ratio
+        if ratio_global > self.PLAFOND_TOTAL_PCT:
+            facteur_ratio = 'eleve'
+        elif ratio_global > plafond_recommande:
+            facteur_ratio = 'modere'
+        else:
+            facteur_ratio = 'faible'
+
+        # Facteur 2 : concentration des alertes
+        if nb_alertes_risque >= 1:
+            facteur_alertes = 'eleve'
+        elif nb_alertes_attention >= 2:
+            facteur_alertes = 'modere'
+        else:
+            facteur_alertes = 'faible'
+
+        # Facteur 3 : catégorie (les cadres ont plus de légitimité pour les indemnités)
+        bonus_categorie = categorie in ('cadre', 'agent_maitrise')
+
+        # Synthèse
+        niveaux = [facteur_ratio, facteur_alertes]
+        if 'eleve' in niveaux:
+            niveau = 'eleve'
+        elif 'modere' in niveaux:
+            # Un cadre avec modéré descend à faible si score > 80
+            if bonus_categorie and score >= 80:
+                niveau = 'faible'
+            else:
+                niveau = 'modere'
+        else:
+            niveau = 'faible'
+
+        # Labels et explications contextualisées
+        labels = {
+            'faible': {
+                'label': '🟢 Risque faible',
+                'explication': (
+                    'Structure salariale conforme et crédible. '
+                    'Aucun élément susceptible de déclencher un contrôle.'
+                ),
+            },
+            'modere': {
+                'label': '🟡 Risque modéré',
+                'explication': (
+                    'Structure légale mais optimisée au-delà du seuil recommandé. '
+                    'Un inspecteur pourrait demander des justificatifs.'
+                ),
+            },
+            'eleve': {
+                'label': '🔴 Risque élevé',
+                'explication': (
+                    'Structure à risque de requalification fiscale. '
+                    'Action corrective recommandée avant tout contrôle.'
+                ),
+            },
+        }
+
+        result = labels[niveau].copy()
+        result['niveau'] = niveau
+        return result
 
     def _meta_signature(self, now):
         """Signature d'audit pour traçabilité rétroactive."""

@@ -396,6 +396,19 @@
                     </div>
                     {% endif %}
 
+                    {% if conformite_resume.risque_fiscal %}
+                    <div class="alert alert-{% if conformite_resume.risque_fiscal.niveau == 'eleve' %}danger{% elif conformite_resume.risque_fiscal.niveau == 'modere' %}warning{% else %}success{% endif %} d-flex align-items-start mb-3" role="alert">
+                        <div class="fs-4 me-3">
+                            {% if conformite_resume.risque_fiscal.niveau == 'eleve' %}🔴{% elif conformite_resume.risque_fiscal.niveau == 'modere' %}🟡{% else %}🟢{% endif %}
+                        </div>
+                        <div>
+                            <strong>{{ conformite_resume.risque_fiscal.label }}</strong>
+                            <br>
+                            <span class="small">{{ conformite_resume.risque_fiscal.explication }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     {% if conformite_resume.ratio_global_pct %}
                     <p class="mb-3">
                         <strong>Ratio global :</strong> {{ conformite_resume.ratio_global_pct }}% du brut
