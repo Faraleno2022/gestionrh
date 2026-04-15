@@ -1,0 +1,69 @@
+<?xml version='1.0' encoding='utf8'?>
+<nuitka-compilation-report nuitka_version="4.0.8" nuitka_commercial_version="not installed" mode="module" completion="error exit message (1)" exit_message="Failed unexpectedly in Scons C backend compilation.">
+  <module name="project_guardian" kind="CompiledPythonModule" usage="root_module" reason="Root module" source_path="${cwd}\project_guardian.py">
+    <optimization-time pass="1" time="0.17" micro_passes="5" max_branch_merge="14" merged_total="1442" />
+    <optimization-time pass="2" time="0.02" micro_passes="1" max_branch_merge="13" merged_total="283" />
+    <code-generation-time time="0.33" />
+    <module_usages>
+      <module_usage name="os" finding="excluded" line="21" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="sys" finding="absolute" line="22" />
+      <module_usage name="hmac" finding="excluded" line="23" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="json" finding="excluded" line="24" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="hashlib" finding="excluded" line="25" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="socket" finding="excluded" line="26" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="platform" finding="excluded" line="27" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="uuid" finding="excluded" line="28" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="time" finding="absolute" line="29" />
+      <module_usage name="logging" finding="excluded" line="30" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="pathlib" finding="excluded" line="31" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="pathlib.Path" finding="not-found" line="31" />
+      <module_usage name="datetime" finding="excluded" line="32" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="winreg" finding="absolute" line="76" />
+      <module_usage name="license_manager" finding="absolute" line="263" />
+      <module_usage name="ctypes" finding="excluded" line="293" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="ctypes" finding="excluded" line="303" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+      <module_usage name="runtime_shield" finding="absolute" line="326" />
+      <module_usage name="io" finding="excluded" line="548" exclusion_reason="Not following into stdlib unless standalone or requested to follow into stdlib." />
+    </module_usages>
+  </module>
+  <performance>
+    <memory_usage name="after_launch" value="35086336" />
+    <memory_usage name="before_c_code_generation" value="50343936" />
+    <memory_usage name="before_running_scons" value="52957184" />
+  </performance>
+  <data_composer blob_size="7243" total="338">
+    <module_data filename="__bytecode.const" blob_name=".bytecode" blob_size="3" input_size="0" />
+    <module_data filename="__constants.const" blob_name="" blob_size="847" input_size="2136" />
+    <module_data filename="module.project_guardian.const" blob_name="project_guardian" blob_size="6345" input_size="9422" />
+  </data_composer>
+  <command_line>
+    <option value="--assume-yes-for-downloads" />
+    <option value="--module" />
+    <option value="--output-dir=dist_nuitka" />
+    <option value="--remove-output" />
+    <option value="--python-flag=no_docstrings" />
+    <option value="--python-flag=no_asserts" />
+    <option value="project_guardian.py" />
+  </command_line>
+  <plugins>
+    <plugin name="anti-bloat" user_enabled="no" />
+    <plugin name="eventlet" user_enabled="no" />
+    <plugin name="gi" user_enabled="no" />
+    <plugin name="implicit-imports" user_enabled="no" />
+    <plugin name="options-nanny" user_enabled="no" />
+    <plugin name="pkg-resources" user_enabled="no" />
+    <plugin name="transformers" user_enabled="no" />
+  </plugins>
+  <distributions />
+  <python python_exe="${sys.prefix}\Scripts\python.exe" python_flavor="CPython Official" python_version="3.13.11" os_name="Windows" os_release="11" arch_name="x86_64" filesystem_encoding="utf-8" gil="yes">
+    <search_path>
+      <path value="${cwd}" />
+      <path value="${sys.real_prefix}\DLLs" />
+      <path value="${sys.real_prefix}\Lib" />
+      <path value="${sys.real_prefix}" />
+      <path value="${sys.prefix}" />
+      <path value="${sys.prefix}\Lib\site-packages" />
+    </search_path>
+  </python>
+  <output run_filename="${cwd}\dist_nuitka\project_guardian.cp313-win_amd64.pyd" />
+</nuitka-compilation-report>

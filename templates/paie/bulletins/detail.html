@@ -397,14 +397,32 @@
                     {% endif %}
 
                     {% if conformite_resume.risque_fiscal %}
-                    <div class="alert alert-{% if conformite_resume.risque_fiscal.niveau == 'eleve' %}danger{% elif conformite_resume.risque_fiscal.niveau == 'modere' %}warning{% else %}success{% endif %} d-flex align-items-start mb-3" role="alert">
+                    <div class="alert alert-{{ conformite_resume.risque_fiscal.decision_classe }} d-flex align-items-start mb-3" role="alert">
                         <div class="fs-4 me-3">
                             {% if conformite_resume.risque_fiscal.niveau == 'eleve' %}🔴{% elif conformite_resume.risque_fiscal.niveau == 'modere' %}🟡{% else %}🟢{% endif %}
                         </div>
-                        <div>
-                            <strong>{{ conformite_resume.risque_fiscal.label }}</strong>
-                            <br>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong>{{ conformite_resume.risque_fiscal.label }}</strong>
+                                <span class="badge bg-{{ conformite_resume.risque_fiscal.decision_classe }} fs-6">
+                                    {{ conformite_resume.risque_fiscal.decision_icone }} {{ conformite_resume.risque_fiscal.decision }}
+                                </span>
+                            </div>
                             <span class="small">{{ conformite_resume.risque_fiscal.explication }}</span>
+                            {% if conformite_resume.risque_fiscal.defense %}
+                            <div class="mt-2 p-2 bg-white bg-opacity-50 rounded border-start border-3 border-{{ conformite_resume.risque_fiscal.decision_classe }}">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <small class="text-muted"><i class="fas fa-gavel"></i> Phrase de défense :</small>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="copierDefense(this)" data-defense="{{ conformite_resume.risque_fiscal.defense }}" title="Copier l'argumentaire">
+                                        <i class="fas fa-copy"></i> Copier
+                                    </button>
+                                </div>
+                                <em class="small" id="texte-defense">« {{ conformite_resume.risque_fiscal.defense }} »</em>
+                                <div class="mt-1 border-top pt-1">
+                                    <small class="text-muted fst-italic">⚖️ Recommandation basée sur les pratiques fiscales usuelles en République de Guinée (CGI, art. 55)</small>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                     {% endif %}
@@ -592,5 +610,39 @@
         </div>
     </div>
 </div>
+
+<script>
+function copierDefense(btn) {
+    var texte = btn.getAttribute('data-defense');
+    var complet = texte + '\n\n⚖️ Recommandation basée sur les pratiques fiscales usuelles en République de Guinée (CGI, art. 55)';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(complet).then(function() {
+            var original = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
+            btn.classList.replace('btn-outline-secondary', 'btn-success');
+            setTimeout(function() {
+                btn.innerHTML = original;
+                btn.classList.replace('btn-success', 'btn-outline-secondary');
+            }, 2000);
+        });
+    } else {
+        var ta = document.createElement('textarea');
+        ta.value = complet;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        var original = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
+        btn.classList.replace('btn-outline-secondary', 'btn-success');
+        setTimeout(function() {
+            btn.innerHTML = original;
+            btn.classList.replace('btn-success', 'btn-outline-secondary');
+        }, 2000);
+    }
+}
+</script>
 {% endblock %}
 

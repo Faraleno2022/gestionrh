@@ -1857,7 +1857,7 @@ class AnalyseurConformiteIndemnites:
     Fournit aussi une recommandation d'optimisation.
     """
 
-    VERSION_MOTEUR = '1.2'
+    VERSION_MOTEUR = '1.2.2'
 
     # Fourchettes par défaut (appliquées si aucune RegleIndemnite n'est définie)
     DEFAULTS = {
@@ -2259,7 +2259,7 @@ class AnalyseurConformiteIndemnites:
         else:
             niveau = 'faible'
 
-        # Labels et explications contextualisées
+        # Labels, explications, phrase de défense et décision
         labels = {
             'faible': {
                 'label': '🟢 Risque faible',
@@ -2267,6 +2267,14 @@ class AnalyseurConformiteIndemnites:
                     'Structure salariale conforme et crédible. '
                     'Aucun élément susceptible de déclencher un contrôle.'
                 ),
+                'defense': (
+                    'La structure de rémunération est conforme aux seuils usuels '
+                    'du Code Général des Impôts et cohérente avec le niveau '
+                    'de responsabilité et la catégorie professionnelle du salarié.'
+                ),
+                'decision': 'Valider',
+                'decision_icone': '✅',
+                'decision_classe': 'success',
             },
             'modere': {
                 'label': '🟡 Risque modéré',
@@ -2274,6 +2282,15 @@ class AnalyseurConformiteIndemnites:
                     'Structure légale mais optimisée au-delà du seuil recommandé. '
                     'Un inspecteur pourrait demander des justificatifs.'
                 ),
+                'defense': (
+                    'La structure respecte le plafond légal de 25% du CGI mais '
+                    'dépasse les pratiques usuelles pour ce profil salarial. '
+                    'Une justification documentaire des indemnités forfaitaires '
+                    'est recommandée (baux, ordres de mission, attestations).'
+                ),
+                'decision': 'Ajuster recommandé',
+                'decision_icone': '⚠️',
+                'decision_classe': 'warning',
             },
             'eleve': {
                 'label': '🔴 Risque élevé',
@@ -2281,6 +2298,15 @@ class AnalyseurConformiteIndemnites:
                     'Structure à risque de requalification fiscale. '
                     'Action corrective recommandée avant tout contrôle.'
                 ),
+                'defense': (
+                    'La structure dépasse les limites fiscales du CGI et expose '
+                    'l\'entreprise à un risque élevé de requalification des '
+                    'indemnités en salaire imposable, avec redressement '
+                    'et pénalités de retard.'
+                ),
+                'decision': 'Corriger immédiatement',
+                'decision_icone': '🚨',
+                'decision_classe': 'danger',
             },
         }
 
