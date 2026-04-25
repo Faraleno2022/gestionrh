@@ -57,6 +57,38 @@
     </div>
 </div>
 
+<!-- Filtre période -->
+<form method="get" class="row g-2 align-items-end mb-3 p-3 bg-light rounded shadow-sm">
+    <div class="col-auto">
+        <label for="filtre-mois" class="form-label small mb-1 text-muted">
+            <i class="bi bi-calendar3"></i> Mois
+        </label>
+        <select name="mois" id="filtre-mois" class="form-select form-select-sm">
+            {% for num, nom in mois_labels %}
+                <option value="{{ num }}" {% if num == mois_filtre %}selected{% endif %}>{{ nom }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <label for="filtre-annee" class="form-label small mb-1 text-muted">
+            <i class="bi bi-calendar-event"></i> Année
+        </label>
+        <select name="annee" id="filtre-annee" class="form-select form-select-sm">
+            {% for an in annees_disponibles %}
+                <option value="{{ an }}" {% if an == annee_filtre %}selected{% endif %}>{{ an }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-primary">
+            <i class="bi bi-funnel"></i> Filtrer
+        </button>
+        <a href="{% url 'dashboard:index' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-counterclockwise"></i> Mois en cours
+        </a>
+    </div>
+</form>
+
 <!-- Cartes statistiques principales -->
 <div class="row mb-4">
     <div class="col-xl-3 col-md-6 mb-4">
@@ -140,6 +172,97 @@
                         <i class="bi bi-file-earmark-text fs-2 text-gray-300"></i>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cotisations & Taxes du mois -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h5 class="mb-3"><i class="bi bi-bank"></i> Cotisations & Taxes (mois en cours)</h5>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-left-primary shadow-sm h-100 py-2">
+            <div class="card-body">
+                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">CNSS 5% (Employé)</div>
+                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                    {{ total_cnss_5|floatformat:0|intcomma }} GNF
+                </div>
+                <small class="text-muted">Part salariale</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-left-info shadow-sm h-100 py-2">
+            <div class="card-body">
+                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">CNSS 18% (Employeur)</div>
+                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                    {{ total_cnss_18|floatformat:0|intcomma }} GNF
+                </div>
+                <small class="text-muted">Part patronale</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-left-success shadow-sm h-100 py-2">
+            <div class="card-body">
+                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">CNSS 23% (Total)</div>
+                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                    {{ total_cnss_23|floatformat:0|intcomma }} GNF
+                </div>
+                <small class="text-muted">Employé + Employeur</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-left-warning shadow-sm h-100 py-2">
+            <div class="card-body">
+                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">TRS</div>
+                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                    {{ total_trs|floatformat:0|intcomma }} GNF
+                </div>
+                <small class="text-muted">Retenue sur Salaires</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-left-danger shadow-sm h-100 py-2">
+            <div class="card-body">
+                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">VF</div>
+                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                    {{ total_vf|floatformat:0|intcomma }} GNF
+                </div>
+                <small class="text-muted">Versement Forfaitaire</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-left-secondary shadow-sm h-100 py-2">
+            <div class="card-body">
+                <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">ONFPP</div>
+                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                    {{ total_onfpp|floatformat:0|intcomma }} GNF
+                </div>
+                <small class="text-muted">Contribution formation</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6 col-md-12 mb-3">
+        <div class="card border-left-dark shadow-sm h-100 py-2">
+            <div class="card-body">
+                <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">DMU - Déclaration Mensuelle Unique</div>
+                <div class="h4 mb-0 font-weight-bold text-gray-800">
+                    {{ total_dmu|floatformat:0|intcomma }} GNF
+                </div>
+                <small class="text-muted">Total CNSS (23%) + TRS + VF + ONFPP + TA</small>
             </div>
         </div>
     </div>

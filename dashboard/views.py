@@ -22,7 +22,33 @@ def index(request):
         return redirect('comptabilite:compte-bancaire-list')
     
     entreprise_id = request.user.entreprise_id
-    
+
+    # Filtre période (mois/année) — défaut = mois en cours
+    now = timezone.now()
+    try:
+        mois_filtre = int(request.GET.get('mois', now.month))
+        annee_filtre = int(request.GET.get('annee', now.year))
+    except (TypeError, ValueError):
+        mois_filtre, annee_filtre = now.month, now.year
+    if not (1 <= mois_filtre <= 12):
+        mois_filtre = now.month
+    if not (2000 <= annee_filtre <= 2100):
+        annee_filtre = now.year
+
+    mois_labels = [
+        (1, 'Janvier'), (2, 'Février'), (3, 'Mars'), (4, 'Avril'),
+        (5, 'Mai'), (6, 'Juin'), (7, 'Juillet'), (8, 'Août'),
+        (9, 'Septembre'), (10, 'Octobre'), (11, 'Novembre'), (12, 'Décembre'),
+    ]
+    annees_disponibles = list(range(now.year - 5, now.year + 2))
+
+    filtre_context = {
+        'mois_filtre': mois_filtre,
+        'annee_filtre': annee_filtre,
+        'mois_labels': mois_labels,
+        'annees_disponibles': annees_disponibles,
+    }
+
     # Si l'utilisateur n'a pas d'entreprise, afficher un dashboard vide avec alerte
     if not entreprise_id:
         context = {
@@ -34,16 +60,19 @@ def index(request):
             'conges_en_cours': 0, 'employes_en_conge': [],
             'conges_en_attente': 0, 'bulletins_calcules': 0,
             'bulletins_valides': 0, 'masse_salariale': 0, 'pointages_jour': 0,
+            'total_trs': 0, 'total_vf': 0, 'total_ta': 0, 'total_onfpp': 0,
+            'total_cnss_5': 0, 'total_cnss_18': 0, 'total_cnss_23': 0, 'total_dmu': 0,
             'alertes': [{
                 'type': 'warning',
                 'icon': 'bi-exclamation-triangle',
                 'message': 'Aucune entreprise associée à votre compte. Veuillez contacter l\'administrateur.'
             }],
+            **filtre_context,
         }
         return render(request, 'dashboard/index.html', context)
-    
-    cache_key = f'dashboard_stats_{entreprise_id}'
-    
+
+    cache_key = f'dashboard_stats_{entreprise_id}_{annee_filtre}_{mois_filtre}'
+
     # Essayer de récupérer du cache
     cached_data = cache.get(cache_key)
     if cached_data:
@@ -121,15 +150,12 @@ def index(request):
         employe__entreprise=request.user.entreprise,
     ).count()
     
-    # Paie du mois en cours
-    mois_actuel = timezone.now().month
-    annee_actuelle = timezone.now().year
-    
+    # Paie de la période sélectionnée (filtre mois/année)
     try:
         periode_actuelle = PeriodePaie.objects.get(
             entreprise=request.user.entreprise,
-            annee=annee_actuelle,
-            mois=mois_actuel
+            annee=annee_filtre,
+            mois=mois_filtre
         )
         bulletins_mois = BulletinPaie.objects.filter(
             periode=periode_actuelle,
@@ -137,13 +163,42 @@ def index(request):
         )
         context['bulletins_calcules'] = bulletins_mois.filter(statut_bulletin='calcule').count()
         context['bulletins_valides'] = bulletins_mois.filter(statut_bulletin='valide').count()
-        context['masse_salariale'] = bulletins_mois.aggregate(
-            total=Sum('net_a_payer')
-        )['total'] or 0
+        totaux = bulletins_mois.aggregate(
+            net=Sum('net_a_payer'),
+            trs=Sum('irg'),
+            vf=Sum('versement_forfaitaire'),
+            ta=Sum('taxe_apprentissage'),
+            onfpp=Sum('contribution_onfpp'),
+            cnss_5=Sum('cnss_employe'),
+            cnss_18=Sum('cnss_employeur'),
+        )
+        context['masse_salariale'] = totaux['net'] or 0
+        context['total_trs'] = totaux['trs'] or 0
+        context['total_vf'] = totaux['vf'] or 0
+        context['total_ta'] = totaux['ta'] or 0
+        context['total_onfpp'] = totaux['onfpp'] or 0
+        context['total_cnss_5'] = totaux['cnss_5'] or 0
+        context['total_cnss_18'] = totaux['cnss_18'] or 0
+        context['total_cnss_23'] = (totaux['cnss_5'] or 0) + (totaux['cnss_18'] or 0)
+        context['total_dmu'] = (
+            (totaux['trs'] or 0)
+            + (totaux['vf'] or 0)
+            + (totaux['ta'] or 0)
+            + (totaux['onfpp'] or 0)
+            + context['total_cnss_23']
+        )
     except PeriodePaie.DoesNotExist:
         context['bulletins_calcules'] = 0
         context['bulletins_valides'] = 0
         context['masse_salariale'] = 0
+        context['total_trs'] = 0
+        context['total_vf'] = 0
+        context['total_ta'] = 0
+        context['total_onfpp'] = 0
+        context['total_cnss_5'] = 0
+        context['total_cnss_18'] = 0
+        context['total_cnss_23'] = 0
+        context['total_dmu'] = 0
     
     # Pointages du jour
     context['pointages_jour'] = Pointage.objects.filter(
@@ -206,9 +261,12 @@ def index(request):
             'message': f'{context["conges_en_attente"]} demande(s) de congé en attente'
         })
     
+    # Ajouter les variables de filtre au contexte
+    context.update(filtre_context)
+
     # Mettre en cache pour 2 minutes
     cache.set(cache_key, context, 120)
-    
+
     return render(request, 'dashboard/index.html', context)
 
 

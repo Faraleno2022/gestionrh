@@ -28,6 +28,22 @@ from core.models import Devise
 import calendar
 
 
+def _to_json_safe(value):
+    """Convertit récursivement Decimal/date/datetime en types JSON-sérialisables
+    (str pour Decimal, ISO 8601 pour date/datetime). Requis avant stockage dans
+    un JSONField SQLite, qui utilise json.dumps sans encodeur custom."""
+    from datetime import date as _date, datetime as _datetime
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, (_datetime, _date)):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {k: _to_json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_to_json_safe(v) for v in value]
+    return value
+
+
 # ============================================================================
 # DÉTECTION INTELLIGENTE DES INDEMNITÉS FORFAITAIRES EXONÉRÉES DE RTS
 # Législation guinéenne (CGI): les indemnités forfaitaires (transport, logement,
@@ -967,30 +983,45 @@ class MoteurCalculPaie:
             )
         
         # Versement Forfaitaire (VF) - charge patronale
-        # Règle CGI Guinée : VF = Brut × 6% (base = salaire brut, sans déduction)
+        # Règle CGI Guinée :
+        #   Déduction VF = min(brut, 2 500 000) × 6%  (donc plafonnée à 150 000)
+        #   Base VF      = Brut − Déduction VF
+        #   VF final     = Base VF × 6%
+        # Exemples :
+        #   brut 2 000 000 → déduction = 120 000 → base 1 880 000 → VF 112 800
+        #   brut 2 500 000 → déduction = 150 000 → base 2 350 000 → VF 141 000
+        #   brut 4 229 834 → déduction = 150 000 (plafond) → base 4 079 834 → VF 244 790
         taux_vf = self.constantes.get('TAUX_VF', Decimal('6.00'))
+        plafond_deduction_vf = self.constantes.get('PLAFOND_CNSS', Decimal('2500000'))
 
-        # Appliquer les paramètres personnalisés pour la base VF/TA
         from .formules import evaluer_formule as _evaluer_vf
         params_vf = getattr(self.employe.entreprise, 'parametres_calcul_paie', None)
 
-        if params_vf and params_vf.mode_base_vf == 'brut_moins_deduction':
-            # Brut − déduction fixe (si brut ≥ 2.5M : −150 000)
-            if base_vf_ta >= Decimal('2500000'):
-                base_vf_nette = base_vf_ta - Decimal('150000')
-            else:
-                base_vf_nette = base_vf_ta
-        elif params_vf and params_vf.mode_base_vf == 'formule' and params_vf.formule_base_vf:
+        if params_vf and params_vf.mode_base_vf == 'formule' and params_vf.formule_base_vf:
+            # Mode personnalisé : formule définie par l'entreprise
             variables_vf = self._construire_variables_formule()
             variables_vf['brut'] = float(base_vf_ta)
             try:
                 base_vf_nette = _evaluer_vf(params_vf.formule_base_vf, variables_vf)
+                deduction_vf = base_vf_ta - base_vf_nette
             except ValueError:
-                base_vf_nette = base_vf_ta  # fallback brut direct
+                deduction_vf = self._arrondir(
+                    min(base_vf_ta, plafond_deduction_vf) * taux_vf / Decimal('100')
+                )
+                base_vf_nette = base_vf_ta - deduction_vf
+        elif params_vf and params_vf.mode_base_vf == 'brut':
+            # Mode legacy : base = brut directement, pas de déduction
+            deduction_vf = Decimal('0')
+            base_vf_nette = base_vf_ta
         else:
-            base_vf_nette = base_vf_ta  # base = brut directement
+            # Mode par défaut : Brut − min(brut, 2,5M) × 6%
+            deduction_vf = self._arrondir(
+                min(base_vf_ta, plafond_deduction_vf) * taux_vf / Decimal('100')
+            )
+            base_vf_nette = base_vf_ta - deduction_vf
+
         self.montants['base_vf'] = base_vf_nette
-        self.montants['deduction_vf'] = Decimal('0')
+        self.montants['deduction_vf'] = deduction_vf
         self.montants['taux_vf'] = taux_vf
         self.montants['versement_forfaitaire'] = self._arrondir(
             base_vf_nette * taux_vf / Decimal('100')
@@ -1231,26 +1262,55 @@ class MoteurCalculPaie:
     
     def _calculer_irg_progressif(self, base_imposable):
         """
-        Calculer l'RTS selon le barème progressif CGI 2022.
-        
-        Barème RTS Guinée (6 tranches continues, CGI officiel):
-        - 0 - 1 000 000 GNF: 0%
-        - 1 000 001 - 5 000 000 GNF: 10%
-        - 5 000 001 - 10 000 000 GNF: 15%
-        - 10 000 001 - 15 000 000 GNF: 20%
-        - 15 000 001 - 20 000 000 GNF: 25%
-        - Au-delà 20 000 000 GNF: 35%
-        
-        Utilise des comparaisons absolues sur les bornes pour éviter
-        les erreurs d'arrondi liées aux gaps entre tranches (1000001 vs 1000000).
+        Calcule la RTS (Retenue à la Source) selon le barème progressif CGI Guinée.
+
+        Barème officiel CGI 2022+ (cf. manuel_paie_guinee_CORRIGE_2026) :
+            T1 : 0           - 1 000 000   GNF  → 0%
+            T2 : 1 000 001   - 3 000 000   GNF  → 5%
+            T3 : 3 000 001   - 5 000 000   GNF  → 8%
+            T4 : 5 000 001   - 10 000 000  GNF  → 10%
+            T5 : 10 000 001  - 20 000 000  GNF  → 15%
+            T6 : au-delà de 20 000 000     GNF  → 20%
+
+        Les bornes sont lues depuis TrancheRTS (DB) avec fallback codé en dur
+        dans _charger_tranches_irg. On normalise les bornes pour que les gaps
+        de 1 GNF (ex : T1 finit à 1 000 000 et T2 commence à 1 000 001) ne
+        causent pas de perte de 1 GNF dans le calcul progressif.
+
+        Exemple (base = 3 185 426) :
+            T1 :   1 000 000 ×  0% =        0
+            T2 :   2 000 000 ×  5% =  100 000
+            T3 :     185 426 ×  8% =   14 834
+            TOTAL RTS                 114 834 GNF
         """
         if base_imposable <= 0:
             return Decimal('0')
-        
+
+        seuils = self._construire_seuils_rts()
+
         irg_total = Decimal('0')
-        
-        # Construire les seuils continus à partir des tranches
-        # On normalise les bornes pour éliminer les gaps de 1 GNF
+        for borne_inf, borne_sup, taux in seuils:
+            if base_imposable <= borne_inf:
+                break
+
+            if borne_sup is not None:
+                montant_tranche = min(base_imposable, borne_sup) - borne_inf
+            else:
+                montant_tranche = base_imposable - borne_inf
+
+            if montant_tranche > 0:
+                irg_total += self._arrondir(montant_tranche * taux / Decimal('100'))
+
+        return irg_total
+
+    def _construire_seuils_rts(self):
+        """Normalise les tranches RTS en seuils contigus (borne_inf, borne_sup, taux).
+
+        Source unique de vérité pour le calcul RTS et la trace d'audit : si
+        les bornes de la DB présentent un gap de 1 GNF (1 000 000 / 1 000 001),
+        on aligne borne_inf sur la borne_sup précédente pour éviter qu'un
+        franc de base échappe au calcul progressif.
+        """
         seuils = []
         for i, tranche in enumerate(self.tranches_irg):
             if isinstance(tranche, dict):
@@ -1261,32 +1321,17 @@ class MoteurCalculPaie:
                 borne_inf = tranche.borne_inferieure
                 borne_sup = tranche.borne_superieure
                 taux = tranche.taux_irg
-            
-            # Normaliser: si borne_inf = borne_sup précédente + 1, utiliser borne_sup précédente
+
             if i > 0 and seuils:
                 prev_sup = seuils[-1][1]
                 if prev_sup is not None and borne_inf > prev_sup and borne_inf <= prev_sup + 2:
                     borne_inf = prev_sup
-            
+
             if borne_sup is not None:
                 borne_sup = Decimal(str(borne_sup))
-            
+
             seuils.append((borne_inf, borne_sup, taux))
-        
-        # Calcul progressif par tranche avec bornes absolues
-        for borne_inf, borne_sup, taux in seuils:
-            if base_imposable <= borne_inf:
-                break
-            
-            if borne_sup is not None:
-                montant_tranche = min(base_imposable, borne_sup) - borne_inf
-            else:
-                montant_tranche = base_imposable - borne_inf
-            
-            if montant_tranche > 0:
-                irg_total += self._arrondir(montant_tranche * taux / Decimal('100'))
-        
-        return irg_total
+        return seuils
     
     def _calculer_credits_impot(self):
         """Calculer les crédits d'impôt"""
@@ -1414,31 +1459,37 @@ class MoteurCalculPaie:
         """
         m = self.montants
 
-        # Détail des tranches RTS
+        # Détail des tranches RTS — on utilise les mêmes seuils normalisés
+        # que le calcul principal pour garantir que base_imposable affichée
+        # par tranche = base réellement taxée. Sans ça, un écart de 1 GNF
+        # apparaît quand la DB a des bornes en +1 (1 000 001 vs 1 000 000).
         tranches_detail = []
-        base_restante = m.get('base_rts', Decimal('0'))
-        for t in self.tranches_irg:
-            borne_inf = t.get('borne_inferieure', Decimal('0'))
-            borne_sup = t.get('borne_superieure')
-            taux = t.get('taux_irg', Decimal('0'))
-            if base_restante <= 0:
+        base_rts = m.get('base_rts', Decimal('0'))
+        seuils = self._construire_seuils_rts()
+        for i, (borne_inf, borne_sup, taux) in enumerate(seuils):
+            if base_rts <= borne_inf:
                 break
-            if borne_sup is None:
-                tranche_base = base_restante
+            if borne_sup is not None:
+                tranche_base = min(base_rts, borne_sup) - borne_inf
             else:
-                tranche_base = min(base_restante, borne_sup - borne_inf)
+                tranche_base = base_rts - borne_inf
             if tranche_base <= 0:
                 continue
             montant_tranche = money(tranche_base * taux / Decimal('100'))
+            numero = i + 1
+            raw = self.tranches_irg[i] if i < len(self.tranches_irg) else None
+            if isinstance(raw, dict):
+                numero = int(raw.get('numero_tranche', numero))
+            elif raw is not None:
+                numero = int(getattr(raw, 'numero_tranche', numero))
             tranches_detail.append({
-                'numero': int(t.get('numero_tranche', 0)),
+                'numero': numero,
                 'de': int(borne_inf),
-                'a': int(borne_sup) if borne_sup else None,
+                'a': int(borne_sup) if borne_sup is not None else None,
                 'taux_pct': float(taux),
                 'base': int(money(tranche_base)),
                 'impot': int(montant_tranche),
             })
-            base_restante -= tranche_base
 
         # Heures supplémentaires
         hs = {}
@@ -1538,7 +1589,7 @@ class MoteurCalculPaie:
         plafond_val = self.montants.get('plafond_indemnites', Decimal('0'))
         tentative_depassement = total_ind > plafond_val if plafond_val > 0 else False
 
-        return {
+        snapshot = {
             'version': '2.0',
             'meta': {
                 'generated_at': datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
@@ -1559,6 +1610,7 @@ class MoteurCalculPaie:
             },
             'conformite_indemnites': self.montants.get('conformite_indemnites', {}),
         }
+        return _to_json_safe(snapshot)
 
     @transaction.atomic
     def generer_bulletin(self, utilisateur=None):

@@ -116,9 +116,32 @@ class BulkPayrollService:
                 bulletin = moteur.generer_bulletin(utilisateur=utilisateur)
                 self.bulletins_created += 1
             except Exception as e:
+                import traceback, os, tempfile, json as _json
+                tb = traceback.format_exc()
                 error_msg = f"{employe.matricule}: {str(e)}"
                 self.errors.append(error_msg)
-                logger.error(f"Erreur calcul bulletin: {error_msg}")
+                logger.error(f"Erreur calcul bulletin: {error_msg}\n{tb}")
+                paths = []
+                try:
+                    from django.conf import settings
+                    base = getattr(settings, 'BASE_DIR', None)
+                    if base:
+                        paths.append(os.path.join(str(base), 'logs', 'bulletin_crash.log'))
+                except Exception:
+                    pass
+                paths.append(os.path.join(tempfile.gettempdir(), 'gestionnairerh_bulletin_crash.log'))
+                paths.append(os.path.expanduser(r'~\gestionnairerh_bulletin_crash.log'))
+                patched = getattr(_json.JSONEncoder, '_gestionrh_patched', False)
+                for p in paths:
+                    try:
+                        os.makedirs(os.path.dirname(p), exist_ok=True)
+                        with open(p, 'a', encoding='utf-8') as fp:
+                            from datetime import datetime as _dt
+                            fp.write(f"\n\n===== {_dt.now().isoformat()} | {employe.matricule} | json_patched={patched} =====\n")
+                            fp.write(f"Exception: {type(e).__name__}: {e}\n")
+                            fp.write(tb)
+                    except Exception:
+                        pass
     
     @classmethod
     def recalculer_bulletin(cls, bulletin_id: int, utilisateur) -> Tuple[bool, str]:
