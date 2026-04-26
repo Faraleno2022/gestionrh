@@ -3,7 +3,7 @@ import uuid
 
 from django.db import models
 from core.models import Poste, Service, Entreprise
-from core.validators import valider_cv, valider_image_document, valider_image
+from core.validators import valider_cv, valider_image_document, valider_image, valider_taille_2mo, valider_taille_3mo, valider_taille_5mo
 from employes.models import Employe
 
 
@@ -121,9 +121,9 @@ class Candidature(models.Model):
     formation_niveau = models.CharField(max_length=100, blank=True, null=True)
     experience_annees = models.IntegerField(blank=True, null=True)
     date_candidature = models.DateField(auto_now_add=True)
-    cv_fichier = models.FileField(upload_to=chemin_cv, blank=True, null=True, validators=[valider_cv], help_text="CV au format PDF ou Word, max 5 Mo")
-    lettre_motivation = models.FileField(upload_to=chemin_lettre, blank=True, null=True, validators=[valider_cv], help_text="Lettre de motivation (PDF ou Word)")
-    autres_documents = models.FileField(upload_to=chemin_autre_doc, blank=True, null=True, validators=[valider_image_document], help_text="Autres documents (PDF, Word, JPEG, PNG)")
+    cv_fichier = models.FileField(upload_to=chemin_cv, blank=True, null=True, validators=[valider_cv, valider_taille_3mo], help_text="CV au format PDF ou Word, max 3 Mo")
+    lettre_motivation = models.FileField(upload_to=chemin_lettre, blank=True, null=True, validators=[valider_cv, valider_taille_2mo], help_text="Lettre de motivation (PDF ou Word), max 2 Mo")
+    autres_documents = models.FileField(upload_to=chemin_autre_doc, blank=True, null=True, validators=[valider_image_document, valider_taille_5mo], help_text="Autres documents (PDF, Word, JPEG, PNG), max 5 Mo")
     statut_candidature = models.CharField(max_length=20, choices=STATUTS, default='recue')
     score_evaluation = models.IntegerField(blank=True, null=True)
     commentaires = models.TextField(blank=True, null=True)

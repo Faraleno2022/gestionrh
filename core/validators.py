@@ -125,3 +125,28 @@ def valider_image_document(fichier):
 def valider_image(fichier):
     """Valide une image (JPEG ou PNG uniquement)."""
     return valider_fichier(fichier, categorie='image')
+
+
+def _valider_taille(fichier, taille_mo):
+    if not fichier:
+        return
+    if fichier.size > int(taille_mo * 1024 * 1024):
+        raise ValidationError(
+            f"Fichier trop volumineux ({fichier.size // (1024 * 1024)} Mo). "
+            f"Maximum autorisé : {taille_mo} Mo."
+        )
+
+
+def valider_taille_2mo(fichier):
+    """Limite stricte à 2 Mo — défense en profondeur contre saturation stockage."""
+    _valider_taille(fichier, 2)
+
+
+def valider_taille_3mo(fichier):
+    """Limite stricte à 3 Mo — défense en profondeur contre saturation stockage."""
+    _valider_taille(fichier, 3)
+
+
+def valider_taille_5mo(fichier):
+    """Limite stricte à 5 Mo — défense en profondeur contre saturation stockage."""
+    _valider_taille(fichier, 5)
