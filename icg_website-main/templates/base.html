@@ -4,9 +4,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}International Consulting Guinea{% endblock %}</title>
+    <title>{% block title %}International Consulting Guinea (ICG) — Conseil RH, HSE & RSE en Guinée{% endblock %}</title>
 
-    <meta name="description" content="International Consulting Guinea : L'expertise au service de la transformation d'entreprise. Nous apportons des stratégies novatrices et une vision claire pour chaque défi.">
+    <meta name="description" content="{% block meta_description %}International Consulting Guinea (ICG) — Cabinet de conseil en Ressources Humaines, Hygiène-Sécurité-Environnement (HSE) et Responsabilité Sociétale (RSE) à Conakry, Guinée. Recrutement, formation, accompagnement stratégique.{% endblock %}">
+    <meta name="keywords" content="ICG, International Consulting Guinea, ICG Guinea, ICG Guinée, cabinet conseil Guinée, ressources humaines Conakry, recrutement Guinée, HSE Guinée, RSE Guinée, formation entreprise Conakry, icguinea, conseil entreprise Guinée">
+    <meta name="author" content="International Consulting Guinea (ICG)">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="googlebot" content="index, follow">
+    <meta name="language" content="French">
+    <meta name="geo.region" content="GN">
+    <meta name="geo.placename" content="Conakry">
+
+    <link rel="canonical" href="https://www.icguinea.com{{ request.path }}">
+
+    {# Open Graph #}
+    <meta property="og:site_name" content="International Consulting Guinea (ICG)">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="fr_FR">
+    <meta property="og:title" content="{% block og_title %}International Consulting Guinea (ICG) — Conseil RH, HSE & RSE{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}ICG (International Consulting Guinea) accompagne les entreprises en Guinée : recrutement, formation, HSE, RSE et conseil stratégique.{% endblock %}">
+    <meta property="og:url" content="https://www.icguinea.com{{ request.path }}">
+    <meta property="og:image" content="{% block og_image %}https://www.icguinea.com{% static 'images/home2.png' %}{% endblock %}">
+
+    {# Twitter Card #}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="International Consulting Guinea (ICG)">
+    <meta name="twitter:description" content="Cabinet de conseil RH, HSE & RSE à Conakry, Guinée.">
+    <meta name="twitter:image" content="https://www.icguinea.com{% static 'images/home2.png' %}">
+
+    {# JSON-LD Organization — aide Google à afficher le nom officiel #}
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "International Consulting Guinea",
+        "alternateName": ["ICG", "ICG Guinea", "ICG Guinée", "International Consulting Guinea (ICG)"],
+        "legalName": "International Consulting Guinea",
+        "url": "https://www.icguinea.com",
+        "logo": "https://www.icguinea.com{% static 'favicon.ico' %}",
+        "description": "Cabinet de conseil en Ressources Humaines, HSE et RSE basé à Conakry, Guinée.",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Carrefour T6, 2ème Étage Immeuble Le Général",
+            "addressLocality": "Conakry",
+            "addressCountry": "GN"
+        },
+        "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+224620113225",
+            "contactType": "customer service",
+            "email": "contact@icguinea.com",
+            "areaServed": "GN",
+            "availableLanguage": ["French"]
+        },
+        "sameAs": []
+    }
+    </script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
