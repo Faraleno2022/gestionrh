@@ -669,12 +669,17 @@ def telecharger_bulletin_pdf(request, pk):
     
     emp = bulletin.employe
     
-    # Calcul de l'ancienneté (précis avec dateutil.relativedelta)
+    # Calcul de l'ancienneté (précis avec dateutil.relativedelta).
+    # Référence = dernier jour du mois de paie (l'employé a travaillé tout le mois),
+    # sinon on sous-estime d'un mois (ex: embauche 01/01/2024, bulletin avril 2026 :
+    # ref 01/04 → 2 ans 3 mois ; ref 30/04 → 2 ans 4 mois, ce qui est correct).
     anciennete_str = "-"
     if emp.date_embauche:
         from datetime import date as date_cls
         from dateutil.relativedelta import relativedelta
-        ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie, 1)
+        import calendar as _cal
+        _last_day = _cal.monthrange(bulletin.annee_paie, bulletin.mois_paie)[1]
+        ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie, _last_day)
         rd = relativedelta(ref_date, emp.date_embauche)
         if rd.years > 0:
             anciennete_str = f"{rd.years} an{'s' if rd.years > 1 else ''} {rd.months} mois"
@@ -771,19 +776,18 @@ def telecharger_bulletin_pdf(request, pk):
         if ('HS' in code_rub or 'HEURE' in libelle.upper()) and 'SUP' in libelle.upper():
             import re
             libelle = re.sub(r'\s*\+?\d+\s*%', '', libelle).strip()
-        # Cohérence d'affichage : éviter l'ambiguïté visuelle "10 125 000" lu comme "10 × 125 000".
-        # Si la base est redondante avec le montant (pas de calcul nbre×base ou base×taux),
-        # on masque la colonne Base pour ne montrer que le Montant.
-        base_redondante = (
+        # Transparence du calcul : pour un montant mensuel fixe (base == montant, sans nombre>1
+        # ni taux), afficher explicitement Nbre = 1 pour signaler la formule "1 × montant".
+        # Évite la lecture ambiguë "10 125 000" comprise comme "10 × 125 000".
+        montant_fixe_mensuel = (
             g.base
             and (not g.nombre or g.nombre == 1)
             and not g.taux
             and abs(float(g.base) - float(g.montant or 0)) < 1
         )
-        if base_redondante:
-            base_str = "-"
-        else:
-            base_str = f"{g.base:,.0f}".replace(",", "\u00A0") if g.base else "-"
+        if montant_fixe_mensuel and not nbre_str:
+            nbre_str = "1"
+        base_str = f"{g.base:,.0f}".replace(",", "\u00A0") if g.base else "-"
         gains_data.append([
             libelle,
             nbre_str,
@@ -1112,9 +1116,10 @@ def telecharger_bulletin_pdf(request, pk):
         if abs(base_vf_f - brut_gnf) < 1:
             note_base = f"Base VF/{ta_ou_onfpp} = Brut {base_vf_f:,.0f} GNF"
         else:
+            ecart = brut_gnf - base_vf_f
             note_base = (
                 f"Base VF/{ta_ou_onfpp} = {base_vf_f:,.0f} GNF "
-                f"(Brut {brut_gnf:,.0f} − éléments non soumis)"
+                f"(Brut {brut_gnf:,.0f} − {ecart:,.0f} indemnités forfaitaires non soumises)"
             )
         p.drawString(1.5*cm, y,
             f"{note_base}  |  VF = {base_vf_f:,.0f} × 6%  |  {ta_ou_onfpp} = {base_vf_f:,.0f} × {taux_ta_note}%"
@@ -1296,12 +1301,17 @@ def telecharger_bulletin_public(request, token):
     
     emp = bulletin.employe
     
-    # Calcul de l'ancienneté (précis avec dateutil.relativedelta)
+    # Calcul de l'ancienneté (précis avec dateutil.relativedelta).
+    # Référence = dernier jour du mois de paie (l'employé a travaillé tout le mois),
+    # sinon on sous-estime d'un mois (ex: embauche 01/01/2024, bulletin avril 2026 :
+    # ref 01/04 → 2 ans 3 mois ; ref 30/04 → 2 ans 4 mois, ce qui est correct).
     anciennete_str = "-"
     if emp.date_embauche:
         from datetime import date as date_cls
         from dateutil.relativedelta import relativedelta
-        ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie, 1)
+        import calendar as _cal
+        _last_day = _cal.monthrange(bulletin.annee_paie, bulletin.mois_paie)[1]
+        ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie, _last_day)
         rd = relativedelta(ref_date, emp.date_embauche)
         if rd.years > 0:
             anciennete_str = f"{rd.years} an{'s' if rd.years > 1 else ''} {rd.months} mois"
@@ -1397,19 +1407,18 @@ def telecharger_bulletin_public(request, token):
         if ('HS' in code_rub or 'HEURE' in libelle.upper()) and 'SUP' in libelle.upper():
             import re
             libelle = re.sub(r'\s*\+?\d+\s*%', '', libelle).strip()
-        # Cohérence d'affichage : éviter l'ambiguïté visuelle "10 125 000" lu comme "10 × 125 000".
-        # Si la base est redondante avec le montant (pas de calcul nbre×base ou base×taux),
-        # on masque la colonne Base pour ne montrer que le Montant.
-        base_redondante = (
+        # Transparence du calcul : pour un montant mensuel fixe (base == montant, sans nombre>1
+        # ni taux), afficher explicitement Nbre = 1 pour signaler la formule "1 × montant".
+        # Évite la lecture ambiguë "10 125 000" comprise comme "10 × 125 000".
+        montant_fixe_mensuel = (
             g.base
             and (not g.nombre or g.nombre == 1)
             and not g.taux
             and abs(float(g.base) - float(g.montant or 0)) < 1
         )
-        if base_redondante:
-            base_str = "-"
-        else:
-            base_str = f"{g.base:,.0f}".replace(",", "\u00A0") if g.base else "-"
+        if montant_fixe_mensuel and not nbre_str:
+            nbre_str = "1"
+        base_str = f"{g.base:,.0f}".replace(",", "\u00A0") if g.base else "-"
         gains_data.append([
             libelle,
             nbre_str,
@@ -1745,9 +1754,10 @@ def telecharger_bulletin_public(request, token):
         if abs(base_vf_f - brut_gnf) < 1:
             note_base = f"Base VF/{ta_ou_onfpp} = Brut {base_vf_f:,.0f} GNF"
         else:
+            ecart = brut_gnf - base_vf_f
             note_base = (
                 f"Base VF/{ta_ou_onfpp} = {base_vf_f:,.0f} GNF "
-                f"(Brut {brut_gnf:,.0f} − éléments non soumis)"
+                f"(Brut {brut_gnf:,.0f} − {ecart:,.0f} indemnités forfaitaires non soumises)"
             )
         p.drawString(1.5*cm, y,
             f"{note_base}  |  VF = {base_vf_f:,.0f} × 6%  |  {ta_ou_onfpp} = {base_vf_f:,.0f} × {taux_ta_note}%"
