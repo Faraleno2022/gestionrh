@@ -3393,7 +3393,12 @@ def config_paie_entreprise(request):
             config.taux_versement_forfaitaire = to_decimal(request.POST.get('taux_versement_forfaitaire'), '6')
             config.taux_taxe_apprentissage = to_decimal(request.POST.get('taux_taxe_apprentissage'), '2')
             config.taux_onfpp = to_decimal(request.POST.get('taux_onfpp'), '1.5')
-            
+
+            # Arrondi du net à payer
+            arrondi_val = to_int(request.POST.get('arrondi_net'), '0')
+            if arrondi_val in (0, 100, 500, 1000):
+                config.arrondi_net = arrondi_val
+
             config.modifie_par = request.user
             config.save()
             messages.success(request, 'Configuration enregistrée avec succès.')
@@ -3404,6 +3409,7 @@ def config_paie_entreprise(request):
         'config': config,
         'modes_hs': ConfigurationPaieEntreprise.MODES_HS,
         'modes_conges': ConfigurationPaieEntreprise.MODES_CONGES,
+        'arrondis_net': ConfigurationPaieEntreprise.ARRONDIS_NET,
     })
 
 

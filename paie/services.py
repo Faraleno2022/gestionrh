@@ -347,6 +347,21 @@ class MoteurCalculPaie:
         # 7. Calculer le net (rappels et retenues trop-perçu inclus) — arrondi à l'unité GNF
         self.montants['total_retenues'] = self._arrondir(self.montants['total_retenues'])
         net_calcule = self._arrondir(self.montants['brut'] - self.montants['total_retenues'] + self.montants['rappel_salaire'] - self.montants['retenue_trop_percu'])
+
+        # 7.0 Arrondi RH du net à payer (config entreprise)
+        # N'affecte PAS les bases CNSS/RTS qui doivent rester exactes pour la conformité.
+        try:
+            pas_arrondi = int(getattr(self.employe.entreprise.config_paie, 'arrondi_net', 0) or 0)
+        except (AttributeError, Exception):
+            pas_arrondi = 0
+        if pas_arrondi > 0 and net_calcule > 0:
+            pas = Decimal(pas_arrondi)
+            # Arrondi au pas le plus proche (banker's rounding via quantize)
+            net_arrondi = (net_calcule / pas).quantize(Decimal('1'), rounding=ROUND_HALF_UP) * pas
+            self.montants['ecart_arrondi_net'] = net_arrondi - net_calcule
+            net_calcule = net_arrondi
+        else:
+            self.montants['ecart_arrondi_net'] = Decimal('0')
         
         # 7.1 Protection: Empêcher le net négatif
         # Si les retenues dépassent le brut, on plafonne les retenues au brut

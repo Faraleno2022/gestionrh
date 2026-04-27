@@ -185,8 +185,17 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Contribution ONFPP (%)</label>
-                                <input type="number" name="taux_onfpp" class="form-control" 
+                                <input type="number" name="taux_onfpp" class="form-control"
                                        value="{{ config.taux_onfpp }}" step="0.01">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Arrondi du net à payer</label>
+                                <select name="arrondi_net" class="form-select">
+                                    {% for val, label in arrondis_net %}
+                                    <option value="{{ val }}" {% if config.arrondi_net == val %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Bases CNSS/RTS restent à l'unité (conformité).</small>
                             </div>
                         </div>
                     </div>

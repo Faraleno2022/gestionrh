@@ -1101,7 +1101,24 @@ class ConfigurationPaieEntreprise(models.Model):
         max_digits=5, decimal_places=2, default=1.50,
         verbose_name='Contribution ONFPP (%)'
     )
-    
+
+    # === ARRONDI DU NET À PAYER ===
+    # Arrondi appliqué uniquement sur le net final (pour faciliter paiement
+    # espèces / virements). Les bases CNSS et RTS restent calculées à l'unité
+    # exacte pour la conformité fiscale.
+    ARRONDIS_NET = (
+        (0, 'Aucun (à l\'unité GNF)'),
+        (100, 'Centaine de GNF'),
+        (500, 'Demi-millier (500 GNF)'),
+        (1000, 'Millier de GNF'),
+    )
+    arrondi_net = models.IntegerField(
+        choices=ARRONDIS_NET, default=0,
+        verbose_name='Arrondi du net à payer',
+        help_text='Arrondi appliqué uniquement sur le net final. '
+                  'Les bases fiscales (CNSS, RTS) restent à l\'unité.'
+    )
+
     # Métadonnées
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
