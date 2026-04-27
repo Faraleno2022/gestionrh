@@ -1125,7 +1125,14 @@ def telecharger_bulletin_pdf(request, pk):
         p.drawString(1.5*cm, y,
             f"{note_base}  |  VF = {base_vf_f:,.0f} × 6%  |  {ta_ou_onfpp} = {base_vf_f:,.0f} × {taux_ta_note}%"
             .replace(",", "\u00A0"))
+        y -= 0.20*cm
+        # Référence légale (justification en cas de contrôle fiscal)
+        p.setFont(_FI, 5.5)
+        p.setFillColor(colors.HexColor("#888888"))
+        p.drawString(1.5*cm, y,
+            "Réf : Code Général des Impôts — Guinée (Versement Forfaitaire sur salaires, taux 6 %)")
         y -= 0.25*cm
+        p.setFillColor(colors.black)
     p.setFillColor(colors.black)
     
     # === PIED DE PAGE — signatures compactes + infos légales centrées ===
@@ -1764,7 +1771,14 @@ def telecharger_bulletin_public(request, token):
         p.drawString(1.5*cm, y,
             f"{note_base}  |  VF = {base_vf_f:,.0f} × 6%  |  {ta_ou_onfpp} = {base_vf_f:,.0f} × {taux_ta_note}%"
             .replace(",", "\u00A0"))
+        y -= 0.20*cm
+        # Référence légale (justification en cas de contrôle fiscal)
+        p.setFont(_FI, 5.5)
+        p.setFillColor(colors.HexColor("#888888"))
+        p.drawString(1.5*cm, y,
+            "Réf : Code Général des Impôts — Guinée (Versement Forfaitaire sur salaires, taux 6 %)")
         y -= 0.25*cm
+        p.setFillColor(colors.black)
     p.setFillColor(colors.black)
     
     # === PIED DE PAGE — signatures compactes + infos légales centrées ===
