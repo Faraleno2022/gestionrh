@@ -700,10 +700,15 @@ def telecharger_bulletin_pdf(request, pk):
     except Exception:
         pass
 
+    poste_str = str(emp.poste).strip() if emp.poste else ""
+    service_str = str(emp.service).strip() if emp.service else ""
+    poste_affiche = poste_str or "Non renseigné"
+    service_affiche = service_str or "Non renseigné"
+
     infos_emp = [
         ["Matricule:", emp.matricule or "-", "N° CNSS:", emp.num_cnss_individuel or "-"],
         ["Nom et Prénoms:", f"{emp.nom} {emp.prenoms}", "Ancienneté:", anciennete_str],
-        ["Poste:", str(emp.poste or "-"), "Service:", str(emp.service or "-")],
+        ["Poste:", poste_affiche, "Service:", service_affiche],
         ["Date embauche:", emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else "-", "Mode paiement:", emp.mode_paiement or "-"],
         ["Congés acquis:", f"{conges_acquis:g} j", "Congés pris:", f"{conges_pris:g} j"],
         ["Solde congés:", f"{conges_restants:g} j", "Acquis ce mois:", f"{acquis_ce_mois:g} j"],
@@ -712,14 +717,28 @@ def telecharger_bulletin_pdf(request, pk):
 
     for row in infos_emp:
         p.setFont(_FB, 8)
+        p.setFillColor(colors.black)
         p.drawString(1.5*cm, y, row[0])
-        p.setFont(_FN, 8)
-        p.drawString(4*cm, y, str(row[1]))
+        # Mise en italique gris si valeur "Non renseigné" pour signaler les champs à compléter.
+        val_left = str(row[1])
+        if val_left == "Non renseigné":
+            p.setFont(_FI, 8)
+            p.setFillColor(colors.HexColor("#999999"))
+        else:
+            p.setFont(_FN, 8)
+        p.drawString(4*cm, y, val_left)
+        p.setFillColor(colors.black)
         if row[2]:
             p.setFont(_FB, 8)
             p.drawString(11*cm, y, row[2])
-            p.setFont(_FN, 8)
-            p.drawString(14*cm, y, str(row[3]))
+            val_right = str(row[3])
+            if val_right == "Non renseigné":
+                p.setFont(_FI, 8)
+                p.setFillColor(colors.HexColor("#999999"))
+            else:
+                p.setFont(_FN, 8)
+            p.drawString(14*cm, y, val_right)
+            p.setFillColor(colors.black)
         y -= 0.4*cm
     
     y -= 0.3*cm
@@ -752,14 +771,27 @@ def telecharger_bulletin_pdf(request, pk):
         if ('HS' in code_rub or 'HEURE' in libelle.upper()) and 'SUP' in libelle.upper():
             import re
             libelle = re.sub(r'\s*\+?\d+\s*%', '', libelle).strip()
+        # Cohérence d'affichage : éviter l'ambiguïté visuelle "10 125 000" lu comme "10 × 125 000".
+        # Si la base est redondante avec le montant (pas de calcul nbre×base ou base×taux),
+        # on masque la colonne Base pour ne montrer que le Montant.
+        base_redondante = (
+            g.base
+            and (not g.nombre or g.nombre == 1)
+            and not g.taux
+            and abs(float(g.base) - float(g.montant or 0)) < 1
+        )
+        if base_redondante:
+            base_str = "-"
+        else:
+            base_str = f"{g.base:,.0f}".replace(",", "\u00A0") if g.base else "-"
         gains_data.append([
             libelle,
             nbre_str,
-            f"{g.base:,.0f}".replace(",", " ") if g.base else "-",
+            base_str,
             taux_str,
-            f"{g.montant:,.0f}".replace(",", " ")
+            f"{g.montant:,.0f}".replace(",", "\u00A0"),
         ])
-    gains_data.append(["TOTAL BRUT", "", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " ")])
+    gains_data.append(["TOTAL BRUT", "", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", "\u00A0")])
     
     row_height = 14
     gains_table = Table(gains_data, colWidths=[6.5*cm, 1.5*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
@@ -1068,16 +1100,25 @@ def telecharger_bulletin_pdf(request, pk):
     charges_table.wrapOn(p, width, height)
     charges_table.drawOn(p, 1.5*cm, y - ch_table_h)
     y -= ch_table_h + 0.15*cm
-    # Note explicative déduction VF
+    # Note explicative déduction VF — utiliser base_vf (et non salaire_brut)
+    # pour rester cohérent avec les montants effectivement calculés dans le tableau ci-dessus.
     if base_vf > 0 and y > 3.8*cm:
+        base_vf_f = float(base_vf)
         brut_gnf = float(bulletin.salaire_brut)
         ta_ou_onfpp = 'ONFPP' if onfpp > 0 else 'TA'
         taux_ta_note = '1,5' if onfpp > 0 else taux_ta_label
         p.setFont(_FI, 6)
         p.setFillColor(colors.HexColor("#666666"))
+        if abs(base_vf_f - brut_gnf) < 1:
+            note_base = f"Base VF/{ta_ou_onfpp} = Brut {base_vf_f:,.0f} GNF"
+        else:
+            note_base = (
+                f"Base VF/{ta_ou_onfpp} = {base_vf_f:,.0f} GNF "
+                f"(Brut {brut_gnf:,.0f} − éléments non soumis)"
+            )
         p.drawString(1.5*cm, y,
-            f"Base VF/{ta_ou_onfpp} = Brut {brut_gnf:,.0f} GNF  |  VF = {brut_gnf:,.0f} × 6%  |  {ta_ou_onfpp} = {brut_gnf:,.0f} × {taux_ta_note}%"
-            .replace(",", " "))
+            f"{note_base}  |  VF = {base_vf_f:,.0f} × 6%  |  {ta_ou_onfpp} = {base_vf_f:,.0f} × {taux_ta_note}%"
+            .replace(",", "\u00A0"))
         y -= 0.25*cm
     p.setFillColor(colors.black)
     
@@ -1286,10 +1327,15 @@ def telecharger_bulletin_public(request, token):
     except Exception:
         pass
 
+    poste_str = str(emp.poste).strip() if emp.poste else ""
+    service_str = str(emp.service).strip() if emp.service else ""
+    poste_affiche = poste_str or "Non renseigné"
+    service_affiche = service_str or "Non renseigné"
+
     infos_emp = [
         ["Matricule:", emp.matricule or "-", "N° CNSS:", emp.num_cnss_individuel or "-"],
         ["Nom et Prénoms:", f"{emp.nom} {emp.prenoms}", "Ancienneté:", anciennete_str],
-        ["Poste:", str(emp.poste or "-"), "Service:", str(emp.service or "-")],
+        ["Poste:", poste_affiche, "Service:", service_affiche],
         ["Date embauche:", emp.date_embauche.strftime('%d/%m/%Y') if emp.date_embauche else "-", "Mode paiement:", emp.mode_paiement or "-"],
         ["Congés acquis:", f"{conges_acquis:g} j", "Congés pris:", f"{conges_pris:g} j"],
         ["Solde congés:", f"{conges_restants:g} j", "Acquis ce mois:", f"{acquis_ce_mois:g} j"],
@@ -1298,14 +1344,28 @@ def telecharger_bulletin_public(request, token):
 
     for row in infos_emp:
         p.setFont(_FB, 8)
+        p.setFillColor(colors.black)
         p.drawString(1.5*cm, y, row[0])
-        p.setFont(_FN, 8)
-        p.drawString(4*cm, y, str(row[1]))
+        # Mise en italique gris si valeur "Non renseigné" pour signaler les champs à compléter.
+        val_left = str(row[1])
+        if val_left == "Non renseigné":
+            p.setFont(_FI, 8)
+            p.setFillColor(colors.HexColor("#999999"))
+        else:
+            p.setFont(_FN, 8)
+        p.drawString(4*cm, y, val_left)
+        p.setFillColor(colors.black)
         if row[2]:
             p.setFont(_FB, 8)
             p.drawString(11*cm, y, row[2])
-            p.setFont(_FN, 8)
-            p.drawString(14*cm, y, str(row[3]))
+            val_right = str(row[3])
+            if val_right == "Non renseigné":
+                p.setFont(_FI, 8)
+                p.setFillColor(colors.HexColor("#999999"))
+            else:
+                p.setFont(_FN, 8)
+            p.drawString(14*cm, y, val_right)
+            p.setFillColor(colors.black)
         y -= 0.4*cm
     
     y -= 0.3*cm
@@ -1337,14 +1397,27 @@ def telecharger_bulletin_public(request, token):
         if ('HS' in code_rub or 'HEURE' in libelle.upper()) and 'SUP' in libelle.upper():
             import re
             libelle = re.sub(r'\s*\+?\d+\s*%', '', libelle).strip()
+        # Cohérence d'affichage : éviter l'ambiguïté visuelle "10 125 000" lu comme "10 × 125 000".
+        # Si la base est redondante avec le montant (pas de calcul nbre×base ou base×taux),
+        # on masque la colonne Base pour ne montrer que le Montant.
+        base_redondante = (
+            g.base
+            and (not g.nombre or g.nombre == 1)
+            and not g.taux
+            and abs(float(g.base) - float(g.montant or 0)) < 1
+        )
+        if base_redondante:
+            base_str = "-"
+        else:
+            base_str = f"{g.base:,.0f}".replace(",", "\u00A0") if g.base else "-"
         gains_data.append([
             libelle,
             nbre_str,
-            f"{g.base:,.0f}".replace(",", " ") if g.base else "-",
+            base_str,
             taux_str,
-            f"{g.montant:,.0f}".replace(",", " ")
+            f"{g.montant:,.0f}".replace(",", "\u00A0"),
         ])
-    gains_data.append(["TOTAL BRUT", "", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", " ")])
+    gains_data.append(["TOTAL BRUT", "", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", "\u00A0")])
     
     row_height = 14
     gains_table = Table(gains_data, colWidths=[6.5*cm, 1.5*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
@@ -1660,16 +1733,25 @@ def telecharger_bulletin_public(request, token):
     charges_table.wrapOn(p, width, height)
     charges_table.drawOn(p, 1.5*cm, y - ch_table_h)
     y -= ch_table_h + 0.15*cm
-    # Note explicative déduction VF
+    # Note explicative déduction VF — utiliser base_vf (et non salaire_brut)
+    # pour rester cohérent avec les montants effectivement calculés dans le tableau ci-dessus.
     if base_vf > 0 and y > 3.8*cm:
+        base_vf_f = float(base_vf)
         brut_gnf = float(bulletin.salaire_brut)
         ta_ou_onfpp = 'ONFPP' if onfpp > 0 else 'TA'
         taux_ta_note = '1,5' if onfpp > 0 else taux_ta_label
         p.setFont(_FI, 6)
         p.setFillColor(colors.HexColor("#666666"))
+        if abs(base_vf_f - brut_gnf) < 1:
+            note_base = f"Base VF/{ta_ou_onfpp} = Brut {base_vf_f:,.0f} GNF"
+        else:
+            note_base = (
+                f"Base VF/{ta_ou_onfpp} = {base_vf_f:,.0f} GNF "
+                f"(Brut {brut_gnf:,.0f} − éléments non soumis)"
+            )
         p.drawString(1.5*cm, y,
-            f"Base VF/{ta_ou_onfpp} = Brut {brut_gnf:,.0f} GNF  |  VF = {brut_gnf:,.0f} × 6%  |  {ta_ou_onfpp} = {brut_gnf:,.0f} × {taux_ta_note}%"
-            .replace(",", " "))
+            f"{note_base}  |  VF = {base_vf_f:,.0f} × 6%  |  {ta_ou_onfpp} = {base_vf_f:,.0f} × {taux_ta_note}%"
+            .replace(",", "\u00A0"))
         y -= 0.25*cm
     p.setFillColor(colors.black)
     
