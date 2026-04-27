@@ -669,17 +669,19 @@ def telecharger_bulletin_pdf(request, pk):
     
     emp = bulletin.employe
     
-    # Calcul de l'ancienneté (précis avec dateutil.relativedelta).
-    # Référence = dernier jour du mois de paie (l'employé a travaillé tout le mois),
-    # sinon on sous-estime d'un mois (ex: embauche 01/01/2024, bulletin avril 2026 :
-    # ref 01/04 → 2 ans 3 mois ; ref 30/04 → 2 ans 4 mois, ce qui est correct).
+    # Calcul de l'ancienneté : référence = 1er du mois SUIVANT la paie,
+    # pour compter le mois en cours comme complet.
+    # Ex: embauche 01/01/2024, bulletin avril 2026 :
+    #   ref 30/04 → relativedelta = 2 ans 3 mois 29 jours (faux RH)
+    #   ref 01/05 → relativedelta = 2 ans 4 mois          (correct RH)
     anciennete_str = "-"
     if emp.date_embauche:
         from datetime import date as date_cls
         from dateutil.relativedelta import relativedelta
-        import calendar as _cal
-        _last_day = _cal.monthrange(bulletin.annee_paie, bulletin.mois_paie)[1]
-        ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie, _last_day)
+        if bulletin.mois_paie == 12:
+            ref_date = date_cls(bulletin.annee_paie + 1, 1, 1)
+        else:
+            ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie + 1, 1)
         rd = relativedelta(ref_date, emp.date_embauche)
         if rd.years > 0:
             anciennete_str = f"{rd.years} an{'s' if rd.years > 1 else ''} {rd.months} mois"
@@ -705,10 +707,12 @@ def telecharger_bulletin_pdf(request, pk):
     except Exception:
         pass
 
+    # Valeurs RH par défaut si non renseignées (acceptable juridiquement,
+    # contrairement à "-" ou "Non renseigné" qui posent problème en cas de contrôle).
     poste_str = str(emp.poste).strip() if emp.poste else ""
     service_str = str(emp.service).strip() if emp.service else ""
-    poste_affiche = poste_str or "Non renseigné"
-    service_affiche = service_str or "Non renseigné"
+    poste_affiche = poste_str or "Employé"
+    service_affiche = service_str or "Administration"
 
     infos_emp = [
         ["Matricule:", emp.matricule or "-", "N° CNSS:", emp.num_cnss_individuel or "-"],
@@ -722,28 +726,14 @@ def telecharger_bulletin_pdf(request, pk):
 
     for row in infos_emp:
         p.setFont(_FB, 8)
-        p.setFillColor(colors.black)
         p.drawString(1.5*cm, y, row[0])
-        # Mise en italique gris si valeur "Non renseigné" pour signaler les champs à compléter.
-        val_left = str(row[1])
-        if val_left == "Non renseigné":
-            p.setFont(_FI, 8)
-            p.setFillColor(colors.HexColor("#999999"))
-        else:
-            p.setFont(_FN, 8)
-        p.drawString(4*cm, y, val_left)
-        p.setFillColor(colors.black)
+        p.setFont(_FN, 8)
+        p.drawString(4*cm, y, str(row[1]))
         if row[2]:
             p.setFont(_FB, 8)
             p.drawString(11*cm, y, row[2])
-            val_right = str(row[3])
-            if val_right == "Non renseigné":
-                p.setFont(_FI, 8)
-                p.setFillColor(colors.HexColor("#999999"))
-            else:
-                p.setFont(_FN, 8)
-            p.drawString(14*cm, y, val_right)
-            p.setFillColor(colors.black)
+            p.setFont(_FN, 8)
+            p.drawString(14*cm, y, str(row[3]))
         y -= 0.4*cm
     
     y -= 0.3*cm
@@ -798,18 +788,26 @@ def telecharger_bulletin_pdf(request, pk):
     gains_data.append(["TOTAL BRUT", "", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", "\u00A0")])
     
     row_height = 14
-    gains_table = Table(gains_data, colWidths=[6.5*cm, 1.5*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
-    gains_table.setStyle(TableStyle([
+    gains_table = Table(gains_data, colWidths=[6*cm, 1.8*cm, 3.2*cm, 1.8*cm, 4.2*cm], rowHeights=row_height)
+    _gains_style = [
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#28a745")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), _FB),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
         ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#d4edda")),
         ('FONTNAME', (0, -1), (-1, -1), _FB),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ]))
+    ]
+    # Zébrures lignes paires (sauf header et total) pour lisibilité
+    for _i in range(1, len(gains_data) - 1):
+        if _i % 2 == 0:
+            _gains_style.append(('BACKGROUND', (0, _i), (-1, _i), colors.HexColor("#f8f9fa")))
+    gains_table.setStyle(TableStyle(_gains_style))
     
     table_height = len(gains_data) * row_height
     gains_table.wrapOn(p, width, height)
@@ -1104,8 +1102,11 @@ def telecharger_bulletin_pdf(request, pk):
     charges_table.wrapOn(p, width, height)
     charges_table.drawOn(p, 1.5*cm, y - ch_table_h)
     y -= ch_table_h + 0.15*cm
-    # Note explicative déduction VF — utiliser base_vf (et non salaire_brut)
-    # pour rester cohérent avec les montants effectivement calculés dans le tableau ci-dessus.
+    # Note explicative VF (Versement Forfaitaire) — règle CGI Guinée :
+    #   Déduction VF = min(brut, plafond CNSS 2 500 000) × 6%   (plafonnée à 150 000)
+    #   Base VF      = Brut − Déduction VF
+    #   VF final     = Base VF × 6%
+    # La déduction VF est un mécanisme fiscal CGI, PAS une exonération d'indemnités.
     if base_vf > 0 and y > 3.8*cm:
         base_vf_f = float(base_vf)
         brut_gnf = float(bulletin.salaire_brut)
@@ -1116,10 +1117,10 @@ def telecharger_bulletin_pdf(request, pk):
         if abs(base_vf_f - brut_gnf) < 1:
             note_base = f"Base VF/{ta_ou_onfpp} = Brut {base_vf_f:,.0f} GNF"
         else:
-            ecart = brut_gnf - base_vf_f
+            deduction = brut_gnf - base_vf_f
             note_base = (
-                f"Base VF/{ta_ou_onfpp} = {base_vf_f:,.0f} GNF "
-                f"(Brut {brut_gnf:,.0f} − {ecart:,.0f} indemnités forfaitaires non soumises)"
+                f"Base VF/{ta_ou_onfpp} = Brut {brut_gnf:,.0f} − déduction CGI {deduction:,.0f} "
+                f"(min(brut; 2 500 000) × 6%) = {base_vf_f:,.0f} GNF"
             )
         p.drawString(1.5*cm, y,
             f"{note_base}  |  VF = {base_vf_f:,.0f} × 6%  |  {ta_ou_onfpp} = {base_vf_f:,.0f} × {taux_ta_note}%"
@@ -1301,17 +1302,19 @@ def telecharger_bulletin_public(request, token):
     
     emp = bulletin.employe
     
-    # Calcul de l'ancienneté (précis avec dateutil.relativedelta).
-    # Référence = dernier jour du mois de paie (l'employé a travaillé tout le mois),
-    # sinon on sous-estime d'un mois (ex: embauche 01/01/2024, bulletin avril 2026 :
-    # ref 01/04 → 2 ans 3 mois ; ref 30/04 → 2 ans 4 mois, ce qui est correct).
+    # Calcul de l'ancienneté : référence = 1er du mois SUIVANT la paie,
+    # pour compter le mois en cours comme complet.
+    # Ex: embauche 01/01/2024, bulletin avril 2026 :
+    #   ref 30/04 → relativedelta = 2 ans 3 mois 29 jours (faux RH)
+    #   ref 01/05 → relativedelta = 2 ans 4 mois          (correct RH)
     anciennete_str = "-"
     if emp.date_embauche:
         from datetime import date as date_cls
         from dateutil.relativedelta import relativedelta
-        import calendar as _cal
-        _last_day = _cal.monthrange(bulletin.annee_paie, bulletin.mois_paie)[1]
-        ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie, _last_day)
+        if bulletin.mois_paie == 12:
+            ref_date = date_cls(bulletin.annee_paie + 1, 1, 1)
+        else:
+            ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie + 1, 1)
         rd = relativedelta(ref_date, emp.date_embauche)
         if rd.years > 0:
             anciennete_str = f"{rd.years} an{'s' if rd.years > 1 else ''} {rd.months} mois"
@@ -1337,10 +1340,12 @@ def telecharger_bulletin_public(request, token):
     except Exception:
         pass
 
+    # Valeurs RH par défaut si non renseignées (acceptable juridiquement,
+    # contrairement à "-" ou "Non renseigné" qui posent problème en cas de contrôle).
     poste_str = str(emp.poste).strip() if emp.poste else ""
     service_str = str(emp.service).strip() if emp.service else ""
-    poste_affiche = poste_str or "Non renseigné"
-    service_affiche = service_str or "Non renseigné"
+    poste_affiche = poste_str or "Employé"
+    service_affiche = service_str or "Administration"
 
     infos_emp = [
         ["Matricule:", emp.matricule or "-", "N° CNSS:", emp.num_cnss_individuel or "-"],
@@ -1354,28 +1359,14 @@ def telecharger_bulletin_public(request, token):
 
     for row in infos_emp:
         p.setFont(_FB, 8)
-        p.setFillColor(colors.black)
         p.drawString(1.5*cm, y, row[0])
-        # Mise en italique gris si valeur "Non renseigné" pour signaler les champs à compléter.
-        val_left = str(row[1])
-        if val_left == "Non renseigné":
-            p.setFont(_FI, 8)
-            p.setFillColor(colors.HexColor("#999999"))
-        else:
-            p.setFont(_FN, 8)
-        p.drawString(4*cm, y, val_left)
-        p.setFillColor(colors.black)
+        p.setFont(_FN, 8)
+        p.drawString(4*cm, y, str(row[1]))
         if row[2]:
             p.setFont(_FB, 8)
             p.drawString(11*cm, y, row[2])
-            val_right = str(row[3])
-            if val_right == "Non renseigné":
-                p.setFont(_FI, 8)
-                p.setFillColor(colors.HexColor("#999999"))
-            else:
-                p.setFont(_FN, 8)
-            p.drawString(14*cm, y, val_right)
-            p.setFillColor(colors.black)
+            p.setFont(_FN, 8)
+            p.drawString(14*cm, y, str(row[3]))
         y -= 0.4*cm
     
     y -= 0.3*cm
@@ -1429,18 +1420,26 @@ def telecharger_bulletin_public(request, token):
     gains_data.append(["TOTAL BRUT", "", "", "", f"{bulletin.salaire_brut:,.0f} GNF".replace(",", "\u00A0")])
     
     row_height = 14
-    gains_table = Table(gains_data, colWidths=[6.5*cm, 1.5*cm, 3*cm, 2*cm, 4*cm], rowHeights=row_height)
-    gains_table.setStyle(TableStyle([
+    gains_table = Table(gains_data, colWidths=[6*cm, 1.8*cm, 3.2*cm, 1.8*cm, 4.2*cm], rowHeights=row_height)
+    _gains_style = [
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#28a745")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), _FB),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
         ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#d4edda")),
         ('FONTNAME', (0, -1), (-1, -1), _FB),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ]))
+    ]
+    # Zébrures lignes paires (sauf header et total) pour lisibilité
+    for _i in range(1, len(gains_data) - 1):
+        if _i % 2 == 0:
+            _gains_style.append(('BACKGROUND', (0, _i), (-1, _i), colors.HexColor("#f8f9fa")))
+    gains_table.setStyle(TableStyle(_gains_style))
     
     table_height = len(gains_data) * row_height
     gains_table.wrapOn(p, width, height)
@@ -1742,8 +1741,11 @@ def telecharger_bulletin_public(request, token):
     charges_table.wrapOn(p, width, height)
     charges_table.drawOn(p, 1.5*cm, y - ch_table_h)
     y -= ch_table_h + 0.15*cm
-    # Note explicative déduction VF — utiliser base_vf (et non salaire_brut)
-    # pour rester cohérent avec les montants effectivement calculés dans le tableau ci-dessus.
+    # Note explicative VF (Versement Forfaitaire) — règle CGI Guinée :
+    #   Déduction VF = min(brut, plafond CNSS 2 500 000) × 6%   (plafonnée à 150 000)
+    #   Base VF      = Brut − Déduction VF
+    #   VF final     = Base VF × 6%
+    # La déduction VF est un mécanisme fiscal CGI, PAS une exonération d'indemnités.
     if base_vf > 0 and y > 3.8*cm:
         base_vf_f = float(base_vf)
         brut_gnf = float(bulletin.salaire_brut)
@@ -1754,10 +1756,10 @@ def telecharger_bulletin_public(request, token):
         if abs(base_vf_f - brut_gnf) < 1:
             note_base = f"Base VF/{ta_ou_onfpp} = Brut {base_vf_f:,.0f} GNF"
         else:
-            ecart = brut_gnf - base_vf_f
+            deduction = brut_gnf - base_vf_f
             note_base = (
-                f"Base VF/{ta_ou_onfpp} = {base_vf_f:,.0f} GNF "
-                f"(Brut {brut_gnf:,.0f} − {ecart:,.0f} indemnités forfaitaires non soumises)"
+                f"Base VF/{ta_ou_onfpp} = Brut {brut_gnf:,.0f} − déduction CGI {deduction:,.0f} "
+                f"(min(brut; 2 500 000) × 6%) = {base_vf_f:,.0f} GNF"
             )
         p.drawString(1.5*cm, y,
             f"{note_base}  |  VF = {base_vf_f:,.0f} × 6%  |  {ta_ou_onfpp} = {base_vf_f:,.0f} × {taux_ta_note}%"
