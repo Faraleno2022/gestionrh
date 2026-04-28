@@ -2,12 +2,40 @@
 Middleware de sécurité personnalisé pour l'application
 """
 import logging
+import json
 from django.http import HttpResponseForbidden
 from django.core.cache import cache
 from django.conf import settings
 import re
 
 logger = logging.getLogger(__name__)
+
+
+def _is_json_request(request):
+    content_type = request.META.get('CONTENT_TYPE', '').lower()
+    return 'application/json' in content_type
+
+
+def _iter_request_strings(request):
+    if _is_json_request(request):
+        try:
+            payload = json.loads(request.body or b'{}')
+        except (TypeError, ValueError):
+            return []
+        return list(_walk_json_strings(payload))
+
+    return list(request.POST.items())
+
+
+def _walk_json_strings(value, prefix='json'):
+    if isinstance(value, dict):
+        for key, item in value.items():
+            yield from _walk_json_strings(item, f'{prefix}.{key}')
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            yield from _walk_json_strings(item, f'{prefix}[{index}]')
+    elif isinstance(value, str):
+        yield prefix, value
 
 
 class SecurityHeadersMiddleware:
@@ -84,13 +112,13 @@ class SQLInjectionProtectionMiddleware:
         
         # Vérifier les paramètres POST
         if request.method == 'POST':
-            for key, value in request.POST.items():
+            for key, value in _iter_request_strings(request):
                 if isinstance(value, str) and self._contains_sql_injection(value):
                     logger.warning(f"Tentative d'injection SQL détectée dans POST: {key} depuis {request.META.get('REMOTE_ADDR')}")
                     return HttpResponseForbidden("Requête invalide détectée")
         
         return self.get_response(request)
-    
+
     def _contains_sql_injection(self, value):
         """Vérifie si la valeur contient des patterns d'injection SQL"""
         if not isinstance(value, str):
@@ -133,13 +161,13 @@ class XSSProtectionMiddleware:
         
         # Vérifier les paramètres POST
         if request.method == 'POST':
-            for key, value in request.POST.items():
+            for key, value in _iter_request_strings(request):
                 if isinstance(value, str) and self._contains_xss(value):
                     logger.warning(f"Tentative XSS détectée dans POST: {key} depuis {request.META.get('REMOTE_ADDR')}")
                     return HttpResponseForbidden("Requête invalide détectée")
         
         return self.get_response(request)
-    
+
     def _contains_xss(self, value):
         """Vérifie si la valeur contient des patterns XSS"""
         if not isinstance(value, str):

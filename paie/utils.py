@@ -28,19 +28,80 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import os as _os
 
-# Enregistrer Arial avec support UTF-8/accents
+
+def _to_date(value):
+    if not value:
+        return None
+    if hasattr(value, "date"):
+        return value.date()
+    return value
+
+
+def date_reference_bulletin(bulletin):
+    """Date utilisee pour afficher l'anciennete sur le bulletin."""
+    date_calcul = _to_date(getattr(bulletin, "date_calcul", None))
+    if date_calcul:
+        return date_calcul
+
+    periode = getattr(bulletin, "periode", None)
+    date_fin = _to_date(getattr(periode, "date_fin", None))
+    if date_fin:
+        return date_fin
+
+    try:
+        from calendar import monthrange
+        from datetime import date as date_cls
+        dernier_jour = monthrange(bulletin.annee_paie, bulletin.mois_paie)[1]
+        return date_cls(bulletin.annee_paie, bulletin.mois_paie, dernier_jour)
+    except Exception:
+        return None
+
+
+def format_anciennete_bulletin(emp, bulletin):
+    """Formate l'anciennete en annees, mois complets et jours."""
+    date_embauche = _to_date(getattr(emp, "date_embauche", None))
+    ref_date = date_reference_bulletin(bulletin)
+    if not date_embauche or not ref_date:
+        return "-"
+    if ref_date < date_embauche:
+        return "0 jour"
+
+    from dateutil.relativedelta import relativedelta
+    rd = relativedelta(ref_date, date_embauche)
+    parts = []
+    if rd.years:
+        parts.append(f"{rd.years} an{'s' if rd.years > 1 else ''}")
+    if rd.months:
+        parts.append(f"{rd.months} mois")
+    if rd.days:
+        parts.append(f"{rd.days} jour{'s' if rd.days > 1 else ''}")
+    if not parts:
+        return "0 jour"
+    if len(parts) == 1:
+        return parts[0]
+    return f"{' '.join(parts[:-1])} et {parts[-1]}"
+
+
+# Enregistrer Arial avec support UTF-8/accents, avec fallback ReportLab fiable.
 _FONT_DIR = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), 'static', 'fonts')
+_FONT_NORMAL = 'Helvetica'
+_FONT_BOLD = 'Helvetica-Bold'
+_FONT_ITALIC = 'Helvetica-Oblique'
+
 try:
-    pdfmetrics.registerFont(TTFont('Arial', _os.path.join(_FONT_DIR, 'Arial.ttf')))
-    pdfmetrics.registerFont(TTFont('Arial-Bold', _os.path.join(_FONT_DIR, 'Arial-Bold.ttf')))
-    pdfmetrics.registerFont(TTFont('Arial-Italic', _os.path.join(_FONT_DIR, 'Arial-Italic.ttf')))
-    _FONT_NORMAL = 'Arial'
-    _FONT_BOLD   = 'Arial-Bold'
-    _FONT_ITALIC = 'Arial-Italic'
+    arial_regular = _os.path.join(_FONT_DIR, 'Arial.ttf')
+    arial_bold = _os.path.join(_FONT_DIR, 'Arial-Bold.ttf')
+    arial_italic = _os.path.join(_FONT_DIR, 'Arial-Italic.ttf')
+
+    if all(_os.path.exists(path) for path in (arial_regular, arial_bold, arial_italic)):
+        pdfmetrics.registerFont(TTFont('Arial', arial_regular))
+        pdfmetrics.registerFont(TTFont('Arial-Bold', arial_bold))
+        pdfmetrics.registerFont(TTFont('Arial-Italic', arial_italic))
+        _FONT_NORMAL = 'Arial'
+        _FONT_BOLD = 'Arial-Bold'
+        _FONT_ITALIC = 'Arial-Italic'
 except Exception:
-    _FONT_NORMAL = _FONT_NORMAL
-    _FONT_BOLD   = _FONT_BOLD
-    _FONT_ITALIC = 'Helvetica-Oblique'
+    pass
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
 from django.utils import timezone
@@ -333,18 +394,8 @@ def generer_bulletin_pdf(bulletin):
     
     emp = bulletin.employe
     
-    # Calcul de l'ancienneté
-    anciennete_str = "-"
-    if emp.date_embauche:
-        from datetime import date as date_cls
-        ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie, 1)
-        delta = ref_date - emp.date_embauche
-        annees_anc = delta.days // 365
-        mois_anc = (delta.days % 365) // 30
-        if annees_anc > 0:
-            anciennete_str = f"{annees_anc} an{'s' if annees_anc > 1 else ''} {mois_anc} mois"
-        else:
-            anciennete_str = f"{mois_anc} mois"
+    # Ancienneté en années, mois complets et jours à la date du bulletin.
+    anciennete_str = format_anciennete_bulletin(emp, bulletin)
     
     # Récupération des congés
     from temps_travail.models import SoldeConge
@@ -720,12 +771,12 @@ def generer_bulletin_pdf(bulletin):
         "6%",
         f"{vf:,.0f}".replace(",", " ")])
     if ta > 0:
-        charges_data.append([f"TA (applicable si effectif < 25 sal. \u2014 effectif actuel : {nb_sal})",
+        charges_data.append([f"TA (applicable si effectif < 30 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             f"{taux_ta_label}%",
             f"{ta:,.0f}".replace(",", " ")])
     elif onfpp > 0:
-        charges_data.append([f"ONFPP (applicable si effectif \u2265 25 sal. \u2014 effectif actuel : {nb_sal})",
+        charges_data.append([f"ONFPP (applicable si effectif \u2265 30 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             "1,5%",
             f"{onfpp:,.0f}".replace(",", " ")])
@@ -797,14 +848,7 @@ def generer_bulletin_pdf_sdbk(bulletin):
     emp        = bulletin.employe
 
     # ── Ancienneté ──────────────────────────────────────────────────────────
-    anciennete_str = "-"
-    if emp.date_embauche:
-        from datetime import date as _d
-        ref  = _d(bulletin.annee_paie, bulletin.mois_paie, 1)
-        diff = ref - emp.date_embauche
-        ans  = diff.days // 365
-        mois = (diff.days % 365) // 30
-        anciennete_str = f"{ans:02d} ans et Mois {mois:02d}"
+    anciennete_str = format_anciennete_bulletin(emp, bulletin)
 
     # ── Congés ───────────────────────────────────────────────────────────────
     from temps_travail.models import SoldeConge

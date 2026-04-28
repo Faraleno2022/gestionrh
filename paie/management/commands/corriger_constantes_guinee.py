@@ -148,6 +148,22 @@ class Command(BaseCommand):
         )
         status = '✅ Créé' if created else '🔄 Mis à jour'
         self.stdout.write(self.style.SUCCESS(f'  {status}: TAUX_ONFPP = 1.5%'))
+
+        obj, created = Constante.objects.update_or_create(
+            code='SEUIL_TA_ONFPP',
+            defaults={
+                'libelle': 'Seuil TA / ONFPP',
+                'valeur': Decimal('30.00'),
+                'type_valeur': 'nombre',
+                'categorie': 'general',
+                'unite': 'salariés',
+                'description': 'TA si effectif < 30 salariés ; contribution ONFPP si effectif >= 30 salariés',
+                'date_debut_validite': date_validite,
+                'actif': True,
+            }
+        )
+        status = '✅ Créé' if created else '🔄 Mis à jour'
+        self.stdout.write(self.style.SUCCESS(f'  {status}: SEUIL_TA_ONFPP = 30 salariés'))
         
         # ============================================
         # 4. CONSTANTES CONGÉS PAYÉS

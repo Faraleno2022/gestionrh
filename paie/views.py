@@ -49,6 +49,7 @@ from .models import (
 )
 from employes.models import Employe
 from .services import MoteurCalculPaie
+from .utils import format_anciennete_bulletin
 from core.decorators import reauth_required, entreprise_active_required
 
 
@@ -669,26 +670,8 @@ def telecharger_bulletin_pdf(request, pk):
     
     emp = bulletin.employe
     
-    # Calcul de l'ancienneté : référence = 1er du mois SUIVANT la paie,
-    # pour compter le mois en cours comme complet.
-    # Ex: embauche 01/01/2024, bulletin avril 2026 :
-    #   ref 30/04 → relativedelta = 2 ans 3 mois 29 jours (faux RH)
-    #   ref 01/05 → relativedelta = 2 ans 4 mois          (correct RH)
-    anciennete_str = "-"
-    if emp.date_embauche:
-        from datetime import date as date_cls
-        from dateutil.relativedelta import relativedelta
-        if bulletin.mois_paie == 12:
-            ref_date = date_cls(bulletin.annee_paie + 1, 1, 1)
-        else:
-            ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie + 1, 1)
-        rd = relativedelta(ref_date, emp.date_embauche)
-        if rd.years > 0:
-            anciennete_str = f"{rd.years} an{'s' if rd.years > 1 else ''} {rd.months} mois"
-        elif rd.months > 0:
-            anciennete_str = f"{rd.months} mois"
-        else:
-            anciennete_str = f"{rd.days} jour{'s' if rd.days > 1 else ''}"
+    # Ancienneté en années, mois complets et jours à la date du bulletin.
+    anciennete_str = format_anciennete_bulletin(emp, bulletin)
     
     # Récupération des congés
     from temps_travail.models import SoldeConge
@@ -1073,12 +1056,12 @@ def telecharger_bulletin_pdf(request, pk):
         "6%",
         f"{vf:,.0f}".replace(",", " ")])
     if ta > 0:
-        charges_data.append([f"TA (applicable si effectif < 25 sal. \u2014 effectif actuel : {nb_sal})",
+        charges_data.append([f"TA (applicable si effectif < 30 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             f"{taux_ta_label}%",
             f"{ta:,.0f}".replace(",", " ")])
     elif onfpp > 0:
-        charges_data.append([f"ONFPP (applicable si effectif \u2265 25 sal. \u2014 effectif actuel : {nb_sal})",
+        charges_data.append([f"ONFPP (applicable si effectif \u2265 30 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             "1,5%",
             f"{onfpp:,.0f}".replace(",", " ")])
@@ -1309,26 +1292,8 @@ def telecharger_bulletin_public(request, token):
     
     emp = bulletin.employe
     
-    # Calcul de l'ancienneté : référence = 1er du mois SUIVANT la paie,
-    # pour compter le mois en cours comme complet.
-    # Ex: embauche 01/01/2024, bulletin avril 2026 :
-    #   ref 30/04 → relativedelta = 2 ans 3 mois 29 jours (faux RH)
-    #   ref 01/05 → relativedelta = 2 ans 4 mois          (correct RH)
-    anciennete_str = "-"
-    if emp.date_embauche:
-        from datetime import date as date_cls
-        from dateutil.relativedelta import relativedelta
-        if bulletin.mois_paie == 12:
-            ref_date = date_cls(bulletin.annee_paie + 1, 1, 1)
-        else:
-            ref_date = date_cls(bulletin.annee_paie, bulletin.mois_paie + 1, 1)
-        rd = relativedelta(ref_date, emp.date_embauche)
-        if rd.years > 0:
-            anciennete_str = f"{rd.years} an{'s' if rd.years > 1 else ''} {rd.months} mois"
-        elif rd.months > 0:
-            anciennete_str = f"{rd.months} mois"
-        else:
-            anciennete_str = f"{rd.days} jour{'s' if rd.days > 1 else ''}"
+    # Ancienneté en années, mois complets et jours à la date du bulletin.
+    anciennete_str = format_anciennete_bulletin(emp, bulletin)
     
     # Récupération des congés
     from temps_travail.models import SoldeConge
@@ -1719,12 +1684,12 @@ def telecharger_bulletin_public(request, token):
         "6%",
         f"{vf:,.0f}".replace(",", " ")])
     if ta > 0:
-        charges_data.append([f"TA (applicable si effectif < 25 sal. \u2014 effectif actuel : {nb_sal})",
+        charges_data.append([f"TA (applicable si effectif < 30 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             f"{taux_ta_label}%",
             f"{ta:,.0f}".replace(",", " ")])
     elif onfpp > 0:
-        charges_data.append([f"ONFPP (applicable si effectif \u2265 25 sal. \u2014 effectif actuel : {nb_sal})",
+        charges_data.append([f"ONFPP (applicable si effectif \u2265 30 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             "1,5%",
             f"{onfpp:,.0f}".replace(",", " ")])
