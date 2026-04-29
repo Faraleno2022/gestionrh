@@ -2,7 +2,8 @@ from django.contrib import admin
 from .models import (
     ParametrePaie, Constante, TrancheRTS, Variable,
     PeriodePaie, RubriquePaie, BulletinPaie, ElementSalaire,
-    LigneBulletin, CumulPaie, HistoriquePaie, RegleIndemnite
+    LigneBulletin, CumulPaie, HistoriquePaie, RegleIndemnite,
+    DeclarationEtax
 )
 
 
@@ -241,3 +242,23 @@ class RegleIndemniteAdmin(admin.ModelAdmin):
             from core.models import Entreprise
             kwargs['queryset'] = Entreprise.objects.filter(pk=request.user.entreprise_id)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+@admin.register(DeclarationEtax)
+class DeclarationEtaxAdmin(admin.ModelAdmin):
+    list_display = ['reference', 'entreprise', 'mois', 'annee', 'statut', 'total_fiscal', 'reference_etax']
+    list_filter = ['statut', 'annee', 'mois']
+    search_fields = ['reference', 'reference_etax', 'entreprise__nom_entreprise']
+    readonly_fields = [
+        'reference', 'effectif_declare', 'total_brut', 'total_net', 'total_base_rts',
+        'total_rts', 'total_vf', 'total_ta', 'total_onfpp', 'total_fiscal',
+        'total_cnss_employe', 'total_cnss_employeur', 'total_cnss', 'total_general',
+        'date_generation', 'date_creation', 'date_modification'
+    ]
+    ordering = ['-annee', '-mois']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(entreprise=request.user.entreprise)

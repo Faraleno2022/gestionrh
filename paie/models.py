@@ -818,6 +818,62 @@ class LigneDeclaration(models.Model):
         return f"{self.declaration.reference} - {self.employe.matricule}"
 
 
+class DeclarationEtax(models.Model):
+    """Historique des déclarations préparées pour le portail eTax Guinée."""
+    STATUTS = (
+        ('brouillon', 'Brouillon'),
+        ('generee', 'Générée'),
+        ('declaree', 'Déclarée sur eTax'),
+        ('payee', 'Payée'),
+        ('rejetee', 'Rejetée'),
+    )
+
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='declarations_etax')
+    periode = models.ForeignKey(PeriodePaie, on_delete=models.SET_NULL, null=True, blank=True, related_name='declarations_etax')
+    annee = models.IntegerField()
+    mois = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
+    reference = models.CharField(max_length=60, unique=True)
+
+    effectif_declare = models.IntegerField(default=0)
+    total_brut = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    total_net = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    total_base_rts = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    total_rts = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    total_vf = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    total_ta = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    total_onfpp = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    total_fiscal = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    total_cnss_employe = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    total_cnss_employeur = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    total_cnss = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    total_general = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
+    statut = models.CharField(max_length=20, choices=STATUTS, default='brouillon')
+    reference_etax = models.CharField(max_length=100, blank=True, null=True)
+    date_generation = models.DateTimeField(null=True, blank=True)
+    date_declaration = models.DateField(null=True, blank=True)
+    date_paiement = models.DateField(null=True, blank=True)
+
+    fichier_pdf = models.FileField(upload_to='declarations/etax/pdf/', null=True, blank=True)
+    fichier_excel = models.FileField(upload_to='declarations/etax/excel/', null=True, blank=True)
+    fichier_recu = models.FileField(upload_to='declarations/etax/recus/', null=True, blank=True)
+
+    genere_par = models.ForeignKey(Utilisateur, on_delete=models.SET_NULL, null=True, blank=True, related_name='declarations_etax_generees')
+    observations = models.TextField(blank=True, null=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'declarations_etax'
+        verbose_name = 'Déclaration eTax'
+        verbose_name_plural = 'Déclarations eTax'
+        ordering = ['-annee', '-mois']
+        unique_together = ['entreprise', 'annee', 'mois']
+
+    def __str__(self):
+        return f"eTax {self.mois:02d}/{self.annee} - {self.reference}"
+
+
 class AlerteEcheance(models.Model):
     """Alertes pour les échéances de déclarations sociales et fiscales"""
     TYPES_ECHEANCE = (

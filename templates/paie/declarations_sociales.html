@@ -100,6 +100,16 @@
                 </button>
                 <small class="text-warning"><i class="fas fa-info-circle me-1"></i>Sélectionnez un mois pour exporter la DMU</small>
                 {% endif %}
+                <!-- Déclaration eTax -->
+                {% if mois %}
+                <a class="btn btn-primary" href="{% url 'paie:declaration_etax' %}?annee={{ annee }}&mois={{ mois }}">
+                    <i class="fas fa-file-invoice-dollar me-1"></i> Déclaration eTax
+                </a>
+                {% else %}
+                <button class="btn btn-secondary" disabled title="Sélectionnez un mois pour eTax">
+                    <i class="fas fa-file-invoice-dollar me-1"></i> Déclaration eTax
+                </button>
+                {% endif %}
             </div>
         </div>
     </div>

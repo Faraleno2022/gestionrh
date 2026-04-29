@@ -279,6 +279,11 @@
                 <i class="bi bi-file-earmark-spreadsheet"></i> Déclarations sociales
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {% if 'declarations/etax' in request.path %}active{% endif %}" href="{% url 'paie:declaration_etax' %}">
+                <i class="bi bi-receipt"></i> Déclaration eTax
+            </a>
+        </li>
         
         <!-- MODULES -->
         <li class="nav-item">
@@ -518,4 +523,3 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-

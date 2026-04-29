@@ -8,6 +8,7 @@ from . import views_frais
 from . import views_parametres
 from . import views_rapports
 from . import views_simulation
+from . import views_etax
 
 app_name = 'paie'
 
@@ -45,6 +46,11 @@ urlpatterns = [
     # Déclarations sociales
     path('declarations/', views.declarations_sociales, name='declarations_sociales'),
     path('declarations/pdf/', views.declarations_sociales_pdf, name='declarations_sociales_pdf'),
+    path('declarations/etax/', views_etax.declaration_etax, name='declaration_etax'),
+    path('declarations/etax/generer/', views_etax.generer_declaration_etax, name='generer_declaration_etax'),
+    path('declarations/etax/<int:pk>/suivi/', views_etax.mettre_a_jour_declaration_etax, name='mettre_a_jour_declaration_etax'),
+    path('declarations/etax/excel/', views_etax.declaration_etax_excel, name='declaration_etax_excel'),
+    path('declarations/etax/pdf/', views_etax.declaration_etax_pdf, name='declaration_etax_pdf'),
     
     # Éléments de salaire
     path('elements-salaire/', views.liste_elements_salaire, name='liste_elements_salaire'),
