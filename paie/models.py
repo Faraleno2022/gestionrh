@@ -1248,11 +1248,11 @@ class ParametresCalculPaie(models.Model):
     # Base VF / TA
     MODE_BASE_VF = [
         ('brut', 'Brut direct (simplifié)'),
-        ('brut_moins_deduction', 'Brut − déduction fixe (si brut≥2.5M: −150000)'),
+        ('brut_moins_deduction', 'Modèle standard GuinéeRH : brut − déduction CGI plafonnée'),
         ('formule', 'Formule personnalisée'),
     ]
     mode_base_vf = models.CharField(
-        max_length=30, choices=MODE_BASE_VF, default='brut'
+        max_length=30, choices=MODE_BASE_VF, default='brut_moins_deduction'
     )
     formule_base_vf = models.TextField(
         blank=True,
@@ -1275,6 +1275,16 @@ class ParametresCalculPaie(models.Model):
 
     def __str__(self):
         return f"Paramètres calcul paie — {self.entreprise.nom_entreprise}"
+
+    def appliquer_modele_standard_guineerh(self):
+        """Applique le modèle validé pour les bulletins GuinéeRH standard."""
+        self.mode_exoneration_indemnites = 'plafond_pct'
+        self.plafond_exoneration_pct = Decimal('25')
+        self.formule_exoneration = ''
+        self.mode_base_vf = 'brut_moins_deduction'
+        self.formule_base_vf = ''
+        self.utiliser_formule_base_rts = False
+        self.formule_base_rts = ''
 
 
 class HistoriqueParametresPaie(models.Model):

@@ -55,6 +55,20 @@
             <form method="post" id="formParametres" {% if not peut_modifier %}onsubmit="return false;"{% endif %}>
                 {% csrf_token %}
 
+                {% if peut_modifier %}
+                <div class="alert alert-success border d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+                    <div>
+                        <strong>Modèle standard GuinéeRH</strong>
+                        <div class="small mb-0">
+                            Base 75% / indemnités 25%, CNSS plafonnée, RTS standard, VF/ONFPP avec déduction CGI.
+                        </div>
+                    </div>
+                    <button type="submit" name="action" value="appliquer_modele_standard" class="btn btn-success">
+                        <i class="bi bi-check2-circle me-1"></i>Appliquer le modèle standard
+                    </button>
+                </div>
+                {% endif %}
+
                 <!-- Section 1 : Indemnités forfaitaires -->
                 <div class="card mb-4">
                     <div class="card-header bg-primary text-white">
@@ -131,6 +145,9 @@
                                 </option>
                                 {% endfor %}
                             </select>
+                            <div class="form-text">
+                                Recommandé : modèle standard GuinéeRH, soit brut moins déduction CGI plafonnée.
+                            </div>
                         </div>
 
                         <div id="block_formule_base_vf" class="mb-3" style="display:none">

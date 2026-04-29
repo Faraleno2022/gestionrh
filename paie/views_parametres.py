@@ -59,6 +59,32 @@ def parametres_calcul_paie(request):
             return redirect('paie:parametres_calcul')
 
         raison = request.POST.get('raison', '').strip()
+        action = request.POST.get('action', '')
+
+        if action == 'appliquer_modele_standard':
+            valeurs_avant = {
+                'mode_exoneration_indemnites': params.mode_exoneration_indemnites,
+                'plafond_exoneration_pct': params.plafond_exoneration_pct,
+                'formule_exoneration': params.formule_exoneration,
+                'mode_base_vf': params.mode_base_vf,
+                'formule_base_vf': params.formule_base_vf,
+                'utiliser_formule_base_rts': params.utiliser_formule_base_rts,
+                'formule_base_rts': params.formule_base_rts,
+            }
+            params.appliquer_modele_standard_guineerh()
+            raison_standard = raison or "Application du modèle standard GuinéeRH"
+            for champ, ancienne in valeurs_avant.items():
+                _enregistrer_historique(
+                    params, request.user, champ, ancienne,
+                    getattr(params, champ), raison_standard,
+                )
+            params.save()
+            messages.success(
+                request,
+                "Modèle standard GuinéeRH appliqué : indemnités plafonnées à 25 %, "
+                "base VF/ONFPP avec déduction CGI, base RTS standard."
+            )
+            return redirect('paie:parametres_calcul')
 
         # --- Indemnités forfaitaires ---
         nouveau_mode_exo = request.POST.get('mode_exoneration_indemnites', 'plafond_pct')
