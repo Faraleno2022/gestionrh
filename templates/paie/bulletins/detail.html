@@ -286,7 +286,7 @@
                         </tr>
                         {% if bulletin.taxe_apprentissage and bulletin.taxe_apprentissage > 0 %}
                         <tr>
-                            <td>Taxe d'Apprentissage TA ({{ bulletin.taux_ta|default:"2" }}%) <span class="badge bg-secondary">&lt;30 sal.</span></td>
+                            <td>Taxe d'Apprentissage TA ({{ bulletin.taux_ta|default:"2" }}%) <span class="badge bg-secondary">&lt;25 sal.</span></td>
                             <td class="text-end"><strong>{{ bulletin.taxe_apprentissage|floatformat:0|intcomma }} GNF</strong></td>
                         </tr>
                         <tr class="small text-muted">
@@ -295,7 +295,7 @@
                         {% endif %}
                         {% if bulletin.contribution_onfpp and bulletin.contribution_onfpp > 0 %}
                         <tr>
-                            <td>Contribution ONFPP (1,5%) <span class="badge bg-secondary">&ge;30 sal.</span></td>
+                            <td>Contribution ONFPP (1,5%) <span class="badge bg-secondary">&ge;25 sal.</span></td>
                             <td class="text-end"><strong>{{ bulletin.contribution_onfpp|floatformat:0|intcomma }} GNF</strong></td>
                         </tr>
                         <tr class="small text-muted">

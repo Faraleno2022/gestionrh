@@ -1056,12 +1056,12 @@ def telecharger_bulletin_pdf(request, pk):
         "6%",
         f"{vf:,.0f}".replace(",", " ")])
     if ta > 0:
-        charges_data.append([f"TA (applicable si effectif < 30 sal. \u2014 effectif actuel : {nb_sal})",
+        charges_data.append([f"TA (applicable si effectif < 25 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             f"{taux_ta_label}%",
             f"{ta:,.0f}".replace(",", " ")])
     elif onfpp > 0:
-        charges_data.append([f"ONFPP (applicable si effectif \u2265 30 sal. \u2014 effectif actuel : {nb_sal})",
+        charges_data.append([f"ONFPP (applicable si effectif \u2265 25 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             "1,5%",
             f"{onfpp:,.0f}".replace(",", " ")])
@@ -1684,12 +1684,12 @@ def telecharger_bulletin_public(request, token):
         "6%",
         f"{vf:,.0f}".replace(",", " ")])
     if ta > 0:
-        charges_data.append([f"TA (applicable si effectif < 30 sal. \u2014 effectif actuel : {nb_sal})",
+        charges_data.append([f"TA (applicable si effectif < 25 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             f"{taux_ta_label}%",
             f"{ta:,.0f}".replace(",", " ")])
     elif onfpp > 0:
-        charges_data.append([f"ONFPP (applicable si effectif \u2265 30 sal. \u2014 effectif actuel : {nb_sal})",
+        charges_data.append([f"ONFPP (applicable si effectif \u2265 25 sal. \u2014 effectif actuel : {nb_sal})",
             f"{base_vf:,.0f}".replace(",", " ") if base_vf else "-",
             "1,5%",
             f"{onfpp:,.0f}".replace(",", " ")])
@@ -3096,8 +3096,8 @@ def simulation_paie(request):
                 'message': f"Brut très faible ({salaire_brut:,.0f} GNF < {seuil_minimum_cnss:,.0f} GNF). Pas de cotisation CNSS calculée."
             })
         else:
-            # Assiette CNSS = min(brut, plafond)
-            assiette_cnss = min(salaire_brut, plafond_cnss)
+            # Assiette CNSS = brut encadré par le plancher et le plafond
+            assiette_cnss = max(min(salaire_brut, plafond_cnss), plancher_cnss)
             cnss_employe = (assiette_cnss * taux_cnss_employe / Decimal('100')).quantize(Decimal('1'))
             cnss_employeur = (assiette_cnss * taux_cnss_employeur / Decimal('100')).quantize(Decimal('1'))
         
@@ -3151,15 +3151,17 @@ def simulation_paie(request):
             taux_effectif_rts = Decimal('0')
         
         # Charges patronales
-        vf = (salaire_brut * taux_vf / Decimal('100')).quantize(Decimal('1'))
+        deduction_vf = (min(salaire_brut, plafond_cnss) * taux_vf / Decimal('100')).quantize(Decimal('1'))
+        base_vf = max(Decimal('0'), salaire_brut - deduction_vf)
+        vf = (base_vf * taux_vf / Decimal('100')).quantize(Decimal('1'))
         
         # TA et ONFPP mutuellement exclusifs : < 25 → TA 2%, ≥ 25 → ONFPP 1,5% (CGI Guinée)
         if nb_salaries < 25:
-            ta = (salaire_brut * taux_ta / Decimal('100')).quantize(Decimal('1'))
+            ta = (base_vf * taux_ta / Decimal('100')).quantize(Decimal('1'))
             onfpp = Decimal('0')
         else:
             ta = Decimal('0')
-            onfpp = (salaire_brut * taux_onfpp / Decimal('100')).quantize(Decimal('1'))
+            onfpp = (base_vf * taux_onfpp / Decimal('100')).quantize(Decimal('1'))
         
         # Totaux (rappels et retenues trop-perçu hors base)
         total_retenues = cnss_employe + rts
@@ -3203,6 +3205,7 @@ def simulation_paie(request):
             'taux_effectif_rts': taux_effectif_rts,
             'detail_rts': detail_rts,
             'vf': vf,
+            'base_vf': base_vf,
             'ta': ta,
             'onfpp': onfpp,
             'nb_salaries': nb_salaries,

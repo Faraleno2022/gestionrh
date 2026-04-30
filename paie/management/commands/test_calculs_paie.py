@@ -132,8 +132,10 @@ class Command(BaseCommand):
         TAUX_TA = Decimal('2.00')
         
         cnss_employeur = self._arrondir(assiette_cnss * TAUX_CNSS_EMPLOYEUR / Decimal('100'))
-        vf = self._arrondir(salaire_brut * TAUX_VF / Decimal('100'))
-        ta = self._arrondir(salaire_brut * TAUX_TA / Decimal('100'))
+        deduction_vf = self._arrondir(min(salaire_brut, Decimal('2500000')) * TAUX_VF / Decimal('100'))
+        base_vf = max(Decimal('0'), salaire_brut - deduction_vf)
+        vf = self._arrondir(base_vf * TAUX_VF / Decimal('100'))
+        ta = self._arrondir(base_vf * TAUX_TA / Decimal('100'))
         
         return cnss_employeur, vf, ta
 
@@ -219,9 +221,9 @@ class Command(BaseCommand):
         
         tests = [
             # (salaire_brut, assiette_cnss, cnss_pat_att, vf_att, ta_att) - TA = 2% CGI 2022
-            (Decimal('8000000'), Decimal('2500000'), Decimal('450000'), Decimal('480000'), Decimal('160000')),
-            (Decimal('2000000'), Decimal('2000000'), Decimal('360000'), Decimal('120000'), Decimal('40000')),
-            (Decimal('500000'), Decimal('550000'), Decimal('99000'), Decimal('30000'), Decimal('10000')),
+            (Decimal('8000000'), Decimal('2500000'), Decimal('450000'), Decimal('471000'), Decimal('157000')),
+            (Decimal('2000000'), Decimal('2000000'), Decimal('360000'), Decimal('112800'), Decimal('37600')),
+            (Decimal('500000'), Decimal('550000'), Decimal('99000'), Decimal('28200'), Decimal('9400')),
         ]
         
         reussis = 0
@@ -263,9 +265,9 @@ class Command(BaseCommand):
         
         # Charges patronales attendues (TA = 2% CGI 2022)
         cnss_employeur_attendu = Decimal('450000')
-        vf_attendu = Decimal('480000')
-        ta_attendu = Decimal('160000')
-        total_charges_attendu = Decimal('1090000')
+        vf_attendu = Decimal('471000')
+        ta_attendu = Decimal('157000')
+        total_charges_attendu = Decimal('1078000')
         
         # Calculs
         assiette_cnss, cnss_employe, cnss_employeur = self._calculer_cnss(salaire_brut)
@@ -299,7 +301,7 @@ class Command(BaseCommand):
         self.stdout.write('  --- Charges patronales ---')
         check('CNSS Employeur (18%)', cnss_employeur, cnss_employeur_attendu)
         check('Versement Forfaitaire (6%)', vf, vf_attendu)
-        check('Taxe Apprentissage (1,5%)', ta, ta_attendu)
+        check('Taxe Apprentissage (2%)', ta, ta_attendu)
         
         # Résumé
         self.stdout.write('')

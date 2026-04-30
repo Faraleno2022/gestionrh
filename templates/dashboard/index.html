@@ -119,12 +119,12 @@
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            Masse Salariale
+                            Masse Salariale Brute
                         </div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">
                             {{ masse_salariale|floatformat:0|intcomma }} GNF
                         </div>
-                        <small class="text-muted">Mois en cours</small>
+                        <small class="text-muted">{{ periode_label }}</small>
                     </div>
                     <div class="col-auto">
                         <i class="bi bi-cash-stack fs-2 text-gray-300"></i>
@@ -165,7 +165,7 @@
                         </div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">{{ bulletins_valides }}</div>
                         <small class="text-muted">
-                            <i class="bi bi-check-circle"></i> Validés / {{ bulletins_calcules }} calculés
+                            <i class="bi bi-check-circle"></i> {{ periode_label }} · Validés / {{ bulletins_calcules }} calculés
                         </small>
                     </div>
                     <div class="col-auto">
@@ -177,10 +177,55 @@
     </div>
 </div>
 
+<!-- Soldes de paie filtrés -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Net à payer
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ total_net_a_payer|floatformat:0|intcomma }} GNF
+                        </div>
+                        <small class="text-muted">{{ periode_label }}</small>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-wallet2 fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-secondary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                            Base VF / ONFPP
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ total_base_vf|floatformat:0|intcomma }} GNF
+                        </div>
+                        <small class="text-muted">{{ periode_label }}</small>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-calculator fs-2 text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Cotisations & Taxes du mois -->
 <div class="row mb-4">
     <div class="col-12">
-        <h5 class="mb-3"><i class="bi bi-bank"></i> Cotisations & Taxes (mois en cours)</h5>
+        <h5 class="mb-3"><i class="bi bi-bank"></i> Cotisations & Taxes ({{ periode_label }})</h5>
     </div>
 
     <div class="col-xl-3 col-md-6 mb-3">

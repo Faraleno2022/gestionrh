@@ -368,12 +368,15 @@ def calculer_charges_patronales(brut, annee=None, nb_salaries=0):
         base = _arrondir(max(min(brut, plafond), plancher))
         cnss_pat = _arrondir(base * taux_cnss_pat / Decimal('100'))
 
-    vf = _arrondir(brut * taux_vf  / Decimal('100'))
-    ta = _arrondir(brut * taux_ta  / Decimal('100'))
+    deduction_vf = _arrondir(min(brut, plafond) * taux_vf / Decimal('100'))
+    base_vf = max(Decimal('0'), brut - deduction_vf)
+    vf = _arrondir(base_vf * taux_vf / Decimal('100'))
+    ta = _arrondir(base_vf * taux_ta / Decimal('100'))
     total = cnss_pat + vf + ta
 
     return {
         'cnss_employeur':      int(cnss_pat),
+        'base_vf':             int(base_vf),
         'vf':                  int(vf),
         'ta':                  int(ta),
         'libelle_ta':          libelle_ta,
@@ -436,8 +439,10 @@ def cout_total_vers_brut(
         else:
             base = _arrondir(max(min(brut, plafond), plancher))
             cnss_pat = _arrondir(base * taux_cnss_pat / Decimal('100'))
-        vf = _arrondir(brut * taux_vf / Decimal('100'))
-        ta = _arrondir(brut * taux_ta_onfpp / Decimal('100'))
+        deduction_vf = _arrondir(min(brut, plafond) * taux_vf / Decimal('100'))
+        base_vf = max(Decimal('0'), brut - deduction_vf)
+        vf = _arrondir(base_vf * taux_vf / Decimal('100'))
+        ta = _arrondir(base_vf * taux_ta_onfpp / Decimal('100'))
         return cnss_pat, vf, ta
 
     def _cout(brut):

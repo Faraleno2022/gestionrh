@@ -12,6 +12,31 @@ from paie.models import BulletinPaie, PeriodePaie
 from temps_travail.models import Conge, Pointage
 
 
+def _build_paie_totaux_context(totaux):
+    """Construit les totaux paie affichés sur le tableau de bord."""
+    total_cnss_5 = totaux.get('cnss_5') or 0
+    total_cnss_18 = totaux.get('cnss_18') or 0
+    total_cnss_23 = total_cnss_5 + total_cnss_18
+    total_trs = totaux.get('trs') or 0
+    total_vf = totaux.get('vf') or 0
+    total_ta = totaux.get('ta') or 0
+    total_onfpp = totaux.get('onfpp') or 0
+
+    return {
+        'masse_salariale': totaux.get('brut') or 0,
+        'total_net_a_payer': totaux.get('net') or 0,
+        'total_base_vf': totaux.get('base_vf') or 0,
+        'total_trs': total_trs,
+        'total_vf': total_vf,
+        'total_ta': total_ta,
+        'total_onfpp': total_onfpp,
+        'total_cnss_5': total_cnss_5,
+        'total_cnss_18': total_cnss_18,
+        'total_cnss_23': total_cnss_23,
+        'total_dmu': total_cnss_23 + total_trs + total_vf + total_onfpp + total_ta,
+    }
+
+
 @login_required
 def index(request):
     """Tableau de bord principal - Optimisé pour rapidité"""
@@ -45,6 +70,7 @@ def index(request):
     filtre_context = {
         'mois_filtre': mois_filtre,
         'annee_filtre': annee_filtre,
+        'periode_label': f"{dict(mois_labels).get(mois_filtre, mois_filtre)} {annee_filtre}",
         'mois_labels': mois_labels,
         'annees_disponibles': annees_disponibles,
     }
@@ -60,6 +86,7 @@ def index(request):
             'conges_en_cours': 0, 'employes_en_conge': [],
             'conges_en_attente': 0, 'bulletins_calcules': 0,
             'bulletins_valides': 0, 'masse_salariale': 0, 'pointages_jour': 0,
+            'total_net_a_payer': 0, 'total_base_vf': 0,
             'total_trs': 0, 'total_vf': 0, 'total_ta': 0, 'total_onfpp': 0,
             'total_cnss_5': 0, 'total_cnss_18': 0, 'total_cnss_23': 0, 'total_dmu': 0,
             'alertes': [{
@@ -164,7 +191,9 @@ def index(request):
         context['bulletins_calcules'] = bulletins_mois.filter(statut_bulletin='calcule').count()
         context['bulletins_valides'] = bulletins_mois.filter(statut_bulletin='valide').count()
         totaux = bulletins_mois.aggregate(
+            brut=Sum('salaire_brut'),
             net=Sum('net_a_payer'),
+            base_vf=Sum('base_vf'),
             trs=Sum('irg'),
             vf=Sum('versement_forfaitaire'),
             ta=Sum('taxe_apprentissage'),
@@ -172,33 +201,11 @@ def index(request):
             cnss_5=Sum('cnss_employe'),
             cnss_18=Sum('cnss_employeur'),
         )
-        context['masse_salariale'] = totaux['net'] or 0
-        context['total_trs'] = totaux['trs'] or 0
-        context['total_vf'] = totaux['vf'] or 0
-        context['total_ta'] = totaux['ta'] or 0
-        context['total_onfpp'] = totaux['onfpp'] or 0
-        context['total_cnss_5'] = totaux['cnss_5'] or 0
-        context['total_cnss_18'] = totaux['cnss_18'] or 0
-        context['total_cnss_23'] = (totaux['cnss_5'] or 0) + (totaux['cnss_18'] or 0)
-        context['total_dmu'] = (
-            (totaux['trs'] or 0)
-            + (totaux['vf'] or 0)
-            + (totaux['ta'] or 0)
-            + (totaux['onfpp'] or 0)
-            + context['total_cnss_23']
-        )
+        context.update(_build_paie_totaux_context(totaux))
     except PeriodePaie.DoesNotExist:
         context['bulletins_calcules'] = 0
         context['bulletins_valides'] = 0
-        context['masse_salariale'] = 0
-        context['total_trs'] = 0
-        context['total_vf'] = 0
-        context['total_ta'] = 0
-        context['total_onfpp'] = 0
-        context['total_cnss_5'] = 0
-        context['total_cnss_18'] = 0
-        context['total_cnss_23'] = 0
-        context['total_dmu'] = 0
+        context.update(_build_paie_totaux_context({}))
     
     # Pointages du jour
     context['pointages_jour'] = Pointage.objects.filter(

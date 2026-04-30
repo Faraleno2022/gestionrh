@@ -79,41 +79,44 @@ class CNSSCalculTests(SimpleTestCase):
 
 class ChargesPatronalesTests(SimpleTestCase):
     """TU-04 et TU-05: Tests VF et TA"""
-    
+
     TAUX_VF = Decimal('0.06')    # 6%
     TAUX_TA = Decimal('0.02')    # 2%
-    
+
     def _calculer_vf_ta(self, salaire_brut):
-        """Calcule VF et TA sur brut total"""
-        vf = round(salaire_brut * self.TAUX_VF)
-        ta = round(salaire_brut * self.TAUX_TA)
-        return vf, ta
-    
+        """Calcule VF et TA sur base VF/ONFPP."""
+        deduction_vf = round(min(salaire_brut, Decimal('2500000')) * self.TAUX_VF)
+        base_vf = salaire_brut - deduction_vf
+        vf = round(base_vf * self.TAUX_VF)
+        ta = round(base_vf * self.TAUX_TA)
+        return base_vf, vf, ta
+
     def test_tu04_vf_6_pourcent(self):
-        """TU-04: Versement Forfaitaire = 6% du brut"""
+        """TU-04: Versement Forfaitaire = 6% de la base VF/ONFPP"""
         salaire = Decimal('3600000')
-        vf, _ = self._calculer_vf_ta(salaire)
-        
-        self.assertEqual(vf, Decimal('216000'))  # 3.6M × 6%
-    
+        base_vf, vf, _ = self._calculer_vf_ta(salaire)
+
+        self.assertEqual(base_vf, Decimal('3450000'))
+        self.assertEqual(vf, Decimal('207000'))
+
     def test_tu05_ta_2_pourcent(self):
-        """TU-05: Taxe Apprentissage = 2% du brut"""
+        """TU-05: Taxe Apprentissage = 2% de la base VF/ONFPP"""
         salaire = Decimal('3600000')
-        _, ta = self._calculer_vf_ta(salaire)
-        
-        self.assertEqual(ta, Decimal('72000'))  # 3.6M × 2%
-    
+        _, _, ta = self._calculer_vf_ta(salaire)
+
+        self.assertEqual(ta, Decimal('69000'))
+
     def test_charges_patronales_total(self):
         """Total charges patronales = CNSS 18% + VF 6% + TA 2%"""
         salaire = Decimal('3600000')
-        
+
         # CNSS employeur (plafonné)
-        cnss_employeur = Decimal('450000')  # 2.5M × 18%
-        
-        vf, ta = self._calculer_vf_ta(salaire)
+        cnss_employeur = Decimal('450000')  # 2.5M x 18%
+
+        _, vf, ta = self._calculer_vf_ta(salaire)
         total = cnss_employeur + vf + ta
-        
-        self.assertEqual(total, Decimal('738000'))  # 450K + 216K + 72K
+
+        self.assertEqual(total, Decimal('726000'))
 
 
 class IRGCalculTests(SimpleTestCase):

@@ -332,6 +332,9 @@ class MoteurCalculPaie:
                 'message': f"Salaire brut très faible ({self.montants['brut']:,.0f} GNF < {seuil_minimum:,.0f} GNF). Pas de cotisation CNSS calculée."
             })
         
+        # 3.2 Appliquer l'exonération RTS des indemnités forfaitaires sur le brut final.
+        self._appliquer_exoneration_indemnites_forfaitaires()
+
         # 4. Calculer les cotisations sociales
         self._calculer_cotisations_sociales()
         
@@ -584,9 +587,9 @@ class MoteurCalculPaie:
         
         # Ajouter les heures supplémentaires si présentes
         self._calculer_heures_supplementaires()
-        
-        # Appliquer l'exonération RTS des indemnités forfaitaires (intégrale, CGI Guinée)
-        self._appliquer_exoneration_indemnites_forfaitaires()
+
+        # L'exonération RTS est appliquée après le calcul du brut final, pour
+        # tenir compte des absences non payées.
     
     def _calculer_element(self, element, phase=None):
         """Calculer le montant d'un élément (montant fixe, taux, ou formule).
@@ -809,7 +812,7 @@ class MoteurCalculPaie:
         """
         # Totaliser les indemnités forfaitaires détectées (arrondi à l'unité)
         total_indemnites = Decimal(str(sum(montant for _, montant, _ in self._indemnites_detectees))).quantize(Decimal("1"), rounding=ROUND_FLOOR)
-        salaire_brut = self.montants['total_gains']
+        salaire_brut = self.montants.get('brut') or self.montants['total_gains']
 
         self.montants['indemnites_forfaitaires'] = total_indemnites
         self.montants['salaire_base_hors_indemnites'] = self.montants['imposable']
@@ -914,7 +917,8 @@ class MoteurCalculPaie:
         # sinon on tombe sur le brut.
         plancher_seuil = self.constantes.get('PLANCHER_CNSS', Decimal('550000')) * Decimal('0.10')
         if self.montants['cnss_base'] >= plancher_seuil:
-            base_raw = self.montants['cnss_base']
+            retenue_absence = self.montants.get('retenue_absence', Decimal('0'))
+            base_raw = max(Decimal('0'), self.montants['cnss_base'] - retenue_absence)
         else:
             base_raw = self.montants['brut']
 
@@ -989,7 +993,7 @@ class MoteurCalculPaie:
         )
         
         # Base VF/TA = salaire brut total (en GNF si devise étrangère)
-        base_vf_ta = self.montants['brut']
+        base_vf_ta = max(Decimal('0'), self.montants['brut'])
         if self.devise_employe != self.devise_base:
             base_vf_ta = DeviseService.convertir_vers_gnf(
                 self.montants['brut'],
@@ -1035,6 +1039,10 @@ class MoteurCalculPaie:
             )
             base_vf_nette = base_vf_ta - deduction_vf
 
+        base_vf_calculee = Decimal(str(base_vf_nette))
+        base_vf_nette = self._arrondir(max(Decimal('0'), min(base_vf_calculee, base_vf_ta)))
+        deduction_vf = self._arrondir(base_vf_ta - base_vf_nette)
+
         self.montants['base_vf'] = base_vf_nette
         self.montants['deduction_vf'] = deduction_vf
         self.montants['taux_vf'] = taux_vf
@@ -1043,12 +1051,12 @@ class MoteurCalculPaie:
         )
 
         # TA et ONFPP sont mutuellement exclusifs selon le nombre de salariés:
-        # - Moins de 30 salariés: TA (2%) sur brut
-        # - 30 salariés ou plus: ONFPP (1,5%) sur brut (législation guinéenne)
+        # - Moins de 25 salariés: TA (2%) sur la base VF/ONFPP
+        # - 25 salariés ou plus: ONFPP (1,5%) sur la base VF/ONFPP
         # Les taux sont FIXES par la loi guinéenne, non configurables.
         TAUX_TA_LEGAL = Decimal('2.00')       # Taxe d'Apprentissage: 2% (loi)
         TAUX_ONFPP_LEGAL = Decimal('1.50')    # ONFPP: 1,5% (loi)
-        seuil_ta_onfpp = int(self.constantes.get('SEUIL_TA_ONFPP', Decimal('30')))
+        seuil_ta_onfpp = int(self.constantes.get('SEUIL_TA_ONFPP', Decimal('25')))
         if self.nb_salaries < seuil_ta_onfpp:
             self.montants['base_ta'] = base_vf_nette
             self.montants['taux_ta'] = TAUX_TA_LEGAL
@@ -1119,7 +1127,11 @@ class MoteurCalculPaie:
         # Base imposable = gains non-forfaitaires - CNSS
         # + réintégration de l'excédent d'indemnités au-delà du plafond 25%
         depassement = self.montants.get('depassement_plafond_indemnites', Decimal('0'))
-        base_imposable_defaut = self._arrondir(self.montants['imposable'] - self.montants['cnss_employe'] + depassement)
+        imposable_apres_absence = max(
+            Decimal('0'),
+            self.montants['imposable'] - self.montants.get('retenue_absence', Decimal('0'))
+        )
+        base_imposable_defaut = self._arrondir(imposable_apres_absence - self.montants['cnss_employe'] + depassement)
 
         # Vérifier si une formule personnalisée de base RTS est configurée
         from .formules import evaluer_formule as _evaluer_rts

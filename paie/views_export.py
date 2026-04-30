@@ -71,23 +71,28 @@ def get_declarations_data(entreprise, annee, mois=None):
     taux_cnss_employeur = get_constante('TAUX_CNSS_EMPLOYEUR', 18)
     taux_vf = get_constante('TAUX_VF', 6)
     taux_ta = get_constante('TAUX_TA', 2)
+    taux_onfpp = get_constante('TAUX_ONFPP', 1.5)
     
     # Calculer les totaux
     totaux = bulletins.aggregate(
         masse_salariale=Sum('salaire_brut'),
+        total_base_vf=Sum('base_vf'),
         total_cnss_employe=Sum('cnss_employe'),
         total_cnss_employeur=Sum('cnss_employeur'),
         total_rts=Sum('irg'),
+        total_vf=Sum('versement_forfaitaire'),
+        total_ta=Sum('taxe_apprentissage'),
+        total_onfpp=Sum('contribution_onfpp'),
     )
     
     masse_salariale = totaux['masse_salariale'] or Decimal('0')
+    total_base_vf = totaux['total_base_vf'] or Decimal('0')
     total_cnss_employe = totaux['total_cnss_employe'] or Decimal('0')
     total_cnss_employeur = totaux['total_cnss_employeur'] or Decimal('0')
     total_rts = totaux['total_rts'] or Decimal('0')
-    
-    # Calculer VF et TA
-    total_vf = (masse_salariale * taux_vf / Decimal('100')).quantize(Decimal('1'))
-    total_ta = (masse_salariale * taux_ta / Decimal('100')).quantize(Decimal('1'))
+    total_vf = totaux['total_vf'] or Decimal('0')
+    total_ta = totaux['total_ta'] or Decimal('0')
+    total_onfpp = totaux['total_onfpp'] or Decimal('0')
     
     # Détail par employé
     detail_employes = []
@@ -105,6 +110,10 @@ def get_declarations_data(entreprise, annee, mois=None):
             'total_cnss': bulletin.cnss_employe + bulletin.cnss_employeur,
             'rts': bulletin.irg,
             'net_a_payer': bulletin.net_a_payer,
+            'base_vf': bulletin.base_vf,
+            'vf': bulletin.versement_forfaitaire,
+            'ta': bulletin.taxe_apprentissage,
+            'onfpp': bulletin.contribution_onfpp,
             'periode': str(bulletin.periode),
         })
     
@@ -114,6 +123,7 @@ def get_declarations_data(entreprise, annee, mois=None):
         'mois': mois,
         'nb_salaries': bulletins.values('employe').distinct().count(),
         'masse_salariale': masse_salariale,
+        'total_base_vf': total_base_vf,
         'plancher_cnss': plancher_cnss,
         'plafond_cnss': plafond_cnss,
         'taux_cnss_employe': taux_cnss_employe,
@@ -123,9 +133,11 @@ def get_declarations_data(entreprise, annee, mois=None):
         'total_cnss': total_cnss_employe + total_cnss_employeur,
         'taux_vf': taux_vf,
         'taux_ta': taux_ta,
+        'taux_onfpp': taux_onfpp,
         'total_rts': total_rts,
         'total_vf': total_vf,
         'total_ta': total_ta,
+        'total_onfpp': total_onfpp,
         'detail_employes': detail_employes,
         'date_generation': timezone.now(),
     }
@@ -508,8 +520,9 @@ def export_dmu_excel(request):
     row += 1
     recap_data = [
         ["RTS (Retenue sur Traitements et Salaires)", float(data['masse_salariale']), "Barème", float(data['total_rts'])],
-        ["VF (Versement Forfaitaire)", float(data['masse_salariale']), f"{data['taux_vf']}%", float(data['total_vf'])],
-        ["TA (Taxe d'Apprentissage)", float(data['masse_salariale']), f"{data['taux_ta']}%", float(data['total_ta'])],
+        ["VF (Versement Forfaitaire)", float(data['total_base_vf']), f"{data['taux_vf']}%", float(data['total_vf'])],
+        ["ONFPP", float(data['total_base_vf']), f"{data['taux_onfpp']}%", float(data['total_onfpp'])],
+        ["TA (Taxe d'Apprentissage)", float(data['total_base_vf']), f"{data['taux_ta']}%", float(data['total_ta'])],
     ]
     
     for item in recap_data:
@@ -519,7 +532,7 @@ def export_dmu_excel(request):
         row += 1
     
     # Total à verser DNI
-    total_dni = data['total_rts'] + data['total_vf'] + data['total_ta']
+    total_dni = data['total_rts'] + data['total_vf'] + data['total_onfpp'] + data['total_ta']
     ws.cell(row=row, column=1, value="TOTAL À VERSER À LA DNI").font = title_font
     ws.cell(row=row, column=4, value=float(total_dni)).font = title_font
     for col in range(1, 5):
@@ -651,12 +664,13 @@ def export_dmu_pdf(request):
     # Récapitulatif impôts
     elements.append(Paragraph("RÉCAPITULATIF DES IMPÔTS ET TAXES", section_style))
     
-    total_dni = data['total_rts'] + data['total_vf'] + data['total_ta']
+    total_dni = data['total_rts'] + data['total_vf'] + data['total_onfpp'] + data['total_ta']
     
     recap_data = [
         ["Désignation", "Taux", "Montant"],
         ["RTS (Retenue sur Traitements et Salaires)", "Barème", f"{data['total_rts']:,.0f} GNF"],
         ["VF (Versement Forfaitaire)", f"{data['taux_vf']}%", f"{data['total_vf']:,.0f} GNF"],
+        ["ONFPP", f"{data['taux_onfpp']}%", f"{data['total_onfpp']:,.0f} GNF"],
         ["TA (Taxe d'Apprentissage)", f"{data['taux_ta']}%", f"{data['total_ta']:,.0f} GNF"],
         ["TOTAL À VERSER À LA DNI", "", f"{total_dni:,.0f} GNF"],
     ]

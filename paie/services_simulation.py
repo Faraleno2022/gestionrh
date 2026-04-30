@@ -191,17 +191,19 @@ def calculer_un_bareme(
     Calcule le bulletin complet pour un barème donné.
 
     Formule CGI Guinée (validée par tests T01–T17):
-      CNSS   = half_up(min(brut, plafond_cnss) × taux_cnss_emp / 100)
+      CNSS   = half_up(assiette CNSS encadrée plancher/plafond × taux_cnss_emp / 100)
       plafond_exon = floor(brut × 25%)
       exon   = min(indemnites, plafond_exon)
       depasse = max(0, indemnites − plafond_exon)
       base_rts = brut − CNSS − exon + depasse
       RTS    = calcul progressif (ROUND_HALF_UP sur montants partiels)
       net    = brut − CNSS − RTS
+      VF/TA/ONFPP = base VF/ONFPP × taux
     """
     brut = Decimal(str(brut))
     total_indemnites = Decimal(str(max(Decimal('0'), total_indemnites)))
 
+    plancher_cnss   = constantes.get('PLANCHER_CNSS',       Decimal('550000'))
     plafond_cnss    = constantes.get('PLAFOND_CNSS',        Decimal('2500000'))
     taux_cnss_emp   = constantes.get('TAUX_CNSS_EMPLOYE',   Decimal('5'))
     taux_cnss_pat   = constantes.get('TAUX_CNSS_EMPLOYEUR', Decimal('18'))
@@ -210,11 +212,17 @@ def calculer_un_bareme(
     TAUX_TA_LEGAL    = Decimal('2')      # Taxe d'Apprentissage: 2% (loi)
     TAUX_ONFPP_LEGAL = Decimal('1.5')    # ONFPP: 1,5% (loi)
 
+    seuil_minimum_cnss = plancher_cnss * Decimal('0.10')
+    if brut < seuil_minimum_cnss:
+        assiette_cnss = Decimal('0')
+    else:
+        assiette_cnss = max(min(brut, plafond_cnss), plancher_cnss)
+
     # -- CNSS employé --
-    cnss = _half_up(min(brut, plafond_cnss) * taux_cnss_emp / Decimal('100'))
+    cnss = _half_up(assiette_cnss * taux_cnss_emp / Decimal('100'))
 
     # -- CNSS employeur --
-    cnss_employeur = _half_up(min(brut, plafond_cnss) * taux_cnss_pat / Decimal('100'))
+    cnss_employeur = _half_up(assiette_cnss * taux_cnss_pat / Decimal('100'))
 
     # -- Plafond d'exonération indemnités = 25% brut (floor) --
     plafond_exon = _floor_gnf(brut * Decimal('25') / Decimal('100'))
@@ -238,21 +246,24 @@ def calculer_un_bareme(
     net = int(brut) - cnss - rts
 
     # -- Charges patronales --
-    vf    = _half_up(brut * taux_vf / Decimal('100'))
+    deduction_vf = _half_up(min(brut, plafond_cnss) * taux_vf / Decimal('100'))
+    base_vf = max(Decimal('0'), brut - Decimal(str(deduction_vf)))
+    vf = _half_up(base_vf * taux_vf / Decimal('100'))
     # Seuil TA/ONFPP : < 25 salariés → TA 2%, ≥ 25 → ONFPP 1,5% (CGI Guinée)
     seuil_ta_onfpp = int(constantes.get('SEUIL_TA_ONFPP', Decimal('25')))
     if nb_salaries < seuil_ta_onfpp:
-        ta    = _half_up(brut * TAUX_TA_LEGAL / Decimal('100'))
+        ta    = _half_up(base_vf * TAUX_TA_LEGAL / Decimal('100'))
         onfpp = 0
     else:
         ta    = 0
-        onfpp = _half_up(brut * TAUX_ONFPP_LEGAL / Decimal('100'))
+        onfpp = _half_up(base_vf * TAUX_ONFPP_LEGAL / Decimal('100'))
 
     return {
         'brut':                  int(brut),
         'total_indemnites':      int(total_indemnites),
         'cnss':                  cnss,
         'cnss_employeur':        cnss_employeur,
+        'assiette_cnss':         int(assiette_cnss),
         'plafond_exon':          plafond_exon,
         'exon':                  exon,
         'depasse':               depasse,
@@ -261,6 +272,7 @@ def calculer_un_bareme(
         'taux_effectif':         taux_effectif,
         'net':                   net,
         'vf':                    vf,
+        'base_vf':               int(base_vf),
         'ta':                    ta,
         'onfpp':                 onfpp,
         'total_charges_pat':     cnss_employeur + vf + ta + onfpp,
