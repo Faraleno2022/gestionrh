@@ -1645,8 +1645,18 @@ class MoteurCalculPaie:
         # Calculer le bulletin
         self.calculer_bulletin()
         
-        # Générer le numéro de bulletin
-        numero = self._generer_numero_bulletin()
+        bulletin_existant = BulletinPaie.objects.filter(
+            employe=self.employe,
+            periode=self.periode,
+        ).first()
+        if bulletin_existant and bulletin_existant.statut_bulletin in BulletinPaie.STATUTS_VERROUILLES:
+            raise PermissionError(
+                f"Bulletin {bulletin_existant.numero_bulletin} déjà {bulletin_existant.statut_bulletin}; "
+                "impossible de le recalculer."
+            )
+
+        # Générer le numéro de bulletin uniquement pour une nouvelle fiche.
+        numero = bulletin_existant.numero_bulletin if bulletin_existant else self._generer_numero_bulletin()
         
         # Créer le bulletin
         bulletin_data = {
@@ -1706,7 +1716,18 @@ class MoteurCalculPaie:
         # Cela crée/met à jour le SoldeConge avec ancienneté-based calculation
         self._calculer_conges_acquis()
         
-        bulletin = BulletinPaie.objects.create(**bulletin_data)
+        if bulletin_existant:
+            for champ, valeur in bulletin_data.items():
+                setattr(bulletin_existant, champ, valeur)
+            bulletin_existant.save()
+            LigneBulletin.objects.filter(bulletin=bulletin_existant).delete()
+            bulletin = bulletin_existant
+            action = 'recalcul'
+            description = f'Recalcul du bulletin {numero}'
+        else:
+            bulletin = BulletinPaie.objects.create(**bulletin_data)
+            action = 'creation'
+            description = f'Création du bulletin {numero}'
         
         # Créer les lignes
         for ligne_data in sorted(self.lignes, key=lambda x: x['ordre']):
@@ -1728,8 +1749,8 @@ class MoteurCalculPaie:
             bulletin=bulletin,
             periode=self.periode,
             employe=self.employe,
-            type_action='creation',
-            description=f'Création du bulletin {numero}',
+            type_action=action,
+            description=description,
             utilisateur=utilisateur,
             valeurs_apres={
                 'brut': float(self.montants['brut']),
@@ -1775,13 +1796,25 @@ class MoteurCalculPaie:
                 'nombre_bulletins': 0
             }
         )
-        
-        cumul.cumul_brut += bulletin.salaire_brut
-        cumul.cumul_net += bulletin.net_a_payer
-        cumul.cumul_cnss_employe += bulletin.cnss_employe
-        cumul.cumul_cnss_employeur += bulletin.cnss_employeur
-        cumul.cumul_irg += bulletin.irg
-        cumul.nombre_bulletins += 1
+
+        totaux = BulletinPaie.objects.filter(
+            employe=self.employe,
+            periode__annee=self.periode.annee,
+        ).aggregate(
+            cumul_brut=models.Sum('salaire_brut'),
+            cumul_net=models.Sum('net_a_payer'),
+            cumul_cnss_employe=models.Sum('cnss_employe'),
+            cumul_cnss_employeur=models.Sum('cnss_employeur'),
+            cumul_irg=models.Sum('irg'),
+            nombre_bulletins=models.Count('id'),
+        )
+
+        cumul.cumul_brut = totaux['cumul_brut'] or Decimal('0')
+        cumul.cumul_net = totaux['cumul_net'] or Decimal('0')
+        cumul.cumul_cnss_employe = totaux['cumul_cnss_employe'] or Decimal('0')
+        cumul.cumul_cnss_employeur = totaux['cumul_cnss_employeur'] or Decimal('0')
+        cumul.cumul_irg = totaux['cumul_irg'] or Decimal('0')
+        cumul.nombre_bulletins = totaux['nombre_bulletins'] or 0
         cumul.save()
     
     def _calculer_anciennete_mois(self, date_embauche, date_ref=None):
