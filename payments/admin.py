@@ -5,7 +5,7 @@ from .models import PlanAbonnement, Transaction, Abonnement
 @admin.register(PlanAbonnement)
 class PlanAbonnementAdmin(admin.ModelAdmin):
     list_display = ['nom', 'prix_mensuel', 'prix_annuel', 'max_utilisateurs', 'max_employes', 'actif', 'ordre']
-    list_filter = ['actif', 'module_paie', 'module_recrutement', 'module_formation']
+    list_filter = ['actif', 'module_paie', 'module_recrutement', 'module_formation', 'module_comptabilite']
     search_fields = ['nom', 'slug', 'description']
     prepopulated_fields = {'slug': ('nom',)}
     ordering = ['ordre', 'prix_mensuel']
